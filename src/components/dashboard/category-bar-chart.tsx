@@ -8,20 +8,24 @@ import {
 } from "@/components/ui/chart";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface CategoryBarChartProps {
   title: string;
   data: { category: string; value: number }[];
   valueLabel: string;
-  formatValue?: (val: number) => string;
+  isCurrency?: boolean;
 }
 
 export function CategoryBarChart({
   title,
   data,
   valueLabel,
-  formatValue = (v) => v.toString(),
+  isCurrency = false,
 }: CategoryBarChartProps) {
+  const formatValue = isCurrency
+    ? (v: number) => formatCurrency(v)
+    : (v: number) => v.toString();
   if (data.length === 0) {
     return (
       <Card>

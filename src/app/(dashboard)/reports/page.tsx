@@ -66,7 +66,7 @@ export default async function ReportsPage() {
           title="Revenue by Category (This Month)"
           data={revenueChartData}
           valueLabel="Revenue"
-          formatValue={(v) => formatCurrency(v)}
+          isCurrency
         />
       </div>
     </div>
