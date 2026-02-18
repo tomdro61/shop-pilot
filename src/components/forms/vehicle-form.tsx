@@ -102,8 +102,15 @@ export function VehicleForm({
                       <Input
                         type="number"
                         placeholder="2024"
-                        {...field}
                         value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === "" ? null : Number(e.target.value)
+                          )
+                        }
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
                       />
                     </FormControl>
                     <FormMessage />
@@ -177,8 +184,15 @@ export function VehicleForm({
                     <Input
                       type="number"
                       placeholder="45000"
-                      {...field}
                       value={field.value ?? ""}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value === "" ? null : Number(e.target.value)
+                        )
+                      }
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
                     />
                   </FormControl>
                   <FormMessage />
