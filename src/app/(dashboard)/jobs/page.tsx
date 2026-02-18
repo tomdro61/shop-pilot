@@ -1,0 +1,57 @@
+import { Suspense } from "react";
+import { getJobs, getJobCategories } from "@/lib/actions/jobs";
+import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
+import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
+import { JobsListView } from "@/components/dashboard/jobs-list-view";
+import { JobsBoardView } from "@/components/dashboard/jobs-board-view";
+import { Fab } from "@/components/dashboard/fab";
+import type { JobStatus } from "@/types";
+
+export const metadata = {
+  title: "Jobs | ShopPilot",
+};
+
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    view?: string;
+    search?: string;
+    status?: string;
+    category?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const view = params.view || "list";
+
+  const [jobs, dbCategories] = await Promise.all([
+    getJobs({
+      search: params.search,
+      status: params.status as JobStatus | undefined,
+      category: params.category,
+    }),
+    getJobCategories(),
+  ]);
+
+  const allCategories = [
+    ...new Set([...DEFAULT_JOB_CATEGORIES, ...dbCategories]),
+  ].sort();
+
+  return (
+    <div className="p-4 lg:p-6">
+      <Suspense>
+        <JobsToolbar categories={allCategories} />
+      </Suspense>
+
+      <div className="mt-4">
+        {view === "board" ? (
+          <JobsBoardView jobs={jobs} />
+        ) : (
+          <JobsListView jobs={jobs} />
+        )}
+      </div>
+
+      <Fab href="/jobs/new" />
+    </div>
+  );
+}

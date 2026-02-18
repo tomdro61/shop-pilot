@@ -1,0 +1,40 @@
+import { Suspense } from "react";
+import Link from "next/link";
+import { getCustomers } from "@/lib/actions/customers";
+import { CustomerSearch } from "@/components/forms/customer-search";
+import { CustomerList } from "@/components/dashboard/customer-list";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+
+export const metadata = {
+  title: "Customers | ShopPilot",
+};
+
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>;
+}) {
+  const { search } = await searchParams;
+  const customers = await getCustomers(search);
+
+  return (
+    <div className="p-4 lg:p-6">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <Suspense>
+            <CustomerSearch />
+          </Suspense>
+        </div>
+        <Link href="/customers/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Add Customer</span>
+            <span className="sm:hidden">Add</span>
+          </Button>
+        </Link>
+      </div>
+      <CustomerList customers={customers} />
+    </div>
+  );
+}
