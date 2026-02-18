@@ -52,6 +52,7 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
                   <p className="font-medium">{formatVehicle(vehicle)}</p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                     {vehicle.vin && <span>VIN: {vehicle.vin}</span>}
+                    {vehicle.license_plate && <span>Plate: {vehicle.license_plate}</span>}
                     {vehicle.mileage && (
                       <span>{vehicle.mileage.toLocaleString()} mi</span>
                     )}

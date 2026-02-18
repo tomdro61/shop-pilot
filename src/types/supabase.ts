@@ -53,6 +53,7 @@ export type Database = {
           make: string | null;
           model: string | null;
           vin: string | null;
+          license_plate: string | null;
           mileage: number | null;
           color: string | null;
           notes: string | null;
@@ -66,6 +67,7 @@ export type Database = {
           make?: string | null;
           model?: string | null;
           vin?: string | null;
+          license_plate?: string | null;
           mileage?: number | null;
           color?: string | null;
           notes?: string | null;
@@ -79,6 +81,7 @@ export type Database = {
           make?: string | null;
           model?: string | null;
           vin?: string | null;
+          license_plate?: string | null;
           mileage?: number | null;
           color?: string | null;
           notes?: string | null;

@@ -47,6 +47,7 @@ export function VehicleForm({
       make: vehicle?.make ?? "",
       model: vehicle?.model ?? "",
       vin: vehicle?.vin ?? "",
+      license_plate: vehicle?.license_plate ?? "",
       mileage: vehicle?.mileage ?? undefined,
       color: vehicle?.color ?? "",
       notes: vehicle?.notes ?? "",
@@ -145,7 +146,7 @@ export function VehicleForm({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="vin"
@@ -154,6 +155,19 @@ export function VehicleForm({
                     <FormLabel>VIN</FormLabel>
                     <FormControl>
                       <Input placeholder="1HGBH41JXMN109186" maxLength={17} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="license_plate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Plate</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ABC-1234" maxLength={15} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
