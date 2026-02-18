@@ -203,6 +203,32 @@ shop-pilot/
 5. Should the AI assistant have its own phone number customers can text, or internal-only?
 6. What are the MA-specific tax rules for auto repair labor vs. parts?
 
+## Session Workflow
+
+**At the end of every session**, update `PROGRESS.md` with:
+1. **Date and summary** of what was completed
+2. **What's not done yet** — remaining tasks, blockers
+3. **What's next** — the next logical work to pick up
+4. **Known issues** — bugs, warnings, things to investigate
+
+At the start of a new session, read `PROGRESS.md` first to pick up where we left off.
+
+## Current Status
+
+**Phase 1: COMPLETE** (code written, not yet deployed)
+- All UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports
+- Schema migrations written but not yet pushed to a live Supabase project
+- GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
+
+**Remaining before Phase 1 is fully live:**
+- Create Supabase project, add credentials to `.env.local`
+- Run `npx supabase db push`
+- Create manager account in Supabase Auth
+- Deploy to Vercel
+- Wix customer import (1000+ contacts)
+
+**Next phase:** Phase 2 — Payments & Communication (Stripe, estimates, SMS, email)
+
 ## Development Conventions
 
 - **TypeScript** — strict mode, no `any` types
