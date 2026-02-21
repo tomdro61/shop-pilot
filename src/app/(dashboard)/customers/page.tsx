@@ -21,26 +21,26 @@ export default async function CustomersPage({
 
   return (
     <div className="p-4 lg:p-6">
-      <div className="mb-4 flex items-center justify-between gap-4">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Suspense>
+          <CustomerSearch />
+        </Suspense>
         <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">All Customers</span>
           <span>({customers.length})</span>
         </div>
-        <div className="flex flex-1 md:flex-initial items-center gap-2">
-          <Suspense>
-            <CustomerSearch />
-          </Suspense>
-          <Suspense>
-            <CustomerTypeFilter />
-          </Suspense>
+        <Suspense>
+          <CustomerTypeFilter />
+        </Suspense>
+        <div className="ml-auto">
+          <Link href="/customers/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Add Customer</span>
+              <span className="sm:hidden">Add</span>
+            </Button>
+          </Link>
         </div>
-        <Link href="/customers/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Add Customer</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
-        </Link>
       </div>
       <CustomerList customers={customers} />
     </div>
