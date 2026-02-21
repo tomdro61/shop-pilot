@@ -716,3 +716,87 @@
 - Bottom nav now shows Quick Pay instead of Reports on mobile — Reports is still accessible via sidebar on desktop
 - Next.js 16 middleware deprecation warning persists — not blocking
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 10 — 2026-02-21 — Quick Pay Presets, Inspections Update, Dashboard Overhaul, Typography System
+
+### What Was Completed
+
+**Quick Pay preset integration, fleet inspection counter update, inspection category fix, dashboard restructure, and app-wide typography hierarchy:**
+
+1. **Quick Pay Preset Buttons** — Added service preset chips above the numpad on the Quick Pay page
+   - Server component fetches presets via `getPresets()` and computes totals from JSONB `line_items`
+   - Tapping a preset populates amount + note; amount remains editable after selection
+   - Deselecting a preset resets amount and note
+   - `QuickPayPreset` interface includes `category` field from preset data
+
+2. **Inspections Counter — Fleet Only** — Removed Retail State and Retail TNC rows
+   - Only Hertz, Sixt, DriveWhip rows remain (state inspections now handled via Quick Pay)
+   - Updated TNC inspection rates from $35 to $15 for all fleet accounts
+
+3. **Inspection Category Fix** — Fixed mismatch where Quick Pay preset jobs weren't counted in reports
+   - **Problem:** `createQuickPayJob()` hardcoded `category: "Quick Pay"`, but reports filter on `category: "Inspection"`
+   - **Fix:** Threaded `category` from preset data through `QuickPayForm` → `createQuickPayJob(amountCents, note, category)`
+   - Now defaults to `"Quick Pay"` only when no preset is selected; State Inspection preset passes `"Inspection"`
+   - Verified preset seed data has `category: 'Inspection'` matching reports filter exactly
+
+4. **Typography Hierarchy — App-Wide** — Unified all section headers across 13 files
+   - Applied consistent label pattern: `text-[11px] font-medium uppercase tracking-wider text-muted-foreground`
+   - Converted all CardTitle, SectionHeader, h4 subsection headers to match
+   - Icons next to labels downsized from `h-4 w-4` to `h-3.5 w-3.5`
+   - Files: dashboard, job detail, customer detail, estimates, reports, inspections, line items, vehicles, presets, job form, category bar charts
+
+5. **Dashboard Restructure — Three-Zone Layout with Section Containers**
+   - **Section 1 "REVENUE":** 4 metric cards (Today, This Week, This Month, Avg Ticket) inside a `rounded-xl border bg-muted/50` container
+   - **Section 2 "OPERATIONS":** Alert bars + Shop Floor stats + Tech Activity grouped in same container style. Shop Floor and Tech Activity side by side on desktop.
+   - **Section 3 "RECENT JOBS":** Full-width job list inside container with "View all" link inline with header
+   - All sections use identical container treatment (`rounded-xl border bg-muted/50 p-4 lg:p-5`) creating a two-level visual hierarchy — muted containers wrap white `bg-card` child cards
+   - Bold uppercase section labels (`text-xs font-semibold`) inside each container
+   - Loading skeleton updated to match three-zone structure
+
+### Files Modified (17)
+- `src/app/(dashboard)/quick-pay/page.tsx` — Preset fetching + category passthrough
+- `src/components/dashboard/quick-pay-form.tsx` — Preset chips UI + category threading
+- `src/lib/actions/terminal.ts` — Optional `category` param on `createQuickPayJob()`
+- `src/app/(dashboard)/inspections/page.tsx` — Removed retail rows, updated TNC rates
+- `src/app/(dashboard)/dashboard/page.tsx` — Three-zone container layout
+- `src/app/(dashboard)/dashboard/loading.tsx` — Updated skeleton
+- `src/app/(dashboard)/customers/[id]/page.tsx` — Typography fix
+- `src/app/(dashboard)/estimates/[id]/page.tsx` — Typography fix
+- `src/app/(dashboard)/reports/page.tsx` — Typography fix
+- `src/components/dashboard/category-bar-chart.tsx` — Typography fix
+- `src/components/dashboard/estimate-line-items-list.tsx` — Typography fix
+- `src/components/dashboard/estimate-section.tsx` — Typography fix
+- `src/components/dashboard/invoice-section.tsx` — Typography fix
+- `src/components/dashboard/line-items-list.tsx` — Typography fix
+- `src/components/dashboard/preset-list.tsx` — Typography fix
+- `src/components/dashboard/vehicle-section.tsx` — Typography fix
+- `src/components/forms/job-form.tsx` — SectionHeader typography fix
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+- All commits pushed to GitHub, Vercel auto-deploying
+
+### What's NOT Done Yet
+- [ ] Register WisePOS E reader in Stripe Dashboard to get `tmr_xxx` reader ID
+- [ ] Add `payment_intent.succeeded` to Stripe Dashboard webhook event types
+- [ ] Run terminal migration against Supabase
+- [ ] Test terminal with Stripe simulated reader
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Port Broadway Motors' real phone number to Quo
+- [ ] Resend transactional email integration
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory)
+- [ ] Stripe live mode activation
+- [ ] Wix customer data import (1000+ contacts)
+
+### What's Next
+- Enable Stripe Terminal on Stripe account, register WisePOS E hardware
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Optional: voice input, chat persistence
+
+### Known Issues / Notes
+- Dashboard section container pattern (`bg-muted/50` wrapping `bg-card` cards) creates clear two-level hierarchy in both light and dark mode
+- Typography hierarchy is now fully consistent — all section labels use the same 11px uppercase muted pattern app-wide
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
