@@ -28,9 +28,9 @@ export function KpiCard({
   }
 
   return (
-    <Card>
+    <Card className="shadow-[var(--glow-md)]">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {title}
         </CardTitle>
       </CardHeader>

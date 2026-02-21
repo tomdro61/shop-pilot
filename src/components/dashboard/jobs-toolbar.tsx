@@ -27,6 +27,7 @@ export function JobsToolbar({ categories }: JobsToolbarProps) {
   const view = searchParams.get("view") || "list";
   const category = searchParams.get("category") || "all";
   const status = searchParams.get("status") || "all";
+  const paymentStatus = searchParams.get("payment_status") || "all";
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -84,6 +85,22 @@ export function JobsToolbar({ categories }: JobsToolbarProps) {
             <SelectItem value="waiting_for_parts">Waiting for Parts</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="complete">Complete</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={paymentStatus}
+          onValueChange={(val) => updateParams({ payment_status: val })}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All Payments" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Payments</SelectItem>
+            <SelectItem value="unpaid">Unpaid</SelectItem>
+            <SelectItem value="invoiced">Invoiced</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="waived">Waived</SelectItem>
           </SelectContent>
         </Select>
 

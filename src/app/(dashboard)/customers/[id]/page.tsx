@@ -2,10 +2,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCustomer } from "@/lib/actions/customers";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+
 import { formatPhone, formatVehicle } from "@/lib/utils/format";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
@@ -87,74 +87,53 @@ export default async function CustomerDetailPage({
         </Card>
       )}
 
-      <Separator className="mb-4" />
-
       <VehicleSection customerId={id} vehicles={vehicles} />
 
-      <Separator className="mb-4" />
-
       {/* Job History */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-base font-semibold">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <Wrench className="h-4 w-4" />
             Jobs ({jobs.length})
-          </h3>
+          </CardTitle>
           <Link href={`/jobs/new?customerId=${id}`}>
             <Button variant="outline" size="sm">
               New Job
             </Button>
           </Link>
-        </div>
-        {jobs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No jobs yet</p>
-        ) : (
-          <div className="space-y-2">
-            {jobs.map((job) => {
-              const status = job.status as JobStatus;
-              const colors = JOB_STATUS_COLORS[status];
-              return (
-                <Link key={job.id} href={`/jobs/${job.id}`}>
-                  <Card className="py-0 transition-colors hover:bg-accent">
-                    <CardContent className="flex items-center justify-between p-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={`${colors.bg} ${colors.text} ${colors.border}`}
-                          >
-                            {JOB_STATUS_LABELS[status]}
-                          </Badge>
-                          {job.category && (
-                            <span className="text-sm text-muted-foreground">
-                              {job.category}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground">
-                          {job.vehicles &&
-                            formatVehicle(
-                              job.vehicles as {
-                                year: number | null;
-                                make: string | null;
-                                model: string | null;
-                              }
-                            )}
-                          {job.date_received && (
-                            <span className="ml-2">
-                              {new Date(job.date_received).toLocaleDateString()}
-                            </span>
-                          )}
-                        </div>
+        </CardHeader>
+        <CardContent>
+          {jobs.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">No jobs yet</p>
+          ) : (
+            <div className="-mx-5 divide-y">
+              {jobs.map((job) => {
+                const status = job.status as JobStatus;
+                const colors = JOB_STATUS_COLORS[status];
+                const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+                return (
+                  <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+                    <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{job.category || "General"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {[vehicle ? formatVehicle(vehicle) : null, job.date_received ? new Date(job.date_received).toLocaleDateString() : null].filter(Boolean).join(" · ")}
+                        </p>
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                      <Badge
+                        variant="outline"
+                        className={`shrink-0 text-[10px] ${colors.bg} ${colors.text} ${colors.border}`}
+                      >
+                        {JOB_STATUS_LABELS[status]}
+                      </Badge>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

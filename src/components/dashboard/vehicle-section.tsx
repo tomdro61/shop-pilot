@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { VehicleForm } from "@/components/forms/vehicle-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
@@ -32,62 +32,65 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
 
   return (
     <div className="mb-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-base font-semibold">
-          <Car className="h-4 w-4" />
-          Vehicles ({vehicles.length})
-        </h3>
-        <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
-          Add Vehicle
-        </Button>
-      </div>
-      {vehicles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No vehicles yet</p>
-      ) : (
-        <div className="space-y-2">
-          {vehicles.map((vehicle) => (
-            <Card key={vehicle.id}>
-              <CardContent className="flex items-center justify-between p-3">
-                <div>
-                  <p className="font-medium">{formatVehicle(vehicle)}</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    {vehicle.vin && <span>VIN: {vehicle.vin}</span>}
-                    {vehicle.license_plate && <span>Plate: {vehicle.license_plate}</span>}
-                    {vehicle.mileage && (
-                      <span>{vehicle.mileage.toLocaleString()} mi</span>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <Car className="h-4 w-4" />
+            Vehicles ({vehicles.length})
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
+            Add Vehicle
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {vehicles.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">No vehicles yet</p>
+          ) : (
+            <div className="-mx-5 divide-y">
+              {vehicles.map((vehicle) => (
+                <div key={vehicle.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{formatVehicle(vehicle)}</p>
+                    <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                      {vehicle.vin && <span>VIN: {vehicle.vin}</span>}
+                      {vehicle.license_plate && <span>Plate: {vehicle.license_plate}</span>}
+                      {vehicle.mileage && (
+                        <span>{vehicle.mileage.toLocaleString()} mi</span>
+                      )}
+                      {vehicle.color && <span>{vehicle.color}</span>}
+                    </div>
+                    {vehicle.notes && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {vehicle.notes}
+                      </p>
                     )}
-                    {vehicle.color && <span>{vehicle.color}</span>}
                   </div>
-                  {vehicle.notes && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {vehicle.notes}
-                    </p>
-                  )}
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setEditVehicle(vehicle)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <DeleteConfirmDialog
+                      title="Delete Vehicle"
+                      description={`Delete ${formatVehicle(vehicle)}? This cannot be undone.`}
+                      onConfirm={() => handleDeleteVehicle(vehicle.id)}
+                      trigger={
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      }
+                    />
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditVehicle(vehicle)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <DeleteConfirmDialog
-                    title="Delete Vehicle"
-                    description={`Delete ${formatVehicle(vehicle)}? This cannot be undone.`}
-                    onConfirm={() => handleDeleteVehicle(vehicle.id)}
-                    trigger={
-                      <Button variant="ghost" size="icon">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <VehicleForm
         customerId={customerId}

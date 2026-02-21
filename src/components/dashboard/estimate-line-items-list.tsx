@@ -99,8 +99,8 @@ export function EstimateLineItemsList({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base">Line Items</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
+        <CardTitle className="text-base font-semibold">Line Items</CardTitle>
         {!readOnly && (
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />

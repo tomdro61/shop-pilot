@@ -15,7 +15,7 @@ export function ChatBubble() {
     <Button
       asChild
       size="icon"
-      className="fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg lg:bottom-6"
+      className="fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-[var(--glow-lg)] transition-transform hover:scale-105 lg:bottom-6"
     >
       <Link href="/chat">
         <MessageCircle className="h-6 w-6" />

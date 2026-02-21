@@ -10,6 +10,7 @@ export async function getJobs(filters?: {
   search?: string;
   status?: JobStatus;
   category?: string;
+  paymentStatus?: PaymentStatus;
 }) {
   const supabase = await createClient();
 
@@ -20,6 +21,10 @@ export async function getJobs(filters?: {
 
   if (filters?.status) {
     query = query.eq("status", filters.status);
+  }
+
+  if (filters?.paymentStatus) {
+    query = query.eq("payment_status", filters.paymentStatus);
   }
 
   if (filters?.category) {

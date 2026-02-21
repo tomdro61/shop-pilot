@@ -20,29 +20,29 @@ export const JOB_STATUS_COLORS: Record<
   { bg: string; text: string; border: string }
 > = {
   not_started: {
-    bg: "bg-red-100 dark:bg-red-950",
+    bg: "bg-red-100 dark:bg-red-500/10",
     text: "text-red-700 dark:text-red-400",
-    border: "border-red-200 dark:border-red-900",
+    border: "border-red-200 dark:border-red-500/20",
   },
   waiting_for_parts: {
-    bg: "bg-orange-100 dark:bg-orange-950",
-    text: "text-orange-700 dark:text-orange-400",
-    border: "border-orange-200 dark:border-orange-900",
+    bg: "bg-amber-100 dark:bg-amber-500/10",
+    text: "text-amber-700 dark:text-amber-400",
+    border: "border-amber-200 dark:border-amber-500/20",
   },
   in_progress: {
-    bg: "bg-blue-100 dark:bg-blue-950",
+    bg: "bg-blue-100 dark:bg-blue-500/10",
     text: "text-blue-700 dark:text-blue-400",
-    border: "border-blue-200 dark:border-blue-900",
+    border: "border-blue-200 dark:border-blue-500/20",
   },
   complete: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
-    border: "border-green-200 dark:border-green-900",
+    bg: "bg-emerald-100 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    border: "border-emerald-200 dark:border-emerald-500/20",
   },
   paid: { // backwards compat for pre-migration data
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
-    border: "border-green-200 dark:border-green-900",
+    bg: "bg-emerald-100 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    border: "border-emerald-200 dark:border-emerald-500/20",
   },
 };
 
@@ -59,24 +59,24 @@ export const PAYMENT_STATUS_COLORS: Record<
   { bg: string; text: string; border: string }
 > = {
   unpaid: {
-    bg: "bg-red-100 dark:bg-red-950",
+    bg: "bg-red-100 dark:bg-red-500/10",
     text: "text-red-700 dark:text-red-400",
-    border: "border-red-200 dark:border-red-900",
+    border: "border-red-200 dark:border-red-500/20",
   },
   invoiced: {
-    bg: "bg-blue-100 dark:bg-blue-950",
+    bg: "bg-blue-100 dark:bg-blue-500/10",
     text: "text-blue-700 dark:text-blue-400",
-    border: "border-blue-200 dark:border-blue-900",
+    border: "border-blue-200 dark:border-blue-500/20",
   },
   paid: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
-    border: "border-green-200 dark:border-green-900",
+    bg: "bg-emerald-100 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    border: "border-emerald-200 dark:border-emerald-500/20",
   },
   waived: {
-    bg: "bg-gray-100 dark:bg-gray-800",
+    bg: "bg-gray-100 dark:bg-gray-500/10",
     text: "text-gray-700 dark:text-gray-400",
-    border: "border-gray-200 dark:border-gray-700",
+    border: "border-gray-200 dark:border-gray-500/20",
   },
 };
 
@@ -126,24 +126,24 @@ export const ESTIMATE_STATUS_COLORS: Record<
   { bg: string; text: string; border: string }
 > = {
   draft: {
-    bg: "bg-gray-100 dark:bg-gray-800",
+    bg: "bg-gray-100 dark:bg-gray-500/10",
     text: "text-gray-700 dark:text-gray-400",
-    border: "border-gray-200 dark:border-gray-700",
+    border: "border-gray-200 dark:border-gray-500/20",
   },
   sent: {
-    bg: "bg-blue-100 dark:bg-blue-950",
+    bg: "bg-blue-100 dark:bg-blue-500/10",
     text: "text-blue-700 dark:text-blue-400",
-    border: "border-blue-200 dark:border-blue-900",
+    border: "border-blue-200 dark:border-blue-500/20",
   },
   approved: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
-    border: "border-green-200 dark:border-green-900",
+    bg: "bg-emerald-100 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    border: "border-emerald-200 dark:border-emerald-500/20",
   },
   declined: {
-    bg: "bg-red-100 dark:bg-red-950",
+    bg: "bg-red-100 dark:bg-red-500/10",
     text: "text-red-700 dark:text-red-400",
-    border: "border-red-200 dark:border-red-900",
+    border: "border-red-200 dark:border-red-500/20",
   },
 };
 
@@ -159,18 +159,18 @@ export const INVOICE_STATUS_COLORS: Record<
   { bg: string; text: string; border: string }
 > = {
   draft: {
-    bg: "bg-gray-100 dark:bg-gray-800",
+    bg: "bg-gray-100 dark:bg-gray-500/10",
     text: "text-gray-700 dark:text-gray-400",
-    border: "border-gray-200 dark:border-gray-700",
+    border: "border-gray-200 dark:border-gray-500/20",
   },
   sent: {
-    bg: "bg-blue-100 dark:bg-blue-950",
+    bg: "bg-blue-100 dark:bg-blue-500/10",
     text: "text-blue-700 dark:text-blue-400",
-    border: "border-blue-200 dark:border-blue-900",
+    border: "border-blue-200 dark:border-blue-500/20",
   },
   paid: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
-    border: "border-green-200 dark:border-green-900",
+    bg: "bg-emerald-100 dark:bg-emerald-500/10",
+    text: "text-emerald-700 dark:text-emerald-400",
+    border: "border-emerald-200 dark:border-emerald-500/20",
   },
 };

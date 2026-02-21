@@ -5,7 +5,7 @@ import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
 import { JobsListView } from "@/components/dashboard/jobs-list-view";
 import { JobsBoardView } from "@/components/dashboard/jobs-board-view";
 import { Fab } from "@/components/dashboard/fab";
-import type { JobStatus } from "@/types";
+import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
   title: "Jobs | ShopPilot",
@@ -19,6 +19,7 @@ export default async function JobsPage({
     search?: string;
     status?: string;
     category?: string;
+    payment_status?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -29,6 +30,7 @@ export default async function JobsPage({
       search: params.search,
       status: params.status as JobStatus | undefined,
       category: params.category,
+      paymentStatus: params.payment_status as PaymentStatus | undefined,
     }),
     getJobCategories(),
   ]);
