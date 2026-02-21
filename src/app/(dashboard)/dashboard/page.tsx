@@ -157,16 +157,16 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* ── Revenue Metrics ── */}
+      {/* ═══════════════════════════════════════════
+          ZONE 1 — MONEY
+          Revenue metrics, unchanged
+      ═══════════════════════════════════════════ */}
       <section>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {/* Today */}
           <div className="rounded-xl border bg-card p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Today</p>
             <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.todayRevenue)}</p>
           </div>
-
-          {/* This Week */}
           <div className="rounded-xl border bg-card p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Week</p>
             <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.weeklyRevenue)}</p>
@@ -182,14 +182,10 @@ export default async function DashboardPage() {
               <span className="text-xs text-muted-foreground">vs last week</span>
             </div>
           </div>
-
-          {/* This Month */}
           <div className="rounded-xl border bg-card p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Month</p>
             <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.monthlyRevenue)}</p>
           </div>
-
-          {/* Avg Ticket */}
           <div className="rounded-xl border bg-card p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Avg Ticket (Week)</p>
             <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.avgTicketWeek)}</p>
@@ -197,101 +193,102 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Needs Attention ── */}
-      {alertCount > 0 && (
-        <section>
-          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Needs Attention
-          </h2>
-          <div className="space-y-1.5">
-            {stats.unpaidJobs > 0 && (
-              <Link href="/jobs?paymentStatus=unpaid&status=complete" className="block">
-                <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/5 dark:hover:bg-red-500/10">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-                  <span className="text-sm font-medium text-red-700 dark:text-red-400">
-                    {stats.unpaidJobs} unpaid {stats.unpaidJobs === 1 ? "job" : "jobs"}
-                  </span>
-                  <span className="ml-auto text-xs text-red-500 dark:text-red-400/70">Complete but not paid</span>
-                </div>
-              </Link>
-            )}
-            {stats.unassignedJobs > 0 && (
-              <Link href="/jobs?status=not_started" className="block">
-                <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
-                  <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                    {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
-                  </span>
-                  <span className="ml-auto text-xs text-amber-500 dark:text-amber-400/70">Not started, no tech</span>
-                </div>
-              </Link>
-            )}
-            {staleJobs > 0 && (
-              <Link href="/jobs" className="block">
-                <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
-                  <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                    {staleJobs} {staleJobs === 1 ? "job needs" : "jobs need"} review
-                  </span>
-                  <span className="ml-auto text-xs text-amber-500 dark:text-amber-400/70">Open &gt; 2 days</span>
-                </div>
-              </Link>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* ── Shop Floor ── */}
-      <section>
-        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Shop Floor
+      {/* ═══════════════════════════════════════════
+          ZONE 2 — RIGHT NOW
+          Needs Attention + Shop Floor + Tech Activity
+          grouped in a distinct container
+      ═══════════════════════════════════════════ */}
+      <section className="rounded-2xl border border-border/60 bg-muted/40 p-4 lg:p-5">
+        <h2 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Right Now
         </h2>
-        <div className="flex items-center gap-6 rounded-xl border bg-card px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <Car className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <div>
-              <p className="text-2xl font-bold tabular-nums leading-none">{stats.carsInShop}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Cars In Shop</p>
-            </div>
-          </div>
-          <div className="h-8 w-px bg-border" />
-          <div className="flex items-center gap-2.5">
-            <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <div>
-              <p className="text-2xl font-bold tabular-nums leading-none">{stats.waitingForParts}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Waiting for Parts</p>
-            </div>
-          </div>
-          <div className="h-8 w-px bg-border" />
-          <div className="flex items-center gap-2.5">
-            <ClipboardCheck className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-            <div>
-              <p className="text-2xl font-bold tabular-nums leading-none">{inspectionsToday}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">Inspections Today</p>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ── Tech Activity + Recent Jobs (side by side on desktop) ── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          {/* Needs Attention — compact alerts */}
+          {alertCount > 0 && (
+            <div className="space-y-1.5">
+              {stats.unpaidJobs > 0 && (
+                <Link href="/jobs?paymentStatus=unpaid&status=complete" className="block">
+                  <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/5 dark:hover:bg-red-500/10">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                    <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                      {stats.unpaidJobs} unpaid {stats.unpaidJobs === 1 ? "job" : "jobs"}
+                    </span>
+                    <span className="ml-auto hidden text-xs text-red-500 dark:text-red-400/70 sm:inline">Complete but not paid</span>
+                  </div>
+                </Link>
+              )}
+              {stats.unassignedJobs > 0 && (
+                <Link href="/jobs?status=not_started" className="block">
+                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
+                    <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                      {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
+                    </span>
+                    <span className="ml-auto hidden text-xs text-amber-500 dark:text-amber-400/70 sm:inline">Not started, no tech</span>
+                  </div>
+                </Link>
+              )}
+              {staleJobs > 0 && (
+                <Link href="/jobs" className="block">
+                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
+                    <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                      {staleJobs} {staleJobs === 1 ? "job needs" : "jobs need"} review
+                    </span>
+                    <span className="ml-auto hidden text-xs text-amber-500 dark:text-amber-400/70 sm:inline">Open &gt; 2 days</span>
+                  </div>
+                </Link>
+              )}
+            </div>
+          )}
 
-        {/* Tech Activity */}
-        <section>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-              <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Today&apos;s Tech Activity</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
+          {/* Shop Floor + Tech Activity — side by side on desktop */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Shop Floor */}
+            <div className="rounded-xl border bg-card p-4">
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shop Floor</p>
+              <div className="flex items-center gap-5">
+                <div className="flex items-center gap-2.5">
+                  <Car className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div>
+                    <p className="text-2xl font-bold tabular-nums leading-none">{stats.carsInShop}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">In Shop</p>
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div className="flex items-center gap-2.5">
+                  <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <div>
+                    <p className="text-2xl font-bold tabular-nums leading-none">{stats.waitingForParts}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">Waiting Parts</p>
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div className="flex items-center gap-2.5">
+                  <ClipboardCheck className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                  <div>
+                    <p className="text-2xl font-bold tabular-nums leading-none">{inspectionsToday}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">Inspections</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tech Activity */}
+            <div className="rounded-xl border bg-card">
+              <div className="border-b px-4 py-3">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tech Activity</p>
+              </div>
               {techActivity.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <p className="mt-2 text-sm text-muted-foreground">No activity today</p>
                 </div>
               ) : (
                 <div className="divide-y">
                   {techActivity.map((tech) => (
-                    <div key={tech.name} className="flex items-center justify-between px-5 py-2.5">
+                    <div key={tech.name} className="flex items-center justify-between px-4 py-2.5">
                       <span className="text-sm font-medium">{tech.name}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">
@@ -308,81 +305,84 @@ export default async function DashboardPage() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </section>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {/* Recent Jobs */}
-        <section>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-              <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Recent Jobs</CardTitle>
-              <Link
-                href="/jobs"
-                className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
-              >
-                View all
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </CardHeader>
-            <CardContent className="p-0">
-              {recentJobs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Car className="h-5 w-5 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">No jobs yet</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {recentJobs.map((job) => {
-                    const status = job.status as JobStatus;
-                    const statusColors = JOB_STATUS_COLORS[status];
-                    const paymentStatus = (job.payment_status || "unpaid") as PaymentStatus;
-                    const paymentColors = PAYMENT_STATUS_COLORS[paymentStatus];
-                    const customer = job.customers as { first_name: string; last_name: string } | null;
-                    const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-                    const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-                      (s, li) => s + (li.total || 0), 0
-                    ) || 0;
-                    return (
-                      <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                        <div className="flex items-center justify-between px-5 py-2.5 transition-colors hover:bg-accent/50">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium">
-                              {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                            </p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              {[job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
-                            </p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1.5 pl-4">
-                            {jobTotal > 0 && (
-                              <span className="hidden text-xs font-medium tabular-nums text-muted-foreground sm:inline">
-                                {formatCurrency(jobTotal)}
-                              </span>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
-                            >
-                              {JOB_STATUS_LABELS[status] || status}
-                            </Badge>
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${paymentColors?.bg ?? ""} ${paymentColors?.text ?? ""} ${paymentColors?.border ?? ""}`}
-                            >
-                              {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
-                            </Badge>
-                          </div>
+      {/* ═══════════════════════════════════════════
+          ZONE 3 — HISTORY
+          Recent Jobs, full width
+      ═══════════════════════════════════════════ */}
+      <section>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
+            <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Recent Jobs</CardTitle>
+            <Link
+              href="/jobs"
+              className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              View all
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardHeader>
+          <CardContent className="p-0">
+            {recentJobs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <Car className="h-5 w-5 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">No jobs yet</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {recentJobs.map((job) => {
+                  const status = job.status as JobStatus;
+                  const statusColors = JOB_STATUS_COLORS[status];
+                  const paymentStatus = (job.payment_status || "unpaid") as PaymentStatus;
+                  const paymentColors = PAYMENT_STATUS_COLORS[paymentStatus];
+                  const customer = job.customers as { first_name: string; last_name: string } | null;
+                  const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+                  const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+                    (s, li) => s + (li.total || 0), 0
+                  ) || 0;
+                  return (
+                    <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+                      <div className="flex items-center justify-between px-5 py-2.5 transition-colors hover:bg-accent/50">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">
+                            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {[job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
+                          </p>
                         </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-      </div>
+                        <div className="flex shrink-0 items-center gap-1.5 pl-4">
+                          {jobTotal > 0 && (
+                            <span className="hidden text-xs font-medium tabular-nums text-muted-foreground sm:inline">
+                              {formatCurrency(jobTotal)}
+                            </span>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
+                          >
+                            {JOB_STATUS_LABELS[status] || status}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${paymentColors?.bg ?? ""} ${paymentColors?.text ?? ""} ${paymentColors?.border ?? ""}`}
+                          >
+                            {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }
