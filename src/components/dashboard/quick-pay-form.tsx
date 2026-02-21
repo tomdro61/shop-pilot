@@ -8,15 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle, Delete } from "lucide-react";
 import { createQuickPayJob } from "@/lib/actions/terminal";
+import { formatCurrency } from "@/lib/utils/format";
 
 type QuickPayState = "input" | "processing" | "succeeded" | "failed" | "canceled";
 
+interface QuickPayPreset {
+  id: string;
+  name: string;
+  total: number;
+}
+
 const NUM_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"];
 
-export function QuickPayForm() {
+export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   const [amountStr, setAmountStr] = useState("0");
   const [note, setNote] = useState("");
   const [state, setState] = useState<QuickPayState>("input");
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [completedJobId, setCompletedJobId] = useState<string | null>(null);
 
@@ -27,6 +35,7 @@ export function QuickPayForm() {
   }).format(amountCents / 100);
 
   function handleKey(key: string) {
+    setSelectedPresetId(null);
     setAmountStr((prev) => {
       if (key === "." && prev.includes(".")) return prev;
       // Limit to 2 decimal places
@@ -39,14 +48,33 @@ export function QuickPayForm() {
   }
 
   function handleBackspace() {
+    setSelectedPresetId(null);
     setAmountStr((prev) => {
       if (prev.length <= 1) return "0";
       return prev.slice(0, -1);
     });
   }
 
+  function handlePresetSelect(preset: QuickPayPreset) {
+    const isDeselect = selectedPresetId === preset.id;
+    if (isDeselect) {
+      setSelectedPresetId(null);
+      setAmountStr("0");
+      setNote("");
+      return;
+    }
+    setSelectedPresetId(preset.id);
+    // Convert total to string with 2 decimal places, stripping trailing zeros
+    const totalStr = preset.total % 1 === 0
+      ? String(preset.total)
+      : preset.total.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+    setAmountStr(totalStr);
+    setNote(preset.name);
+  }
+
   function handleClear() {
     setAmountStr("0");
+    setSelectedPresetId(null);
   }
 
   const pollStatus = useCallback(async (piId: string) => {
@@ -134,6 +162,7 @@ export function QuickPayForm() {
     setAmountStr("0");
     setNote("");
     setState("input");
+    setSelectedPresetId(null);
     setPaymentIntentId(null);
     setCompletedJobId(null);
   }
@@ -201,6 +230,31 @@ export function QuickPayForm() {
           {displayAmount}
         </p>
       </div>
+
+      {/* Service presets */}
+      {presets.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Quick Services
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {presets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handlePresetSelect(preset)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  selectedPresetId === preset.id
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-foreground hover:bg-accent"
+                }`}
+              >
+                {preset.name} · {formatCurrency(preset.total)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Numpad */}
       <div className="grid grid-cols-3 gap-2">
