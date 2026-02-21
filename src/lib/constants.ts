@@ -86,6 +86,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Cash",
   check: "Check",
   ach: "ACH",
+  terminal: "Terminal",
 };
 
 // Customer Type

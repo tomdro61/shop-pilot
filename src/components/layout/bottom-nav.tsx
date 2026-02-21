@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, ClipboardCheck, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, ClipboardCheck, CircleDollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -10,7 +10,7 @@ const navItems = [
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/jobs", label: "Jobs", icon: Wrench },
   { href: "/inspections", label: "Inspect", icon: ClipboardCheck },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/quick-pay", label: "Pay", icon: CircleDollarSign },
 ];
 
 export function BottomNav() {

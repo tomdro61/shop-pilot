@@ -34,6 +34,13 @@ export async function POST(request: Request) {
     await handleInvoicePaid(stripeInvoice);
   }
 
+  if (event.type === "payment_intent.succeeded") {
+    const pi = event.data.object as Stripe.PaymentIntent;
+    if (pi.metadata?.job_id) {
+      await handleTerminalPayment(pi);
+    }
+  }
+
   return NextResponse.json({ received: true });
 }
 
@@ -67,4 +74,18 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       payment_method: "stripe",
     })
     .eq("id", invoice.job_id);
+}
+
+async function handleTerminalPayment(pi: Stripe.PaymentIntent) {
+  const supabase = createAdminClient();
+  const jobId = pi.metadata.job_id;
+
+  await supabase
+    .from("jobs")
+    .update({
+      payment_status: "paid",
+      payment_method: "terminal",
+      stripe_payment_intent_id: pi.id,
+    })
+    .eq("id", jobId);
 }

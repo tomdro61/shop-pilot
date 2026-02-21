@@ -14,7 +14,7 @@ export const jobSchema = z.object({
   date_received: z.string().min(1, "Date is required"),
   date_finished: z.string().nullable().optional(),
   notes: z.string().max(5000),
-  payment_method: z.enum(["stripe", "cash", "check", "ach"]).nullable().optional(),
+  payment_method: z.enum(["stripe", "cash", "check", "ach", "terminal"]).nullable().optional(),
   payment_status: z.enum(["unpaid", "invoiced", "paid", "waived"]),
   mileage_in: z.number().int().positive().nullable().optional(),
 });

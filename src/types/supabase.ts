@@ -121,6 +121,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"] | null;
           payment_status: Database["public"]["Enums"]["payment_status"];
           mileage_in: number | null;
+          stripe_payment_intent_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -137,6 +138,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"] | null;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           mileage_in?: number | null;
+          stripe_payment_intent_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -153,6 +155,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"] | null;
           payment_status?: Database["public"]["Enums"]["payment_status"];
           mileage_in?: number | null;
+          stripe_payment_intent_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -501,7 +504,7 @@ export type Database = {
       invoice_status: "draft" | "sent" | "paid";
       message_channel: "sms" | "email";
       message_direction: "in" | "out";
-      payment_method: "stripe" | "cash" | "check" | "ach";
+      payment_method: "stripe" | "cash" | "check" | "ach" | "terminal";
       payment_status: "unpaid" | "invoiced" | "paid" | "waived";
       user_role: "manager" | "tech";
     };

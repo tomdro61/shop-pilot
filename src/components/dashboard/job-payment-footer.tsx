@@ -14,6 +14,7 @@ import { recordPayment } from "@/lib/actions/jobs";
 import { formatCurrency } from "@/lib/utils/format";
 import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { CreditCard, Banknote, Landmark, CircleDollarSign, ChevronDown } from "lucide-react";
+import { TerminalPayButton } from "@/components/dashboard/terminal-pay-button";
 import type { JobStatus, PaymentStatus, PaymentMethod } from "@/types";
 
 const paymentMethods: { value: PaymentMethod; label: string; icon: typeof CreditCard }[] = [
@@ -80,25 +81,31 @@ export function JobPaymentFooter({
           )}
         </div>
         {showMarkAsPaid && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" disabled={loading}>
-                {loading ? "Recording..." : "Mark as Paid"}
-                <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {paymentMethods.map((pm) => (
-                <DropdownMenuItem
-                  key={pm.value}
-                  onClick={() => handleRecordPayment(pm.value)}
-                >
-                  <pm.icon className="mr-2 h-4 w-4" />
-                  {pm.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <TerminalPayButton
+              jobId={jobId}
+              amountCents={Math.round(grandTotal * 100)}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" disabled={loading}>
+                  {loading ? "Recording..." : "Mark as Paid"}
+                  <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {paymentMethods.map((pm) => (
+                  <DropdownMenuItem
+                    key={pm.value}
+                    onClick={() => handleRecordPayment(pm.value)}
+                  >
+                    <pm.icon className="mr-2 h-4 w-4" />
+                    {pm.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
       </div>
     </div>
