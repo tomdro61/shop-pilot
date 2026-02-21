@@ -13,6 +13,7 @@ interface JobCardProps {
     notes: string | null;
     customers: { id: string; first_name: string; last_name: string; phone: string | null } | null;
     vehicles: { id: string; year: number | null; make: string | null; model: string | null } | null;
+    users?: { id: string; name: string } | null;
   };
   showStatus?: boolean;
 }
@@ -36,6 +37,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
               )}
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {job.category && <span>{job.category}</span>}
+                {job.users && <span>{job.users.name}</span>}
                 <span>{new Date(job.date_received).toLocaleDateString()}</span>
               </div>
             </div>

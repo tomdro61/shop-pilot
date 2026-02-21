@@ -12,8 +12,8 @@ import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/format";
-import { Pencil, User, Car } from "lucide-react";
-import type { JobStatus, Customer, Vehicle, JobLineItem } from "@/types";
+import { Pencil, User, Car, HardHat } from "lucide-react";
+import type { JobStatus, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,6 +40,7 @@ export default async function JobDetailPage({
 
   const customer = job.customers as (Customer & { email: string | null }) | null;
   const vehicle = job.vehicles as Vehicle | null;
+  const tech = job.users as Pick<UserType, "id" | "name"> | null;
   const lineItems = (job.job_line_items || []) as JobLineItem[];
 
   return (
@@ -55,6 +56,12 @@ export default async function JobDetailPage({
             {job.date_finished &&
               ` | Finished ${new Date(job.date_finished).toLocaleDateString()}`}
           </p>
+          {tech && (
+            <p className="flex items-center gap-1 text-sm text-muted-foreground">
+              <HardHat className="h-3.5 w-3.5" />
+              {tech.name}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />

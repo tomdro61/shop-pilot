@@ -35,6 +35,7 @@ type JobRow = {
   notes: string | null;
   customers: { id: string; first_name: string; last_name: string; phone: string | null } | null;
   vehicles: { id: string; year: number | null; make: string | null; model: string | null } | null;
+  users?: { id: string; name: string } | null;
 };
 
 interface JobsListViewProps {
@@ -102,6 +103,12 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             <ArrowUpDown className="ml-1 h-3 w-3" />
           </Button>
         ),
+      },
+      {
+        id: "tech",
+        header: "Tech",
+        accessorFn: (row) => row.users?.name ?? "",
+        cell: ({ row }) => row.original.users?.name ?? null,
       },
       {
         accessorKey: "date_received",

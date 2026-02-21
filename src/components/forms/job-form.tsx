@@ -57,6 +57,7 @@ interface JobFormProps {
 
 type CustomerOption = { id: string; first_name: string; last_name: string; phone: string | null };
 type VehicleOption = { id: string; year: number | null; make: string | null; model: string | null };
+type TechOption = { id: string; name: string };
 
 export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
   const router = useRouter();
@@ -68,6 +69,7 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  const [technicians, setTechnicians] = useState<TechOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
 
   const form = useForm<JobFormData>({
@@ -125,6 +127,20 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
     }
     loadVehicles();
   }, [selectedCustomerId]);
+
+  // Load technicians
+  useEffect(() => {
+    async function loadTechnicians() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("users")
+        .select("id, name")
+        .eq("role", "tech")
+        .order("name", { ascending: true });
+      setTechnicians(data || []);
+    }
+    loadTechnicians();
+  }, []);
 
   async function onSubmit(data: JobFormData) {
     const result = isEditing
@@ -359,6 +375,36 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
               </FormItem>
             );
           }}
+        />
+
+        {/* Assigned Tech */}
+        <FormField
+          control={form.control}
+          name="assigned_tech"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Assigned Tech</FormLabel>
+              <Select
+                value={field.value ?? "none"}
+                onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  {technicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
         />
 
         {/* Date Received */}

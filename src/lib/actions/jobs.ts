@@ -15,7 +15,7 @@ export async function getJobs(filters?: {
 
   let query = supabase
     .from("jobs")
-    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model)")
+    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model), users(id, name)")
     .order("date_received", { ascending: false });
 
   if (filters?.status) {
@@ -65,7 +65,7 @@ export async function getJob(id: string) {
   const { data, error } = await supabase
     .from("jobs")
     .select(
-      "*, customers(id, first_name, last_name, phone, email), vehicles(id, year, make, model, vin, mileage), job_line_items(*)"
+      "*, customers(id, first_name, last_name, phone, email), vehicles(id, year, make, model, vin, mileage), users(id, name), job_line_items(*)"
     )
     .eq("id", id)
     .single();

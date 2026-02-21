@@ -13,6 +13,7 @@ type JobRow = {
   notes: string | null;
   customers: { id: string; first_name: string; last_name: string; phone: string | null } | null;
   vehicles: { id: string; year: number | null; make: string | null; model: string | null } | null;
+  users?: { id: string; name: string } | null;
 };
 
 interface JobsBoardViewProps {
