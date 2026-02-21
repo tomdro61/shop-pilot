@@ -14,9 +14,19 @@ export async function getCustomers(search?: string, customerType?: string) {
     .order("last_name", { ascending: true });
 
   if (search) {
-    query = query.or(
-      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`
-    );
+    const words = search.trim().split(/\s+/);
+    if (words.length > 1) {
+      // Multi-word: match first word against first_name AND last word against last_name
+      const first = words[0];
+      const last = words[words.length - 1];
+      query = query.or(
+        `and(first_name.ilike.%${first}%,last_name.ilike.%${last}%),phone.ilike.%${search}%,email.ilike.%${search}%`
+      );
+    } else {
+      query = query.or(
+        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`
+      );
+    }
   }
 
   if (customerType && customerType !== "all") {
