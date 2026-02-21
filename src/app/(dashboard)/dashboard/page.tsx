@@ -139,7 +139,7 @@ export default async function DashboardPage() {
   const alertCount = stats.unpaidJobs + stats.unassignedJobs + staleJobs;
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-4 lg:p-6 space-y-8">
 
       {/* ── Quick Actions ── */}
       <div className="flex gap-3">
@@ -158,19 +158,22 @@ export default async function DashboardPage() {
       </div>
 
       {/* ═══════════════════════════════════════════
-          ZONE 1 — MONEY
-          Revenue metrics, unchanged
+          ZONE 1 — REVENUE
+          Green-accented metric cards
       ═══════════════════════════════════════════ */}
       <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Revenue
+        </h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="rounded-xl border bg-card p-4">
+          <div className="rounded-xl border border-l-[3px] border-l-emerald-500 bg-card p-4 dark:border-l-emerald-400">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Today</p>
-            <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.todayRevenue)}</p>
+            <p className="mt-1.5 text-4xl font-extrabold tabular-nums tracking-tight">{formatCurrency(stats.todayRevenue)}</p>
           </div>
-          <div className="rounded-xl border bg-card p-4">
+          <div className="rounded-xl border border-l-[3px] border-l-emerald-500 bg-card p-4 dark:border-l-emerald-400">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Week</p>
-            <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.weeklyRevenue)}</p>
-            <div className="mt-1 flex items-center gap-1">
+            <p className="mt-1.5 text-4xl font-extrabold tabular-nums tracking-tight">{formatCurrency(stats.weeklyRevenue)}</p>
+            <div className="mt-1.5 flex items-center gap-1">
               {weekChange >= 0 ? (
                 <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
               ) : (
@@ -182,24 +185,23 @@ export default async function DashboardPage() {
               <span className="text-xs text-muted-foreground">vs last week</span>
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-4">
+          <div className="rounded-xl border border-l-[3px] border-l-emerald-500 bg-card p-4 dark:border-l-emerald-400">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Month</p>
-            <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.monthlyRevenue)}</p>
+            <p className="mt-1.5 text-4xl font-extrabold tabular-nums tracking-tight">{formatCurrency(stats.monthlyRevenue)}</p>
           </div>
-          <div className="rounded-xl border bg-card p-4">
+          <div className="rounded-xl border border-l-[3px] border-l-emerald-500 bg-card p-4 dark:border-l-emerald-400">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Avg Ticket (Week)</p>
-            <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.avgTicketWeek)}</p>
+            <p className="mt-1.5 text-4xl font-extrabold tabular-nums tracking-tight">{formatCurrency(stats.avgTicketWeek)}</p>
           </div>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════
           ZONE 2 — RIGHT NOW
-          Needs Attention + Shop Floor + Tech Activity
-          grouped in a distinct container
+          Distinct blue-tinted panel surface
       ═══════════════════════════════════════════ */}
-      <section className="rounded-2xl border border-border/60 bg-muted/40 p-4 lg:p-5">
-        <h2 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <section className="-mx-4 px-4 py-6 lg:-mx-6 lg:px-6 bg-blue-50/60 dark:bg-blue-950/20 border-y border-blue-100 dark:border-blue-900/30">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
           Right Now
         </h2>
 
@@ -209,7 +211,7 @@ export default async function DashboardPage() {
             <div className="space-y-1.5">
               {stats.unpaidJobs > 0 && (
                 <Link href="/jobs?paymentStatus=unpaid&status=complete" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/5 dark:hover:bg-red-500/10">
+                  <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-950/40 dark:hover:bg-red-950/60">
                     <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                     <span className="text-sm font-medium text-red-700 dark:text-red-400">
                       {stats.unpaidJobs} unpaid {stats.unpaidJobs === 1 ? "job" : "jobs"}
@@ -220,7 +222,7 @@ export default async function DashboardPage() {
               )}
               {stats.unassignedJobs > 0 && (
                 <Link href="/jobs?status=not_started" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
+                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-950/40 dark:hover:bg-amber-950/60">
                     <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
                       {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
@@ -231,7 +233,7 @@ export default async function DashboardPage() {
               )}
               {staleJobs > 0 && (
                 <Link href="/jobs" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
+                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-950/40 dark:hover:bg-amber-950/60">
                     <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
                       {staleJobs} {staleJobs === 1 ? "job needs" : "jobs need"} review
@@ -246,7 +248,7 @@ export default async function DashboardPage() {
           {/* Shop Floor + Tech Activity — side by side on desktop */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Shop Floor */}
-            <div className="rounded-xl border bg-card p-4">
+            <div className="rounded-xl border bg-card p-4 shadow-sm">
               <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shop Floor</p>
               <div className="flex items-center gap-5">
                 <div className="flex items-center gap-2.5">
@@ -276,7 +278,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Tech Activity */}
-            <div className="rounded-xl border bg-card">
+            <div className="rounded-xl border bg-card shadow-sm">
               <div className="border-b px-4 py-3">
                 <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tech Activity</p>
               </div>
@@ -311,13 +313,13 @@ export default async function DashboardPage() {
       </section>
 
       {/* ═══════════════════════════════════════════
-          ZONE 3 — HISTORY
-          Recent Jobs, full width
+          ZONE 3 — RECENT JOBS
+          Clean white card, full width
       ═══════════════════════════════════════════ */}
       <section>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-            <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Recent Jobs</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent Jobs</CardTitle>
             <Link
               href="/jobs"
               className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
