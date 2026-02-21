@@ -277,8 +277,14 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-4xl p-4 lg:p-6 space-y-6">
 
       {/* ── Quick Actions ── */}
-      <div className="animate-in-up stagger-1">
-        <Link href="/jobs/new">
+      <div className="flex gap-3 animate-in-up stagger-1">
+        <Link href="/customers/new" className="flex-1">
+          <Button variant="outline" className="w-full gap-2">
+            <Plus className="h-4 w-4" />
+            New Customer
+          </Button>
+        </Link>
+        <Link href="/jobs/new" className="flex-1">
           <Button className="w-full gap-2">
             <Plus className="h-4 w-4" />
             New Job
