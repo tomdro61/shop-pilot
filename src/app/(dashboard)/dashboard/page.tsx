@@ -280,7 +280,7 @@ export default async function DashboardPage() {
         <section>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-              <CardTitle className="text-sm font-semibold">Today&apos;s Tech Activity</CardTitle>
+              <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Today&apos;s Tech Activity</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {techActivity.length === 0 ? (
@@ -316,7 +316,7 @@ export default async function DashboardPage() {
         <section>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-              <CardTitle className="text-sm font-semibold">Recent Jobs</CardTitle>
+              <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Recent Jobs</CardTitle>
               <Link
                 href="/jobs"
                 className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"

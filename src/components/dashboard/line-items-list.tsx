@@ -42,7 +42,7 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
     if (items.length === 0) return null;
     return (
       <div className="space-y-2">
-        <h4 className="text-sm font-medium text-muted-foreground">{label}</h4>
+        <h4 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</h4>
         {items.map((item) => (
           <div
             key={item.id}
@@ -91,7 +91,7 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-        <CardTitle className="text-base font-semibold">Line Items</CardTitle>
+        <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Line Items</CardTitle>
         <Button size="sm" onClick={() => setAddOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Item

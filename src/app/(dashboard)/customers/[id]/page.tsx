@@ -121,8 +121,8 @@ export default async function CustomerDetailPage({
       <div className="animate-in-up stagger-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <Wrench className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <Wrench className="h-3.5 w-3.5" />
               Jobs ({jobs.length})
             </CardTitle>
             <Link href={`/jobs/new?customerId=${id}`}>

@@ -204,7 +204,7 @@ export default function InspectionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Inspection Counter</CardTitle>
+          <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Inspection Counter</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {INSPECTION_ROWS.map((row) => {

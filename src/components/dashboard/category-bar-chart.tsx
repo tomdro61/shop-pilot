@@ -44,7 +44,7 @@ export function CategoryBarChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{title}</CardTitle>
+          <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{title}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="py-8 text-center text-sm text-muted-foreground">
@@ -65,7 +65,7 @@ export function CategoryBarChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px] w-full">

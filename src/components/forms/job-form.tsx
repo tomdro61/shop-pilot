@@ -66,9 +66,9 @@ type TechOption = { id: string; name: string };
 function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className="mb-3">
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{title}</h3>
       {description && (
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
       )}
     </div>
   );

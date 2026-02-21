@@ -46,7 +46,7 @@ export function PresetList({ presets }: PresetListProps) {
     <div>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-          <CardTitle className="text-base font-semibold">
+          <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Job Presets ({presets.length})
           </CardTitle>
           <Button size="sm" onClick={() => setAddOpen(true)}>

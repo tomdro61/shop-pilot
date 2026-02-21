@@ -116,7 +116,7 @@ export default async function ReportsPage({
         <div className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Service Profitability ({resolved.label})</CardTitle>
+              <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Service Profitability ({resolved.label})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -155,7 +155,7 @@ export default async function ReportsPage({
         <div className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Fleet A/R Aging</CardTitle>
+              <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Fleet A/R Aging</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">

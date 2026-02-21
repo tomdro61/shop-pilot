@@ -34,8 +34,8 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
     <div className="mb-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
-            <Car className="h-4 w-4" />
+          <CardTitle className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <Car className="h-3.5 w-3.5" />
             Vehicles ({vehicles.length})
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>

@@ -95,8 +95,8 @@ export default async function EstimateDetailPage({
         {customer && (
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <User className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <User className="h-3.5 w-3.5" />
                 Customer
               </CardTitle>
             </CardHeader>
@@ -119,8 +119,8 @@ export default async function EstimateDetailPage({
         {vehicle && (
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Car className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <Car className="h-3.5 w-3.5" />
                 Vehicle
               </CardTitle>
             </CardHeader>
