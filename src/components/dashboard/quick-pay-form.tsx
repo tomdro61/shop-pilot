@@ -15,6 +15,7 @@ type QuickPayState = "input" | "processing" | "succeeded" | "failed" | "canceled
 interface QuickPayPreset {
   id: string;
   name: string;
+  category: string | null;
   total: number;
 }
 
@@ -108,8 +109,9 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
 
     setState("processing");
 
-    // Create skeleton job
-    const jobResult = await createQuickPayJob(amountCents, note || undefined);
+    // Create skeleton job — use preset category if one is selected
+    const selectedPreset = presets.find((p) => p.id === selectedPresetId);
+    const jobResult = await createQuickPayJob(amountCents, note || undefined, selectedPreset?.category || undefined);
     if (jobResult.error || !jobResult.data) {
       setState("failed");
       toast.error(jobResult.error || "Failed to create job");

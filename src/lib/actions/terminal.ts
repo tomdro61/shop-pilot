@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 const WALK_IN_CUSTOMER_ID = "00000000-0000-0000-0000-000000000000";
 
-export async function createQuickPayJob(amountCents: number, note?: string) {
+export async function createQuickPayJob(amountCents: number, note?: string, category?: string) {
   const supabase = await createClient();
 
   // Create skeleton job linked to walk-in customer
@@ -14,7 +14,7 @@ export async function createQuickPayJob(amountCents: number, note?: string) {
     .insert({
       customer_id: WALK_IN_CUSTOMER_ID,
       status: "complete",
-      category: "Quick Pay",
+      category: category || "Quick Pay",
       date_received: new Date().toISOString().split("T")[0],
       date_finished: new Date().toISOString().split("T")[0],
       notes: note || null,

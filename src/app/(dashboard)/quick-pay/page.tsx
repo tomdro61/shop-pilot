@@ -12,7 +12,7 @@ export default async function QuickPayPage() {
   const presetsWithTotals = presets.map((p) => {
     const lineItems = p.line_items as PresetLineItem[];
     const total = lineItems.reduce((sum, li) => sum + li.quantity * li.unit_cost, 0);
-    return { id: p.id, name: p.name, total };
+    return { id: p.id, name: p.name, category: p.category, total };
   });
 
   return (
