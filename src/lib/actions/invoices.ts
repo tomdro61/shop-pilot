@@ -136,6 +136,19 @@ export async function createInvoiceFromJob(jobId: string) {
       return { error: "Invoice created in Stripe but failed to save locally" };
     }
 
+    // Fire-and-forget SMS with payment link
+    if (customer.phone && hostedInvoiceUrl) {
+      import("@/lib/actions/messages")
+        .then(({ sendCustomerSMS }) =>
+          sendCustomerSMS({
+            customerId: customer.id,
+            body: `Hi ${customer.first_name}, your invoice from Broadway Motors is ready. Pay here: ${hostedInvoiceUrl}`,
+            jobId,
+          })
+        )
+        .catch((err) => console.error("Failed to send invoice SMS:", err));
+    }
+
     revalidatePath(`/jobs/${jobId}`);
     return { data: invoice };
   } catch (err) {
