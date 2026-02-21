@@ -42,6 +42,7 @@ import {
 } from "@/lib/actions/invoices";
 import { getTeamMembers, getTechnicians } from "@/lib/actions/team";
 import { getReportData, getFleetARSummary, getDailySummary } from "@/lib/actions/reports";
+import { sendCustomerSMS, getCustomerMessages } from "@/lib/actions/messages";
 
 type Input = Record<string, unknown>;
 
@@ -356,6 +357,20 @@ export async function executeToolCall(
       }
       case "get_daily_summary": {
         const result = await getDailySummary();
+        return JSON.stringify(result);
+      }
+
+      // ── Messaging ──────────────────────────────────────────
+      case "send_sms": {
+        const result = await sendCustomerSMS({
+          customerId: str(toolInput.customer_id),
+          body: str(toolInput.body),
+          jobId: toolInput.job_id ? str(toolInput.job_id) : undefined,
+        });
+        return JSON.stringify(result);
+      }
+      case "get_customer_messages": {
+        const result = await getCustomerMessages(str(toolInput.customer_id));
         return JSON.stringify(result);
       }
 

@@ -112,10 +112,12 @@ export async function getEstimateByToken(token: string) {
 export async function sendEstimate(id: string) {
   const supabase = await createClient();
 
-  // Verify it's a draft
+  // Verify it's a draft and get job/customer info for SMS
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
-    .select("id, status")
+    .select(
+      "id, status, job_id, jobs(id, customer_id, customers(id, first_name, phone))"
+    )
     .eq("id", id)
     .single();
 
@@ -136,6 +138,25 @@ export async function sendEstimate(id: string) {
     .eq("id", id);
 
   if (error) return { error: error.message };
+
+  // Fire-and-forget SMS notification to customer
+  const job = estimate.jobs as {
+    id: string;
+    customer_id: string;
+    customers: { id: string; first_name: string; phone: string | null } | null;
+  } | null;
+  const customer = job?.customers;
+  if (customer?.phone) {
+    import("@/lib/actions/messages")
+      .then(({ sendCustomerSMS }) =>
+        sendCustomerSMS({
+          customerId: customer.id,
+          body: `Hi ${customer.first_name}, your estimate from Broadway Motors is ready. View and approve here: ${approvalUrl}`,
+          jobId: job!.id,
+        })
+      )
+      .catch((err) => console.error("Failed to send estimate SMS:", err));
+  }
 
   revalidatePath(`/estimates/${id}`);
   return { data: { approvalUrl } };

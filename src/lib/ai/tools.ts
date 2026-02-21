@@ -549,4 +549,32 @@ export const tools: Anthropic.Tool[] = [
       required: [],
     },
   },
+
+  // ── Messaging tools ─────────────────────────────────────────
+  {
+    name: "send_sms",
+    description:
+      "Send an SMS text message to a customer. Requires the customer's ID and message body. The customer must have a valid phone number on file. Confirm with the user before calling this.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        customer_id: { type: "string", description: "Customer UUID (required)" },
+        body: { type: "string", description: "The text message to send (required)" },
+        job_id: { type: "string", description: "Job UUID to link this message to (optional)" },
+      },
+      required: ["customer_id", "body"],
+    },
+  },
+  {
+    name: "get_customer_messages",
+    description:
+      "Get the SMS/email message history for a customer. Returns the last 50 messages in reverse chronological order.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        customer_id: { type: "string", description: "Customer UUID (required)" },
+      },
+      required: ["customer_id"],
+    },
+  },
 ];
