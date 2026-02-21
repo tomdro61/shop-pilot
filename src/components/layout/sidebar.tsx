@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, HardHat, BarChart3, MessageCircle, ClipboardCheck, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mainNav = [
@@ -13,9 +13,8 @@ const mainNav = [
 ];
 
 const secondaryNav = [
-  { href: "/team", label: "Team", icon: HardHat },
-  { href: "/presets", label: "Presets", icon: ClipboardList },
   { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/settings", label: "Settings", icon: Settings },
   { href: "/chat", label: "AI Assistant", icon: MessageCircle },
 ];
 
@@ -60,9 +59,11 @@ function NavItem({
   item: { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
   pathname: string;
 }) {
+  const settingsRoutes = ["/settings", "/team", "/presets"];
   const isActive =
     pathname === item.href ||
-    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+    (item.href !== "/dashboard" && pathname.startsWith(item.href)) ||
+    (item.href === "/settings" && settingsRoutes.some((r) => pathname.startsWith(r)));
 
   return (
     <Link

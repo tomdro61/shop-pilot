@@ -20,6 +20,8 @@ const pageTitles: Record<string, string> = {
   "/customers": "Customers",
   "/jobs": "Jobs",
   "/inspections": "Inspections",
+  "/settings": "Settings",
+  "/team": "Team",
   "/presets": "Job Presets",
   "/reports": "Reports",
   "/chat": "AI Assistant",
@@ -30,6 +32,8 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/customers")) return "Customers";
   if (pathname.startsWith("/jobs")) return "Jobs";
   if (pathname.startsWith("/inspections")) return "Inspections";
+  if (pathname.startsWith("/settings")) return "Settings";
+  if (pathname.startsWith("/team")) return "Team";
   if (pathname.startsWith("/presets")) return "Job Presets";
   if (pathname.startsWith("/reports")) return "Reports";
   if (pathname.startsWith("/chat")) return "AI Assistant";
