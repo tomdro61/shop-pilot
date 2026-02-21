@@ -323,3 +323,89 @@
 - Chat history is in-memory only — refreshing the page clears conversation
 - All 32 tool schemas are sent with every API call, which increases input token cost. Could optimize later by subsetting tools based on conversation context.
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 6 — 2026-02-21 — UI Refresh Phase 2 + Dashboard Expansion
+
+### What Was Completed
+
+**Dashboard overhaul with operational intelligence, revenue comparisons, and UI consistency fixes:**
+
+1. **Dashboard Restructured into Labeled Sections** — Replaced flat 5-column stat card grid with clearly separated sections, each with an uppercase section header label:
+   - **Quick Actions** — Full-width "New Job" button (removed New Inspection Day button)
+   - **Revenue** — This Week + This Month cards with week-over-week and month-over-month percentage comparisons (trend up/down icons)
+   - **Needs Attention** (conditional) — Unpaid Jobs, Outstanding A/R — only renders when counts > 0
+   - **Shop Floor** — Cars In Shop, Waiting for Parts, Unassigned Jobs
+
+2. **New Dashboard Data Queries** — Added to `getDashboardStats()`:
+   - Waiting for Parts count (`status = "waiting_for_parts"`)
+   - Unassigned Jobs count (`status = "not_started"` + `assigned_tech IS NULL`)
+   - Revenue This Month (completed jobs finished this month)
+   - Last Week Revenue (for week-over-week comparison)
+   - Last Month Revenue (for month-over-month comparison)
+   - Unpaid Jobs count (complete but not paid/waived)
+
+3. **Revenue Comparison Cards** — `RevenueCard` component shows:
+   - Current period revenue amount
+   - Percentage change vs prior period with TrendingUp/TrendingDown icon
+   - Green for positive, red for negative
+
+4. **Today's Schedule Section** — New `getTodaysSchedule()` function shows jobs received today:
+   - Customer name, vehicle, category
+   - Assigned tech name or "Unassigned" in red
+   - Status badge
+   - Empty state when no jobs scheduled
+
+5. **Removed from Dashboard:**
+   - Avg Ticket card (ambiguous time frame)
+   - Inspections Today card
+   - New Inspection Day button
+
+6. **Customer List Consistency** — Updated `customer-list.tsx` to match Team and Job History patterns:
+   - Added `CardHeader` with "Customers (count)" title and `border-b`
+   - Changed row padding from `px-4` to `px-5` (matches app-wide pattern)
+   - Added `className="block"` to `<Link>` elements (fixes `divide-y` row dividers not rendering)
+
+7. **UI Refresh (broader)** — Login page animations, auth layout ambient gradients, sidebar/header/bottom-nav refinements, card glow effects, globals.css design system updates
+
+### Files Modified (17)
+- `src/app/(dashboard)/dashboard/page.tsx` — Full dashboard restructure
+- `src/components/dashboard/customer-list.tsx` — CardHeader + padding + divider fix
+- `src/app/(auth)/layout.tsx` — Ambient gradient blobs
+- `src/app/(auth)/login/page.tsx` — Animation + styling refinements
+- `src/app/(dashboard)/customers/[id]/page.tsx` — Detail page styling
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — Detail page styling
+- `src/app/globals.css` — Design system variables, animations
+- `src/app/layout.tsx` — Root layout updates
+- `src/components/dashboard/job-card.tsx` — Card styling
+- `src/components/dashboard/jobs-board-view.tsx` — Board styling
+- `src/components/dashboard/jobs-list-view.tsx` — List view styling
+- `src/components/dashboard/jobs-toolbar.tsx` — Toolbar styling
+- `src/components/dashboard/kpi-card.tsx` — KPI card styling
+- `src/components/layout/bottom-nav.tsx` — Bottom nav refinements
+- `src/components/layout/header.tsx` — Header refinements
+- `src/components/layout/sidebar.tsx` — Sidebar refinements
+- `src/components/ui/card.tsx` — Card glow shadow
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+- Merged to master and pushed — Vercel auto-deploying
+
+### What's NOT Done Yet
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory, resets on page refresh)
+- [ ] SMS/email sending of estimate approval links (currently manual copy/paste)
+- [ ] Stripe live mode (currently sandbox/test mode)
+- [ ] Wix customer data import (1000+ contacts)
+- [ ] Quo SMS integration (pending Quo signup + number port from Wix)
+- [ ] Resend email integration
+
+### What's Next
+- Continue Phase 2 remaining: Resend email, Wix import, Stripe live mode
+- Or start Phase 4: vehicle service history, work orders, labor rates, inventory
+- Optional: voice input, chat persistence
+
+### Known Issues / Notes
+- Next.js 16 middleware deprecation warning persists — not blocking
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

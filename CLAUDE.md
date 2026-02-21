@@ -222,12 +222,14 @@ At the start of a new session, read `PROGRESS.md` first to pick up where we left
 **Phase 3: COMPLETE** — AI Assistant with Claude API, 32 tools, streaming chat UI
 **Session 4 additions:** Team management, tech assignment on jobs, reports date filtering + tech charts
 **Session 5 additions:** Full AI chat assistant (Phase 3)
+**Session 6 additions:** Dashboard operational intelligence (sectioned layout, revenue comparisons, shop floor stats, today's schedule), customer list consistency, UI refresh phase 2
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - Stripe invoicing + estimate builder with public approval page fully working (sandbox mode)
 - Reports enhanced with date range toolbar (presets + custom) and technician breakdown charts
 - AI Assistant: conversational chat at `/chat` with 32 tools covering all CRUD operations, streaming SSE, floating chat bubble on all pages
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
+- Dashboard: sectioned layout (Quick Actions → Revenue with week/month comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
