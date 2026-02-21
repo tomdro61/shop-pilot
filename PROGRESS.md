@@ -36,7 +36,7 @@
 ### What's Next — Phase 2: Payments & Communication
 - Stripe Invoicing integration (invoices table already has `stripe_invoice_id`)
 - Custom estimate builder with SMS approval link
-- OpenPhone SMS integration (messages table ready)
+- Quo (formerly OpenPhone) SMS integration (messages table ready — pending Quo signup + number port from Wix)
 - Resend email integration
 - Communication log per customer
 - Message templates
@@ -235,12 +235,12 @@
 - [ ] "Create Invoice" button flow (direct from job, without estimate) — code exists but untested
 - [ ] Stripe live mode (currently sandbox/test mode)
 - [ ] Wix customer data import (1000+ customers)
-- [ ] OpenPhone SMS integration
+- [ ] Quo SMS integration (pending Quo signup + number port from Wix)
 - [ ] Resend email integration
 
 ### What's Next
 - Phase 3: AI Assistant (Claude API with function calling)
-- Or continue Phase 2: OpenPhone SMS + Resend email integration
+- Or continue Phase 2: Quo SMS (pending signup + number port from Wix) + Resend email integration
 
 ### Known Issues / Notes
 - Next.js 16 middleware deprecation warning persists — not blocking

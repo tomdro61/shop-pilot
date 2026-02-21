@@ -19,7 +19,7 @@ ShopPilot is a custom shop management system for Broadway Motors, an independent
 | Backend/DB | Supabase (PostgreSQL) | Auth, database, real-time subscriptions, file storage, Row Level Security |
 | AI Assistant | Claude API (Anthropic) | Function calling / tool use for all CRUD and external operations |
 | Payments | Stripe | Payment links, invoicing, webhooks for auto-status updates. Terminal later. |
-| SMS | OpenPhone (Quo) API | Messages from the shop's real business number. Already in use. |
+| SMS | Quo (formerly OpenPhone) API | Currently using Wix for SMS. Transitioning to Quo — need to sign up and port shop number. |
 | Email | Resend | Transactional email for estimates, invoices, receipts |
 | Hosting | Vercel (free tier) | Auto-deploy from Git, edge functions, free SSL |
 | Parts (future) | Parts Tech API (TBD) | Needs API access investigation |
@@ -59,7 +59,7 @@ shop-pilot/
 │   │   └── api/                # API routes
 │   │       ├── ai/             # Claude API integration
 │   │       ├── stripe/         # Stripe webhooks + payment links
-│   │       ├── messaging/      # OpenPhone + Resend integrations
+│   │       ├── messaging/      # Quo (SMS) + Resend (email) integrations
 │   │       └── ...
 │   ├── components/             # Shared React components
 │   │   ├── ui/                 # Base UI components (shadcn/ui)
@@ -137,7 +137,7 @@ shop-pilot/
 - Stripe integration: create payment links from invoices, set up webhooks for auto-status updates
 - Estimate builder: itemized labor + parts, tax calculation, send to customer for digital approval
 - Invoice generation from completed jobs
-- OpenPhone (Quo) API integration for SMS from shop's real number
+- Quo (formerly OpenPhone) API integration for SMS from shop's real number (transitioning from Wix — requires Quo signup + number port)
 - Resend integration for transactional email
 - Communication log per customer (all SMS/email in one timeline)
 - Message templates (estimate ready, car ready, payment reminder)
@@ -180,7 +180,7 @@ shop-pilot/
 
 ### Must Address Before Building
 - **MA tax calculation:** Massachusetts auto repair may have specific tax rules (parts taxable, labor taxable or exempt?). Research before hardcoding tax logic. Consider a tax API if rules are complex.
-- **OpenPhone (Quo) API access:** Confirm API availability, rate limits, and webhook support for incoming messages. The shared inbox sync is critical.
+- **Quo (formerly OpenPhone) API access:** Shop currently uses Wix for SMS — transitioning to Quo. Need to sign up for Quo (Business plan or higher for API access), port the shop's existing number (1-4 weeks), and confirm API capabilities. Quo API supports sending SMS, receiving webhooks, and contact management. Rate limit: 10 req/sec. No MMS via API. SMS costs $0.01/segment (prepaid credits).
 - **Supabase free tier limits:** 500MB storage, 50K rows. Should be fine for a single shop initially but monitor usage. Plan for when/if we need to upgrade ($25/mo Pro plan).
 
 ### Architecture Decisions
@@ -193,12 +193,12 @@ shop-pilot/
 ### Things to Be Careful About
 - **Never expose Supabase service role key** to the client. Use anon key + RLS for client-side, service role only in API routes.
 - **Stripe webhook signature verification** — always verify webhook signatures to prevent spoofed events.
-- **Phone number formatting** — standardize to E.164 format on input for OpenPhone API compatibility.
+- **Phone number formatting** — standardize to E.164 format on input for Quo API compatibility.
 - **Optimistic UI** — for the Kanban board drag-and-drop, update UI immediately and reconcile with server. Supabase real-time can help here.
 
 ### Open Questions from PRD (Need Answers)
 1. Wave Apps vs. QuickBooks for accounting? (Wave is free, QuickBooks has better API)
-2. Keep Wix for public website or migrate that too?
+2. Keep Wix for public website or migrate that too? (Currently using Wix for SMS + website)
 3. Parts Tech API availability for independent shops?
 4. Stripe Terminal hardware preference? (Start with payment links, add terminal later)
 5. Should the AI assistant have its own phone number customers can text, or internal-only?
@@ -227,12 +227,12 @@ At the start of a new session, read `PROGRESS.md` first to pick up where we left
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
 **Remaining Phase 2 work:**
-- OpenPhone (Quo) SMS integration
+- Quo SMS integration (pending Quo signup + number port from Wix)
 - Resend transactional email
 - Communication log per customer
 - Message templates
 - Stripe live mode activation
-- Wix customer data import (1000+ contacts)
+- Wix customer data import/export (1000+ contacts)
 
 **Next phase:** Phase 3 — AI Assistant (Claude API with function calling)
 
