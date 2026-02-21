@@ -1,16 +1,18 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Wrench } from "lucide-react";
+import { LogOut, Wrench, Sun, Moon, Monitor } from "lucide-react";
 import type { User } from "@/types";
 
 const pageTitles: Record<string, string> = {
@@ -35,6 +37,7 @@ function getPageTitle(pathname: string): string {
 export function Header({ user }: { user: User | null }) {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
+  const { theme, setTheme } = useTheme();
 
   const initials = user?.name
     ? user.name
@@ -69,6 +72,26 @@ export function Header({ user }: { user: User | null }) {
               {user.name}
             </div>
           )}
+          <DropdownMenuSeparator />
+          <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Theme
+          </div>
+          <DropdownMenuItem onClick={() => setTheme("light")}>
+            <Sun className="mr-2 h-4 w-4" />
+            Light
+            {theme === "light" && <span className="ml-auto text-xs text-primary">✓</span>}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme("dark")}>
+            <Moon className="mr-2 h-4 w-4" />
+            Dark
+            {theme === "dark" && <span className="ml-auto text-xs text-primary">✓</span>}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setTheme("system")}>
+            <Monitor className="mr-2 h-4 w-4" />
+            System
+            {theme === "system" && <span className="ml-auto text-xs text-primary">✓</span>}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
             Sign out
