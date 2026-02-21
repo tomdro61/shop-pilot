@@ -113,3 +113,58 @@
 - Webhook initially failed with 307/405 due to middleware intercepting API routes — fixed by excluding `/api/` from middleware matcher
 - Stripe sandbox shows "Broadway Motor Service sandbox" branding on invoices — will show real name in live mode
 - `NEXT_PUBLIC_APP_URL` must match deployment environment (localhost for dev, Vercel URL for prod)
+
+---
+
+## Session 3 — 2026-02-20 — UI Visual Polish (Complete)
+
+### What Was Completed
+
+**Tightened spacing and visual hierarchy across the entire app (layout/spacing only, no functionality changes):**
+
+1. **Card Component (global)** — Reduced padding from `py-6 px-6` → `py-5 px-5`, gap from `gap-6` → `gap-4`, header gap `gap-2` → `gap-1.5`
+2. **Dark Mode Borders** — Bumped border opacity from 10% → 14%, input borders from 15% → 18% for sharper definition in `globals.css`
+3. **Dashboard** — Tighter grid gap (`gap-4` → `gap-3`), smaller stat card headers (`text-sm` → `text-xs`, icons `h-4` → `h-3.5`), added Recent Jobs section showing last 5 jobs
+4. **Job Detail Page** — All margins `mb-6` → `mb-4`, `mt-6` → `mt-4`, card section headers `text-sm` → `text-xs`
+5. **Customer Detail Page** — Margins `mb-6` → `mb-4`, section headers `text-lg` → `text-base`, icons `h-5` → `h-4`, job card padding `p-4` → `p-3`
+6. **Estimate Detail Page** — Margins `mb-6` → `mb-4`, gaps `gap-4` → `gap-3`, card headers `text-sm` → `text-xs`, `pb-2` → `pb-1`
+7. **Public Approval Page** — Spacing `space-y-6` → `space-y-4`, title `text-lg` → `text-base`, total `text-xl` → `text-lg`
+8. **Line Items Lists (job + estimate)** — Title `text-lg` → `text-base`, empty state padding `py-4` → `py-2`
+9. **Invoice & Estimate Section Cards** — Title `text-lg` → `text-base`, icons `h-5` → `h-4`
+10. **Vehicle Section** — Margins `mb-6` → `mb-4`, headers `text-lg` → `text-base`, icons `h-5` → `h-4`, card padding `p-4` → `p-3`
+11. **Empty State Component** — Padding `py-16` → `py-10`, icon `h-12` → `h-10`, title `text-lg` → `text-base`
+12. **Forms (line-item + estimate-line-item)** — Form spacing `mt-4 space-y-4` → `mt-3 space-y-3`
+
+### Files Modified (15)
+- `src/components/ui/card.tsx` — Global card padding/gap
+- `src/app/globals.css` — Dark mode border opacity
+- `src/app/(dashboard)/dashboard/page.tsx` — Dashboard layout + Recent Jobs
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — Job detail spacing
+- `src/app/(dashboard)/customers/[id]/page.tsx` — Customer detail spacing
+- `src/app/(dashboard)/estimates/[id]/page.tsx` — Estimate detail spacing
+- `src/app/estimates/approve/[token]/page.tsx` — Public approval spacing
+- `src/components/dashboard/line-items-list.tsx` — Line items title/empty state
+- `src/components/dashboard/estimate-line-items-list.tsx` — Estimate line items title/empty state
+- `src/components/dashboard/estimate-section.tsx` — Section card title/icon
+- `src/components/dashboard/invoice-section.tsx` — Section card title/icon
+- `src/components/dashboard/vehicle-section.tsx` — Vehicle section spacing
+- `src/components/dashboard/empty-state.tsx` — Empty state padding/sizing
+- `src/components/forms/line-item-form.tsx` — Form spacing
+- `src/components/forms/estimate-line-item-form.tsx` — Form spacing
+
+### What's NOT Done Yet
+- [ ] SMS/email sending of estimate approval links (currently manual copy/paste)
+- [ ] "Create Invoice" button flow (direct from job, without estimate) — code exists but untested
+- [ ] Stripe live mode (currently sandbox/test mode)
+- [ ] Wix customer data import (1000+ customers)
+
+### What's Next — Phase 3: AI Assistant
+- Claude API integration with function calling (tool use)
+- Define tool suite: customer lookup, job CRUD, estimate/invoice generation, messaging, status updates
+- Mobile-optimized chat interface
+- Voice input (Web Speech API or Whisper)
+- Confirmation step before financial actions
+
+### Known Issues / Notes
+- No functionality changes — layout and spacing only
+- Dark theme preserved, just sharper borders for better visual separation
