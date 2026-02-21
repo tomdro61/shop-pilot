@@ -34,7 +34,7 @@ export async function sendSMS({ to, body }: SendSMSParams): Promise<SendSMSResul
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.QUO_API_KEY}`,
+      Authorization: process.env.QUO_API_KEY!,
     },
     body: JSON.stringify({
       content: body,
