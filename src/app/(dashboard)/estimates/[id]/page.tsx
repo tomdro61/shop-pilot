@@ -64,7 +64,7 @@ export default async function EstimateDetailPage({
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-6">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4">
         {job && (
           <Link href={`/jobs/${job.id}`}>
             <Button variant="ghost" size="sm" className="mb-2">
@@ -91,11 +91,11 @@ export default async function EstimateDetailPage({
       </div>
 
       {/* Customer & Vehicle Info */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {customer && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <User className="h-4 w-4" />
                 Customer
               </CardTitle>
@@ -118,8 +118,8 @@ export default async function EstimateDetailPage({
 
         {vehicle && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <Car className="h-4 w-4" />
                 Vehicle
               </CardTitle>
@@ -147,7 +147,7 @@ export default async function EstimateDetailPage({
         </p>
       )}
 
-      <Separator className="mb-6" />
+      <Separator className="mb-4" />
 
       {/* Line Items */}
       <EstimateLineItemsList
@@ -157,7 +157,7 @@ export default async function EstimateDetailPage({
       />
 
       {/* Actions */}
-      <div className="mt-6">
+      <div className="mt-4">
         <EstimateActions
           estimateId={id}
           status={status}

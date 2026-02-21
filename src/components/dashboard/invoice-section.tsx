@@ -61,8 +61,8 @@ export function InvoiceSection({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <FileText className="h-5 w-5" />
+        <CardTitle className="flex items-center gap-2 text-base">
+          <FileText className="h-4 w-4" />
           Invoice
         </CardTitle>
         {status && statusColors && (

@@ -45,7 +45,7 @@ export default async function JobDetailPage({
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-6">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-4 flex items-start justify-between">
         <div>
           <h2 className="text-2xl font-bold">
             {job.category || "Job"}
@@ -69,11 +69,11 @@ export default async function JobDetailPage({
       </div>
 
       {/* Customer & Vehicle Info */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {customer && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <User className="h-4 w-4" />
                 Customer
               </CardTitle>
@@ -96,8 +96,8 @@ export default async function JobDetailPage({
 
         {vehicle && (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-1">
+              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <Car className="h-4 w-4" />
                 Vehicle
               </CardTitle>
@@ -117,9 +117,9 @@ export default async function JobDetailPage({
       {/* Notes */}
       {job.notes && (
         <>
-          <Card className="mb-6">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card className="mb-4">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 Notes
               </CardTitle>
             </CardHeader>
@@ -130,18 +130,18 @@ export default async function JobDetailPage({
         </>
       )}
 
-      <Separator className="mb-6" />
+      <Separator className="mb-4" />
 
       {/* Line Items */}
       <LineItemsList jobId={id} lineItems={lineItems} />
 
       {/* Estimate */}
-      <div className="mt-6">
+      <div className="mt-4">
         <EstimateSection jobId={id} estimate={estimate} />
       </div>
 
       {/* Invoice */}
-      <div className="mt-6">
+      <div className="mt-4">
         <InvoiceSection
           jobId={id}
           jobStatus={job.status as JobStatus}

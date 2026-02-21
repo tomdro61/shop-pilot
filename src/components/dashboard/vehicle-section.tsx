@@ -31,10 +31,10 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
   }
 
   return (
-    <div className="mb-6">
+    <div className="mb-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-lg font-semibold">
-          <Car className="h-5 w-5" />
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          <Car className="h-4 w-4" />
           Vehicles ({vehicles.length})
         </h3>
         <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
@@ -47,7 +47,7 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
         <div className="space-y-2">
           {vehicles.map((vehicle) => (
             <Card key={vehicle.id}>
-              <CardContent className="flex items-center justify-between p-4">
+              <CardContent className="flex items-center justify-between p-3">
                 <div>
                   <p className="font-medium">{formatVehicle(vehicle)}</p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">

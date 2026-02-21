@@ -52,7 +52,7 @@ export default async function CustomerDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-6">
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-4 flex items-start justify-between">
         <div>
           <h2 className="text-2xl font-bold">
             {customer.first_name} {customer.last_name}
@@ -75,22 +75,22 @@ export default async function CustomerDetailPage({
       </div>
 
       {customer.notes && (
-        <Card className="mb-6">
+        <Card className="mb-4">
           <CardContent className="p-4 text-sm">{customer.notes}</CardContent>
         </Card>
       )}
 
-      <Separator className="mb-6" />
+      <Separator className="mb-4" />
 
       <VehicleSection customerId={id} vehicles={vehicles} />
 
-      <Separator className="mb-6" />
+      <Separator className="mb-4" />
 
       {/* Job History */}
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="flex items-center gap-2 text-lg font-semibold">
-            <Wrench className="h-5 w-5" />
+          <h3 className="flex items-center gap-2 text-base font-semibold">
+            <Wrench className="h-4 w-4" />
             Jobs ({jobs.length})
           </h3>
           <Link href={`/jobs/new?customerId=${id}`}>
@@ -108,8 +108,8 @@ export default async function CustomerDetailPage({
               const colors = JOB_STATUS_COLORS[status];
               return (
                 <Link key={job.id} href={`/jobs/${job.id}`}>
-                  <Card className="transition-colors hover:bg-accent">
-                    <CardContent className="flex items-center justify-between p-4">
+                  <Card className="py-0 transition-colors hover:bg-accent">
+                    <CardContent className="flex items-center justify-between p-3">
                       <div>
                         <div className="flex items-center gap-2">
                           <Badge

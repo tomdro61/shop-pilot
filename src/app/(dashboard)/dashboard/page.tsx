@@ -1,7 +1,12 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Users, Wrench, Calendar, DollarSign } from "lucide-react";
 import { startOfWeek, endOfWeek } from "date-fns";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/lib/constants";
+import { formatVehicle } from "@/lib/utils/format";
+import type { JobStatus } from "@/types";
 
 export const metadata = {
   title: "Dashboard | ShopPilot",
@@ -50,8 +55,21 @@ async function getDashboardStats() {
   };
 }
 
+async function getRecentJobs() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("jobs")
+    .select("id, status, category, date_received, customers(first_name, last_name), vehicles(year, make, model)")
+    .order("date_received", { ascending: false })
+    .limit(5);
+  return data || [];
+}
+
 export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  const [stats, recentJobs] = await Promise.all([
+    getDashboardStats(),
+    getRecentJobs(),
+  ]);
 
   const cards = [
     {
@@ -77,21 +95,83 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="p-4 lg:p-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="mx-auto max-w-4xl p-4 lg:p-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {cards.map((card) => (
           <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
                 {card.title}
               </CardTitle>
-              <card.icon className="h-4 w-4 text-muted-foreground" />
+              <card.icon className="h-3.5 w-3.5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{card.value}</div>
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Recent Jobs */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base font-semibold">Recent Jobs</CardTitle>
+            <Link href="/jobs" className="text-sm text-muted-foreground hover:text-foreground">
+              View all
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {recentJobs.length === 0 ? (
+              <p className="py-3 text-center text-sm text-muted-foreground">
+                No jobs yet
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {recentJobs.map((job) => {
+                  const status = job.status as JobStatus;
+                  const colors = JOB_STATUS_COLORS[status];
+                  const customer = job.customers as { first_name: string; last_name: string } | null;
+                  const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+                  return (
+                    <Link key={job.id} href={`/jobs/${job.id}`}>
+                      <div className="flex items-center justify-between rounded-md px-2 py-2.5 transition-colors hover:bg-accent">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                            </span>
+                            {job.category && (
+                              <span className="text-xs text-muted-foreground">
+                                {job.category}
+                              </span>
+                            )}
+                          </div>
+                          {vehicle && (
+                            <p className="text-xs text-muted-foreground">
+                              {formatVehicle(vehicle)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(job.date_received).toLocaleDateString()}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${colors.bg} ${colors.text} ${colors.border}`}
+                          >
+                            {JOB_STATUS_LABELS[status]}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

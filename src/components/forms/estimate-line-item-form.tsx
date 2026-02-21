@@ -111,7 +111,7 @@ export function EstimateLineItemForm({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="mt-4 space-y-4"
+            className="mt-3 space-y-3"
           >
             <input type="hidden" {...form.register("estimate_id")} />
 

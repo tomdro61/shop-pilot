@@ -59,7 +59,7 @@ export default async function EstimateApprovalPage({
   const grandTotal = laborTotal + partsTotal + taxAmount;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold">Estimate</h2>
@@ -88,7 +88,7 @@ export default async function EstimateApprovalPage({
       {/* Line Items */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Details</CardTitle>
+          <CardTitle className="text-base">Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {laborItems.length > 0 && (
@@ -155,7 +155,7 @@ export default async function EstimateApprovalPage({
                 {formatCurrency(taxAmount)}
               </p>
             )}
-            <p className="text-xl font-bold">
+            <p className="text-lg font-bold">
               Total: {formatCurrency(grandTotal)}
             </p>
           </div>

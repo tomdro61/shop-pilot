@@ -100,7 +100,7 @@ export function EstimateLineItemsList({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-lg">Line Items</CardTitle>
+        <CardTitle className="text-base">Line Items</CardTitle>
         {!readOnly && (
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -110,7 +110,7 @@ export function EstimateLineItemsList({
       </CardHeader>
       <CardContent className="space-y-4">
         {lineItems.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
+          <p className="py-2 text-center text-sm text-muted-foreground">
             No line items yet. Add labor or parts.
           </p>
         ) : (
