@@ -3,10 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Calendar, DollarSign, AlertTriangle, Plus, ArrowRight, Clock, UserX, TrendingUp, TrendingDown } from "lucide-react";
+import { Car, Calendar, DollarSign, AlertTriangle, Plus, ArrowRight, Clock, UserX, TrendingUp, TrendingDown, Wrench, Package, PiggyBank } from "lucide-react";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from "date-fns";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/constants";
 import { formatVehicle, formatCurrency } from "@/lib/utils/format";
+import { getDailyRevenueSparkline, getRevenueBreakdown, getStaleJobsCount } from "@/lib/actions/reports";
+import { RevenueSparklineCard } from "@/components/dashboard/revenue-sparkline-card";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -30,6 +32,11 @@ async function getDashboardStats() {
   const lastMonthStart = startOfMonth(lastMonthDate).toISOString().split("T")[0];
   const lastMonthEnd = endOfMonth(lastMonthDate).toISOString().split("T")[0];
 
+  const yearStart = `${now.getFullYear()}-01-01`;
+  const yearEnd = `${now.getFullYear()}-12-31`;
+  const lastYearStart = `${now.getFullYear() - 1}-01-01`;
+  const lastYearEnd = `${now.getFullYear() - 1}-12-31`;
+
   const [
     carsInShopResult,
     waitingForPartsResult,
@@ -38,6 +45,8 @@ async function getDashboardStats() {
     lastWeekRevenueResult,
     monthlyRevenueResult,
     lastMonthRevenueResult,
+    yearlyRevenueResult,
+    lastYearRevenueResult,
     unpaidJobsResult,
     fleetARResult,
   ] = await Promise.all([
@@ -78,6 +87,18 @@ async function getDashboardStats() {
       .eq("status", "complete")
       .gte("date_finished", lastMonthStart)
       .lte("date_finished", lastMonthEnd),
+    supabase
+      .from("jobs")
+      .select("id, job_line_items(total)")
+      .eq("status", "complete")
+      .gte("date_finished", yearStart)
+      .lte("date_finished", yearEnd),
+    supabase
+      .from("jobs")
+      .select("id, job_line_items(total)")
+      .eq("status", "complete")
+      .gte("date_finished", lastYearStart)
+      .lte("date_finished", lastYearEnd),
     supabase
       .from("jobs")
       .select("id", { count: "exact", head: true })
@@ -129,6 +150,24 @@ async function getDashboardStats() {
       return sum + (jobTotal || 0);
     }, 0) || 0;
 
+  const yearlyRevenue =
+    yearlyRevenueResult.data?.reduce((sum, job) => {
+      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+        (s, li) => s + (li.total || 0),
+        0
+      );
+      return sum + (jobTotal || 0);
+    }, 0) || 0;
+
+  const lastYearRevenue =
+    lastYearRevenueResult.data?.reduce((sum, job) => {
+      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+        (s, li) => s + (li.total || 0),
+        0
+      );
+      return sum + (jobTotal || 0);
+    }, 0) || 0;
+
   const outstandingAR =
     fleetARResult.data?.reduce((sum, job) => {
       const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
@@ -146,6 +185,8 @@ async function getDashboardStats() {
     lastWeekRevenue,
     monthlyRevenue,
     lastMonthRevenue,
+    yearlyRevenue,
+    lastYearRevenue,
     unpaidJobs: unpaidJobsResult.count || 0,
     outstandingAR,
   };
@@ -265,13 +306,18 @@ function StatCard({
 }
 
 export default async function DashboardPage() {
-  const [stats, todaysSchedule, recentJobs] = await Promise.all([
+  const [stats, todaysSchedule, recentJobs, weekSparkline, monthSparkline, yearSparkline, revenueBreakdown, staleJobs] = await Promise.all([
     getDashboardStats(),
     getTodaysSchedule(),
     getRecentJobs(),
+    getDailyRevenueSparkline(7),
+    getDailyRevenueSparkline(30),
+    getDailyRevenueSparkline(365),
+    getRevenueBreakdown(),
+    getStaleJobsCount(),
   ]);
 
-  const hasAlerts = stats.unpaidJobs > 0 || stats.outstandingAR > 0;
+  const hasAlerts = stats.unpaidJobs > 0 || stats.outstandingAR > 0 || staleJobs > 0;
 
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-6 space-y-6">
@@ -295,9 +341,27 @@ export default async function DashboardPage() {
       {/* ── Revenue ── */}
       <section className="animate-in-up stagger-2">
         <SectionHeader label="Revenue" />
-        <div className="grid grid-cols-2 gap-3">
-          <RevenueCard label="This Week" value={stats.weeklyRevenue} previous={stats.lastWeekRevenue} previousLabel="vs last week" />
-          <RevenueCard label="This Month" value={stats.monthlyRevenue} previous={stats.lastMonthRevenue} previousLabel="vs last month" />
+        <div className="grid grid-cols-3 gap-3">
+          <RevenueSparklineCard label="This Week" value={stats.weeklyRevenue} previous={stats.lastWeekRevenue} previousLabel="vs last week" sparklineData={weekSparkline} />
+          <RevenueSparklineCard label="This Month" value={stats.monthlyRevenue} previous={stats.lastMonthRevenue} previousLabel="vs last month" sparklineData={monthSparkline} />
+          <RevenueSparklineCard label="This Year" value={stats.yearlyRevenue} previous={stats.lastYearRevenue} previousLabel="vs last year" sparklineData={yearSparkline} />
+        </div>
+      </section>
+
+      {/* ── Revenue Breakdown ── */}
+      <section className="animate-in-up stagger-2">
+        <SectionHeader label="Revenue Breakdown — This Month" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="Revenue" value={formatCurrency(revenueBreakdown.totalRevenue)} color="emerald" icon={DollarSign} />
+          <StatCard label="Labor" value={formatCurrency(revenueBreakdown.laborRevenue)} color="blue" icon={Wrench} />
+          <StatCard label="Parts" value={formatCurrency(revenueBreakdown.partsRevenue)} color="violet" icon={Package} />
+          <StatCard
+            label="Est. Gross Profit"
+            value={formatCurrency(revenueBreakdown.estimatedGrossProfit)}
+            subtitle="Assumes 40% parts margin"
+            color="emerald"
+            icon={PiggyBank}
+          />
         </div>
       </section>
 
@@ -306,8 +370,11 @@ export default async function DashboardPage() {
         <section className="animate-in-up stagger-3">
           <SectionHeader label="Needs Attention" />
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            {staleJobs > 0 && (
+              <StatCard label="Stale Jobs" value={staleJobs} subtitle="Open > 2 days" color="amber" icon={Clock} />
+            )}
             {stats.unpaidJobs > 0 && (
-              <StatCard label="Unpaid Jobs" value={stats.unpaidJobs} color="red" icon={AlertTriangle} />
+              <StatCard label="Unpaid Jobs" value={stats.unpaidJobs} subtitle="Complete but unpaid" color="red" icon={AlertTriangle} />
             )}
             {stats.outstandingAR > 0 && (
               <StatCard label="Outstanding A/R" value={formatCurrency(stats.outstandingAR)} color="red" icon={AlertTriangle} />

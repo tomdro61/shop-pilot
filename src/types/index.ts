@@ -17,6 +17,18 @@ export type JobLineItem = Database["public"]["Tables"]["job_line_items"]["Row"];
 export type JobLineItemInsert = Database["public"]["Tables"]["job_line_items"]["Insert"];
 export type JobLineItemUpdate = Database["public"]["Tables"]["job_line_items"]["Update"];
 
+export type JobPreset = Database["public"]["Tables"]["job_presets"]["Row"];
+export type JobPresetInsert = Database["public"]["Tables"]["job_presets"]["Insert"];
+export type JobPresetUpdate = Database["public"]["Tables"]["job_presets"]["Update"];
+
+export type PresetLineItem = {
+  type: "labor" | "part";
+  description: string;
+  quantity: number;
+  unit_cost: number;
+  part_number?: string;
+};
+
 export type Estimate = Database["public"]["Tables"]["estimates"]["Row"];
 export type EstimateInsert = Database["public"]["Tables"]["estimates"]["Insert"];
 export type EstimateUpdate = Database["public"]["Tables"]["estimates"]["Update"];

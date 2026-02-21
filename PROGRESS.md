@@ -409,3 +409,191 @@
 ### Known Issues / Notes
 - Next.js 16 middleware deprecation warning persists — not blocking
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 8 — 2026-02-21 — Job Presets + Dashboard Enhancements + Job Form Redesign
+
+### What Was Completed
+
+**Job Presets/Templates feature — reusable templates for common job types with pre-filled line items:**
+
+1. **Database Migration** (`supabase/migrations/20250221000000_job_presets.sql`) — New `job_presets` table with JSONB `line_items` column, RLS policy, `updated_at` trigger, and 6 seed presets (Oil Change, Brake Service, Tire Rotation, State Inspection, Battery Replacement, Diagnostic)
+2. **TypeScript Types** — Added `job_presets` Row/Insert/Update types to `supabase.ts`, convenience aliases (`JobPreset`, `JobPresetInsert`, `JobPresetUpdate`, `PresetLineItem`) to `types/index.ts`
+3. **Server Actions** (`src/lib/actions/presets.ts`) — `getPresets()`, `getPreset()`, `createPreset()`, `updatePreset()`, `deletePreset()`, `applyPresetToJob()` (bulk-inserts preset line items into `job_line_items`)
+4. **Preset Management Page** (`/presets`) — Card-based list with name, category badge, line item summary, total. Full CRUD with Sheet-based form for create/edit (inline line item editor with add/remove rows)
+5. **Sidebar + Header Nav** — Added "Presets" with ClipboardList icon to secondary nav (between Team and Reports), added page title to header
+6. **Job Form Preset Integration** — New job form shows preset chips at top; selecting one auto-fills category and stores preset ID; on submit, `applyPresetToJob()` bulk-inserts line items; user lands on job detail page with line items pre-populated
+
+**Job Form Redesign — restructured into 3-section card layout:**
+
+7. **Preset Card** (dashed border, new jobs only) — "Start from a preset" header with helper text, chips with reduced contrast on unselected, "Clear" button
+8. **Section 1: Customer & Vehicle** — Customer selector full width with "+ New Customer" link, Vehicle disabled with "Select customer first" placeholder until customer selected
+9. **Section 2: Job Details** — 2-column responsive grid: Category | Status | Assigned Tech | Date Received
+10. **Section 3: Payment & Notes** — 2-column grid: Payment Status | Payment Method | Mileage In | Notes (full width)
+11. **SectionHeader component** — Consistent title + description for each card section
+
+**Dashboard + Reports Enhancements:**
+
+12. **Yearly Revenue** — Dashboard now shows Year-to-Date revenue with year-over-year comparison
+13. **Revenue Sparkline Card** (`revenue-sparkline-card.tsx`) — New component for dashboard
+14. **Revenue Breakdown on Reports** — New KPI row: Total Revenue, Labor, Parts, Est. Gross Profit (assumes 40% parts margin)
+15. **Inspection Count on Reports** — Replaced duplicate Revenue KPI with Inspections count for the selected period
+16. **Job Payment Footer** (`job-payment-footer.tsx`) — Sticky footer on job detail page showing payment status + actions
+17. **KPI Card subtitle** — Added optional `subtitle` prop to KpiCard component
+18. **Primary Color Hue Shift** — Adjusted oklch hue from 255→240 (light) and 250→238 (dark) for slightly warmer blue
+
+### New Files (6)
+- `supabase/migrations/20250221000000_job_presets.sql`
+- `src/lib/actions/presets.ts`
+- `src/app/(dashboard)/presets/page.tsx`
+- `src/components/dashboard/preset-list.tsx`
+- `src/components/forms/preset-form.tsx`
+- `src/components/dashboard/job-payment-footer.tsx`
+- `src/components/dashboard/revenue-sparkline-card.tsx`
+
+### Modified Files (12)
+- `src/types/supabase.ts` — job_presets table types
+- `src/types/index.ts` — JobPreset + PresetLineItem type aliases
+- `src/components/forms/job-form.tsx` — Full redesign: 3-section card layout + preset integration
+- `src/app/(dashboard)/jobs/new/page.tsx` — Fetches presets, passes to JobForm
+- `src/components/layout/sidebar.tsx` — Presets nav item
+- `src/components/layout/header.tsx` — Presets page title
+- `src/app/(dashboard)/dashboard/page.tsx` — Yearly revenue, sparkline card
+- `src/app/(dashboard)/reports/page.tsx` — Revenue breakdown + inspection count
+- `src/lib/actions/reports.ts` — getRevenueBreakdown, getInspectionCount, getDailyRevenueSparkline
+- `src/components/dashboard/kpi-card.tsx` — subtitle prop
+- `src/components/dashboard/line-items-list.tsx` — Minor text update
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — Job payment footer integration
+- `src/app/globals.css` — Primary color hue adjustment
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Port Broadway Motors' real phone number to Quo
+- [ ] Resend transactional email integration
+- [ ] Message templates (estimate ready, car ready, payment reminder)
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory, resets on page refresh)
+- [ ] Stripe live mode (currently sandbox/test mode)
+- [ ] Wix customer data import (1000+ contacts)
+
+### What's Next
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Resend email integration
+- Optional: voice input, chat persistence
+
+### Known Issues / Notes
+- Job presets table must be created manually in Supabase SQL Editor (migration file provided, not auto-pushed)
+- Next.js 16 middleware deprecation warning persists — not blocking
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 7 — 2026-02-21 — Quo SMS Integration + AI Chat Fixes
+
+### What Was Completed
+
+**Full SMS infrastructure with Quo API integration, AI tool context preservation, and customer search fix:**
+
+1. **Quo SMS Client** (`src/lib/quo/client.ts`) — API client with automatic test/live mode toggle
+   - `isQuoConfigured()` — checks if `QUO_API_KEY` env var is set
+   - `sendSMS({ to, body })` — calls Quo API in live mode, logs to console in test mode
+   - Auth format: raw API key in Authorization header (Quo does NOT use Bearer tokens)
+   - Debug logging for env var detection and API responses
+
+2. **E.164 Phone Formatting** (`src/lib/quo/format.ts`) — `toE164()` normalizes US phone numbers
+   - Handles 10-digit, 11-digit with leading 1, already E.164 format
+   - Returns null for invalid numbers
+
+3. **Message Server Actions** (`src/lib/actions/messages.ts`)
+   - `sendCustomerSMS({ customerId, body, jobId? })` — looks up customer phone, validates E.164, sends via Quo, logs to `messages` table
+   - `getCustomerMessages(customerId)` — returns last 50 messages for a customer
+   - `getMessagesForJob(jobId)` — returns messages linked to a job
+   - `logInboundSMS({ customerPhone, body })` — matches phone to customer, logs inbound message (used by webhook)
+
+4. **Inbound SMS Webhook** (`src/app/api/messaging/quo/webhooks/route.ts`)
+   - Handles `message.received` events from Quo
+   - Optional `QUO_WEBHOOK_SECRET` signature verification
+   - Follows pattern from Stripe webhook handler
+
+5. **AI SMS Tools** — Two new tools added (now 34 total)
+   - `send_sms` — sends SMS to customer (confirmation required per existing pattern)
+   - `get_customer_messages` — retrieves message history for a customer
+   - Handlers in `handlers.ts` dispatch to message server actions
+
+6. **AI System Prompt Updated** — Added SMS messaging section explaining capability, test mode behavior, and added `send_sms` to confirmation-required list
+
+7. **Estimate SMS Auto-Send** (`src/lib/actions/estimates.ts`) — `sendEstimate()` now auto-texts the customer the approval link: "Hi {name}, your estimate from Broadway Motors is ready. View and approve here: {url}" — fire-and-forget
+
+8. **Invoice SMS Auto-Send** (`src/lib/actions/invoices.ts`) — `createInvoiceFromJob()` now auto-texts the customer the Stripe payment link: "Hi {name}, your invoice from Broadway Motors is ready. Pay here: {url}" — fire-and-forget
+
+9. **Customer Search Fix** (`src/lib/actions/customers.ts`) — Multi-word search now works correctly
+   - Previously "Thomas DiGregorio" matched neither `first_name` nor `last_name` since each field only contains one word
+   - Now splits multi-word queries: first word → `first_name`, last word → `last_name`
+
+10. **AI Chat Context Preservation** — Fixed tool call results being lost between conversation turns
+    - **Root cause:** Client only sent `{ role, content }` to API, stripping all `tool_use` and `tool_result` blocks. When user confirmed an action, the AI had to re-search because it lost the customer ID from the prior turn.
+    - **Fix:** Server now sends full Anthropic conversation state (including tool blocks) back to client via `conversation_state` SSE event. Client stores it in a ref and sends it back on the next request.
+    - Files modified: `types.ts` (new ApiMessage types), `sse.ts` (new event parser), `use-chat.ts` (conversationStateRef), `route.ts` (send/receive state)
+
+### New Files (4)
+- `src/lib/quo/client.ts` — Quo API client with test mode
+- `src/lib/quo/format.ts` — E.164 phone normalization
+- `src/lib/actions/messages.ts` — Message server actions
+- `src/app/api/messaging/quo/webhooks/route.ts` — Inbound SMS webhook
+
+### Modified Files (10)
+- `src/lib/ai/tools.ts` — Added send_sms + get_customer_messages (34 tools)
+- `src/lib/ai/handlers.ts` — Added messaging tool dispatch
+- `src/lib/ai/system-prompt.ts` — Added SMS section + confirmation rule
+- `src/lib/ai/types.ts` — Added ApiMessage types + conversation_state SSE event
+- `src/lib/ai/sse.ts` — Added conversation_state event parser
+- `src/lib/ai/use-chat.ts` — Added conversationStateRef for context preservation
+- `src/app/api/ai/chat/route.ts` — Accepts/returns conversation state
+- `src/lib/actions/estimates.ts` — Auto-SMS on estimate send
+- `src/lib/actions/invoices.ts` — Auto-SMS on invoice creation
+- `src/lib/actions/customers.ts` — Multi-word search fix
+
+### Environment Variables Added
+- `QUO_API_KEY` — Quo API key (empty = test mode, set = live mode)
+- `QUO_PHONE_NUMBER` — Shop's E.164 number (e.g. +19786849254)
+- `QUO_WEBHOOK_SECRET` — Optional webhook signature verification
+
+### Quo Account Setup (Broadway Motors)
+- Quo account created, test number assigned: (978) 684-9254
+- API key generated ("broadwaymotors1")
+- Webhook configured: `https://shop-pilot-rosy.vercel.app/api/messaging/quo/webhooks` with event type `message.received`
+- **Blocker:** A2P registration required before SMS delivery — requires paid Quo plan + EIN. Located at Quo → Settings → Trust center → Local numbers registration ($19.50 one-time + $1.50/month)
+- **Plan:** Don't register test number — wait until Broadway Motors' real number is ported, then register that one
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+- Multiple deploys to Vercel via `git push origin master`
+
+### What's NOT Done Yet
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Port Broadway Motors' real phone number to Quo
+- [ ] Resend transactional email integration
+- [ ] Message templates (estimate ready, car ready, payment reminder)
+- [ ] Messages UI page (AI chat is primary interface; dedicated page later)
+- [ ] Customer message timeline on detail page
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory, resets on page refresh)
+- [ ] Stripe live mode (currently sandbox/test mode)
+- [ ] Wix customer data import (1000+ contacts)
+
+### What's Next
+- Port Broadway Motors' number to Quo, upgrade to paid plan, complete A2P registration
+- Resend email integration (same `messages` table architecture)
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Optional: voice input, chat persistence, Sonnet model upgrade
+
+### Known Issues / Notes
+- SMS is fully wired end-to-end but won't deliver until A2P registration is complete on Quo
+- Test mode still works — messages are logged to database, just not delivered to phone
+- Quo auth uses raw API key (NOT Bearer token) — documented in their API docs
+- Next.js 16 middleware deprecation warning persists — not blocking
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

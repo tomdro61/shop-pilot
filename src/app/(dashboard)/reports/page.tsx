@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getReportData, getFleetARSummary, getServiceProfitability } from "@/lib/actions/reports";
+import { getReportData, getFleetARSummary, getServiceProfitability, getRevenueBreakdown, getInspectionCount } from "@/lib/actions/reports";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -18,7 +18,7 @@ export default async function ReportsPage({
 }) {
   const { range, from, to } = await searchParams;
   const resolved = resolveDateRange(range, from, to);
-  const [data, fleetAR, profitability] = await Promise.all([
+  const [data, fleetAR, profitability, breakdown, inspectionCount] = await Promise.all([
     getReportData({
       from: resolved.from,
       to: resolved.to,
@@ -26,6 +26,8 @@ export default async function ReportsPage({
     }),
     getFleetARSummary(),
     getServiceProfitability(resolved.from, resolved.to),
+    getRevenueBreakdown(resolved.from, resolved.to),
+    getInspectionCount(resolved.from, resolved.to),
   ]);
 
   const jobsChartData = data.jobsByCategory.map((d) => ({
@@ -56,6 +58,14 @@ export default async function ReportsPage({
         </Suspense>
       </div>
 
+      {/* Revenue Breakdown */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <KpiCard title={`Revenue (${resolved.label})`} value={formatCurrency(breakdown.totalRevenue)} />
+        <KpiCard title="Labor" value={formatCurrency(breakdown.laborRevenue)} />
+        <KpiCard title="Parts" value={formatCurrency(breakdown.partsRevenue)} />
+        <KpiCard title="Est. Gross Profit" value={formatCurrency(breakdown.estimatedGrossProfit)} subtitle="Assumes 40% parts margin" />
+      </div>
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
           title={`Jobs (${resolved.label})`}
@@ -66,12 +76,8 @@ export default async function ReportsPage({
           }
         />
         <KpiCard
-          title={`Revenue (${resolved.label})`}
-          value={formatCurrency(data.revenueCurrent)}
-          currentValue={data.isAllTime ? undefined : data.revenueCurrent}
-          previousValue={
-            data.isAllTime ? undefined : (data.revenuePrior ?? undefined)
-          }
+          title={`Inspections (${resolved.label})`}
+          value={inspectionCount.toString()}
         />
         <KpiCard
           title="Avg Ticket Size"

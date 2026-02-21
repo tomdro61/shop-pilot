@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { jobSchema, type JobFormData } from "@/lib/validators/job";
 import { createJob, updateJob } from "@/lib/actions/jobs";
+import { applyPresetToJob } from "@/lib/actions/presets";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -41,10 +44,10 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER, DEFAULT_JOB_CATEGORIES, PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
-import { formatCustomerName } from "@/lib/utils/format";
+import { formatCustomerName, formatCurrency } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown } from "lucide-react";
-import type { Customer, Vehicle, Job, JobStatus, PaymentStatus, PaymentMethod } from "@/types";
+import { Check, ChevronsUpDown, X, Plus } from "lucide-react";
+import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, JobStatus, PaymentStatus, PaymentMethod } from "@/types";
 
 interface JobFormProps {
   job?: Job & {
@@ -53,13 +56,25 @@ interface JobFormProps {
   };
   defaultCustomerId?: string;
   categories: string[];
+  presets?: JobPreset[];
 }
 
 type CustomerOption = { id: string; first_name: string; last_name: string; phone: string | null };
 type VehicleOption = { id: string; year: number | null; make: string | null; model: string | null };
 type TechOption = { id: string; name: string };
 
-export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
+function SectionHeader({ title, description }: { title: string; description?: string }) {
+  return (
+    <div className="mb-3">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      {description && (
+        <p className="text-xs text-muted-foreground">{description}</p>
+      )}
+    </div>
+  );
+}
+
+export function JobForm({ job, defaultCustomerId, categories, presets }: JobFormProps) {
   const router = useRouter();
   const isEditing = !!job;
 
@@ -71,6 +86,7 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [technicians, setTechnicians] = useState<TechOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -145,6 +161,17 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
     loadTechnicians();
   }, []);
 
+  function handlePresetSelect(preset: JobPreset) {
+    if (selectedPresetId === preset.id) {
+      setSelectedPresetId(null);
+      return;
+    }
+    setSelectedPresetId(preset.id);
+    if (preset.category) {
+      form.setValue("category", preset.category);
+    }
+  }
+
   async function onSubmit(data: JobFormData) {
     const result = isEditing
       ? await updateJob(job.id, data)
@@ -157,6 +184,13 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
         toast.error("Please fix the form errors");
       }
       return;
+    }
+
+    if (!isEditing && "data" in result && result.data && selectedPresetId) {
+      const presetResult = await applyPresetToJob(result.data.id, selectedPresetId);
+      if ("error" in presetResult && presetResult.error) {
+        toast.error(`Job created but failed to apply preset: ${presetResult.error}`);
+      }
     }
 
     toast.success(isEditing ? "Job updated" : "Job created");
@@ -172,354 +206,460 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {/* Customer Selection */}
-        <FormField
-          control={form.control}
-          name="customer_id"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Customer</FormLabel>
-              <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      role="combobox"
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+        {/* ── Preset (Step 0) ── */}
+        {!isEditing && presets && presets.length > 0 && (
+          <Card className="border-dashed">
+            <CardContent className="pt-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-semibold">Start from a preset</h3>
+                  <p className="text-xs text-muted-foreground">Pre-fills category and line items</p>
+                </div>
+                {selectedPresetId && (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setSelectedPresetId(null)}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {presets.map((preset) => {
+                  const isSelected = selectedPresetId === preset.id;
+                  const items = preset.line_items as PresetLineItem[];
+                  const total = items.reduce(
+                    (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
+                    0
+                  );
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handlePresetSelect(preset)}
                       className={cn(
-                        "w-full justify-between",
-                        !field.value && "text-muted-foreground"
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all",
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-medium shadow-sm"
+                          : "border-border text-muted-foreground/70 hover:border-border hover:bg-accent hover:text-foreground"
                       )}
                     >
-                      {selectedCustomer
-                        ? formatCustomerName(selectedCustomer)
-                        : "Select customer..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command shouldFilter={false}>
-                    <CommandInput
-                      placeholder="Search by name or phone..."
-                      value={customerSearch}
-                      onValueChange={setCustomerSearch}
-                    />
-                    <CommandList>
-                      <CommandEmpty>No customers found.</CommandEmpty>
-                      <CommandGroup>
-                        {customers.map((customer) => (
-                          <CommandItem
-                            key={customer.id}
-                            value={customer.id}
-                            onSelect={() => {
-                              field.onChange(customer.id);
-                              form.setValue("vehicle_id", undefined);
-                              setCustomerOpen(false);
-                            }}
+                      {preset.name}
+                      <span className={cn("text-xs", isSelected ? "opacity-80" : "opacity-50")}>
+                        {formatCurrency(total)}
+                      </span>
+                      {isSelected && <X className="h-3 w-3" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Section 1: Customer & Vehicle ── */}
+        <Card>
+          <CardContent className="pt-5">
+            <SectionHeader
+              title="Customer & Vehicle"
+              description="Who's the job for?"
+            />
+
+            <div className="space-y-4">
+              {/* Customer — full width, prominent */}
+              <FormField
+                control={form.control}
+                name="customer_id"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Customer</FormLabel>
+                      <Link
+                        href="/customers/new"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Plus className="h-3 w-3" />
+                        New Customer
+                      </Link>
+                    </div>
+                    <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between h-10",
+                              !field.value && "text-muted-foreground"
+                            )}
                           >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                customer.id === field.value ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {formatCustomerName(customer)}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                            {selectedCustomer
+                              ? formatCustomerName(selectedCustomer)
+                              : "Select customer..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search by name or phone..."
+                            value={customerSearch}
+                            onValueChange={setCustomerSearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No customers found.</CommandEmpty>
+                            <CommandGroup>
+                              {customers.map((customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={customer.id}
+                                  onSelect={() => {
+                                    field.onChange(customer.id);
+                                    form.setValue("vehicle_id", undefined);
+                                    setCustomerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      customer.id === field.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {formatCustomerName(customer)}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        {/* Vehicle Selection */}
-        <FormField
-          control={form.control}
-          name="vehicle_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Vehicle</FormLabel>
-              <Select
-                value={field.value ?? "none"}
-                onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select vehicle (optional)" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="none">No vehicle</SelectItem>
-                  {vehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {[v.year, v.make, v.model].filter(Boolean).join(" ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Category */}
-        <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Category</FormLabel>
-              <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className={cn(
-                        "w-full justify-between",
-                        !field.value && "text-muted-foreground"
-                      )}
+              {/* Vehicle — depends on customer */}
+              <FormField
+                control={form.control}
+                name="vehicle_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vehicle</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                      disabled={!selectedCustomerId}
                     >
-                      {field.value || "Select category..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search or type category..." />
-                    <CommandList>
-                      <CommandEmpty>
-                        <Button
-                          variant="ghost"
-                          className="w-full"
-                          onClick={() => {
-                            setCategoryOpen(false);
-                          }}
-                        >
-                          Use typed value
-                        </Button>
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {allCategories.map((cat) => (
-                          <CommandItem
-                            key={cat}
-                            value={cat}
-                            onSelect={() => {
-                              field.onChange(cat);
-                              setCategoryOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                cat === field.value ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {cat}
-                          </CommandItem>
+                      <FormControl>
+                        <SelectTrigger className={cn(!selectedCustomerId && "text-muted-foreground")}>
+                          <SelectValue
+                            placeholder={
+                              selectedCustomerId
+                                ? "Select vehicle (optional)"
+                                : "Select customer first"
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No vehicle</SelectItem>
+                        {vehicles.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                          </SelectItem>
                         ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Status */}
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => {
-            const statusColors = JOB_STATUS_COLORS[field.value as JobStatus];
-            return (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue>
-                        {field.value && (
-                          <Badge
+        {/* ── Section 2: Job Setup ── */}
+        <Card>
+          <CardContent className="pt-5">
+            <SectionHeader
+              title="Job Details"
+              description="Category, status, and assignment"
+            />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Category — half */}
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Category</FormLabel>
+                    <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
                             variant="outline"
-                            className={`${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between",
+                              !field.value && "text-muted-foreground"
+                            )}
                           >
-                            {JOB_STATUS_LABELS[field.value as JobStatus]}
-                          </Badge>
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {JOB_STATUS_ORDER.map((status) => {
-                      const colors = JOB_STATUS_COLORS[status];
-                      return (
-                        <SelectItem key={status} value={status}>
-                          <Badge
-                            variant="outline"
-                            className={`${colors.bg} ${colors.text} ${colors.border}`}
-                          >
-                            {JOB_STATUS_LABELS[status]}
-                          </Badge>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            );
-          }}
-        />
+                            {field.value || "Select category..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search or type category..." />
+                          <CommandList>
+                            <CommandEmpty>
+                              <Button
+                                variant="ghost"
+                                className="w-full"
+                                onClick={() => {
+                                  setCategoryOpen(false);
+                                }}
+                              >
+                                Use typed value
+                              </Button>
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {allCategories.map((cat) => (
+                                <CommandItem
+                                  key={cat}
+                                  value={cat}
+                                  onSelect={() => {
+                                    field.onChange(cat);
+                                    setCategoryOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      cat === field.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {cat}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        {/* Assigned Tech */}
-        <FormField
-          control={form.control}
-          name="assigned_tech"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Assigned Tech</FormLabel>
-              <Select
-                value={field.value ?? "none"}
-                onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {technicians.map((tech) => (
-                    <SelectItem key={tech.id} value={tech.id}>
-                      {tech.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              {/* Status — half */}
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => {
+                  const statusColors = JOB_STATUS_COLORS[field.value as JobStatus];
+                  return (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue>
+                              {field.value && (
+                                <Badge
+                                  variant="outline"
+                                  className={`${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
+                                >
+                                  {JOB_STATUS_LABELS[field.value as JobStatus]}
+                                </Badge>
+                              )}
+                            </SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {JOB_STATUS_ORDER.map((status) => {
+                            const colors = JOB_STATUS_COLORS[status];
+                            return (
+                              <SelectItem key={status} value={status}>
+                                <Badge
+                                  variant="outline"
+                                  className={`${colors.bg} ${colors.text} ${colors.border}`}
+                                >
+                                  {JOB_STATUS_LABELS[status]}
+                                </Badge>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
 
-        {/* Date Received */}
-        <FormField
-          control={form.control}
-          name="date_received"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Date Received</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+              {/* Assigned Tech — half */}
+              <FormField
+                control={form.control}
+                name="assigned_tech"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned Tech</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {technicians.map((tech) => (
+                          <SelectItem key={tech.id} value={tech.id}>
+                            {tech.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        {/* Payment Status & Method */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="payment_status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Payment Status</FormLabel>
-                <Select value={field.value || "unpaid"} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {(Object.entries(PAYMENT_STATUS_LABELS) as [PaymentStatus, string][]).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="payment_method"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Payment Method</FormLabel>
-                <Select
-                  value={field.value ?? "none"}
-                  onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Not set" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="none">Not set</SelectItem>
-                    {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+              {/* Date Received — half */}
+              <FormField
+                control={form.control}
+                name="date_received"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date Received</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Mileage In */}
-        <FormField
-          control={form.control}
-          name="mileage_in"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Mileage In</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder="e.g. 45000"
-                  value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* ── Section 3: Payment & Notes ── */}
+        <Card>
+          <CardContent className="pt-5">
+            <SectionHeader
+              title="Payment & Notes"
+              description="Billing info and additional details"
+            />
 
-        {/* Notes */}
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Job notes, customer requests, etc."
-                  rows={3}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Payment Status — half */}
+              <FormField
+                control={form.control}
+                name="payment_status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Status</FormLabel>
+                    <Select value={field.value || "unpaid"} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(Object.entries(PAYMENT_STATUS_LABELS) as [PaymentStatus, string][]).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              {/* Payment Method — half */}
+              <FormField
+                control={form.control}
+                name="payment_method"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Method</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Not set" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Not set</SelectItem>
+                        {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Mileage In — half */}
+              <FormField
+                control={form.control}
+                name="mileage_in"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mileage In</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 45000"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Notes — full width */}
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Job notes, customer requests, etc."
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Actions ── */}
         <div className="flex gap-3">
           <Button type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting

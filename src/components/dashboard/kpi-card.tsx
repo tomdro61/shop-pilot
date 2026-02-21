@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 interface KpiCardProps {
   title: string;
   value: string;
+  subtitle?: string;
   previousValue?: number;
   currentValue?: number;
 }
@@ -12,6 +13,7 @@ interface KpiCardProps {
 export function KpiCard({
   title,
   value,
+  subtitle,
   previousValue,
   currentValue,
 }: KpiCardProps) {
@@ -34,6 +36,9 @@ export function KpiCard({
           {title}
         </p>
         <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight">{value}</p>
+        {subtitle && (
+          <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
+        )}
         {changePercent !== null && (
           <div
             className={cn(

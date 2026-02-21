@@ -13,6 +13,7 @@ import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
+import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
 import { Pencil, User, Car, HardHat, Calendar } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
@@ -39,13 +40,14 @@ export default async function JobDetailPage({
   ]);
   if (!job) notFound();
 
-  const customer = job.customers as (Customer & { email: string | null }) | null;
+  const customer = job.customers as (Customer & { email: string | null; customer_type: string | null }) | null;
   const vehicle = job.vehicles as Vehicle | null;
   const tech = job.users as Pick<UserType, "id" | "name"> | null;
   const lineItems = (job.job_line_items || []) as JobLineItem[];
+  const grandTotal = lineItems.reduce((sum, li) => sum + (li.total || 0), 0);
 
   return (
-    <div className="mx-auto max-w-4xl p-4 lg:p-6">
+    <><div className="mx-auto max-w-4xl p-4 pb-20 lg:p-6 lg:pb-20">
       {/* Header */}
       <div className="mb-6 animate-in-up">
         <div className="flex items-start justify-between">
@@ -180,6 +182,17 @@ export default async function JobDetailPage({
           isFleet={customer?.customer_type === "fleet"}
         />
       </div>
+
     </div>
+
+    {/* Sticky Payment Footer */}
+    <JobPaymentFooter
+      jobId={id}
+      jobStatus={job.status as JobStatus}
+      paymentStatus={(job.payment_status || "unpaid") as PaymentStatus}
+      paymentMethod={(job.payment_method as PaymentMethod) || null}
+      grandTotal={grandTotal}
+    />
+    </>
   );
 }

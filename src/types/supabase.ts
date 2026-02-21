@@ -225,6 +225,36 @@ export type Database = {
           },
         ];
       };
+      job_presets: {
+        Row: {
+          id: string;
+          name: string;
+          category: string | null;
+          line_items: Json;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          category?: string | null;
+          line_items?: Json;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          category?: string | null;
+          line_items?: Json;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       estimates: {
         Row: {
           id: string;

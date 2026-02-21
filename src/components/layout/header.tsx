@@ -20,6 +20,7 @@ const pageTitles: Record<string, string> = {
   "/customers": "Customers",
   "/jobs": "Jobs",
   "/inspections": "Inspections",
+  "/presets": "Job Presets",
   "/reports": "Reports",
   "/chat": "AI Assistant",
 };
@@ -29,6 +30,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/customers")) return "Customers";
   if (pathname.startsWith("/jobs")) return "Jobs";
   if (pathname.startsWith("/inspections")) return "Inspections";
+  if (pathname.startsWith("/presets")) return "Job Presets";
   if (pathname.startsWith("/reports")) return "Reports";
   if (pathname.startsWith("/chat")) return "AI Assistant";
   return "ShopPilot";
@@ -54,6 +56,7 @@ export function Header({ user }: { user: User | null }) {
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
           <Wrench className="h-3.5 w-3.5 text-primary-foreground" />
         </div>
+        <span className="text-sm font-semibold tracking-tight">Broadway Motors</span>
       </div>
       <h1 className="text-sm font-semibold tracking-tight lg:text-base">{title}</h1>
       <DropdownMenu>

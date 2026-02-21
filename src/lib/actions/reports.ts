@@ -263,6 +263,110 @@ export async function getFleetARSummary() {
     .sort((a, b) => b.total - a.total);
 }
 
+export async function getInspectionCount(start: string, end: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("jobs")
+    .select("id, job_line_items(quantity)")
+    .eq("status", "complete")
+    .eq("category", "Inspection")
+    .gte("date_finished", start)
+    .lte("date_finished", end);
+
+  return (
+    data?.reduce((sum, job) => {
+      const jobCount = (job.job_line_items as { quantity: number }[])?.reduce(
+        (s, li) => s + (li.quantity || 0),
+        0
+      );
+      return sum + (jobCount || 0);
+    }, 0) || 0
+  );
+}
+
+export async function getDailyRevenueSparkline(days: number) {
+  const supabase = await createClient();
+  const start = toDateStr(subDays(new Date(), days - 1));
+  const end = toDateStr(new Date());
+
+  const { data } = await supabase
+    .from("jobs")
+    .select("date_finished, updated_at, job_line_items(total)")
+    .eq("status", "complete")
+    .gte("date_finished", start)
+    .lte("date_finished", end);
+
+  // Build a map of date -> revenue
+  const revenueByDate: Record<string, number> = {};
+
+  // Initialize all dates to 0
+  for (let i = 0; i < days; i++) {
+    const d = toDateStr(subDays(new Date(), days - 1 - i));
+    revenueByDate[d] = 0;
+  }
+
+  data?.forEach((job) => {
+    const dateStr = (job.date_finished || job.updated_at || "").split("T")[0];
+    if (dateStr && revenueByDate[dateStr] !== undefined) {
+      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+        (s, li) => s + (li.total || 0),
+        0
+      ) || 0;
+      revenueByDate[dateStr] += jobTotal;
+    }
+  });
+
+  return Object.entries(revenueByDate)
+    .map(([date, revenue]) => ({ date, revenue }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export async function getRevenueBreakdown(start?: string, end?: string) {
+  const supabase = await createClient();
+  const now = new Date();
+  const monthStart = start ?? toDateStr(new Date(now.getFullYear(), now.getMonth(), 1));
+  const monthEnd = end ?? toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+
+  const { data } = await supabase
+    .from("jobs")
+    .select("job_line_items(type, total)")
+    .eq("status", "complete")
+    .gte("date_finished", monthStart)
+    .lte("date_finished", monthEnd);
+
+  let laborRevenue = 0;
+  let partsRevenue = 0;
+
+  data?.forEach((job) => {
+    (job.job_line_items as { type: string; total: number }[])?.forEach((li) => {
+      if (li.type === "labor") {
+        laborRevenue += li.total || 0;
+      } else if (li.type === "part") {
+        partsRevenue += li.total || 0;
+      }
+    });
+  });
+
+  const totalRevenue = laborRevenue + partsRevenue;
+  // Gross profit estimate: labor (100% margin) + parts (40% margin)
+  const estimatedGrossProfit = laborRevenue + partsRevenue * 0.4;
+
+  return { laborRevenue, partsRevenue, totalRevenue, estimatedGrossProfit };
+}
+
+export async function getStaleJobsCount() {
+  const supabase = await createClient();
+  const twoDaysAgo = toDateStr(subDays(new Date(), 2));
+
+  const { count } = await supabase
+    .from("jobs")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["not_started", "in_progress", "waiting_for_parts"])
+    .lt("date_received", twoDaysAgo);
+
+  return count || 0;
+}
+
 export async function getDailySummary() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];

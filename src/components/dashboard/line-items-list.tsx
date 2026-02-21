@@ -106,7 +106,6 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
           <>
             {renderItems(laborItems, "Labor")}
             {renderItems(partItems, "Parts")}
-            <Separator />
             <div className="space-y-1 text-right">
               {laborItems.length > 0 && (
                 <p className="text-sm text-muted-foreground">
@@ -118,8 +117,11 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
                   Parts: {formatCurrency(partsTotal)}
                 </p>
               )}
-              <p className="text-lg font-bold">
-                Total: {formatCurrency(grandTotal)}
+            </div>
+            <Separator />
+            <div className="text-right">
+              <p className="text-2xl font-bold tracking-tight">
+                {formatCurrency(grandTotal)}
               </p>
             </div>
           </>

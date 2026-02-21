@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, HardHat, BarChart3, MessageCircle, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, HardHat, BarChart3, MessageCircle, ClipboardCheck, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mainNav = [
@@ -14,6 +14,7 @@ const mainNav = [
 
 const secondaryNav = [
   { href: "/team", label: "Team", icon: HardHat },
+  { href: "/presets", label: "Presets", icon: ClipboardList },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/chat", label: "AI Assistant", icon: MessageCircle },
 ];
@@ -26,7 +27,10 @@ export function Sidebar() {
       <div className="flex h-14 items-center border-b px-5">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <Wrench className="icon-filled h-5 w-5 text-primary" />
-          <span className="text-[15px] font-semibold tracking-tight">ShopPilot</span>
+          <div className="flex flex-col">
+            <span className="text-[15px] font-semibold tracking-tight leading-tight">ShopPilot</span>
+            <span className="text-[10px] text-muted-foreground leading-tight">Serving Revere Since 1946</span>
+          </div>
         </Link>
       </div>
 
