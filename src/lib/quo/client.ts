@@ -16,6 +16,9 @@ interface SendSMSResult {
 }
 
 export async function sendSMS({ to, body }: SendSMSParams): Promise<SendSMSResult> {
+  console.log("[Quo Debug] QUO_API_KEY set:", !!process.env.QUO_API_KEY);
+  console.log("[Quo Debug] QUO_PHONE_NUMBER set:", !!process.env.QUO_PHONE_NUMBER);
+
   if (!isQuoConfigured()) {
     console.log("[Quo Test Mode] SMS to:", to);
     console.log("[Quo Test Mode] Body:", body);
