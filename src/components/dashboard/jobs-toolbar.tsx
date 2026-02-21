@@ -54,7 +54,17 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground mr-2">
+      <div className="relative flex-1 min-w-[180px]">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search jobs..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
         <span className="font-semibold text-foreground">All Jobs</span>
         <span>({jobCount})</span>
       </div>
@@ -121,16 +131,6 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           </TabsTrigger>
         </TabsList>
       </Tabs>
-
-      <div className="relative flex-1 min-w-[180px]">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search jobs..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-      </div>
 
       <Link href="/jobs/new" className="hidden sm:block">
         <Button className="gap-2">
