@@ -5,49 +5,76 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Wrench, HardHat, BarChart3, MessageCircle, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const mainNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/customers", label: "Customers", icon: Users },
   { href: "/jobs", label: "Jobs", icon: Wrench },
+  { href: "/customers", label: "Customers", icon: Users },
   { href: "/inspections", label: "Inspections", icon: ClipboardCheck },
+];
+
+const secondaryNav = [
   { href: "/team", label: "Team", icon: HardHat },
   { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/chat", label: "Chat", icon: MessageCircle },
+  { href: "/chat", label: "AI Assistant", icon: MessageCircle },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:bg-sidebar">
-      <div className="flex h-14 items-center border-b px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+    <aside className="hidden lg:flex lg:w-56 lg:flex-col lg:border-r lg:bg-sidebar">
+      <div className="flex h-14 items-center border-b px-5">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
           <Wrench className="icon-filled h-5 w-5 text-primary" />
-          <span className="tracking-tight">ShopPilot</span>
+          <span className="text-[15px] font-semibold tracking-tight">ShopPilot</span>
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 p-4">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors border-l-2",
-                isActive
-                  ? "bg-primary/15 text-primary font-semibold border-primary"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground font-medium border-transparent"
-              )}
-            >
-              <item.icon className="icon-filled h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+
+      <nav className="flex flex-1 flex-col px-3 pt-4">
+        <div className="space-y-0.5">
+          {mainNav.map((item) => (
+            <NavItem key={item.href} item={item} pathname={pathname} />
+          ))}
+        </div>
+
+        <div className="my-3 h-px bg-border" />
+
+        <div className="space-y-0.5">
+          {secondaryNav.map((item) => (
+            <NavItem key={item.href} item={item} pathname={pathname} />
+          ))}
+        </div>
       </nav>
     </aside>
+  );
+}
+
+function NavItem({
+  item,
+  pathname,
+}: {
+  item: { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
+  pathname: string;
+}) {
+  const isActive =
+    pathname === item.href ||
+    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150",
+        isActive
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+      )}
+    >
+      {isActive && (
+        <div className="absolute -left-3 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
+      )}
+      <item.icon className={cn("h-4 w-4 shrink-0", isActive && "icon-filled")} />
+      {item.label}
+    </Link>
   );
 }

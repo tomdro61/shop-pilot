@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, HardHat, BarChart3, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, ClipboardCheck, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -28,14 +28,17 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors",
+                "relative flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] transition-colors",
                 isActive
-                  ? "text-primary font-medium"
+                  ? "text-primary font-semibold"
                   : "text-muted-foreground"
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className={cn("h-5 w-5", isActive && "icon-filled")} />
               <span>{item.label}</span>
+              {isActive && (
+                <div className="absolute -top-1 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-primary" />
+              )}
             </Link>
           );
         })}

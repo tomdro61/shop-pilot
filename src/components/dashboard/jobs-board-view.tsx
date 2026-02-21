@@ -82,9 +82,9 @@ function BoardColumn({
         </CardHeader>
         <CardContent className="space-y-2">
           {jobs.length === 0 ? (
-            <p className="py-4 text-center text-xs text-muted-foreground">
-              No jobs
-            </p>
+            <div className="flex items-center justify-center rounded-lg border border-dashed py-6">
+              <p className="text-xs text-muted-foreground/60">Empty</p>
+            </div>
           ) : (
             jobs.map((job) => (
               <JobCard key={job.id} job={job} showStatus={false} />

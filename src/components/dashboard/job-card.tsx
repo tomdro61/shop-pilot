@@ -20,25 +20,31 @@ interface JobCardProps {
 
 export function JobCard({ job, showStatus = true }: JobCardProps) {
   return (
-    <Card className="transition-colors hover:bg-accent">
-      <CardContent className="p-4">
+    <Card className="transition-colors hover:bg-accent/30">
+      <CardContent className="p-3.5">
         <div className="flex items-start justify-between gap-2">
           <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
             <div>
               {job.customers && (
-                <p className="font-medium">
+                <p className="text-sm font-medium leading-tight">
                   {formatCustomerName(job.customers)}
                 </p>
               )}
               {job.vehicles && (
-                <p className="text-sm text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {formatVehicle(job.vehicles)}
                 </p>
               )}
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
                 {job.category && <span>{job.category}</span>}
-                {job.users && <span>{job.users.name}</span>}
-                <span>{new Date(job.date_received).toLocaleDateString()}</span>
+                {job.users && (
+                  <>
+                    <span className="text-border">·</span>
+                    <span>{job.users.name}</span>
+                  </>
+                )}
+                <span className="text-border">·</span>
+                <span className="tabular-nums">{new Date(job.date_received).toLocaleDateString()}</span>
               </div>
             </div>
           </Link>

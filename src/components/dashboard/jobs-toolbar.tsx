@@ -64,8 +64,8 @@ export function JobsToolbar({ categories }: JobsToolbarProps) {
           />
         </div>
         <Link href="/jobs/new" className="hidden sm:block">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
             New Job
           </Button>
         </Link>
@@ -76,7 +76,7 @@ export function JobsToolbar({ categories }: JobsToolbarProps) {
           value={status}
           onValueChange={(val) => updateParams({ status: val })}
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[140px] text-xs">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -92,7 +92,7 @@ export function JobsToolbar({ categories }: JobsToolbarProps) {
           value={paymentStatus}
           onValueChange={(val) => updateParams({ payment_status: val })}
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[140px] text-xs">
             <SelectValue placeholder="All Payments" />
           </SelectTrigger>
           <SelectContent>
@@ -108,7 +108,7 @@ export function JobsToolbar({ categories }: JobsToolbarProps) {
           value={category}
           onValueChange={(val) => updateParams({ category: val })}
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[140px] text-xs">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>

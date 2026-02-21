@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,20 +28,18 @@ export function KpiCard({
   }
 
   return (
-    <Card className="shadow-[var(--glow-md)]">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        </p>
+        <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight">{value}</p>
         {changePercent !== null && (
           <div
             className={cn(
-              "mt-1 flex items-center gap-1 text-xs",
+              "mt-1.5 flex items-center gap-1 text-xs font-medium",
               changePercent > 0
-                ? "text-green-600 dark:text-green-400"
+                ? "text-emerald-600 dark:text-emerald-400"
                 : changePercent < 0
                   ? "text-red-600 dark:text-red-400"
                   : "text-muted-foreground"

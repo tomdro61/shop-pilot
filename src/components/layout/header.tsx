@@ -23,16 +23,12 @@ const pageTitles: Record<string, string> = {
 };
 
 function getPageTitle(pathname: string): string {
-  // Check exact matches first
   if (pageTitles[pathname]) return pageTitles[pathname];
-
-  // Check prefix matches
   if (pathname.startsWith("/customers")) return "Customers";
   if (pathname.startsWith("/jobs")) return "Jobs";
   if (pathname.startsWith("/inspections")) return "Inspections";
   if (pathname.startsWith("/reports")) return "Reports";
   if (pathname.startsWith("/chat")) return "AI Assistant";
-
   return "ShopPilot";
 }
 
@@ -51,15 +47,19 @@ export function Header({ user }: { user: User | null }) {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/80 backdrop-blur-xl px-4 lg:px-6">
-      <div className="flex items-center gap-2 lg:hidden">
-        <Wrench className="h-5 w-5 text-primary" />
+      <div className="flex items-center gap-2.5 lg:hidden">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
+          <Wrench className="h-3.5 w-3.5 text-primary-foreground" />
+        </div>
       </div>
-      <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+      <h1 className="text-sm font-semibold tracking-tight lg:text-base">{title}</h1>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <Avatar className="h-7 w-7">
+              <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
+                {initials}
+              </AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>

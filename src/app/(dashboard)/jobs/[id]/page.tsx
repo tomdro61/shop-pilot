@@ -5,7 +5,6 @@ import { getInvoiceForJob } from "@/lib/actions/invoices";
 import { getEstimateForJob } from "@/lib/actions/estimates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { StatusSelect } from "@/components/dashboard/status-select";
 import { LineItemsList } from "@/components/dashboard/line-items-list";
 import { EstimateSection } from "@/components/dashboard/estimate-section";
@@ -14,7 +13,7 @@ import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
-import { Pencil, User, Car, HardHat } from "lucide-react";
+import { Pencil, User, Car, HardHat, Calendar } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -48,96 +47,104 @@ export default async function JobDetailPage({
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-6">
       {/* Header */}
-      <div className="mb-4 flex items-start justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">
-            {job.category || "Job"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Received {new Date(job.date_received).toLocaleDateString()}
-            {job.date_finished &&
-              ` | Finished ${new Date(job.date_finished).toLocaleDateString()}`}
-          </p>
-          {tech && (
-            <p className="flex items-center gap-1 text-sm text-muted-foreground">
-              <HardHat className="h-3.5 w-3.5" />
-              {tech.name}
-            </p>
-          )}
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            {job.payment_status && (
-              <Badge
-                variant="outline"
-                className={`${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].bg} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].text} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].border}`}
-              >
-                {PAYMENT_STATUS_LABELS[job.payment_status as PaymentStatus]}
-              </Badge>
-            )}
-            {job.payment_method && (
-              <span className="text-sm text-muted-foreground">
-                via {PAYMENT_METHOD_LABELS[job.payment_method as PaymentMethod]}
+      <div className="mb-6 animate-in-up">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight lg:text-2xl">
+              {job.category || "Job"}
+            </h2>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {new Date(job.date_received).toLocaleDateString()}
               </span>
-            )}
-            {job.mileage_in && (
-              <span className="text-sm text-muted-foreground">
-                {job.mileage_in.toLocaleString()} mi
-              </span>
-            )}
+              {job.date_finished && (
+                <span>Finished {new Date(job.date_finished).toLocaleDateString()}</span>
+              )}
+              {tech && (
+                <span className="inline-flex items-center gap-1">
+                  <HardHat className="h-3 w-3" />
+                  {tech.name}
+                </span>
+              )}
+              {job.mileage_in && (
+                <span>{job.mileage_in.toLocaleString()} mi</span>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {job.payment_status && (
+                <Badge
+                  variant="outline"
+                  className={`${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].bg} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].text} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].border}`}
+                >
+                  {PAYMENT_STATUS_LABELS[job.payment_status as PaymentStatus]}
+                </Badge>
+              )}
+              {job.payment_method && (
+                <span className="text-xs text-muted-foreground">
+                  via {PAYMENT_METHOD_LABELS[job.payment_method as PaymentMethod]}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
-          <Link href={`/jobs/${id}/edit`}>
-            <Button variant="outline" size="sm">
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
-          </Link>
-          <JobDeleteButton jobId={id} />
+          <div className="flex items-center gap-2">
+            <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
+            <Link href={`/jobs/${id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Button>
+            </Link>
+            <JobDeleteButton jobId={id} />
+          </div>
         </div>
       </div>
 
       {/* Customer & Vehicle Info */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 animate-in-up stagger-1">
         {customer && (
           <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <User className="h-4 w-4" />
-                Customer
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Link
-                href={`/customers/${customer.id}`}
-                className="font-medium hover:underline"
-              >
-                {formatCustomerName(customer)}
-              </Link>
-              {customer.phone && (
-                <p className="text-sm text-muted-foreground">
-                  {formatPhone(customer.phone)}
-                </p>
-              )}
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                  {customer.first_name?.[0]}{customer.last_name?.[0]}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Customer</p>
+                  <Link
+                    href={`/customers/${customer.id}`}
+                    className="text-sm font-medium hover:text-primary transition-colors"
+                  >
+                    {formatCustomerName(customer)}
+                  </Link>
+                  {customer.phone && (
+                    <p className="text-xs text-muted-foreground">
+                      {formatPhone(customer.phone)}
+                    </p>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {vehicle && (
           <Card>
-            <CardHeader className="pb-1">
-              <CardTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Car className="h-4 w-4" />
-                Vehicle
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="font-medium">{formatVehicle(vehicle)}</p>
-              {vehicle.vin && (
-                <p className="text-sm text-muted-foreground">
-                  VIN: {vehicle.vin}
-                </p>
-              )}
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Car className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Vehicle</p>
+                  <p className="text-sm font-medium">{formatVehicle(vehicle)}</p>
+                  {vehicle.vin && (
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {vehicle.vin}
+                    </p>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -145,32 +152,26 @@ export default async function JobDetailPage({
 
       {/* Notes */}
       {job.notes && (
-        <>
-          <Card className="mb-4">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
-                Notes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-wrap text-sm">{job.notes}</p>
-            </CardContent>
-          </Card>
-        </>
+        <Card className="mb-4 animate-in-up stagger-2">
+          <CardContent className="p-4">
+            <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Notes</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">{job.notes}</p>
+          </CardContent>
+        </Card>
       )}
 
-      <Separator className="mb-4" />
-
       {/* Line Items */}
-      <LineItemsList jobId={id} lineItems={lineItems} />
+      <div className="animate-in-up stagger-3">
+        <LineItemsList jobId={id} lineItems={lineItems} />
+      </div>
 
       {/* Estimate */}
-      <div className="mt-4">
+      <div className="mt-4 animate-in-up stagger-4">
         <EstimateSection jobId={id} estimate={estimate} />
       </div>
 
       {/* Invoice */}
-      <div className="mt-4">
+      <div className="mt-4 animate-in-up stagger-5">
         <InvoiceSection
           jobId={id}
           jobStatus={job.status as JobStatus}

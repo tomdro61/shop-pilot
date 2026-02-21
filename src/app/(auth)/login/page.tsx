@@ -30,18 +30,18 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm animate-in-up">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary shadow-[var(--glow-md)]">
           <Wrench className="h-6 w-6 text-primary-foreground" />
         </div>
-        <CardTitle className="text-2xl">ShopPilot</CardTitle>
-        <CardDescription>Sign in to manage your shop</CardDescription>
+        <CardTitle className="text-xl font-semibold tracking-tight">ShopPilot</CardTitle>
+        <CardDescription className="text-xs">Sign in to manage your shop</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs font-medium">Email</Label>
             <Input
               id="email"
               name="email"
@@ -51,8 +51,8 @@ export default function LoginPage() {
               autoComplete="email"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-xs font-medium">Password</Label>
             <Input
               id="password"
               name="password"
