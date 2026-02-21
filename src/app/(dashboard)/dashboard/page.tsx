@@ -7,8 +7,7 @@ import { Car, Calendar, DollarSign, AlertTriangle, Plus, ArrowRight, Clock, User
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from "date-fns";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/constants";
 import { formatVehicle, formatCurrency } from "@/lib/utils/format";
-import { getDailyRevenueSparkline, getRevenueBreakdown, getStaleJobsCount } from "@/lib/actions/reports";
-import { RevenueSparklineCard } from "@/components/dashboard/revenue-sparkline-card";
+import { getRevenueBreakdown, getStaleJobsCount } from "@/lib/actions/reports";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -37,10 +36,16 @@ async function getDashboardStats() {
   const lastYearStart = `${now.getFullYear() - 1}-01-01`;
   const lastYearEnd = `${now.getFullYear() - 1}-12-31`;
 
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
   const [
     carsInShopResult,
     waitingForPartsResult,
     unassignedJobsResult,
+    todayRevenueResult,
+    yesterdayRevenueResult,
     weeklyRevenueResult,
     lastWeekRevenueResult,
     monthlyRevenueResult,
@@ -63,6 +68,16 @@ async function getDashboardStats() {
       .select("id", { count: "exact", head: true })
       .eq("status", "not_started")
       .is("assigned_tech", null),
+    supabase
+      .from("jobs")
+      .select("id, job_line_items(total)")
+      .eq("status", "complete")
+      .eq("date_finished", today),
+    supabase
+      .from("jobs")
+      .select("id, job_line_items(total)")
+      .eq("status", "complete")
+      .eq("date_finished", yesterdayStr),
     supabase
       .from("jobs")
       .select("id, job_line_items(total)")
@@ -113,6 +128,24 @@ async function getDashboardStats() {
       .neq("payment_status", "paid")
       .neq("payment_status", "waived"),
   ]);
+
+  const todayRevenue =
+    todayRevenueResult.data?.reduce((sum, job) => {
+      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+        (s, li) => s + (li.total || 0),
+        0
+      );
+      return sum + (jobTotal || 0);
+    }, 0) || 0;
+
+  const yesterdayRevenue =
+    yesterdayRevenueResult.data?.reduce((sum, job) => {
+      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+        (s, li) => s + (li.total || 0),
+        0
+      );
+      return sum + (jobTotal || 0);
+    }, 0) || 0;
 
   const weeklyRevenue =
     weeklyRevenueResult.data?.reduce((sum, job) => {
@@ -181,6 +214,8 @@ async function getDashboardStats() {
     carsInShop: carsInShopResult.count || 0,
     waitingForParts: waitingForPartsResult.count || 0,
     unassignedJobs: unassignedJobsResult.count || 0,
+    todayRevenue,
+    yesterdayRevenue,
     weeklyRevenue,
     lastWeekRevenue,
     monthlyRevenue,
@@ -306,13 +341,10 @@ function StatCard({
 }
 
 export default async function DashboardPage() {
-  const [stats, todaysSchedule, recentJobs, weekSparkline, monthSparkline, yearSparkline, revenueBreakdown, staleJobs] = await Promise.all([
+  const [stats, todaysSchedule, recentJobs, revenueBreakdown, staleJobs] = await Promise.all([
     getDashboardStats(),
     getTodaysSchedule(),
     getRecentJobs(),
-    getDailyRevenueSparkline(7),
-    getDailyRevenueSparkline(30),
-    getDailyRevenueSparkline(365),
     getRevenueBreakdown(),
     getStaleJobsCount(),
   ]);
@@ -341,10 +373,11 @@ export default async function DashboardPage() {
       {/* ── Revenue ── */}
       <section className="animate-in-up stagger-2">
         <SectionHeader label="Revenue" />
-        <div className="grid grid-cols-3 gap-3">
-          <RevenueSparklineCard label="This Week" value={stats.weeklyRevenue} previous={stats.lastWeekRevenue} previousLabel="vs last week" sparklineData={weekSparkline} />
-          <RevenueSparklineCard label="This Month" value={stats.monthlyRevenue} previous={stats.lastMonthRevenue} previousLabel="vs last month" sparklineData={monthSparkline} />
-          <RevenueSparklineCard label="This Year" value={stats.yearlyRevenue} previous={stats.lastYearRevenue} previousLabel="vs last year" sparklineData={yearSparkline} />
+        <div className="grid grid-cols-2 gap-3">
+          <RevenueCard label="Today" value={stats.todayRevenue} previous={stats.yesterdayRevenue} previousLabel="vs yesterday" />
+          <RevenueCard label="This Week" value={stats.weeklyRevenue} previous={stats.lastWeekRevenue} previousLabel="vs last week" />
+          <RevenueCard label="This Month" value={stats.monthlyRevenue} previous={stats.lastMonthRevenue} previousLabel="vs last month" />
+          <RevenueCard label="This Year" value={stats.yearlyRevenue} previous={stats.lastYearRevenue} previousLabel="vs last year" />
         </div>
       </section>
 
