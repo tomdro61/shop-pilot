@@ -139,9 +139,9 @@ export default async function DashboardPage() {
   const alertCount = stats.unpaidJobs + stats.unassignedJobs + staleJobs;
 
   return (
-    <div className="p-4 lg:p-6 space-y-8">
+    <div className="p-4 lg:p-6 space-y-7">
 
-      {/* ── Quick Actions ── */}
+      {/* ── Action Bar (page-level, no container) ── */}
       <div className="flex gap-3">
         <Link href="/jobs/new" className="flex-1">
           <Button className="w-full gap-2">
@@ -158,22 +158,21 @@ export default async function DashboardPage() {
       </div>
 
       {/* ═══════════════════════════════════════════
-          ZONE 1 — REVENUE
-          Green-accented metric cards
+          Section 1: REVENUE
       ═══════════════════════════════════════════ */}
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <section className="rounded-xl border bg-muted/50 p-4 lg:p-5">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Revenue
         </h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="rounded-xl border border-l-[3px] border-l-emerald-500 bg-card p-4 dark:border-l-emerald-400">
+          <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Today</p>
-            <p className="mt-1.5 text-4xl font-extrabold tabular-nums tracking-tight">{formatCurrency(stats.todayRevenue)}</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.todayRevenue)}</p>
           </div>
-          <div className="rounded-xl border border-l-[3px] border-l-emerald-500 bg-card p-4 dark:border-l-emerald-400">
+          <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Week</p>
-            <p className="mt-1.5 text-4xl font-extrabold tabular-nums tracking-tight">{formatCurrency(stats.weeklyRevenue)}</p>
-            <div className="mt-1.5 flex items-center gap-1">
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.weeklyRevenue)}</p>
+            <div className="mt-1 flex items-center gap-1">
               {weekChange >= 0 ? (
                 <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
               ) : (
@@ -185,33 +184,32 @@ export default async function DashboardPage() {
               <span className="text-xs text-muted-foreground">vs last week</span>
             </div>
           </div>
-          <div className="rounded-xl border border-l-[3px] border-l-emerald-500 bg-card p-4 dark:border-l-emerald-400">
+          <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Month</p>
-            <p className="mt-1.5 text-4xl font-extrabold tabular-nums tracking-tight">{formatCurrency(stats.monthlyRevenue)}</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.monthlyRevenue)}</p>
           </div>
-          <div className="rounded-xl border border-l-[3px] border-l-emerald-500 bg-card p-4 dark:border-l-emerald-400">
+          <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Avg Ticket (Week)</p>
-            <p className="mt-1.5 text-4xl font-extrabold tabular-nums tracking-tight">{formatCurrency(stats.avgTicketWeek)}</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.avgTicketWeek)}</p>
           </div>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════
-          ZONE 2 — RIGHT NOW
-          Distinct blue-tinted panel surface
+          Section 2: OPERATIONS
       ═══════════════════════════════════════════ */}
-      <section className="-mx-4 px-4 py-6 lg:-mx-6 lg:px-6 bg-blue-50/60 dark:bg-blue-950/20 border-y border-blue-100 dark:border-blue-900/30">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-          Right Now
+      <section className="rounded-xl border bg-muted/50 p-4 lg:p-5">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Operations
         </h2>
 
-        <div className="space-y-4">
-          {/* Needs Attention — compact alerts */}
+        <div className="space-y-3">
+          {/* Alerts */}
           {alertCount > 0 && (
             <div className="space-y-1.5">
               {stats.unpaidJobs > 0 && (
                 <Link href="/jobs?paymentStatus=unpaid&status=complete" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-950/40 dark:hover:bg-red-950/60">
+                  <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/5 dark:hover:bg-red-500/10">
                     <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                     <span className="text-sm font-medium text-red-700 dark:text-red-400">
                       {stats.unpaidJobs} unpaid {stats.unpaidJobs === 1 ? "job" : "jobs"}
@@ -222,7 +220,7 @@ export default async function DashboardPage() {
               )}
               {stats.unassignedJobs > 0 && (
                 <Link href="/jobs?status=not_started" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-950/40 dark:hover:bg-amber-950/60">
+                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
                     <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
                       {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
@@ -233,7 +231,7 @@ export default async function DashboardPage() {
               )}
               {staleJobs > 0 && (
                 <Link href="/jobs" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-950/40 dark:hover:bg-amber-950/60">
+                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
                     <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
                       {staleJobs} {staleJobs === 1 ? "job needs" : "jobs need"} review
@@ -245,10 +243,9 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {/* Shop Floor + Tech Activity — side by side on desktop */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Shop Floor */}
-            <div className="rounded-xl border bg-card p-4 shadow-sm">
+          {/* Shop Floor + Tech Activity */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="rounded-lg border bg-card p-4">
               <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shop Floor</p>
               <div className="flex items-center gap-5">
                 <div className="flex items-center gap-2.5">
@@ -277,8 +274,7 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {/* Tech Activity */}
-            <div className="rounded-xl border bg-card shadow-sm">
+            <div className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
                 <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tech Activity</p>
               </div>
@@ -313,77 +309,76 @@ export default async function DashboardPage() {
       </section>
 
       {/* ═══════════════════════════════════════════
-          ZONE 3 — RECENT JOBS
-          Clean white card, full width
+          Section 3: RECENT JOBS
       ═══════════════════════════════════════════ */}
-      <section>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent Jobs</CardTitle>
-            <Link
-              href="/jobs"
-              className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
-            >
-              View all
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardHeader>
-          <CardContent className="p-0">
-            {recentJobs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <Car className="h-5 w-5 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">No jobs yet</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {recentJobs.map((job) => {
-                  const status = job.status as JobStatus;
-                  const statusColors = JOB_STATUS_COLORS[status];
-                  const paymentStatus = (job.payment_status || "unpaid") as PaymentStatus;
-                  const paymentColors = PAYMENT_STATUS_COLORS[paymentStatus];
-                  const customer = job.customers as { first_name: string; last_name: string } | null;
-                  const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-                  const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-                    (s, li) => s + (li.total || 0), 0
-                  ) || 0;
-                  return (
-                    <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between px-5 py-2.5 transition-colors hover:bg-accent/50">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">
-                            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {[job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1.5 pl-4">
-                          {jobTotal > 0 && (
-                            <span className="hidden text-xs font-medium tabular-nums text-muted-foreground sm:inline">
-                              {formatCurrency(jobTotal)}
-                            </span>
-                          )}
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
-                          >
-                            {JOB_STATUS_LABELS[status] || status}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${paymentColors?.bg ?? ""} ${paymentColors?.text ?? ""} ${paymentColors?.border ?? ""}`}
-                          >
-                            {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
-                          </Badge>
-                        </div>
+      <section className="rounded-xl border bg-muted/50 p-4 lg:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Recent Jobs
+          </h2>
+          <Link
+            href="/jobs"
+            className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+          >
+            View all
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+        <div className="rounded-lg border bg-card">
+          {recentJobs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Car className="h-5 w-5 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">No jobs yet</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {recentJobs.map((job) => {
+                const status = job.status as JobStatus;
+                const statusColors = JOB_STATUS_COLORS[status];
+                const paymentStatus = (job.payment_status || "unpaid") as PaymentStatus;
+                const paymentColors = PAYMENT_STATUS_COLORS[paymentStatus];
+                const customer = job.customers as { first_name: string; last_name: string } | null;
+                const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+                const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+                  (s, li) => s + (li.total || 0), 0
+                ) || 0;
+                return (
+                  <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+                    <div className="flex items-center justify-between px-5 py-2.5 transition-colors hover:bg-accent/50">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">
+                          {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {[job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
+                        </p>
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      <div className="flex shrink-0 items-center gap-1.5 pl-4">
+                        {jobTotal > 0 && (
+                          <span className="hidden text-xs font-medium tabular-nums text-muted-foreground sm:inline">
+                            {formatCurrency(jobTotal)}
+                          </span>
+                        )}
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
+                        >
+                          {JOB_STATUS_LABELS[status] || status}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${paymentColors?.bg ?? ""} ${paymentColors?.text ?? ""} ${paymentColors?.border ?? ""}`}
+                        >
+                          {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );
