@@ -41,8 +41,8 @@ export async function POST(request: Request) {
         for (let iteration = 0; iteration < MAX_TOOL_LOOPS; iteration++) {
           // Stream the response
           const response = anthropic.messages.stream({
-            model: "claude-sonnet-4-5-20250929",
-            max_tokens: 4096,
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 1024,
             system: systemPrompt,
             tools,
             messages: anthropicMessages,
