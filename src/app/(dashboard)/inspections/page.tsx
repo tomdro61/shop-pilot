@@ -21,10 +21,14 @@ import { Plus, Minus, Check } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 
 const INSPECTION_ROWS = [
-  { key: "retail", label: "Retail", rate: 35, lineDescription: "Retail Inspections" },
-  { key: "hertz", label: "Hertz", rate: 35, lineDescription: "Hertz Fleet Inspections" },
-  { key: "sixt", label: "Sixt", rate: 35, lineDescription: "Sixt Fleet Inspections" },
-  { key: "drivewhip", label: "DriveWhip", rate: 35, lineDescription: "DriveWhip Fleet Inspections" },
+  { key: "retail_state", label: "Retail State", rate: 35, lineDescription: "Retail State Inspections" },
+  { key: "retail_tnc", label: "Retail TNC", rate: 35, lineDescription: "Retail TNC Inspections" },
+  { key: "hertz_state", label: "Hertz State", rate: 35, lineDescription: "Hertz State Inspections" },
+  { key: "hertz_tnc", label: "Hertz TNC", rate: 35, lineDescription: "Hertz TNC Inspections" },
+  { key: "sixt_state", label: "Sixt State", rate: 35, lineDescription: "Sixt State Inspections" },
+  { key: "sixt_tnc", label: "Sixt TNC", rate: 35, lineDescription: "Sixt TNC Inspections" },
+  { key: "drivewhip_state", label: "DriveWhip State", rate: 35, lineDescription: "DriveWhip State Inspections" },
+  { key: "drivewhip_tnc", label: "DriveWhip TNC", rate: 35, lineDescription: "DriveWhip TNC Inspections" },
 ];
 
 export default function InspectionsPage() {
