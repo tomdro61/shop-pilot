@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { ChatMessage, ToolCallInfo, ChatSSEEvent } from "./types";
+import type { ChatMessage, ToolCallInfo, ChatSSEEvent, ApiMessage } from "./types";
 import { parseSSE } from "./sse";
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const conversationStateRef = useRef<ApiMessage[] | null>(null);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -42,7 +43,10 @@ export function useChat() {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({
+          messages: apiMessages,
+          conversationState: conversationStateRef.current,
+        }),
         signal: abortRef.current.signal,
       });
 
@@ -156,6 +160,10 @@ export function useChat() {
               : m
           )
         );
+        break;
+
+      case "conversation_state":
+        conversationStateRef.current = event.messages;
         break;
 
       case "done":

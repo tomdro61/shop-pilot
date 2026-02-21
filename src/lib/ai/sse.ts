@@ -30,6 +30,8 @@ export function parseSSE(chunk: string): ChatSSEEvent[] {
           events.push({ type: "done" });
         } else if (currentEvent === "error") {
           events.push({ type: "error", message: JSON.parse(currentData) });
+        } else if (currentEvent === "conversation_state") {
+          events.push({ type: "conversation_state", messages: JSON.parse(currentData) });
         }
       } catch {
         // Skip malformed events
