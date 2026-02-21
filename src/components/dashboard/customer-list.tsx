@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatPhone } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight, Users } from "lucide-react";
 import type { Customer } from "@/types";
 
@@ -24,35 +24,71 @@ export function CustomerList({ customers }: CustomerListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-        <CardTitle className="text-sm font-semibold">Customers ({customers.length})</CardTitle>
-      </CardHeader>
       <CardContent className="p-0">
+        {/* Table header — hidden on mobile */}
+        <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] border-b bg-muted/40 px-5 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <span>Name</span>
+          <span>Email</span>
+          <span>Phone</span>
+          <span className="w-16 text-center">Type</span>
+        </div>
+
+        {/* Customer count — mobile only */}
+        <div className="md:hidden border-b px-5 py-2.5 text-xs font-semibold text-muted-foreground">
+          {customers.length} customers
+        </div>
+
         <div className="divide-y">
           {customers.map((customer) => {
             const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
             return (
               <Link key={customer.id} href={`/customers/${customer.id}`} className="block">
-                <div className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-accent/50">
+                {/* Desktop: columnar table row */}
+                <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] items-center px-5 py-3 transition-colors hover:bg-accent/50">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                      {initials}
+                    </div>
+                    <span className="text-sm font-medium truncate">
+                      {customer.first_name} {customer.last_name}
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted-foreground truncate pr-4">
+                    {customer.email ?? "—"}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {customer.phone ? formatPhone(customer.phone) : "—"}
+                  </span>
+                  <span className="w-16 flex justify-center">
+                    {customer.customer_type === "fleet" ? (
+                      <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-400 text-[10px] py-0">
+                        Fleet
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">Retail</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Mobile: compact stacked row */}
+                <div className="flex items-center gap-3 px-4 py-3 md:hidden transition-colors hover:bg-accent/50">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">
+                      <p className="text-sm font-medium truncate">
                         {customer.first_name} {customer.last_name}
                       </p>
                       {customer.customer_type === "fleet" && (
-                        <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-400 text-[10px] py-0">
+                        <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-400 text-[10px] py-0 shrink-0">
                           Fleet
                         </Badge>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
                       {customer.phone && <span>{formatPhone(customer.phone)}</span>}
-                      {customer.email && (
-                        <span className="truncate">{customer.email}</span>
-                      )}
+                      {customer.email && <span className="truncate">{customer.email}</span>}
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
