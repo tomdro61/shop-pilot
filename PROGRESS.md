@@ -597,3 +597,117 @@
 - Quo auth uses raw API key (NOT Bearer token) — documented in their API docs
 - Next.js 16 middleware deprecation warning persists — not blocking
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 9 — 2026-02-21 — Stripe Terminal (WisePOS E) Integration
+
+### What Was Completed
+
+**Full server-driven Stripe Terminal payment infrastructure for in-person card payments at the counter:**
+
+1. **Database Migration** (`supabase/migrations/20250221100000_stripe_terminal.sql`)
+   - Added `terminal` to `payment_method` enum
+   - Added `stripe_payment_intent_id` text column to `jobs` table
+   - Created walk-in sentinel customer (`00000000-0000-0000-0000-000000000000`) for Quick Pay transactions
+
+2. **TypeScript Types Updated** (`src/types/supabase.ts`)
+   - Added `"terminal"` to `payment_method` enum type
+   - Added `stripe_payment_intent_id` to jobs Row/Insert/Update types
+
+3. **Validators + Constants**
+   - Added `"terminal"` to job validator `payment_method` zod enum
+   - Added `terminal: "Terminal"` to `PAYMENT_METHOD_LABELS`
+
+4. **Stripe Terminal Helpers** (`src/lib/stripe/terminal.ts`) — Server-side functions:
+   - `createTerminalPaymentIntent(amountCents, metadata)` — creates PaymentIntent with `card_present` method
+   - `processReaderPayment(paymentIntentId)` — pushes PI to WisePOS E reader
+   - `getPaymentIntentStatus(paymentIntentId)` — retrieves PI status for polling
+   - `cancelReaderAction()` — cancels current reader action
+
+5. **Terminal API Routes** (3 routes):
+   - `POST /api/terminal/pay` — creates PI, pushes to reader, stores PI ID on job
+   - `GET /api/terminal/status?pi=pi_xxx` — polls PaymentIntent status
+   - `POST /api/terminal/cancel` — cancels reader action + PaymentIntent
+
+6. **Webhook Handler Updated** (`src/app/api/stripe/webhooks/route.ts`)
+   - Added `payment_intent.succeeded` handler alongside existing `invoice.paid`
+   - `handleTerminalPayment()` updates job: `payment_status: "paid"`, `payment_method: "terminal"`, `stripe_payment_intent_id`
+
+7. **Terminal Server Actions** (`src/lib/actions/terminal.ts`)
+   - `createQuickPayJob(amountCents, note?)` — creates skeleton job linked to walk-in sentinel customer, status "complete", single line item
+   - `linkQuickPayToCustomer(jobId, customerId)` — re-assigns walk-in job to real customer (for later use)
+
+8. **TerminalPayButton Component** (`src/components/dashboard/terminal-pay-button.tsx`)
+   - "Collect at Counter" button on job payment footer (next to "Mark as Paid" dropdown)
+   - Shows when job is complete + unpaid + has line items
+   - On click: sends PI to reader, opens dialog with polling spinner
+   - States: processing → succeeded (checkmark) / failed / canceled
+   - Cancel button during processing
+
+9. **Quick Pay Form + Page** (`src/components/dashboard/quick-pay-form.tsx`, `/quick-pay`)
+   - Numpad-style amount input (large `$0.00` display, 0-9 buttons, decimal, backspace)
+   - Optional note/description field
+   - "Charge" button creates skeleton job → sends to terminal
+   - Polling UI: spinner + cancel during processing
+   - Success state: checkmark + "Payment Complete" + "View Job" link + "New Payment" button
+
+10. **Navigation Updates**
+    - Sidebar: added "Quick Pay" with `CircleDollarSign` icon to main nav (between Customers and Inspections)
+    - Bottom nav: replaced Reports with "Pay" (`CircleDollarSign`) for mobile counter use
+    - Header: added `/quick-pay` to page titles
+
+### New Files (9)
+- `supabase/migrations/20250221100000_stripe_terminal.sql`
+- `src/lib/stripe/terminal.ts`
+- `src/app/api/terminal/pay/route.ts`
+- `src/app/api/terminal/status/route.ts`
+- `src/app/api/terminal/cancel/route.ts`
+- `src/lib/actions/terminal.ts`
+- `src/components/dashboard/terminal-pay-button.tsx`
+- `src/components/dashboard/quick-pay-form.tsx`
+- `src/app/(dashboard)/quick-pay/page.tsx`
+
+### Modified Files (8)
+- `src/types/supabase.ts` — `terminal` enum value + `stripe_payment_intent_id` column
+- `src/lib/validators/job.ts` — `terminal` in payment_method zod enum
+- `src/lib/constants.ts` — `terminal: "Terminal"` label
+- `src/app/api/stripe/webhooks/route.ts` — `payment_intent.succeeded` handler
+- `src/components/dashboard/job-payment-footer.tsx` — TerminalPayButton integration
+- `src/components/layout/sidebar.tsx` — Quick Pay nav item
+- `src/components/layout/bottom-nav.tsx` — Quick Pay replaces Reports on mobile
+- `src/components/layout/header.tsx` — Quick Pay page title
+
+### Environment Variables Needed
+- `STRIPE_TERMINAL_READER_ID=tmr_xxx` — From Stripe Dashboard after registering WisePOS E reader
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors, 17 files changed, 730 insertions)
+- Pushed to GitHub, Vercel auto-deploying
+
+### What's NOT Done Yet
+- [ ] Register WisePOS E reader in Stripe Dashboard to get `tmr_xxx` reader ID
+- [ ] Add `payment_intent.succeeded` to Stripe Dashboard webhook event types
+- [ ] Run migration against Supabase (`npx supabase db push` or SQL Editor)
+- [ ] Set `STRIPE_TERMINAL_READER_ID` in `.env.local` and Vercel env vars
+- [ ] Test with Stripe simulated reader in test mode
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Port Broadway Motors' real phone number to Quo
+- [ ] Resend transactional email integration
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory)
+- [ ] Stripe live mode activation
+- [ ] Wix customer data import (1000+ contacts)
+
+### What's Next
+- Enable Stripe Terminal on Stripe account, register WisePOS E hardware
+- Run migration, test with simulated reader
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Optional: voice input, chat persistence
+
+### Known Issues / Notes
+- Terminal integration is fully built but untestable until Stripe Terminal is enabled on the account and hardware is registered
+- Walk-in jobs appear in job list linked to "Walk-In Customer" — can be reassigned later via `linkQuickPayToCustomer()`
+- Bottom nav now shows Quick Pay instead of Reports on mobile — Reports is still accessible via sidebar on desktop
+- Next.js 16 middleware deprecation warning persists — not blocking
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

@@ -18,7 +18,7 @@ ShopPilot is a custom shop management system for Broadway Motors, an independent
 | Frontend | Next.js (React) | App Router, server components, mobile-first responsive design |
 | Backend/DB | Supabase (PostgreSQL) | Auth, database, real-time subscriptions, file storage, Row Level Security |
 | AI Assistant | Claude API (Anthropic) | Function calling / tool use for all CRUD and external operations |
-| Payments | Stripe | Payment links, invoicing, webhooks for auto-status updates. Terminal later. |
+| Payments | Stripe | Invoicing, webhooks, Terminal (WisePOS E) for in-person card payments, Quick Pay for walk-ins |
 | SMS | Quo (formerly OpenPhone) API | Currently using Wix for SMS. Transitioning to Quo — need to sign up and port shop number. |
 | Email | Resend | Transactional email for estimates, invoices, receipts |
 | Hosting | Vercel (free tier) | Auto-deploy from Git, edge functions, free SSL |
@@ -207,41 +207,53 @@ shop-pilot/
 
 ## Session Workflow
 
-**At the end of every session**, update `PROGRESS.md` with:
-1. **Date and summary** of what was completed
-2. **What's not done yet** — remaining tasks, blockers
-3. **What's next** — the next logical work to pick up
-4. **Known issues** — bugs, warnings, things to investigate
+### After Every Change
 
-At the start of a new session, read `PROGRESS.md` first to pick up where we left off.
+Whenever code is committed, update **all** of the following that are affected:
+
+1. **`PROGRESS.md`** — Add a session entry (or update the current one) with: date, what was completed, new/modified files, what's not done yet, what's next, known issues
+2. **`CLAUDE.md` (this file)** — Update the **Current Status** section if the change affects project status, phases, or capabilities. Update other sections (Tech Stack, Database Schema, etc.) if the change introduces new infrastructure, tables, env vars, or architectural patterns.
+3. **`src/types/supabase.ts`** — If a migration was created, update the TypeScript types to match the new schema (add columns, enum values, etc.)
+
+**Do not wait until the end of a session.** Update docs as part of each commit's workflow.
+
+### At the Start of a New Session
+
+Read `PROGRESS.md` first to pick up where we left off.
 
 ## Current Status
 
 **Phase 1: COMPLETE** — Deployed and live on Vercel
-**Phase 2: PARTIAL** — Stripe invoicing + estimates done, SMS/email not started
-**Phase 3: COMPLETE** — AI Assistant with Claude API, 32 tools, streaming chat UI
-**Session 4 additions:** Team management, tech assignment on jobs, reports date filtering + tech charts
-**Session 5 additions:** Full AI chat assistant (Phase 3)
-**Session 6 additions:** Dashboard operational intelligence (sectioned layout, revenue comparisons, shop floor stats, today's schedule), customer list consistency, UI refresh phase 2
+**Phase 2: MOSTLY COMPLETE** — Stripe invoicing + estimates + Quo SMS + Terminal built; Resend email not started
+**Phase 3: COMPLETE** — AI Assistant with Claude API, 34 tools, streaming chat UI
+**Session 4:** Team management, tech assignment on jobs, reports date filtering + tech charts
+**Session 5:** Full AI chat assistant (Phase 3)
+**Session 6:** Dashboard operational intelligence, UI refresh phase 2
+**Session 7:** Quo SMS integration, AI chat context preservation, customer search fix
+**Session 8:** Job presets, job form redesign, dashboard + reports enhancements
+**Session 9:** Stripe Terminal (WisePOS E) integration with Quick Pay
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - Stripe invoicing + estimate builder with public approval page fully working (sandbox mode)
-- Reports enhanced with date range toolbar (presets + custom) and technician breakdown charts
-- AI Assistant: conversational chat at `/chat` with 32 tools covering all CRUD operations, streaming SSE, floating chat bubble on all pages
+- Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
+- Quo SMS: fully wired (send/receive/webhook), auto-texts estimate approval links + invoice payment links; blocked on A2P registration
+- AI Assistant: conversational chat at `/chat` with 34 tools covering all CRUD + SMS operations, streaming SSE, floating chat bubble on all pages
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
-- Dashboard: sectioned layout (Quick Actions → Revenue with week/month comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
+- Job Presets: reusable templates with pre-filled line items, `/presets` management page
+- Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
-**Remaining Phase 2 work:**
-- Quo SMS integration (pending Quo signup + number port from Wix)
+**Remaining work:**
+- Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
+- Run Terminal migration against Supabase
+- A2P registration on Quo (blocked on number port + paid plan)
 - Resend transactional email
-- Communication log per customer
-- Message templates
+- Message templates (estimate ready, car ready, payment reminder)
 - Stripe live mode activation
 - Wix customer data import/export (1000+ contacts)
 
-**Optional Phase 3 enhancements:**
+**Optional enhancements:**
 - Voice input (Web Speech API or Whisper)
 - Chat history persistence in Supabase (currently in-memory, resets on refresh)
 
