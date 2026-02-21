@@ -22,7 +22,11 @@ export default async function CustomersPage({
   return (
     <div className="p-4 lg:p-6">
       <div className="mb-4 flex items-center justify-between gap-4">
-        <div className="flex flex-1 items-center gap-2">
+        <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">All Customers</span>
+          <span>({customers.length})</span>
+        </div>
+        <div className="flex flex-1 md:flex-initial items-center gap-2">
           <Suspense>
             <CustomerSearch />
           </Suspense>
