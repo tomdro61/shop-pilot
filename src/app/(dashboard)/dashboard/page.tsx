@@ -3,11 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Car, Calendar, DollarSign, AlertTriangle, Plus, ArrowRight, Clock, UserX, TrendingUp, TrendingDown, Wrench, Package, PiggyBank } from "lucide-react";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from "date-fns";
+import {
+  Car, Calendar, DollarSign, AlertTriangle, Plus, ArrowRight,
+  Clock, UserX, TrendingUp, TrendingDown, ClipboardCheck, Receipt,
+} from "lucide-react";
+import { startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/constants";
 import { formatVehicle, formatCurrency } from "@/lib/utils/format";
-import { getRevenueBreakdown, getStaleJobsCount } from "@/lib/actions/reports";
+import { getInspectionCount, getStaleJobsCount } from "@/lib/actions/reports";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -20,541 +23,366 @@ async function getDashboardStats() {
   const today = now.toISOString().split("T")[0];
   const weekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString().split("T")[0];
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 }).toISOString().split("T")[0];
-  const monthStart = startOfMonth(now).toISOString().split("T")[0];
-  const monthEnd = endOfMonth(now).toISOString().split("T")[0];
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
 
   const lastWeekDate = subWeeks(now, 1);
   const lastWeekStart = startOfWeek(lastWeekDate, { weekStartsOn: 1 }).toISOString().split("T")[0];
   const lastWeekEnd = endOfWeek(lastWeekDate, { weekStartsOn: 1 }).toISOString().split("T")[0];
 
-  const lastMonthDate = subMonths(now, 1);
-  const lastMonthStart = startOfMonth(lastMonthDate).toISOString().split("T")[0];
-  const lastMonthEnd = endOfMonth(lastMonthDate).toISOString().split("T")[0];
-
-  const yearStart = `${now.getFullYear()}-01-01`;
-  const yearEnd = `${now.getFullYear()}-12-31`;
-  const lastYearStart = `${now.getFullYear() - 1}-01-01`;
-  const lastYearEnd = `${now.getFullYear() - 1}-12-31`;
-
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
+  function sumRevenue(data: { job_line_items: unknown }[] | null) {
+    return (
+      data?.reduce((sum, job) => {
+        const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+          (s, li) => s + (li.total || 0), 0
+        );
+        return sum + (jobTotal || 0);
+      }, 0) || 0
+    );
+  }
 
   const [
     carsInShopResult,
     waitingForPartsResult,
     unassignedJobsResult,
     todayRevenueResult,
-    yesterdayRevenueResult,
     weeklyRevenueResult,
     lastWeekRevenueResult,
     monthlyRevenueResult,
-    lastMonthRevenueResult,
-    yearlyRevenueResult,
-    lastYearRevenueResult,
     unpaidJobsResult,
-    fleetARResult,
   ] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
+    supabase.from("jobs").select("id", { count: "exact", head: true })
       .in("status", ["not_started", "in_progress", "waiting_for_parts"]),
-    supabase
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
+    supabase.from("jobs").select("id", { count: "exact", head: true })
       .eq("status", "waiting_for_parts"),
-    supabase
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "not_started")
-      .is("assigned_tech", null),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total)")
-      .eq("status", "complete")
-      .eq("date_finished", today),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total)")
-      .eq("status", "complete")
-      .eq("date_finished", yesterdayStr),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total)")
-      .eq("status", "complete")
-      .gte("date_finished", weekStart)
-      .lte("date_finished", weekEnd),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total)")
-      .eq("status", "complete")
-      .gte("date_finished", lastWeekStart)
-      .lte("date_finished", lastWeekEnd),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total)")
-      .eq("status", "complete")
-      .gte("date_finished", monthStart)
-      .lte("date_finished", monthEnd),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total)")
-      .eq("status", "complete")
-      .gte("date_finished", lastMonthStart)
-      .lte("date_finished", lastMonthEnd),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total)")
-      .eq("status", "complete")
-      .gte("date_finished", yearStart)
-      .lte("date_finished", yearEnd),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total)")
-      .eq("status", "complete")
-      .gte("date_finished", lastYearStart)
-      .lte("date_finished", lastYearEnd),
-    supabase
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "complete")
-      .neq("payment_status", "paid")
-      .neq("payment_status", "waived"),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total), customers!inner(customer_type)")
-      .eq("customers.customer_type", "fleet")
-      .eq("status", "complete")
-      .neq("payment_status", "paid")
-      .neq("payment_status", "waived"),
+    supabase.from("jobs").select("id", { count: "exact", head: true })
+      .eq("status", "not_started").is("assigned_tech", null),
+    supabase.from("jobs").select("id, job_line_items(total)")
+      .eq("status", "complete").eq("date_finished", today),
+    supabase.from("jobs").select("id, job_line_items(total)")
+      .eq("status", "complete").gte("date_finished", weekStart).lte("date_finished", weekEnd),
+    supabase.from("jobs").select("id, job_line_items(total)")
+      .eq("status", "complete").gte("date_finished", lastWeekStart).lte("date_finished", lastWeekEnd),
+    supabase.from("jobs").select("id, job_line_items(total)")
+      .eq("status", "complete").gte("date_finished", monthStart).lte("date_finished", monthEnd),
+    supabase.from("jobs").select("id", { count: "exact", head: true })
+      .eq("status", "complete").neq("payment_status", "paid").neq("payment_status", "waived"),
   ]);
 
-  const todayRevenue =
-    todayRevenueResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
-
-  const yesterdayRevenue =
-    yesterdayRevenueResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
-
-  const weeklyRevenue =
-    weeklyRevenueResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
-
-  const lastWeekRevenue =
-    lastWeekRevenueResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
-
-  const monthlyRevenue =
-    monthlyRevenueResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
-
-  const lastMonthRevenue =
-    lastMonthRevenueResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
-
-  const yearlyRevenue =
-    yearlyRevenueResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
-
-  const lastYearRevenue =
-    lastYearRevenueResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
-
-  const outstandingAR =
-    fleetARResult.data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0;
+  const weeklyRevenue = sumRevenue(weeklyRevenueResult.data);
+  const weekJobCount = weeklyRevenueResult.data?.length || 0;
 
   return {
     carsInShop: carsInShopResult.count || 0,
     waitingForParts: waitingForPartsResult.count || 0,
     unassignedJobs: unassignedJobsResult.count || 0,
-    todayRevenue,
-    yesterdayRevenue,
+    todayRevenue: sumRevenue(todayRevenueResult.data),
     weeklyRevenue,
-    lastWeekRevenue,
-    monthlyRevenue,
-    lastMonthRevenue,
-    yearlyRevenue,
-    lastYearRevenue,
+    lastWeekRevenue: sumRevenue(lastWeekRevenueResult.data),
+    monthlyRevenue: sumRevenue(monthlyRevenueResult.data),
+    avgTicketWeek: weekJobCount > 0 ? weeklyRevenue / weekJobCount : 0,
     unpaidJobs: unpaidJobsResult.count || 0,
-    outstandingAR,
   };
 }
 
-async function getTodaysSchedule() {
+async function getTechActivity() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
   const { data } = await supabase
     .from("jobs")
-    .select("id, status, category, date_received, customers(first_name, last_name), vehicles(year, make, model), users(id, name)")
-    .eq("date_received", today)
-    .neq("status", "complete")
-    .order("created_at");
+    .select("id, status, category, assigned_tech, users!jobs_assigned_tech_fkey(name)")
+    .or(`date_received.eq.${today},date_finished.eq.${today}`);
 
-  return data || [];
+  const techs: Record<string, { jobs: number; completed: number }> = {};
+  data?.forEach((job) => {
+    const user = job.users as { name: string } | null;
+    const name = user?.name || "Unassigned";
+    if (!techs[name]) techs[name] = { jobs: 0, completed: 0 };
+    techs[name].jobs += 1;
+    if (job.status === "complete") techs[name].completed += 1;
+  });
+
+  return Object.entries(techs)
+    .map(([name, counts]) => ({ name, ...counts }))
+    .sort((a, b) => b.jobs - a.jobs);
 }
 
 async function getRecentJobs() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("jobs")
-    .select("id, status, category, date_received, payment_status, customers(first_name, last_name), vehicles(year, make, model)")
+    .select("id, status, category, date_received, payment_status, job_line_items(total), customers(first_name, last_name), vehicles(year, make, model)")
     .order("date_received", { ascending: false })
-    .limit(5);
+    .limit(8);
   return data || [];
 }
 
-const colorMap = {
-  blue: { border: "border-t-blue-500", bg: "bg-blue-500/10 dark:bg-blue-400/10", text: "text-blue-600 dark:text-blue-400" },
-  emerald: { border: "border-t-emerald-500", bg: "bg-emerald-500/10 dark:bg-emerald-400/10", text: "text-emerald-600 dark:text-emerald-400" },
-  amber: { border: "border-t-amber-500", bg: "bg-amber-500/10 dark:bg-amber-400/10", text: "text-amber-600 dark:text-amber-400" },
-  violet: { border: "border-t-violet-500", bg: "bg-violet-500/10 dark:bg-violet-400/10", text: "text-violet-600 dark:text-violet-400" },
-  red: { border: "border-t-red-500", bg: "bg-red-500/10 dark:bg-red-400/10", text: "text-red-600 dark:text-red-400" },
-} as const;
-
-function RevenueCard({
-  label,
-  value,
-  previous,
-  previousLabel,
-}: {
-  label: string;
-  value: number;
-  previous: number;
-  previousLabel: string;
-}) {
-  const colors = colorMap.emerald;
-  const diff = previous > 0 ? ((value - previous) / previous) * 100 : value > 0 ? 100 : 0;
-  const isUp = diff >= 0;
-
-  return (
-    <Card className={`${colors.border} border-t-2 gap-0 py-0`}>
-      <CardContent className="px-4 py-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-          <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${colors.bg}`}>
-            <DollarSign className={`h-3.5 w-3.5 ${colors.text}`} />
-          </div>
-        </div>
-        <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight">{formatCurrency(value)}</p>
-        <div className="mt-1 flex items-center gap-1">
-          {isUp ? (
-            <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-          ) : (
-            <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />
-          )}
-          <span className={`text-xs font-medium tabular-nums ${isUp ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-            {isUp ? "+" : ""}{diff.toFixed(0)}%
-          </span>
-          <span className="text-xs text-muted-foreground">{previousLabel}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SectionHeader({ label }: { label: string }) {
-  return (
-    <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-      {label}
-    </h2>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  subtitle,
-  color,
-  icon: Icon,
-}: {
-  label: string;
-  value: string | number;
-  subtitle?: string;
-  color: keyof typeof colorMap;
-  icon: typeof Car;
-}) {
-  const colors = colorMap[color];
-  return (
-    <Card className={`${colors.border} border-t-2 gap-0 py-0`}>
-      <CardContent className="px-4 py-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-          <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${colors.bg}`}>
-            <Icon className={`h-3.5 w-3.5 ${colors.text}`} />
-          </div>
-        </div>
-        <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight">{value}</p>
-        {subtitle && (
-          <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
-        )}
-      </CardContent>
-    </Card>
-  );
+function pctChange(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return ((current - previous) / previous) * 100;
 }
 
 export default async function DashboardPage() {
-  const [stats, todaysSchedule, recentJobs, revenueBreakdown, staleJobs] = await Promise.all([
+  const [stats, techActivity, recentJobs, staleJobs, inspectionsToday] = await Promise.all([
     getDashboardStats(),
-    getTodaysSchedule(),
+    getTechActivity(),
     getRecentJobs(),
-    getRevenueBreakdown(),
     getStaleJobsCount(),
+    getInspectionCount(
+      new Date().toISOString().split("T")[0],
+      new Date().toISOString().split("T")[0],
+    ),
   ]);
 
-  const hasAlerts = stats.unpaidJobs > 0 || stats.outstandingAR > 0 || staleJobs > 0;
+  const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
+  const alertCount = stats.unpaidJobs + stats.unassignedJobs + staleJobs;
 
   return (
-    <div className="mx-auto max-w-4xl p-4 lg:p-6 space-y-6">
+    <div className="p-4 lg:p-6 space-y-6">
 
       {/* ── Quick Actions ── */}
-      <div className="flex gap-3 animate-in-up stagger-1">
-        <Link href="/customers/new" className="flex-1">
-          <Button variant="outline" className="w-full gap-2">
-            <Plus className="h-4 w-4" />
-            New Customer
-          </Button>
-        </Link>
+      <div className="flex gap-3">
         <Link href="/jobs/new" className="flex-1">
           <Button className="w-full gap-2">
             <Plus className="h-4 w-4" />
             New Job
           </Button>
         </Link>
+        <Link href="/quick-pay" className="flex-1">
+          <Button variant="outline" className="w-full gap-2">
+            <DollarSign className="h-4 w-4" />
+            Quick Pay
+          </Button>
+        </Link>
       </div>
 
-      {/* ── Revenue ── */}
-      <section className="animate-in-up stagger-2">
-        <SectionHeader label="Revenue" />
-        <div className="grid grid-cols-2 gap-3">
-          <RevenueCard label="Today" value={stats.todayRevenue} previous={stats.yesterdayRevenue} previousLabel="vs yesterday" />
-          <RevenueCard label="This Week" value={stats.weeklyRevenue} previous={stats.lastWeekRevenue} previousLabel="vs last week" />
-          <RevenueCard label="This Month" value={stats.monthlyRevenue} previous={stats.lastMonthRevenue} previousLabel="vs last month" />
-          <RevenueCard label="This Year" value={stats.yearlyRevenue} previous={stats.lastYearRevenue} previousLabel="vs last year" />
-        </div>
-      </section>
-
-      {/* ── Revenue Breakdown ── */}
-      <section className="animate-in-up stagger-2">
-        <SectionHeader label="Revenue Breakdown — This Month" />
+      {/* ── Revenue Metrics ── */}
+      <section>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatCard label="Revenue" value={formatCurrency(revenueBreakdown.totalRevenue)} color="emerald" icon={DollarSign} />
-          <StatCard label="Labor" value={formatCurrency(revenueBreakdown.laborRevenue)} color="blue" icon={Wrench} />
-          <StatCard label="Parts" value={formatCurrency(revenueBreakdown.partsRevenue)} color="violet" icon={Package} />
-          <StatCard
-            label="Est. Gross Profit"
-            value={formatCurrency(revenueBreakdown.estimatedGrossProfit)}
-            subtitle="Assumes 40% parts margin"
-            color="emerald"
-            icon={PiggyBank}
-          />
+          {/* Today */}
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Today</p>
+            <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.todayRevenue)}</p>
+          </div>
+
+          {/* This Week */}
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Week</p>
+            <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.weeklyRevenue)}</p>
+            <div className="mt-1 flex items-center gap-1">
+              {weekChange >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />
+              )}
+              <span className={`text-xs font-medium tabular-nums ${weekChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                {weekChange >= 0 ? "+" : ""}{weekChange.toFixed(0)}%
+              </span>
+              <span className="text-xs text-muted-foreground">vs last week</span>
+            </div>
+          </div>
+
+          {/* This Month */}
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Month</p>
+            <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.monthlyRevenue)}</p>
+          </div>
+
+          {/* Avg Ticket */}
+          <div className="rounded-xl border bg-card p-4">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Avg Ticket (Week)</p>
+            <p className="mt-1 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.avgTicketWeek)}</p>
+          </div>
         </div>
       </section>
 
       {/* ── Needs Attention ── */}
-      {hasAlerts && (
-        <section className="animate-in-up stagger-3">
-          <SectionHeader label="Needs Attention" />
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-            {staleJobs > 0 && (
-              <StatCard label="Stale Jobs" value={staleJobs} subtitle="Open > 2 days" color="amber" icon={Clock} />
-            )}
+      {alertCount > 0 && (
+        <section>
+          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Needs Attention
+          </h2>
+          <div className="space-y-1.5">
             {stats.unpaidJobs > 0 && (
-              <StatCard label="Unpaid Jobs" value={stats.unpaidJobs} subtitle="Complete but unpaid" color="red" icon={AlertTriangle} />
+              <Link href="/jobs?paymentStatus=unpaid&status=complete" className="block">
+                <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/5 dark:hover:bg-red-500/10">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                  <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                    {stats.unpaidJobs} unpaid {stats.unpaidJobs === 1 ? "job" : "jobs"}
+                  </span>
+                  <span className="ml-auto text-xs text-red-500 dark:text-red-400/70">Complete but not paid</span>
+                </div>
+              </Link>
             )}
-            {stats.outstandingAR > 0 && (
-              <StatCard label="Outstanding A/R" value={formatCurrency(stats.outstandingAR)} color="red" icon={AlertTriangle} />
+            {stats.unassignedJobs > 0 && (
+              <Link href="/jobs?status=not_started" className="block">
+                <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
+                  <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                    {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
+                  </span>
+                  <span className="ml-auto text-xs text-amber-500 dark:text-amber-400/70">Not started, no tech</span>
+                </div>
+              </Link>
+            )}
+            {staleJobs > 0 && (
+              <Link href="/jobs" className="block">
+                <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
+                  <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                    {staleJobs} {staleJobs === 1 ? "job needs" : "jobs need"} review
+                  </span>
+                  <span className="ml-auto text-xs text-amber-500 dark:text-amber-400/70">Open &gt; 2 days</span>
+                </div>
+              </Link>
             )}
           </div>
         </section>
       )}
 
       {/* ── Shop Floor ── */}
-      <section className="animate-in-up stagger-4">
-        <SectionHeader label="Shop Floor" />
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Cars In Shop" value={stats.carsInShop} color="blue" icon={Car} />
-          <StatCard label="Waiting for Parts" value={stats.waitingForParts} color="amber" icon={Clock} />
-          <StatCard label="Unassigned" value={stats.unassignedJobs} color="red" icon={UserX} />
+      <section>
+        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Shop Floor
+        </h2>
+        <div className="flex items-center gap-6 rounded-xl border bg-card px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <Car className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <div>
+              <p className="text-2xl font-bold tabular-nums leading-none">{stats.carsInShop}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Cars In Shop</p>
+            </div>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="flex items-center gap-2.5">
+            <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-2xl font-bold tabular-nums leading-none">{stats.waitingForParts}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Waiting for Parts</p>
+            </div>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="flex items-center gap-2.5">
+            <ClipboardCheck className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+            <div>
+              <p className="text-2xl font-bold tabular-nums leading-none">{inspectionsToday}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Inspections Today</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── Today's Schedule ── */}
-      <section className="animate-in-up stagger-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-            <CardTitle className="text-sm font-semibold">Today&apos;s Schedule</CardTitle>
-            <Link
-              href="/jobs"
-              className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
-            >
-              View all
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardHeader>
-          <CardContent className="p-0">
-            {todaysSchedule.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <p className="mt-3 text-sm font-medium text-muted-foreground">No jobs scheduled today</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {todaysSchedule.map((job) => {
-                  const status = job.status as JobStatus;
-                  const statusColors = JOB_STATUS_COLORS[status];
-                  const customer = job.customers as { first_name: string; last_name: string } | null;
-                  const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-                  const tech = job.users as { id: string; name: string } | null;
-                  return (
-                    <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">
-                            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {[job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1.5 pl-4">
-                          <span className={`text-[11px] ${tech ? "text-muted-foreground" : "text-red-500 dark:text-red-400 font-medium"}`}>
-                            {tech ? tech.name : "Unassigned"}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
-                          >
-                            {JOB_STATUS_LABELS[status] || status}
-                          </Badge>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+      {/* ── Tech Activity + Recent Jobs (side by side on desktop) ── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-      {/* ── Recent Jobs ── */}
-      <section className="animate-in-up stagger-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-            <CardTitle className="text-sm font-semibold">Recent Jobs</CardTitle>
-            <Link
-              href="/jobs"
-              className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
-            >
-              View all
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardHeader>
-          <CardContent className="p-0">
-            {recentJobs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  <Car className="h-5 w-5 text-muted-foreground" />
+        {/* Tech Activity */}
+        <section>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
+              <CardTitle className="text-sm font-semibold">Today&apos;s Tech Activity</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {techActivity.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                  <p className="mt-2 text-sm text-muted-foreground">No activity today</p>
                 </div>
-                <p className="mt-3 text-sm font-medium text-muted-foreground">No jobs yet</p>
-                <p className="mt-1 text-xs text-muted-foreground/70">Create your first job to get started</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {recentJobs.map((job) => {
-                  const status = job.status as JobStatus;
-                  const statusColors = JOB_STATUS_COLORS[status];
-                  const paymentStatus = (job.payment_status || "unpaid") as PaymentStatus;
-                  const paymentColors = PAYMENT_STATUS_COLORS[paymentStatus];
-                  const customer = job.customers as { first_name: string; last_name: string } | null;
-                  const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-                  return (
-                    <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium">
-                            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {[job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1.5 pl-4">
-                          <span className="hidden text-[11px] tabular-nums text-muted-foreground sm:inline">
-                            {new Date(job.date_received).toLocaleDateString()}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
-                          >
-                            {JOB_STATUS_LABELS[status] || status}
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${paymentColors?.bg ?? ""} ${paymentColors?.text ?? ""} ${paymentColors?.border ?? ""}`}
-                          >
-                            {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
-                          </Badge>
+              ) : (
+                <div className="divide-y">
+                  {techActivity.map((tech) => (
+                    <div key={tech.name} className="flex items-center justify-between px-5 py-2.5">
+                      <span className="text-sm font-medium">{tech.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">
+                          {tech.completed}/{tech.jobs} done
+                        </span>
+                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${tech.jobs > 0 ? (tech.completed / tech.jobs) * 100 : 0}%` }}
+                          />
                         </div>
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Recent Jobs */}
+        <section>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
+              <CardTitle className="text-sm font-semibold">Recent Jobs</CardTitle>
+              <Link
+                href="/jobs"
+                className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+              >
+                View all
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </CardHeader>
+            <CardContent className="p-0">
+              {recentJobs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Car className="h-5 w-5 text-muted-foreground" />
+                  <p className="mt-2 text-sm text-muted-foreground">No jobs yet</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {recentJobs.map((job) => {
+                    const status = job.status as JobStatus;
+                    const statusColors = JOB_STATUS_COLORS[status];
+                    const paymentStatus = (job.payment_status || "unpaid") as PaymentStatus;
+                    const paymentColors = PAYMENT_STATUS_COLORS[paymentStatus];
+                    const customer = job.customers as { first_name: string; last_name: string } | null;
+                    const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+                    const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+                      (s, li) => s + (li.total || 0), 0
+                    ) || 0;
+                    return (
+                      <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+                        <div className="flex items-center justify-between px-5 py-2.5 transition-colors hover:bg-accent/50">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">
+                              {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {[job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5 pl-4">
+                            {jobTotal > 0 && (
+                              <span className="hidden text-xs font-medium tabular-nums text-muted-foreground sm:inline">
+                                {formatCurrency(jobTotal)}
+                              </span>
+                            )}
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
+                            >
+                              {JOB_STATUS_LABELS[status] || status}
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] ${paymentColors?.bg ?? ""} ${paymentColors?.text ?? ""} ${paymentColors?.border ?? ""}`}
+                            >
+                              {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
+                            </Badge>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </div>
   );
 }
