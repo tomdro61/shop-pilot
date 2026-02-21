@@ -18,6 +18,7 @@ export type Database = {
           email: string | null;
           address: string | null;
           notes: string | null;
+          stripe_customer_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -29,6 +30,7 @@ export type Database = {
           email?: string | null;
           address?: string | null;
           notes?: string | null;
+          stripe_customer_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -40,6 +42,7 @@ export type Database = {
           email?: string | null;
           address?: string | null;
           notes?: string | null;
+          stripe_customer_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -216,6 +219,7 @@ export type Database = {
           approved_at: string | null;
           declined_at: string | null;
           tax_rate: number;
+          approval_token: string | null;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -228,6 +232,7 @@ export type Database = {
           approved_at?: string | null;
           declined_at?: string | null;
           tax_rate?: number;
+          approval_token?: string | null;
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -240,6 +245,7 @@ export type Database = {
           approved_at?: string | null;
           declined_at?: string | null;
           tax_rate?: number;
+          approval_token?: string | null;
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -308,6 +314,7 @@ export type Database = {
           amount: number | null;
           paid_at: string | null;
           payment_method: string | null;
+          stripe_hosted_invoice_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -319,6 +326,7 @@ export type Database = {
           amount?: number | null;
           paid_at?: string | null;
           payment_method?: string | null;
+          stripe_hosted_invoice_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -330,6 +338,7 @@ export type Database = {
           amount?: number | null;
           paid_at?: string | null;
           payment_method?: string | null;
+          stripe_hosted_invoice_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };

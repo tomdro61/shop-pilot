@@ -1,11 +1,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
+import { getInvoiceForJob } from "@/lib/actions/invoices";
+import { getEstimateForJob } from "@/lib/actions/estimates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StatusSelect } from "@/components/dashboard/status-select";
 import { LineItemsList } from "@/components/dashboard/line-items-list";
+import { EstimateSection } from "@/components/dashboard/estimate-section";
+import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/format";
 import { Pencil, User, Car } from "lucide-react";
@@ -27,10 +31,14 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const job = await getJob(id);
+  const [job, invoice, estimate] = await Promise.all([
+    getJob(id),
+    getInvoiceForJob(id),
+    getEstimateForJob(id),
+  ]);
   if (!job) notFound();
 
-  const customer = job.customers as Customer | null;
+  const customer = job.customers as (Customer & { email: string | null }) | null;
   const vehicle = job.vehicles as Vehicle | null;
   const lineItems = (job.job_line_items || []) as JobLineItem[];
 
@@ -126,6 +134,21 @@ export default async function JobDetailPage({
 
       {/* Line Items */}
       <LineItemsList jobId={id} lineItems={lineItems} />
+
+      {/* Estimate */}
+      <div className="mt-6">
+        <EstimateSection jobId={id} estimate={estimate} />
+      </div>
+
+      {/* Invoice */}
+      <div className="mt-6">
+        <InvoiceSection
+          jobId={id}
+          jobStatus={job.status as JobStatus}
+          invoice={invoice}
+          customerEmail={customer?.email || null}
+        />
+      </div>
     </div>
   );
 }
