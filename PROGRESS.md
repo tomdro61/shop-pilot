@@ -705,6 +705,11 @@
 - Phase 4: vehicle service history, work orders, labor rates, inventory
 - Optional: voice input, chat persistence
 
+### CLAUDE.md Updates
+- **Session Workflow** rewritten — doc updates (`PROGRESS.md`, `CLAUDE.md`, `src/types/supabase.ts`) now required after every commit, not just end of session
+- **Current Status** updated to reflect all 9 sessions including Terminal, Quo SMS, presets
+- **Tech Stack** Payments row updated to reflect Terminal is built
+
 ### Known Issues / Notes
 - Terminal integration is fully built but untestable until Stripe Terminal is enabled on the account and hardware is registered
 - Walk-in jobs appear in job list linked to "Walk-In Customer" — can be reassigned later via `linkQuickPayToCustomer()`
