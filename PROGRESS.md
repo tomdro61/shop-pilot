@@ -245,3 +245,81 @@
 ### Known Issues / Notes
 - Next.js 16 middleware deprecation warning persists — not blocking
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 5 — 2026-02-20 — Phase 3: AI Assistant (Complete)
+
+### What Was Completed
+
+**Full conversational AI assistant with Claude API integration, streaming responses, and 32 tools:**
+
+1. **AI Types** (`src/lib/ai/types.ts`) — ChatMessage, ToolCallInfo, ChatSSEEvent type definitions
+2. **System Prompt** (`src/lib/ai/system-prompt.ts`) — Defines ShopPilot persona, data model knowledge, business rules (MA 6.25% tax on parts, job status flow, estimate draft-only editing), confirmation rules for destructive/financial actions, concise phone-screen response style
+3. **Tool Definitions** (`src/lib/ai/tools.ts`) — 32 Anthropic tool definitions with JSON Schema input_schema:
+   - **Read tools (13):** search_customers, get_customer, get_vehicles_for_customer, get_vehicle, search_jobs, get_job, get_job_categories, get_estimate_for_job, get_estimate, get_invoice_for_job, get_technicians, get_team_members, get_report_data
+   - **Create/Update tools (11):** create_customer, update_customer, create_vehicle, update_vehicle, create_job, update_job, update_job_status, create_line_item, update_line_item, create_estimate_line_item, update_estimate_line_item
+   - **Destructive/Financial tools (8):** delete_customer, delete_vehicle, delete_job, delete_line_item, delete_estimate_line_item, create_estimate_from_job, send_estimate, create_invoice_from_job
+4. **Tool Handlers** (`src/lib/ai/handlers.ts`) — `executeToolCall()` switch dispatch to all existing server actions with try/catch error handling, partial update support (fetches current data and merges), sensible defaults (today's date, "not_started" status)
+5. **SSE Utilities** (`src/lib/ai/sse.ts`) — `encodeSSE()` for server streaming, `parseSSE()` for client consumption
+6. **API Route** (`src/app/api/ai/chat/route.ts`) — POST handler with Supabase auth check, streaming SSE response, tool-use loop (max 10 iterations), Claude Haiku 4.5 model with 1024 max tokens
+7. **useChat Hook** (`src/lib/ai/use-chat.ts`) — Client-side React hook managing messages state, SSE stream parsing, abort support, incremental text + tool call updates
+8. **Chat UI Components:**
+   - `chat-message.tsx` — Message bubbles (user right-aligned primary, assistant left-aligned muted) with tool call indicator pills (yellow=running, green=complete, red=error)
+   - `chat-messages-list.tsx` — Scrollable message list with auto-scroll and welcome message
+   - `chat-input.tsx` — Auto-growing textarea, Enter to send, Shift+Enter for newline, send button
+   - `chat-bubble.tsx` — Floating action button (MessageCircle) on all pages except /chat, positioned above mobile bottom nav
+9. **Chat Page** (`src/app/(dashboard)/chat/page.tsx`) — Full-screen chat composing messages list + input
+10. **Nav Updates** — Added Chat (MessageCircle icon) to sidebar, "AI Assistant" to header page titles, ChatBubble to dashboard layout
+
+### Model Configuration
+- **Model:** Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) — chosen for cost efficiency at single-shop volume
+- **Max tokens:** 1024 — sufficient for concise phone-screen responses
+- **Model setting location:** `src/app/api/ai/chat/route.ts` line 44 — change model string to switch (e.g. `claude-sonnet-4-5-20250929` for more capability)
+
+### New Files (12)
+- `src/lib/ai/types.ts` — Chat type definitions
+- `src/lib/ai/system-prompt.ts` — System prompt with business rules
+- `src/lib/ai/tools.ts` — 32 Anthropic tool definitions
+- `src/lib/ai/handlers.ts` — Tool call dispatch to server actions
+- `src/lib/ai/sse.ts` — SSE encode/parse helpers
+- `src/lib/ai/use-chat.ts` — React hook for chat state + streaming
+- `src/app/api/ai/chat/route.ts` — Streaming API route
+- `src/app/(dashboard)/chat/page.tsx` — Chat page
+- `src/components/chat/chat-message.tsx` — Message bubble component
+- `src/components/chat/chat-messages-list.tsx` — Messages list component
+- `src/components/chat/chat-input.tsx` — Chat input component
+- `src/components/chat/chat-bubble.tsx` — Floating chat button
+
+### Modified Files (4)
+- `src/components/layout/sidebar.tsx` — Added Chat nav item
+- `src/components/layout/header.tsx` — Added AI Assistant page title
+- `src/app/(dashboard)/layout.tsx` — Added ChatBubble component
+- `package.json` — Added `@anthropic-ai/sdk`
+
+### Environment Variables Added
+- `ANTHROPIC_API_KEY` — Anthropic API key (added to `.env.local` and Vercel)
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+- Deployed to Vercel via `git push origin master`
+
+### What's NOT Done Yet
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory, resets on page refresh)
+- [ ] SMS/email sending of estimate approval links (currently manual copy/paste)
+- [ ] Stripe live mode (currently sandbox/test mode)
+- [ ] Wix customer data import (1000+ customers)
+- [ ] Quo SMS integration (pending Quo signup + number port from Wix)
+- [ ] Resend email integration
+
+### What's Next
+- Continue Phase 2 remaining: Resend email, Wix import, Stripe live mode
+- Or start Phase 4: vehicle service history, work orders, labor rates, inventory
+- Optional Phase 3 enhancements: voice input, chat persistence
+
+### Known Issues / Notes
+- Next.js 16 middleware deprecation warning persists — not blocking
+- Chat history is in-memory only — refreshing the page clears conversation
+- All 32 tool schemas are sent with every API call, which increases input token cost. Could optimize later by subsetting tools based on conversation context.
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

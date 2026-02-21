@@ -142,16 +142,17 @@ shop-pilot/
 - Communication log per customer (all SMS/email in one timeline)
 - Message templates (estimate ready, car ready, payment reminder)
 
-### Phase 3: AI Assistant (Weeks 5-6)
+### Phase 3: AI Assistant (Weeks 5-6) — COMPLETE
 
 **Goal:** Voice/text-first shop management from a phone.
 
-- Claude API integration with function calling (tool use)
-- Define full tool suite: customer lookup, job CRUD, estimate/invoice generation, messaging, status updates
-- Mobile-optimized chat interface
-- Voice input (Web Speech API or Whisper)
-- Confirmation step before any financial action (invoice, payment, etc.)
-- Thorough real-world testing with actual shop operations
+- ~~Claude API integration with function calling (tool use)~~ DONE — `@anthropic-ai/sdk`, Haiku 4.5
+- ~~Define full tool suite: customer lookup, job CRUD, estimate/invoice generation, messaging, status updates~~ DONE — 32 tools in `src/lib/ai/tools.ts`
+- ~~Mobile-optimized chat interface~~ DONE — `/chat` page + floating chat bubble
+- ~~Confirmation step before any financial action (invoice, payment, etc.)~~ DONE — system prompt enforces confirmation pattern
+- Voice input (Web Speech API or Whisper) — deferred
+- Chat history persistence — deferred (currently in-memory)
+- Thorough real-world testing with actual shop operations — ongoing
 
 ### Phase 4: Operational Excellence (Weeks 7-12)
 
@@ -218,11 +219,15 @@ At the start of a new session, read `PROGRESS.md` first to pick up where we left
 
 **Phase 1: COMPLETE** — Deployed and live on Vercel
 **Phase 2: PARTIAL** — Stripe invoicing + estimates done, SMS/email not started
+**Phase 3: COMPLETE** — AI Assistant with Claude API, 32 tools, streaming chat UI
 **Session 4 additions:** Team management, tech assignment on jobs, reports date filtering + tech charts
+**Session 5 additions:** Full AI chat assistant (Phase 3)
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - Stripe invoicing + estimate builder with public approval page fully working (sandbox mode)
 - Reports enhanced with date range toolbar (presets + custom) and technician breakdown charts
+- AI Assistant: conversational chat at `/chat` with 32 tools covering all CRUD operations, streaming SSE, floating chat bubble on all pages
+- AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
@@ -234,7 +239,11 @@ At the start of a new session, read `PROGRESS.md` first to pick up where we left
 - Stripe live mode activation
 - Wix customer data import/export (1000+ contacts)
 
-**Next phase:** Phase 3 — AI Assistant (Claude API with function calling)
+**Optional Phase 3 enhancements:**
+- Voice input (Web Speech API or Whisper)
+- Chat history persistence in Supabase (currently in-memory, resets on refresh)
+
+**Next phase:** Phase 4 — Operational Excellence (vehicle history, work orders, labor rates, inventory, accounting)
 
 ## Development Conventions
 
