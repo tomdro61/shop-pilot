@@ -45,9 +45,11 @@ export async function sendSMS({ to, body }: SendSMSParams): Promise<SendSMSResul
 
   if (!res.ok) {
     const text = await res.text();
+    console.error("[Quo API Error]", res.status, text);
     throw new Error(`Quo API error (${res.status}): ${text}`);
   }
 
   const data = await res.json();
+  console.log("[Quo API Success] Message sent, response:", JSON.stringify(data));
   return { success: true, testMode: false, messageId: data.id };
 }
