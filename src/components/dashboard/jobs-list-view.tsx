@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import { StatusSelect } from "./status-select";
 import { JobCard } from "./job-card";
 import { formatCustomerName, formatVehicle, formatCurrency } from "@/lib/utils/format";
@@ -64,6 +65,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <Button
             variant="ghost"
             size="sm"
+            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Customer
@@ -98,6 +100,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <Button
             variant="ghost"
             size="sm"
+            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Category
@@ -117,6 +120,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <Button
             variant="ghost"
             size="sm"
+            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Total
@@ -139,6 +143,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <Button
             variant="ghost"
             size="sm"
+            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Date
@@ -164,7 +169,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
   return (
     <>
       {/* Mobile: Card list */}
-      <div className="space-y-2 lg:hidden">
+      <div className="lg:hidden">
         {jobs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -174,69 +179,80 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             <p className="mt-1 text-xs text-muted-foreground/70">Try adjusting your filters</p>
           </div>
         ) : (
-          jobs.map((job) => <JobCard key={job.id} job={job} />)
+          <Card>
+            <CardContent className="p-0">
+              <div className="border-b px-4 py-2.5 text-xs font-semibold text-muted-foreground">
+                {jobs.length} jobs
+              </div>
+              <div className="divide-y">
+                {jobs.map((job) => <JobCard key={job.id} job={job} />)}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
       {/* Desktop: Data table */}
       <div className="hidden lg:block">
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      // Don't navigate if clicking on status select
-                      if ((e.target as HTMLElement).closest("[role='combobox']"))
-                        return;
-                      window.location.href = `/jobs/${row.original.id}`;
-                    }}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className="bg-muted/40 hover:bg-muted/40">
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id} className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
                     ))}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-32 text-center"
-                  >
-                    <div className="flex flex-col items-center justify-center">
-                      <p className="text-sm font-medium text-muted-foreground">No jobs found</p>
-                      <p className="mt-1 text-xs text-muted-foreground/70">Try adjusting your filters</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      className="cursor-pointer"
+                      onClick={(e) => {
+                        // Don't navigate if clicking on status select
+                        if ((e.target as HTMLElement).closest("[role='combobox']"))
+                          return;
+                        window.location.href = `/jobs/${row.original.id}`;
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-32 text-center"
+                    >
+                      <div className="flex flex-col items-center justify-center">
+                        <p className="text-sm font-medium text-muted-foreground">No jobs found</p>
+                        <p className="mt-1 text-xs text-muted-foreground/70">Try adjusting your filters</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

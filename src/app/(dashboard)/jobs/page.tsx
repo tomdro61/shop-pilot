@@ -42,7 +42,7 @@ export default async function JobsPage({
   return (
     <div className="p-4 lg:p-6">
       <Suspense>
-        <JobsToolbar categories={allCategories} />
+        <JobsToolbar categories={allCategories} jobCount={jobs.length} />
       </Suspense>
 
       <div className="mt-4">
