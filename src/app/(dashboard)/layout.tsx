@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/actions/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
+import { ChatBubble } from "@/components/chat/chat-bubble";
 
 export default async function DashboardLayout({
   children,
@@ -19,6 +20,7 @@ export default async function DashboardLayout({
           {children}
         </main>
         <BottomNav />
+        <ChatBubble />
       </div>
     </div>
   );
