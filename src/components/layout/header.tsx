@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Wrench, Sun, Moon, Monitor } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut, Wrench, Sun, Moon, Monitor, Settings } from "lucide-react";
 import type { User } from "@/types";
 
 const pageTitles: Record<string, string> = {
@@ -42,6 +43,7 @@ function getPageTitle(pathname: string): string {
 
 export function Header({ user }: { user: User | null }) {
   const pathname = usePathname();
+  const router = useRouter();
   const title = getPageTitle(pathname);
   const { theme, setTheme } = useTheme();
 
@@ -79,6 +81,11 @@ export function Header({ user }: { user: User | null }) {
               {user.name}
             </div>
           )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push("/settings")}>
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Theme
