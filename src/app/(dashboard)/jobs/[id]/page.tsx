@@ -12,8 +12,10 @@ import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/format";
+import { Badge } from "@/components/ui/badge";
+import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { Pencil, User, Car, HardHat } from "lucide-react";
-import type { JobStatus, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
+import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -62,6 +64,26 @@ export default async function JobDetailPage({
               {tech.name}
             </p>
           )}
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {job.payment_status && (
+              <Badge
+                variant="outline"
+                className={`${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].bg} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].text} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].border}`}
+              >
+                {PAYMENT_STATUS_LABELS[job.payment_status as PaymentStatus]}
+              </Badge>
+            )}
+            {job.payment_method && (
+              <span className="text-sm text-muted-foreground">
+                via {PAYMENT_METHOD_LABELS[job.payment_method as PaymentMethod]}
+              </span>
+            )}
+            {job.mileage_in && (
+              <span className="text-sm text-muted-foreground">
+                {job.mileage_in.toLocaleString()} mi
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
@@ -154,6 +176,7 @@ export default async function JobDetailPage({
           jobStatus={job.status as JobStatus}
           invoice={invoice}
           customerEmail={customer?.email || null}
+          isFleet={customer?.customer_type === "fleet"}
         />
       </div>
     </div>

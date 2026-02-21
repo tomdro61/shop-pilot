@@ -40,6 +40,12 @@ export const tools: Anthropic.Tool[] = [
         email: { type: "string", description: "Email address" },
         address: { type: "string", description: "Street address" },
         notes: { type: "string", description: "Notes about the customer" },
+        customer_type: {
+          type: "string",
+          enum: ["retail", "fleet"],
+          description: "Customer type (defaults to retail)",
+        },
+        fleet_account: { type: "string", description: "Fleet account name (e.g. 'Hertz', 'Sixt', 'DriveWhip') — only for fleet customers" },
       },
       required: ["first_name", "last_name"],
     },
@@ -57,6 +63,8 @@ export const tools: Anthropic.Tool[] = [
         email: { type: "string" },
         address: { type: "string" },
         notes: { type: "string" },
+        customer_type: { type: "string", enum: ["retail", "fleet"] },
+        fleet_account: { type: "string" },
       },
       required: ["id"],
     },
@@ -160,7 +168,7 @@ export const tools: Anthropic.Tool[] = [
         search: { type: "string", description: "Free-text search" },
         status: {
           type: "string",
-          enum: ["not_started", "waiting_for_parts", "in_progress", "complete", "paid"],
+          enum: ["not_started", "waiting_for_parts", "in_progress", "complete"],
           description: "Filter by job status",
         },
         category: { type: "string", description: "Filter by job category" },
@@ -200,7 +208,7 @@ export const tools: Anthropic.Tool[] = [
         vehicle_id: { type: "string", description: "Vehicle UUID" },
         status: {
           type: "string",
-          enum: ["not_started", "waiting_for_parts", "in_progress", "complete", "paid"],
+          enum: ["not_started", "waiting_for_parts", "in_progress", "complete"],
           description: "Job status (defaults to not_started)",
         },
         category: { type: "string", description: "Job category (e.g. 'Brake Service', 'Oil Change')" },
@@ -208,6 +216,17 @@ export const tools: Anthropic.Tool[] = [
         date_received: { type: "string", description: "Date received (YYYY-MM-DD, defaults to today)" },
         date_finished: { type: "string", description: "Date finished (YYYY-MM-DD)" },
         notes: { type: "string", description: "Job notes" },
+        payment_status: {
+          type: "string",
+          enum: ["unpaid", "invoiced", "paid", "waived"],
+          description: "Payment status (defaults to unpaid)",
+        },
+        payment_method: {
+          type: "string",
+          enum: ["stripe", "cash", "check", "ach"],
+          description: "Payment method",
+        },
+        mileage_in: { type: "number", description: "Vehicle mileage at time of service" },
       },
       required: ["customer_id"],
     },
@@ -223,13 +242,22 @@ export const tools: Anthropic.Tool[] = [
         vehicle_id: { type: "string", description: "Vehicle UUID" },
         status: {
           type: "string",
-          enum: ["not_started", "waiting_for_parts", "in_progress", "complete", "paid"],
+          enum: ["not_started", "waiting_for_parts", "in_progress", "complete"],
         },
         category: { type: "string" },
         assigned_tech: { type: "string" },
         date_received: { type: "string" },
         date_finished: { type: "string" },
         notes: { type: "string" },
+        payment_status: {
+          type: "string",
+          enum: ["unpaid", "invoiced", "paid", "waived"],
+        },
+        payment_method: {
+          type: "string",
+          enum: ["stripe", "cash", "check", "ach"],
+        },
+        mileage_in: { type: "number" },
       },
       required: ["id"],
     },
@@ -237,14 +265,14 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "update_job_status",
     description:
-      "Update only the job status. Automatically sets date_finished when status is 'complete' or 'paid'. Confirm with user before setting to 'complete' or 'paid'.",
+      "Update only the job status. Automatically sets date_finished when status is 'complete'. Confirm with user before setting to 'complete'.",
     input_schema: {
       type: "object" as const,
       properties: {
         id: { type: "string", description: "Job UUID" },
         status: {
           type: "string",
-          enum: ["not_started", "waiting_for_parts", "in_progress", "complete", "paid"],
+          enum: ["not_started", "waiting_for_parts", "in_progress", "complete"],
           description: "New job status",
         },
       },
@@ -472,6 +500,52 @@ export const tools: Anthropic.Tool[] = [
           description: "Set to true to get all-time data (ignores from/to)",
         },
       },
+      required: [],
+    },
+  },
+
+  // ── Payment tools ─────────────────────────────────────────────
+  {
+    name: "record_payment",
+    description:
+      "Record a payment on a job. Sets the payment method and payment status. Confirm with the user before calling this.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        job_id: { type: "string", description: "Job UUID (required)" },
+        payment_method: {
+          type: "string",
+          enum: ["stripe", "cash", "check", "ach"],
+          description: "Payment method (required)",
+        },
+        payment_status: {
+          type: "string",
+          enum: ["unpaid", "invoiced", "paid", "waived"],
+          description: "Payment status (defaults to 'paid')",
+        },
+      },
+      required: ["job_id", "payment_method"],
+    },
+  },
+
+  // ── Fleet / AR tools ──────────────────────────────────────────
+  {
+    name: "get_ar_summary",
+    description:
+      "Get outstanding accounts receivable summary for fleet customers. Shows unpaid/invoiced jobs grouped by fleet account with aging buckets (0-30, 31-60, 60+ days).",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_daily_summary",
+    description:
+      "Get a summary of today's shop activity: jobs worked on, revenue by payment method, and technician activity.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
       required: [],
     },
   },

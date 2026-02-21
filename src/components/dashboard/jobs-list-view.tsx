@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { StatusSelect } from "./status-select";
 import { JobCard } from "./job-card";
-import { formatCustomerName, formatVehicle } from "@/lib/utils/format";
+import { formatCustomerName, formatVehicle, formatCurrency } from "@/lib/utils/format";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { JobStatus } from "@/types";
@@ -36,6 +36,7 @@ type JobRow = {
   customers: { id: string; first_name: string; last_name: string; phone: string | null } | null;
   vehicles: { id: string; year: number | null; make: string | null; model: string | null } | null;
   users?: { id: string; name: string } | null;
+  job_line_items?: { total: number }[];
 };
 
 interface JobsListViewProps {
@@ -109,6 +110,28 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         header: "Tech",
         accessorFn: (row) => row.users?.name ?? "",
         cell: ({ row }) => row.original.users?.name ?? null,
+      },
+      {
+        id: "total",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Total
+            <ArrowUpDown className="ml-1 h-3 w-3" />
+          </Button>
+        ),
+        accessorFn: (row) =>
+          row.job_line_items?.reduce((sum, li) => sum + (li.total || 0), 0) ?? 0,
+        cell: ({ row }) => {
+          const total = row.original.job_line_items?.reduce(
+            (sum, li) => sum + (li.total || 0),
+            0
+          ) ?? 0;
+          return total > 0 ? formatCurrency(total) : null;
+        },
       },
       {
         accessorKey: "date_received",

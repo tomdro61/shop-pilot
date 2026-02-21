@@ -46,7 +46,7 @@ export function JobsBoardView({ jobs }: JobsBoardViewProps) {
       </div>
 
       {/* Desktop: Grid */}
-      <div className="hidden lg:grid lg:grid-cols-5 lg:gap-4">
+      <div className="hidden lg:grid lg:grid-cols-4 lg:gap-4">
         {jobsByStatus.map(({ status, jobs: statusJobs }) => (
           <BoardColumn key={status} status={status} jobs={statusJobs} />
         ))}

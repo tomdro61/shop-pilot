@@ -59,12 +59,12 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
     })
     .eq("id", invoice.id);
 
-  // Update job status to paid
+  // Update job payment tracking (don't change job status — payment is separate from workflow)
   await supabase
     .from("jobs")
     .update({
-      status: "paid",
-      date_finished: new Date().toISOString().split("T")[0],
+      payment_status: "paid",
+      payment_method: "stripe",
     })
     .eq("id", invoice.job_id);
 }

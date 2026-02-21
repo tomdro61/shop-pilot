@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Form,
   FormControl,
   FormField,
@@ -36,6 +43,8 @@ export function CustomerForm({ customer }: CustomerFormProps) {
       email: customer?.email || "",
       address: customer?.address || "",
       notes: customer?.notes || "",
+      customer_type: customer?.customer_type || "retail",
+      fleet_account: customer?.fleet_account || "",
     },
   });
 
@@ -150,6 +159,49 @@ export function CustomerForm({ customer }: CustomerFormProps) {
             </FormItem>
           )}
         />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="customer_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Customer Type</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="retail">Retail</SelectItem>
+                    <SelectItem value="fleet">Fleet</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {form.watch("customer_type") === "fleet" && (
+            <FormField
+              control={form.control}
+              name="fleet_account"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fleet Account Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. Hertz, Sixt, DriveWhip"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </div>
 
         <FormField
           control={form.control}

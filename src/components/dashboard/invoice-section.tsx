@@ -27,6 +27,7 @@ interface InvoiceSectionProps {
   jobStatus: JobStatus;
   invoice: Invoice | null;
   customerEmail: string | null;
+  isFleet?: boolean;
 }
 
 export function InvoiceSection({
@@ -34,6 +35,7 @@ export function InvoiceSection({
   jobStatus,
   invoice,
   customerEmail,
+  isFleet = false,
 }: InvoiceSectionProps) {
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +53,7 @@ export function InvoiceSection({
   }
 
   // Don't show if job isn't complete and no invoice exists
-  if (jobStatus !== "complete" && jobStatus !== "paid" && !invoice) {
+  if (jobStatus !== "complete" && !invoice) {
     return null;
   }
 
@@ -77,6 +79,12 @@ export function InvoiceSection({
       <CardContent>
         {!invoice ? (
           <div className="flex flex-col items-center gap-3 py-2">
+            {isFleet ? (
+              <p className="text-sm text-muted-foreground">
+                Fleet account — billed separately (no Stripe invoice).
+              </p>
+            ) : (
+            <>
             <p className="text-sm text-muted-foreground">
               Job is complete. Ready to invoice.
             </p>
@@ -107,6 +115,8 @@ export function InvoiceSection({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            </>
+            )}
           </div>
         ) : (
           <div className="space-y-2">

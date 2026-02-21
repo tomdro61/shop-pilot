@@ -40,11 +40,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER, DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER, DEFAULT_JOB_CATEGORIES, PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatCustomerName } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
-import type { Customer, Vehicle, Job, JobStatus } from "@/types";
+import type { Customer, Vehicle, Job, JobStatus, PaymentStatus, PaymentMethod } from "@/types";
 
 interface JobFormProps {
   job?: Job & {
@@ -83,6 +83,9 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
       date_received: job?.date_received || new Date().toISOString().split("T")[0],
       date_finished: job?.date_finished || undefined,
       notes: job?.notes || "",
+      payment_status: job?.payment_status || "unpaid",
+      payment_method: job?.payment_method || undefined,
+      mileage_in: job?.mileage_in || undefined,
     },
   });
 
@@ -416,6 +419,82 @@ export function JobForm({ job, defaultCustomerId, categories }: JobFormProps) {
               <FormLabel>Date Received</FormLabel>
               <FormControl>
                 <Input type="date" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Payment Status & Method */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="payment_status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Payment Status</FormLabel>
+                <Select value={field.value || "unpaid"} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {(Object.entries(PAYMENT_STATUS_LABELS) as [PaymentStatus, string][]).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="payment_method"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Payment Method</FormLabel>
+                <Select
+                  value={field.value ?? "none"}
+                  onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Not set" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Not set</SelectItem>
+                    {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Mileage In */}
+        <FormField
+          control={form.control}
+          name="mileage_in"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mileage In</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  placeholder="e.g. 45000"
+                  value={field.value ?? ""}
+                  onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

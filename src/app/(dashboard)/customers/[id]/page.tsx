@@ -54,9 +54,16 @@ export default async function CustomerDetailPage({
     <div className="mx-auto max-w-4xl p-4 lg:p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold">
-            {customer.first_name} {customer.last_name}
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold">
+              {customer.first_name} {customer.last_name}
+            </h2>
+            {customer.customer_type === "fleet" && (
+              <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-400 dark:border-purple-900">
+                Fleet{customer.fleet_account ? ` — ${customer.fleet_account}` : ""}
+              </Badge>
+            )}
+          </div>
           <div className="mt-1 space-y-0.5 text-sm text-muted-foreground">
             {customer.phone && <p>{formatPhone(customer.phone)}</p>}
             {customer.email && <p>{customer.email}</p>}

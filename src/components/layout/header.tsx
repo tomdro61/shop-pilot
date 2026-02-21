@@ -17,6 +17,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/customers": "Customers",
   "/jobs": "Jobs",
+  "/inspections": "Inspections",
   "/reports": "Reports",
   "/chat": "AI Assistant",
 };
@@ -28,6 +29,7 @@ function getPageTitle(pathname: string): string {
   // Check prefix matches
   if (pathname.startsWith("/customers")) return "Customers";
   if (pathname.startsWith("/jobs")) return "Jobs";
+  if (pathname.startsWith("/inspections")) return "Inspections";
   if (pathname.startsWith("/reports")) return "Reports";
   if (pathname.startsWith("/chat")) return "AI Assistant";
 

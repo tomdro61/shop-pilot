@@ -45,6 +45,9 @@ export type InvoiceStatus = Database["public"]["Enums"]["invoice_status"];
 export type MessageChannel = Database["public"]["Enums"]["message_channel"];
 export type MessageDirection = Database["public"]["Enums"]["message_direction"];
 export type UserRole = Database["public"]["Enums"]["user_role"];
+export type CustomerType = Database["public"]["Enums"]["customer_type"];
+export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
+export type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 
 // Job with relations (commonly used in lists/details)
 export type JobWithRelations = Job & {

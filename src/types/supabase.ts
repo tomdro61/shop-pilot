@@ -19,6 +19,8 @@ export type Database = {
           address: string | null;
           notes: string | null;
           stripe_customer_id: string | null;
+          customer_type: Database["public"]["Enums"]["customer_type"];
+          fleet_account: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +33,8 @@ export type Database = {
           address?: string | null;
           notes?: string | null;
           stripe_customer_id?: string | null;
+          customer_type?: Database["public"]["Enums"]["customer_type"];
+          fleet_account?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -43,6 +47,8 @@ export type Database = {
           address?: string | null;
           notes?: string | null;
           stripe_customer_id?: string | null;
+          customer_type?: Database["public"]["Enums"]["customer_type"];
+          fleet_account?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -112,6 +118,9 @@ export type Database = {
           date_received: string;
           date_finished: string | null;
           notes: string | null;
+          payment_method: Database["public"]["Enums"]["payment_method"] | null;
+          payment_status: Database["public"]["Enums"]["payment_status"];
+          mileage_in: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -125,6 +134,9 @@ export type Database = {
           date_received?: string;
           date_finished?: string | null;
           notes?: string | null;
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null;
+          payment_status?: Database["public"]["Enums"]["payment_status"];
+          mileage_in?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -138,6 +150,9 @@ export type Database = {
           date_received?: string;
           date_finished?: string | null;
           notes?: string | null;
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null;
+          payment_status?: Database["public"]["Enums"]["payment_status"];
+          mileage_in?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -445,17 +460,19 @@ export type Database = {
       };
     };
     Enums: {
+      customer_type: "retail" | "fleet";
       job_status:
         | "not_started"
         | "waiting_for_parts"
         | "in_progress"
-        | "complete"
-        | "paid";
+        | "complete";
       line_item_type: "labor" | "part";
       estimate_status: "draft" | "sent" | "approved" | "declined";
       invoice_status: "draft" | "sent" | "paid";
       message_channel: "sms" | "email";
       message_direction: "in" | "out";
+      payment_method: "stripe" | "cash" | "check" | "ach";
+      payment_status: "unpaid" | "invoiced" | "paid" | "waived";
       user_role: "manager" | "tech";
     };
     CompositeTypes: {

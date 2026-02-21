@@ -5,7 +5,7 @@ import { customerSchema, prepareCustomerData } from "@/lib/validators/customer";
 import { revalidatePath } from "next/cache";
 import type { CustomerFormData } from "@/lib/validators/customer";
 
-export async function getCustomers(search?: string) {
+export async function getCustomers(search?: string, customerType?: string) {
   const supabase = await createClient();
 
   let query = supabase
@@ -17,6 +17,10 @@ export async function getCustomers(search?: string) {
     query = query.or(
       `first_name.ilike.%${search}%,last_name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`
     );
+  }
+
+  if (customerType && customerType !== "all") {
+    query = query.eq("customer_type", customerType as "retail" | "fleet");
   }
 
   const { data, error } = await query;

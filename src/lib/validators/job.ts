@@ -8,13 +8,15 @@ export const jobSchema = z.object({
     "waiting_for_parts",
     "in_progress",
     "complete",
-    "paid",
   ]),
   category: z.string().max(100),
   assigned_tech: z.string().uuid().nullable().optional(),
   date_received: z.string().min(1, "Date is required"),
   date_finished: z.string().nullable().optional(),
   notes: z.string().max(5000),
+  payment_method: z.enum(["stripe", "cash", "check", "ach"]).nullable().optional(),
+  payment_status: z.enum(["unpaid", "invoiced", "paid", "waived"]),
+  mileage_in: z.number().int().positive().nullable().optional(),
 });
 
 export type JobFormData = z.infer<typeof jobSchema>;
@@ -29,6 +31,9 @@ export function prepareJobData(data: JobFormData) {
     date_received: data.date_received,
     date_finished: data.date_finished || null,
     notes: data.notes || null,
+    payment_method: data.payment_method || null,
+    payment_status: data.payment_status || "unpaid",
+    mileage_in: data.mileage_in ?? null,
   };
 }
 

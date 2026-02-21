@@ -7,6 +7,8 @@ export const customerSchema = z.object({
   email: z.union([z.string().email("Invalid email address").max(255), z.literal("")]),
   address: z.string().max(500),
   notes: z.string().max(2000),
+  customer_type: z.enum(["retail", "fleet"]),
+  fleet_account: z.string().max(200).optional(),
 });
 
 export type CustomerFormData = z.infer<typeof customerSchema>;
@@ -30,5 +32,7 @@ export function prepareCustomerData(data: CustomerFormData) {
     email: data.email || null,
     address: data.address || null,
     notes: data.notes || null,
+    customer_type: data.customer_type || "retail",
+    fleet_account: data.fleet_account || null,
   };
 }

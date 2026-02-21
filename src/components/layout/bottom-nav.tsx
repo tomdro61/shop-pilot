@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, HardHat, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, HardHat, BarChart3, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/jobs", label: "Jobs", icon: Wrench },
-  { href: "/team", label: "Team", icon: HardHat },
+  { href: "/inspections", label: "Inspect", icon: ClipboardCheck },
   { href: "/reports", label: "Reports", icon: BarChart3 },
 ];
 

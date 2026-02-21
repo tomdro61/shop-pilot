@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { getCustomers } from "@/lib/actions/customers";
 import { CustomerSearch } from "@/components/forms/customer-search";
+import { CustomerTypeFilter } from "@/components/dashboard/customer-type-filter";
 import { CustomerList } from "@/components/dashboard/customer-list";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -13,17 +14,20 @@ export const metadata = {
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string }>;
+  searchParams: Promise<{ search?: string; type?: string }>;
 }) {
-  const { search } = await searchParams;
-  const customers = await getCustomers(search);
+  const { search, type } = await searchParams;
+  const customers = await getCustomers(search, type);
 
   return (
     <div className="p-4 lg:p-6">
       <div className="mb-4 flex items-center justify-between gap-4">
-        <div className="flex-1">
+        <div className="flex flex-1 items-center gap-2">
           <Suspense>
             <CustomerSearch />
+          </Suspense>
+          <Suspense>
+            <CustomerTypeFilter />
           </Suspense>
         </div>
         <Link href="/customers/new">

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
 import { formatPhone } from "@/lib/utils/format";
 import { ChevronRight } from "lucide-react";
 import type { Customer } from "@/types";
@@ -18,25 +17,23 @@ export function CustomerList({ customers }: CustomerListProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {customers.map((customer) => (
         <Link key={customer.id} href={`/customers/${customer.id}`}>
-          <Card className="transition-colors hover:bg-accent">
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">
-                  {customer.first_name} {customer.last_name}
-                </p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                  {customer.phone && <span>{formatPhone(customer.phone)}</span>}
-                  {customer.email && (
-                    <span className="truncate">{customer.email}</span>
-                  )}
-                </div>
+          <div className="flex items-center justify-between rounded-md border px-3 py-2.5 transition-colors hover:bg-accent">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">
+                {customer.first_name} {customer.last_name}
+              </p>
+              <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                {customer.phone && <span>{formatPhone(customer.phone)}</span>}
+                {customer.email && (
+                  <span className="truncate">{customer.email}</span>
+                )}
               </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </CardContent>
-          </Card>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </div>
         </Link>
       ))}
     </div>

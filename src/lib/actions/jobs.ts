@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
-import type { JobStatus } from "@/types";
+import type { JobStatus, PaymentMethod, PaymentStatus } from "@/types";
 
 export async function getJobs(filters?: {
   search?: string;
@@ -15,7 +15,7 @@ export async function getJobs(filters?: {
 
   let query = supabase
     .from("jobs")
-    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model), users(id, name)")
+    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model), users(id, name), job_line_items(total)")
     .order("date_received", { ascending: false });
 
   if (filters?.status) {
@@ -122,7 +122,7 @@ export async function updateJobStatus(id: string, status: JobStatus) {
   const updateData: Record<string, unknown> = { status };
 
   // Auto-set date_finished when completing
-  if (status === "complete" || status === "paid") {
+  if (status === "complete") {
     updateData.date_finished = new Date().toISOString().split("T")[0];
   }
 
@@ -162,4 +162,27 @@ export async function getJobCategories() {
 
   const categories = [...new Set(data?.map((j) => j.category).filter(Boolean) as string[])];
   return categories;
+}
+
+export async function recordPayment(
+  jobId: string,
+  paymentMethod: PaymentMethod,
+  paymentStatus: PaymentStatus = "paid"
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({
+      payment_method: paymentMethod,
+      payment_status: paymentStatus,
+    })
+    .eq("id", jobId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/dashboard");
+  return { success: true };
 }

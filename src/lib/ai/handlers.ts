@@ -20,6 +20,7 @@ import {
   updateJobStatus,
   deleteJob,
   getJobCategories,
+  recordPayment,
 } from "@/lib/actions/jobs";
 import {
   createLineItem,
@@ -40,7 +41,7 @@ import {
   getInvoiceForJob,
 } from "@/lib/actions/invoices";
 import { getTeamMembers, getTechnicians } from "@/lib/actions/team";
-import { getReportData } from "@/lib/actions/reports";
+import { getReportData, getFleetARSummary, getDailySummary } from "@/lib/actions/reports";
 
 type Input = Record<string, unknown>;
 
@@ -80,6 +81,8 @@ export async function executeToolCall(
           email: str(toolInput.email),
           address: str(toolInput.address),
           notes: str(toolInput.notes),
+          customer_type: str(toolInput.customer_type, "retail") as "retail" | "fleet",
+          fleet_account: str(toolInput.fleet_account),
         });
         return JSON.stringify(result);
       }
@@ -94,6 +97,8 @@ export async function executeToolCall(
           email: str(toolInput.email, current.email ?? ""),
           address: str(toolInput.address, current.address ?? ""),
           notes: str(toolInput.notes, current.notes ?? ""),
+          customer_type: str(toolInput.customer_type, current.customer_type ?? "retail") as "retail" | "fleet",
+          fleet_account: str(toolInput.fleet_account, current.fleet_account ?? ""),
         });
         return JSON.stringify(result);
       }
@@ -179,6 +184,9 @@ export async function executeToolCall(
           date_received: str(toolInput.date_received, today),
           date_finished: str(toolInput.date_finished) || null,
           notes: str(toolInput.notes),
+          payment_status: str(toolInput.payment_status, "unpaid") as "unpaid",
+          payment_method: toolInput.payment_method ? str(toolInput.payment_method) as "stripe" : undefined,
+          mileage_in: num(toolInput.mileage_in) ?? undefined,
         });
         return JSON.stringify(result);
       }
@@ -200,6 +208,11 @@ export async function executeToolCall(
             ? (str(toolInput.date_finished) || null)
             : (currentJob.date_finished ?? null),
           notes: str(toolInput.notes, currentJob.notes ?? ""),
+          payment_status: str(toolInput.payment_status, currentJob.payment_status ?? "unpaid") as "unpaid",
+          payment_method: toolInput.payment_method !== undefined
+            ? str(toolInput.payment_method) as "stripe"
+            : (currentJob.payment_method as "stripe" | undefined),
+          mileage_in: num(toolInput.mileage_in) ?? currentJob.mileage_in ?? undefined,
         });
         return JSON.stringify(result);
       }
@@ -323,6 +336,26 @@ export async function executeToolCall(
           to: str(toolInput.to, today),
           isAllTime,
         });
+        return JSON.stringify(result);
+      }
+
+      // ── Payments ─────────────────────────────────────────
+      case "record_payment": {
+        const result = await recordPayment(
+          str(toolInput.job_id),
+          str(toolInput.payment_method) as Parameters<typeof recordPayment>[1],
+          (str(toolInput.payment_status, "paid") as Parameters<typeof recordPayment>[2])
+        );
+        return JSON.stringify(result);
+      }
+
+      // ── Fleet / AR ───────────────────────────────────────
+      case "get_ar_summary": {
+        const result = await getFleetARSummary();
+        return JSON.stringify(result);
+      }
+      case "get_daily_summary": {
+        const result = await getDailySummary();
         return JSON.stringify(result);
       }
 
