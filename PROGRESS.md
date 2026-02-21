@@ -168,3 +168,80 @@
 ### Known Issues / Notes
 - No functionality changes — layout and spacing only
 - Dark theme preserved, just sharper borders for better visual separation
+
+---
+
+## Session 4 — 2026-02-20 — Team Management + Tech Assignment + Reports Enhancement
+
+### What Was Completed
+
+**Three feature areas built and shipped:**
+
+1. **Team Management** — New `/team` page with full CRUD for technicians and managers
+   - `src/app/(dashboard)/team/page.tsx` — Team list page
+   - `src/components/dashboard/team-list.tsx` — Team list with edit/delete
+   - `src/components/forms/team-member-form.tsx` — Create/edit team member form
+   - `src/lib/actions/team.ts` — Server actions (getTeamMembers, getTechnicians, create, update, delete)
+   - `src/lib/validators/team.ts` — Zod schema (name, email optional, role)
+   - `supabase/migrations/20250220000000_users_email_optional.sql` — Make email optional on users table
+   - Added Team link to sidebar and bottom nav
+
+2. **Tech Assignment on Jobs** — Technicians can be assigned to jobs and displayed throughout the app
+   - Job form: added tech selector dropdown (loads from users table)
+   - Job detail page: shows assigned tech name with HardHat icon
+   - Job list view: added "Tech" column (TanStack Table)
+   - Job card (board view): shows tech name inline
+   - Jobs query updated to join `users` table via `assigned_tech`
+
+3. **Reports Enhancement: Date Filtering + Technician Charts**
+   - `src/lib/utils/date-range.ts` — `resolveDateRange()` utility converting presets (this_week, this_month, this_quarter, this_year, all_time, custom) into date ranges
+   - `src/components/dashboard/reports-toolbar.tsx` — Client component with preset buttons + custom range calendar popover (uses URL search params)
+   - `src/lib/actions/reports.ts` — Refactored to accept `{from, to, isAllTime}` params; added `getJobsByTech()` and `getRevenueByTech()` helpers; computes prior period of equal length for comparison KPIs; skips comparison for All Time
+   - `src/app/(dashboard)/reports/page.tsx` — Accepts searchParams, renders toolbar in Suspense, 3 KPI cards (Jobs, Revenue, Avg Ticket) with dynamic labels, 4 bar charts (by Category + by Technician)
+   - `src/app/(dashboard)/reports/loading.tsx` — Updated skeleton to match new layout (toolbar, 3 KPIs, 4 charts)
+
+4. **Bug Fix** — Fixed pre-existing type errors in `team.ts` where `|| null` coercion on email conflicted with Supabase's generated types
+
+### New Files (8)
+- `src/app/(dashboard)/team/page.tsx`
+- `src/components/dashboard/team-list.tsx`
+- `src/components/forms/team-member-form.tsx`
+- `src/lib/actions/team.ts`
+- `src/lib/validators/team.ts`
+- `src/lib/utils/date-range.ts`
+- `src/components/dashboard/reports-toolbar.tsx`
+- `supabase/migrations/20250220000000_users_email_optional.sql`
+
+### Modified Files (12)
+- `src/app/(dashboard)/reports/page.tsx` — New layout with toolbar + 4 charts
+- `src/app/(dashboard)/reports/loading.tsx` — Updated skeleton
+- `src/lib/actions/reports.ts` — Refactored for date range + tech queries
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — Show assigned tech
+- `src/components/dashboard/job-card.tsx` — Show tech on cards
+- `src/components/dashboard/jobs-board-view.tsx` — Tech type added
+- `src/components/dashboard/jobs-list-view.tsx` — Tech column added
+- `src/components/forms/job-form.tsx` — Tech selector dropdown
+- `src/lib/actions/jobs.ts` — Join users table in queries
+- `src/components/layout/bottom-nav.tsx` — Team nav link
+- `src/components/layout/sidebar.tsx` — Team nav link
+- `src/components/ui/sheet.tsx` — Bottom sheet styling tweak
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+- Deployed to Vercel via `git push origin master`
+
+### What's NOT Done Yet
+- [ ] SMS/email sending of estimate approval links (currently manual copy/paste)
+- [ ] "Create Invoice" button flow (direct from job, without estimate) — code exists but untested
+- [ ] Stripe live mode (currently sandbox/test mode)
+- [ ] Wix customer data import (1000+ customers)
+- [ ] OpenPhone SMS integration
+- [ ] Resend email integration
+
+### What's Next
+- Phase 3: AI Assistant (Claude API with function calling)
+- Or continue Phase 2: OpenPhone SMS + Resend email integration
+
+### Known Issues / Notes
+- Next.js 16 middleware deprecation warning persists — not blocking
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

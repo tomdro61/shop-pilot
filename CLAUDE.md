@@ -53,6 +53,7 @@ shop-pilot/
 │   │   │   ├── jobs/           # Job tracker + dashboard views
 │   │   │   ├── estimates/      # Estimate builder
 │   │   │   ├── invoices/       # Invoice management
+│   │   │   ├── team/           # Team/technician management
 │   │   │   └── messages/       # Communication log
 │   │   ├── chat/               # AI assistant interface
 │   │   └── api/                # API routes
@@ -80,7 +81,7 @@ shop-pilot/
 
 ## Implementation Plan
 
-### Phase 1: Foundation (Weeks 1-2) — CURRENT PHASE
+### Phase 1: Foundation (Weeks 1-2) — COMPLETE
 
 **Goal:** Replace Notion for job tracking. Get the core data model and UI working.
 
@@ -215,19 +216,25 @@ At the start of a new session, read `PROGRESS.md` first to pick up where we left
 
 ## Current Status
 
-**Phase 1: COMPLETE** (code written, not yet deployed)
-- All UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports
-- Schema migrations written but not yet pushed to a live Supabase project
+**Phase 1: COMPLETE** — Deployed and live on Vercel
+**Phase 2: PARTIAL** — Stripe invoicing + estimates done, SMS/email not started
+**Session 4 additions:** Team management, tech assignment on jobs, reports date filtering + tech charts
+
+- All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
+- Stripe invoicing + estimate builder with public approval page fully working (sandbox mode)
+- Reports enhanced with date range toolbar (presets + custom) and technician breakdown charts
+- Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
-**Remaining before Phase 1 is fully live:**
-- Create Supabase project, add credentials to `.env.local`
-- Run `npx supabase db push`
-- Create manager account in Supabase Auth
-- Deploy to Vercel
-- Wix customer import (1000+ contacts)
+**Remaining Phase 2 work:**
+- OpenPhone (Quo) SMS integration
+- Resend transactional email
+- Communication log per customer
+- Message templates
+- Stripe live mode activation
+- Wix customer data import (1000+ contacts)
 
-**Next phase:** Phase 2 — Payments & Communication (Stripe, estimates, SMS, email)
+**Next phase:** Phase 3 — AI Assistant (Claude API with function calling)
 
 ## Development Conventions
 
