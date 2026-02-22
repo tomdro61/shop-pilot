@@ -59,7 +59,7 @@ export function Header({ user }: { user: User | null }) {
     : "SP";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/80 backdrop-blur-xl px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-white/80 backdrop-blur-xl dark:bg-background/80 px-4 lg:px-6">
       <div className="flex items-center gap-2.5 lg:hidden">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
           <Wrench className="h-3.5 w-3.5 text-primary-foreground" />

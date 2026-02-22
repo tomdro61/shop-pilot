@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/90 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-white/90 backdrop-blur-xl dark:bg-background/90 pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="flex h-14 items-center justify-around">
         {navItems.map((item) => {
           const isActive =
