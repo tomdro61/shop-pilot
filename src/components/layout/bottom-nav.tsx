@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, ClipboardCheck, CircleDollarSign } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, BarChart3, CircleDollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/customers", label: "Customers", icon: Users },
   { href: "/jobs", label: "Jobs", icon: Wrench },
-  { href: "/inspections", label: "Inspect", icon: ClipboardCheck },
+  { href: "/customers", label: "Customers", icon: Users },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/quick-pay", label: "Pay", icon: CircleDollarSign },
 ];
 
