@@ -132,8 +132,11 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
         </TabsList>
       </Tabs>
 
-      <Link href="/jobs/new" className="hidden sm:block">
-        <Button className="gap-2">
+      <Link href="/jobs/new">
+        <Button size="icon" className="sm:hidden h-9 w-9">
+          <Plus className="h-4 w-4" />
+        </Button>
+        <Button className="hidden sm:inline-flex gap-2">
           <Plus className="h-4 w-4" />
           New Job
         </Button>

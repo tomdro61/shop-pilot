@@ -4,7 +4,6 @@ import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
 import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
 import { JobsListView } from "@/components/dashboard/jobs-list-view";
 import { JobsBoardView } from "@/components/dashboard/jobs-board-view";
-import { Fab } from "@/components/dashboard/fab";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -53,7 +52,6 @@ export default async function JobsPage({
         )}
       </div>
 
-      <Fab href="/jobs/new" />
     </div>
   );
 }
