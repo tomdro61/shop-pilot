@@ -19,7 +19,7 @@ ShopPilot is a custom shop management system for Broadway Motors, an independent
 | Backend/DB | Supabase (PostgreSQL) | Auth, database, real-time subscriptions, file storage, Row Level Security |
 | AI Assistant | Claude API (Anthropic) | Function calling / tool use for all CRUD and external operations |
 | Payments | Stripe | Invoicing, webhooks, Terminal (WisePOS E) for in-person card payments, Quick Pay for walk-ins |
-| SMS | Quo (formerly OpenPhone) API | Currently using Wix for SMS. Transitioning to Quo — need to sign up and port shop number. |
+| SMS | Quo (formerly OpenPhone) API | Integrated — send/receive/webhook wired. Blocked on A2P registration + number port. |
 | Email | Resend | Transactional email for estimates, invoices, receipts |
 | Hosting | Vercel (free tier) | Auto-deploy from Git, edge functions, free SSL |
 | Parts (future) | Parts Tech API (TBD) | Needs API access investigation |
@@ -29,16 +29,19 @@ ShopPilot is a custom shop management system for Broadway Motors, an independent
 
 Core tables in Supabase PostgreSQL:
 
-- **customers** — id, first_name, last_name, phone, email, address, notes, created_at
-- **vehicles** — id, customer_id, year, make, model, vin, mileage, color, notes
-- **jobs** — id, customer_id, vehicle_id, status, category, assigned_tech, date_received, date_finished, notes
-- **job_line_items** — id, job_id, type (labor/part), description, quantity, unit_cost, total, part_number
-- **estimates** — id, job_id, status (draft/sent/approved/declined), sent_at, approved_at, total, tax, grand_total
-- **invoices** — id, job_id, stripe_invoice_id, status (draft/sent/paid), amount, paid_at, payment_method
+- **customers** — id, first_name, last_name, phone, email, address, notes, customer_type (retail/fleet), fleet_account, stripe_customer_id, created_at
+- **vehicles** — id, customer_id, year, make, model, vin, license_plate, mileage, color, notes
+- **jobs** — id, customer_id, vehicle_id, status, title, category (deprecated — exists in DB but no longer set/displayed), assigned_tech, date_received, date_finished, notes, payment_status, payment_method, mileage_in, stripe_payment_intent_id
+- **job_line_items** — id, job_id, type (labor/part), description, quantity, unit_cost, total, part_number, category (single source of truth for service categorization)
+- **job_presets** — id, name, category, line_items (JSONB), created_at
+- **estimates** — id, job_id, status (draft/sent/approved/declined), sent_at, approved_at, declined_at, approval_token, tax_rate, created_at
+- **estimate_line_items** — id, estimate_id, type, description, quantity, unit_cost, total, part_number
+- **invoices** — id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status (draft/sent/paid), amount, paid_at
 - **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, sent_at
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
 
-**Job statuses:** Not Started → Waiting for Parts → In Progress → Complete → Paid
+**Job statuses:** Not Started → Waiting for Parts → In Progress → Complete
+**Payment tracked separately:** payment_status (unpaid → invoiced → paid / waived), payment_method (stripe/cash/check/ach/terminal)
 
 ## Project Structure (Target)
 
@@ -147,7 +150,7 @@ shop-pilot/
 **Goal:** Voice/text-first shop management from a phone.
 
 - ~~Claude API integration with function calling (tool use)~~ DONE — `@anthropic-ai/sdk`, Haiku 4.5
-- ~~Define full tool suite: customer lookup, job CRUD, estimate/invoice generation, messaging, status updates~~ DONE — 32 tools in `src/lib/ai/tools.ts`
+- ~~Define full tool suite: customer lookup, job CRUD, estimate/invoice generation, messaging, status updates~~ DONE — 34 tools in `src/lib/ai/tools.ts`
 - ~~Mobile-optimized chat interface~~ DONE — `/chat` page + floating chat bubble
 - ~~Confirmation step before any financial action (invoice, payment, etc.)~~ DONE — system prompt enforces confirmation pattern
 - Voice input (Web Speech API or Whisper) — deferred
@@ -180,7 +183,7 @@ shop-pilot/
 ## Technical Concerns & Notes
 
 ### Must Address Before Building
-- **MA tax calculation:** Massachusetts auto repair may have specific tax rules (parts taxable, labor taxable or exempt?). Research before hardcoding tax logic. Consider a tax API if rules are complex.
+- ~~**MA tax calculation:**~~ RESOLVED — 6.25% on parts only, labor tax-exempt. Implemented as `MA_SALES_TAX_RATE` constant used in Stripe invoices and estimate approval.
 - **Quo (formerly OpenPhone) API access:** Shop currently uses Wix for SMS — transitioning to Quo. Need to sign up for Quo (Business plan or higher for API access), port the shop's existing number (1-4 weeks), and confirm API capabilities. Quo API supports sending SMS, receiving webhooks, and contact management. Rate limit: 10 req/sec. No MMS via API. SMS costs $0.01/segment (prepaid credits).
 - **Supabase free tier limits:** 500MB storage, 50K rows. Should be fine for a single shop initially but monitor usage. Plan for when/if we need to upgrade ($25/mo Pro plan).
 
@@ -199,11 +202,11 @@ shop-pilot/
 
 ### Open Questions from PRD (Need Answers)
 1. Wave Apps vs. QuickBooks for accounting? (Wave is free, QuickBooks has better API)
-2. Keep Wix for public website or migrate that too? (Currently using Wix for SMS + website)
+2. Keep Wix for public website or migrate that too? (SMS moved to Quo, website TBD)
 3. Parts Tech API availability for independent shops?
-4. Stripe Terminal hardware preference? (Start with payment links, add terminal later)
+4. ~~Stripe Terminal hardware preference?~~ ANSWERED — WisePOS E, server-driven integration built
 5. Should the AI assistant have its own phone number customers can text, or internal-only?
-6. What are the MA-specific tax rules for auto repair labor vs. parts?
+6. ~~What are the MA-specific tax rules for auto repair labor vs. parts?~~ ANSWERED — 6.25% on parts only, labor tax-exempt. Implemented in Stripe invoice + estimate builder.
 
 ## Session Workflow
 
@@ -232,6 +235,8 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 7:** Quo SMS integration, AI chat context preservation, customer search fix
 **Session 8:** Job presets, job form redesign, dashboard + reports enhancements
 **Session 9:** Stripe Terminal (WisePOS E) integration with Quick Pay
+**Session 10:** Quick Pay presets, inspections update, dashboard overhaul, typography system
+**Session 11:** Line item categories for multi-service jobs
 **Session 12:** Remove job-level category — line items as single source of truth
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
