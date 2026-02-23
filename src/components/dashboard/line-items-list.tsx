@@ -6,22 +6,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { LineItemForm } from "@/components/forms/line-item-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteLineItem } from "@/lib/actions/job-line-items";
 import { formatCurrency } from "@/lib/utils/format";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
+import { Plus, Pencil, Trash2, Wrench } from "lucide-react";
 import type { JobLineItem } from "@/types";
 
 interface LineItemsListProps {
   jobId: string;
   lineItems: JobLineItem[];
-  jobCategory?: string | null;
 }
 
-export function LineItemsList({ jobId, lineItems, jobCategory }: LineItemsListProps) {
+export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
+  const [defaultCategory, setDefaultCategory] = useState<string | undefined>(undefined);
 
   const grandTotal = lineItems.reduce((sum, li) => sum + (li.total || 0), 0);
 
@@ -33,6 +40,17 @@ export function LineItemsList({ jobId, lineItems, jobCategory }: LineItemsListPr
       toast.success("Line item deleted");
     }
     return result;
+  }
+
+  function handleAddService(category: string) {
+    setServicePickerOpen(false);
+    setDefaultCategory(category);
+    setAddOpen(true);
+  }
+
+  function handleAddItem(category?: string) {
+    setDefaultCategory(category);
+    setAddOpen(true);
   }
 
   function renderItems(items: JobLineItem[], label: string) {
@@ -88,7 +106,7 @@ export function LineItemsList({ jobId, lineItems, jobCategory }: LineItemsListPr
   // Group line items by category
   const categoryGroups: Record<string, JobLineItem[]> = {};
   lineItems.forEach((li) => {
-    const cat = li.category || jobCategory || "Uncategorized";
+    const cat = li.category || "Uncategorized";
     if (!categoryGroups[cat]) categoryGroups[cat] = [];
     categoryGroups[cat].push(li);
   });
@@ -99,15 +117,39 @@ export function LineItemsList({ jobId, lineItems, jobCategory }: LineItemsListPr
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
         <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Line Items</CardTitle>
-        <Button size="sm" onClick={() => setAddOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Item
-        </Button>
+        <div className="flex gap-2">
+          <Popover open={servicePickerOpen} onOpenChange={setServicePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button size="sm">
+                <Wrench className="mr-2 h-4 w-4" />
+                Add Service
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2" align="end">
+              <div className="space-y-1">
+                {DEFAULT_JOB_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-accent transition-colors"
+                    onClick={() => handleAddService(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" variant="outline" onClick={() => handleAddItem()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Item
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {lineItems.length === 0 ? (
           <p className="py-2 text-center text-sm text-muted-foreground">
-            No line items yet. Add labor or parts.
+            No line items yet. Add a service or individual item.
           </p>
         ) : (
           <>
@@ -121,7 +163,18 @@ export function LineItemsList({ jobId, lineItems, jobCategory }: LineItemsListPr
                 <div key={catName} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold">{catName}</h3>
-                    <span className="text-sm text-muted-foreground">{formatCurrency(catTotal)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{formatCurrency(catTotal)}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleAddItem(catName)}
+                        title={`Add item to ${catName}`}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   {renderItems(laborItems, "Labor")}
                   {renderItems(partItems, "Parts")}
@@ -140,15 +193,17 @@ export function LineItemsList({ jobId, lineItems, jobCategory }: LineItemsListPr
 
       <LineItemForm
         jobId={jobId}
-        jobCategory={jobCategory}
+        defaultCategory={defaultCategory}
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) setDefaultCategory(undefined);
+        }}
       />
 
       {editItem && (
         <LineItemForm
           jobId={jobId}
-          jobCategory={jobCategory}
           lineItem={editItem}
           open={!!editItem}
           onOpenChange={(open) => {

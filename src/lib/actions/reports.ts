@@ -26,10 +26,10 @@ export async function getReportData(params: {
     priorEnd = toDateStr(priorEndDate);
   }
 
-  // ONE query for current period — includes category, tech, and line item type for all aggregations
+  // ONE query for current period — includes tech and line item data for all aggregations
   const currentPromise = supabase
     .from("jobs")
-    .select("id, category, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, category)")
+    .select("id, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, category)")
     .eq("status", "complete")
     .gte("date_finished", start)
     .lte("date_finished", end);
@@ -92,13 +92,20 @@ export async function getReportData(params: {
   const techRevenue: Record<string, number> = {};
 
   currentJobs.forEach((job) => {
-    const jobCat = job.category || "Uncategorized";
     const user = job.users as { name: string } | null;
     const techName = user?.name || "Unassigned";
     const lineItems = getLineItems(job);
     const jobTotal = lineItems.reduce((s, li) => s + (li.total || 0), 0);
 
-    // Job counts use job-level category (one job = one count)
+    // Derive job category from highest-revenue line-item category
+    const liCatRevenue: Record<string, number> = {};
+    lineItems.forEach((li) => {
+      const cat = li.category || "Uncategorized";
+      liCatRevenue[cat] = (liCatRevenue[cat] || 0) + (li.total || 0);
+    });
+    const jobCat = Object.entries(liCatRevenue).sort((a, b) => b[1] - a[1])[0]?.[0] || "Uncategorized";
+
+    // Job counts use derived category (one job = one count)
     catCounts[jobCat] = (catCounts[jobCat] || 0) + 1;
 
     // Tech counts + revenue
@@ -107,7 +114,7 @@ export async function getReportData(params: {
 
     // Revenue + profitability use line-item-level category for accurate multi-service splits
     lineItems.forEach((li) => {
-      const liCat = li.category || jobCat;
+      const liCat = li.category || "Uncategorized";
 
       catRevenue[liCat] = (catRevenue[liCat] || 0) + (li.total || 0);
 
@@ -123,9 +130,12 @@ export async function getReportData(params: {
       }
     });
 
-    // Inspection count
-    if (jobCat === "Inspection") {
-      inspectionCount += lineItems.reduce((s, li) => s + (li.quantity || 0), 0);
+    // Inspection count — check if any line items have "Inspection" category
+    const hasInspection = lineItems.some((li) => li.category === "Inspection");
+    if (hasInspection) {
+      inspectionCount += lineItems
+        .filter((li) => li.category === "Inspection")
+        .reduce((s, li) => s + (li.quantity || 0), 0);
     }
   });
 
@@ -225,19 +235,17 @@ export async function getInspectionCount(start: string, end: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("jobs")
-    .select("id, job_line_items(quantity)")
+    .select("id, job_line_items(quantity, category)")
     .eq("status", "complete")
-    .eq("category", "Inspection")
     .gte("date_finished", start)
     .lte("date_finished", end);
 
   return (
     data?.reduce((sum, job) => {
-      const jobCount = (job.job_line_items as { quantity: number }[])?.reduce(
-        (s, li) => s + (li.quantity || 0),
-        0
-      );
-      return sum + (jobCount || 0);
+      const inspectionItems = (job.job_line_items as { quantity: number; category: string | null }[])
+        ?.filter((li) => li.category === "Inspection") || [];
+      const jobCount = inspectionItems.reduce((s, li) => s + (li.quantity || 0), 0);
+      return sum + jobCount;
     }, 0) || 0
   );
 }
@@ -299,7 +307,7 @@ export async function getDailySummary() {
   // Jobs received or worked on today
   const { data: todayJobs } = await supabase
     .from("jobs")
-    .select("id, status, category, payment_status, payment_method, assigned_tech, users!jobs_assigned_tech_fkey(name), customers(first_name, last_name), job_line_items(total)")
+    .select("id, status, payment_status, payment_method, assigned_tech, users!jobs_assigned_tech_fkey(name), customers(first_name, last_name), job_line_items(total, category)")
     .or(`date_received.eq.${today},date_finished.eq.${today}`);
 
   const jobs = todayJobs || [];
@@ -331,12 +339,22 @@ export async function getDailySummary() {
     totalRevenue,
     revenueByMethod,
     techActivity,
-    jobs: jobs.map((j) => ({
-      id: j.id,
-      status: j.status,
-      category: j.category,
-      payment_status: j.payment_status,
-      customer: j.customers as { first_name: string; last_name: string } | null,
-    })),
+    jobs: jobs.map((j) => {
+      // Derive category from highest-revenue line item category
+      const liItems = (j.job_line_items as { total: number; category: string | null }[]) || [];
+      const catTotals: Record<string, number> = {};
+      liItems.forEach((li) => {
+        const cat = li.category || "Uncategorized";
+        catTotals[cat] = (catTotals[cat] || 0) + (li.total || 0);
+      });
+      const category = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || "Uncategorized";
+      return {
+        id: j.id,
+        status: j.status,
+        category,
+        payment_status: j.payment_status,
+        customer: j.customers as { first_name: string; last_name: string } | null,
+      };
+    }),
   };
 }

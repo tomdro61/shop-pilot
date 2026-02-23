@@ -51,11 +51,11 @@ const getDashboardData = unstable_cache(async () => {
   const [activeJobsResult, monthCompletedResult, lastWeekCompletedResult, recentJobsResult] = await Promise.all([
     supabase
       .from("jobs")
-      .select("id, status, assigned_tech, date_received, date_finished, category, users!jobs_assigned_tech_fkey(name)")
+      .select("id, status, assigned_tech, date_received, date_finished, users!jobs_assigned_tech_fkey(name)")
       .in("status", ["not_started", "in_progress", "waiting_for_parts"]),
     supabase
       .from("jobs")
-      .select("id, date_finished, payment_status, category, job_line_items(total, quantity)")
+      .select("id, date_finished, payment_status, job_line_items(total, quantity, category)")
       .eq("status", "complete")
       .gte("date_finished", monthStart)
       .lte("date_finished", monthEnd),
@@ -67,7 +67,7 @@ const getDashboardData = unstable_cache(async () => {
       .lte("date_finished", lastWeekEnd),
     supabase
       .from("jobs")
-      .select("id, status, title, category, date_received, payment_status, job_line_items(total), customers(first_name, last_name), vehicles(year, make, model)")
+      .select("id, status, title, date_received, payment_status, job_line_items(total), customers(first_name, last_name), vehicles(year, make, model)")
       .order("date_received", { ascending: false })
       .limit(8),
   ]);
@@ -126,14 +126,12 @@ const getDashboardData = unstable_cache(async () => {
 
   const weekJobCount = weekCompleted.length;
 
-  // Inspections today — derive from monthly completed + category filter
+  // Inspections today — derive from line items with "Inspection" category
   const inspectionsToday = completedToday
-    .filter(j => j.category === "Inspection")
     .reduce((sum, job) => {
-      const jobCount = (job.job_line_items as { quantity: number }[])?.reduce(
-        (s, li) => s + (li.quantity || 0), 0
-      );
-      return sum + (jobCount || 0);
+      const inspectionItems = (job.job_line_items as { quantity: number; category: string | null }[])
+        ?.filter(li => li.category === "Inspection") || [];
+      return sum + inspectionItems.reduce((s, li) => s + (li.quantity || 0), 0);
     }, 0);
 
   return {
@@ -378,7 +376,7 @@ export default async function DashboardPage() {
                           {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {[job.title || job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
+                          {[job.title, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5 pl-4">

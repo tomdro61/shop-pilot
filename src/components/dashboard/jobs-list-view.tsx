@@ -96,8 +96,8 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           row.original.vehicles ? formatVehicle(row.original.vehicles) : null,
       },
       {
-        id: "category",
-        accessorFn: (row) => row.title || row.category || "",
+        id: "job",
+        accessorFn: (row) => row.title || "",
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -105,17 +105,12 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            Category
+            Job
             <ArrowUpDown className="ml-1 h-3 w-3" />
           </Button>
         ),
         cell: ({ row }) => (
-          <div>
-            <span>{row.original.title || row.original.category}</span>
-            {row.original.title && row.original.category && (
-              <span className="ml-1.5 text-xs text-muted-foreground">{row.original.category}</span>
-            )}
-          </div>
+          <span>{row.original.title}</span>
         ),
       },
       {

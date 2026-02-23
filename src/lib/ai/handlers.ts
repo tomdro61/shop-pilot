@@ -157,10 +157,9 @@ export async function executeToolCall(
 
       // ── Jobs ───────────────────────────────────────────────
       case "search_jobs": {
-        const filters: { search?: string; status?: string; category?: string } = {};
+        const filters: { search?: string; status?: string } = {};
         if (toolInput.search) filters.search = str(toolInput.search);
         if (toolInput.status) filters.status = str(toolInput.status);
-        if (toolInput.category) filters.category = str(toolInput.category);
         const results = await getJobs(
           filters as Parameters<typeof getJobs>[0]
         );
@@ -181,7 +180,6 @@ export async function executeToolCall(
           vehicle_id: str(toolInput.vehicle_id) || null,
           status: (str(toolInput.status, "not_started") as "not_started"),
           title: str(toolInput.title) || undefined,
-          category: str(toolInput.category),
           assigned_tech: str(toolInput.assigned_tech) || null,
           date_received: str(toolInput.date_received, today),
           date_finished: str(toolInput.date_finished) || null,
@@ -204,7 +202,6 @@ export async function executeToolCall(
           title: toolInput.title !== undefined
             ? (str(toolInput.title) || undefined)
             : (currentJob.title ?? undefined),
-          category: str(toolInput.category, currentJob.category ?? ""),
           assigned_tech: toolInput.assigned_tech !== undefined
             ? (str(toolInput.assigned_tech) || null)
             : (currentJob.assigned_tech ?? null),

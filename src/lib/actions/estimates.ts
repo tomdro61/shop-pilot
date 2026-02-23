@@ -70,7 +70,7 @@ export async function getEstimate(id: string) {
   const { data, error } = await supabase
     .from("estimates")
     .select(
-      "*, estimate_line_items(*), jobs(id, category, customer_id, vehicle_id, customers(id, first_name, last_name, email, phone), vehicles(id, year, make, model, vin))"
+      "*, estimate_line_items(*), jobs(id, title, customer_id, vehicle_id, customers(id, first_name, last_name, email, phone), vehicles(id, year, make, model, vin))"
     )
     .eq("id", id)
     .single();
@@ -100,7 +100,7 @@ export async function getEstimateByToken(token: string) {
   const { data, error } = await supabase
     .from("estimates")
     .select(
-      "*, estimate_line_items(*), jobs(id, category, customers(id, first_name, last_name, email, phone, stripe_customer_id), vehicles(id, year, make, model, vin))"
+      "*, estimate_line_items(*), jobs(id, title, customers(id, first_name, last_name, email, phone, stripe_customer_id), vehicles(id, year, make, model, vin))"
     )
     .eq("approval_token", token)
     .single();
@@ -169,7 +169,7 @@ export async function approveEstimate(token: string) {
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select(
-      "*, estimate_line_items(*), jobs(id, category, customer_id, customers(id, first_name, last_name, email, phone, stripe_customer_id))"
+      "*, estimate_line_items(*), jobs(id, customer_id, customers(id, first_name, last_name, email, phone, stripe_customer_id))"
     )
     .eq("approval_token", token)
     .single();
@@ -179,7 +179,6 @@ export async function approveEstimate(token: string) {
 
   const job = estimate.jobs as {
     id: string;
-    category: string | null;
     customer_id: string;
     customers: {
       id: string;
@@ -227,7 +226,7 @@ export async function approveEstimate(token: string) {
       await createStripeInvoice({
         stripeCustomerId,
         lineItems,
-        jobCategory: job.category,
+        jobCategory: null,
       });
 
     // Insert invoice record

@@ -98,11 +98,20 @@ export async function createInvoiceFromJob(jobId: string) {
     description: string;
     quantity: number;
     unit_cost: number;
+    category: string | null;
   }[];
 
   if (lineItems.length === 0) {
     return { error: "Job has no line items" };
   }
+
+  // Derive category from line items for invoice description
+  const catTotals: Record<string, number> = {};
+  lineItems.forEach((li) => {
+    const cat = li.category || "Uncategorized";
+    catTotals[cat] = (catTotals[cat] || 0) + (li.quantity * li.unit_cost);
+  });
+  const derivedCategory = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
   // Get or create Stripe customer
   const stripeResult = await getOrCreateStripeCustomer(customer.id);
@@ -116,7 +125,7 @@ export async function createInvoiceFromJob(jobId: string) {
       await createStripeInvoice({
         stripeCustomerId: stripeResult.data,
         lineItems,
-        jobCategory: job.category,
+        jobCategory: derivedCategory !== "Uncategorized" ? derivedCategory : null,
       });
 
     // Insert invoice record

@@ -37,7 +37,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
                 </p>
               )}
               <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-                {(job.title || job.category) && <span>{job.title || job.category}</span>}
+                {job.title && <span>{job.title}</span>}
                 {job.users && (
                   <>
                     <span className="text-border">·</span>

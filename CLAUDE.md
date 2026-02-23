@@ -232,8 +232,10 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 7:** Quo SMS integration, AI chat context preservation, customer search fix
 **Session 8:** Job presets, job form redesign, dashboard + reports enhancements
 **Session 9:** Stripe Terminal (WisePOS E) integration with Quick Pay
+**Session 12:** Remove job-level category — line items as single source of truth
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
+- **Service categorization:** Line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
 - Stripe invoicing + estimate builder with public approval page fully working (sandbox mode)
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
 - Quo SMS: fully wired (send/receive/webhook), auto-texts estimate approval links + invoice payment links; blocked on A2P registration

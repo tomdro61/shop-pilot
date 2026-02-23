@@ -43,7 +43,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER, DEFAULT_JOB_CATEGORIES, PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER, PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatCustomerName, formatCurrency } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, X, Plus } from "lucide-react";
@@ -55,7 +55,6 @@ interface JobFormProps {
     vehicles?: Pick<Vehicle, "id" | "year" | "make" | "model"> | null;
   };
   defaultCustomerId?: string;
-  categories: string[];
   presets?: JobPreset[];
 }
 
@@ -74,14 +73,11 @@ function SectionHeader({ title, description }: { title: string; description?: st
   );
 }
 
-export function JobForm({ job, defaultCustomerId, categories, presets }: JobFormProps) {
+export function JobForm({ job, defaultCustomerId, presets }: JobFormProps) {
   const router = useRouter();
   const isEditing = !!job;
 
-  const allCategories = [...new Set([...DEFAULT_JOB_CATEGORIES, ...categories])].sort();
-
   const [customerOpen, setCustomerOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [technicians, setTechnicians] = useState<TechOption[]>([]);
@@ -95,7 +91,6 @@ export function JobForm({ job, defaultCustomerId, categories, presets }: JobForm
       vehicle_id: job?.vehicle_id || undefined,
       status: job?.status || "not_started",
       title: job?.title || "",
-      category: job?.category || "",
       assigned_tech: job?.assigned_tech || undefined,
       date_received: job?.date_received || new Date().toISOString().split("T")[0],
       date_finished: job?.date_finished || undefined,
@@ -168,9 +163,6 @@ export function JobForm({ job, defaultCustomerId, categories, presets }: JobForm
       return;
     }
     setSelectedPresetId(preset.id);
-    if (preset.category) {
-      form.setValue("category", preset.category);
-    }
   }
 
   async function onSubmit(data: JobFormData) {
@@ -216,7 +208,7 @@ export function JobForm({ job, defaultCustomerId, categories, presets }: JobForm
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h3 className="text-sm font-semibold">Start from a preset</h3>
-                  <p className="text-xs text-muted-foreground">Pre-fills category and line items</p>
+                  <p className="text-xs text-muted-foreground">Pre-fills line items</p>
                 </div>
                 {selectedPresetId && (
                   <button
@@ -388,7 +380,7 @@ export function JobForm({ job, defaultCustomerId, categories, presets }: JobForm
           <CardContent className="pt-5">
             <SectionHeader
               title="Job Details"
-              description="Title, category, status, and assignment"
+              description="Title, status, and assignment"
             />
 
             <div className="space-y-4">
@@ -413,73 +405,6 @@ export function JobForm({ job, defaultCustomerId, categories, presets }: JobForm
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Category — half */}
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Category</FormLabel>
-                    <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              "w-full justify-between",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value || "Select category..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                          <CommandInput placeholder="Search or type category..." />
-                          <CommandList>
-                            <CommandEmpty>
-                              <Button
-                                variant="ghost"
-                                className="w-full"
-                                onClick={() => {
-                                  setCategoryOpen(false);
-                                }}
-                              >
-                                Use typed value
-                              </Button>
-                            </CommandEmpty>
-                            <CommandGroup>
-                              {allCategories.map((cat) => (
-                                <CommandItem
-                                  key={cat}
-                                  value={cat}
-                                  onSelect={() => {
-                                    field.onChange(cat);
-                                    setCategoryOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      cat === field.value ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {cat}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Status — half */}
               <FormField
                 control={form.control}

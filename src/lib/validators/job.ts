@@ -10,7 +10,7 @@ export const jobSchema = z.object({
     "complete",
   ]),
   title: z.string().max(200).optional(),
-  category: z.string().max(100),
+  category: z.string().max(100).optional(),
   assigned_tech: z.string().uuid().nullable().optional(),
   date_received: z.string().min(1, "Date is required"),
   date_finished: z.string().nullable().optional(),

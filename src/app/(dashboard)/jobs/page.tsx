@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getJobs, getJobCategories } from "@/lib/actions/jobs";
+import { getJobs, getLineItemCategories } from "@/lib/actions/jobs";
 import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
 import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
 import { JobsListView } from "@/components/dashboard/jobs-list-view";
@@ -31,7 +31,7 @@ export default async function JobsPage({
       category: params.category,
       paymentStatus: params.payment_status as PaymentStatus | undefined,
     }),
-    getJobCategories(),
+    getLineItemCategories(),
   ]);
 
   const allCategories = [

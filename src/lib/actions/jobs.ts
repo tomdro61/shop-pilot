@@ -29,7 +29,15 @@ export async function getJobs(filters?: {
   }
 
   if (filters?.category) {
-    query = query.eq("category", filters.category);
+    // Filter jobs that have line items in this category
+    const supabaseForCategory = await createClient();
+    const { data: matchingJobs } = await supabaseForCategory
+      .from("job_line_items")
+      .select("job_id")
+      .eq("category", filters.category);
+    const jobIds = [...new Set(matchingJobs?.map((li) => li.job_id) || [])];
+    if (jobIds.length === 0) return [];
+    query = query.in("id", jobIds);
   }
 
   if (filters?.search) {
@@ -54,7 +62,6 @@ export async function getJobs(filters?: {
     // Build OR filter for job's own fields + matched customer/vehicle IDs
     const orParts: string[] = [
       `title.ilike.%${searchLower}%`,
-      `category.ilike.%${searchLower}%`,
       `notes.ilike.%${searchLower}%`,
     ];
     if (customerIds.length > 0) {
@@ -168,18 +175,21 @@ export async function deleteJob(id: string) {
   return { success: true };
 }
 
-export async function getJobCategories() {
+export async function getLineItemCategories() {
   const supabase = await createClient();
 
   const { data } = await supabase
-    .from("jobs")
+    .from("job_line_items")
     .select("category")
     .not("category", "is", null)
     .order("category");
 
-  const categories = [...new Set(data?.map((j) => j.category).filter(Boolean) as string[])];
+  const categories = [...new Set(data?.map((li) => li.category).filter(Boolean) as string[])];
   return categories;
 }
+
+// Keep old name as alias for backward compatibility with AI handlers
+export const getJobCategories = getLineItemCategories;
 
 export async function recordPayment(
   jobId: string,

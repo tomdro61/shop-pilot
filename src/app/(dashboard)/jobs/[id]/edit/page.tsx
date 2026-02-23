@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getJob, getJobCategories } from "@/lib/actions/jobs";
+import { getJob } from "@/lib/actions/jobs";
 import { JobForm } from "@/components/forms/job-form";
 
 export const metadata = {
@@ -12,13 +12,13 @@ export default async function EditJobPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, categories] = await Promise.all([getJob(id), getJobCategories()]);
+  const job = await getJob(id);
   if (!job) notFound();
 
   return (
     <div className="mx-auto max-w-2xl p-4 lg:p-6">
       <h2 className="mb-6 text-xl font-semibold">Edit Job</h2>
-      <JobForm job={job} categories={categories} />
+      <JobForm job={job} />
     </div>
   );
 }

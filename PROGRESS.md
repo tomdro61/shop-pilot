@@ -800,3 +800,165 @@
 - Dashboard section container pattern (`bg-muted/50` wrapping `bg-card` cards) creates clear two-level hierarchy in both light and dark mode
 - Typography hierarchy is now fully consistent — all section labels use the same 11px uppercase muted pattern app-wide
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 11 — 2026-02-23 — Line Item Categories for Multi-Service Jobs
+
+### What Was Completed
+
+**Added per-line-item category support so multi-service jobs (e.g. brake job + oil change + exhaust) get accurate per-service revenue tracking in reports:**
+
+1. **Database Migration** (`supabase/migrations/20250223100000_line_item_category.sql`) — Added `category text` column to `job_line_items` table
+
+2. **TypeScript Types** — Added `category: string | null` to `job_line_items` Row/Insert/Update in `supabase.ts`; added `category?: string` to `PresetLineItem` in `index.ts`
+
+3. **Validator** (`src/lib/validators/job.ts`) — Added `category: z.string().max(100).optional()` to `lineItemSchema`; added `category: data.category || null` to `prepareLineItemData`
+
+4. **Line Item Form** (`src/components/forms/line-item-form.tsx`) — New `jobCategory` prop; added Category `<Select>` field after Type using `DEFAULT_JOB_CATEGORIES`; defaults to job's category; "Same as job" placeholder for empty value; uses `__none__` sentinel value (Radix Select doesn't allow empty string values)
+
+5. **Line Items List** (`src/components/dashboard/line-items-list.tsx`) — Replaced flat labor/parts split with category-first grouping: groups by `li.category || jobCategory || "Uncategorized"`, per-category subtotals with labor/parts within each group, grand total at bottom; passes `jobCategory` to both LineItemForm instances
+
+6. **Job Detail Page** (`src/app/(dashboard)/jobs/[id]/page.tsx`) — Passes `jobCategory={job.category}` to `<LineItemsList>`
+
+7. **Reports** (`src/lib/actions/reports.ts`) — Query now fetches `category` from line items; revenue/profitability aggregation uses `li.category || jobCategory` per line item for accurate multi-service splits; job counts still use job-level category
+
+8. **AI Tools + Handlers** — Added `category` property to `create_line_item` and `update_line_item` tool schemas in `tools.ts`; pass `category` through in `handlers.ts`; updated system prompt to mention line item categories
+
+9. **Presets** (`src/lib/actions/presets.ts`) — `applyPresetToJob` now fetches `category` from preset and passes `item.category || preset.category || null` to each inserted row
+
+### Files Changed (12)
+- `supabase/migrations/20250223100000_line_item_category.sql` — New migration
+- `src/types/supabase.ts` — category on job_line_items types
+- `src/types/index.ts` — category on PresetLineItem
+- `src/lib/validators/job.ts` — category on lineItemSchema + prepareLineItemData
+- `src/components/forms/line-item-form.tsx` — Category select field + jobCategory prop
+- `src/components/dashboard/line-items-list.tsx` — Category-based grouping
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — Pass jobCategory prop
+- `src/lib/actions/reports.ts` — Line-item-level revenue aggregation
+- `src/lib/ai/tools.ts` — category on create/update line item schemas
+- `src/lib/ai/handlers.ts` — Pass category through
+- `src/lib/ai/system-prompt.ts` — Mention line item categories
+- `src/lib/actions/presets.ts` — Pass category when applying preset
+
+### Backward Compatibility
+- Existing line items have `category = NULL` — fallback logic uses `job.category`, so display and reports work identically for historical data
+- Line item form defaults to job category — single-service jobs get tagged automatically
+- Zod makes category optional — all existing code paths still compile
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+- Pushed to GitHub, Vercel auto-deploying
+
+### What's NOT Done Yet
+- [ ] Register WisePOS E reader in Stripe Dashboard to get `tmr_xxx` reader ID
+- [ ] Run terminal migration against Supabase
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Resend transactional email integration
+- [ ] Message templates (estimate ready, car ready, payment reminder)
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory)
+- [ ] Stripe live mode activation
+- [ ] Wix customer data import (1000+ contacts)
+
+### What's Next
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Resend email integration
+- Optional: voice input, chat persistence
+
+### Known Issues / Notes
+- Migration must be run manually against Supabase (`npx supabase db push` or SQL Editor)
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 12 — 2026-02-23 — Remove Job-Level Category (Line Items as Single Source of Truth)
+
+### What Was Completed
+
+**Removed `job.category` as a user-facing field. Line-item categories are now the single source of truth for all service categorization, reporting, and filtering:**
+
+1. **Job Validator** (`src/lib/validators/job.ts`) — Made `category` optional in `jobSchema` (was required)
+
+2. **Job Form** (`src/components/forms/job-form.tsx`) — Removed category combobox field, `categoryOpen` state, `allCategories` merge, preset → category auto-fill; removed `categories` prop from interface; updated section description to "Title, status, and assignment"
+
+3. **Job New/Edit Pages** — Removed `getJobCategories()` calls and `categories` prop from `<JobForm>`
+
+4. **Job Detail Page** (`src/app/(dashboard)/jobs/[id]/page.tsx`) — Removed category display and subtitle; changed heading to `{job.title || "Job"}`; removed `jobCategory` prop from `<LineItemsList>`
+
+5. **Line Items List** (`src/components/dashboard/line-items-list.tsx`) — Removed `jobCategory` prop; grouping now uses `li.category || "Uncategorized"` (no job-level fallback); **new "Add Service" button** with popover listing `DEFAULT_JOB_CATEGORIES` — opens line item form with pre-set category; **"+" button** per category group header to add items to that category; kept "Add Item" as secondary option for ungrouped items
+
+6. **Line Item Form** (`src/components/forms/line-item-form.tsx`) — Replaced `jobCategory` prop with `defaultCategory?: string`; when `defaultCategory` is set (via "Add Service" flow), category field is hidden and pre-filled; when editing or adding ungrouped items, category select shows as before with "No category" placeholder
+
+7. **Job Card** (`src/components/dashboard/job-card.tsx`) — Changed `{job.title || job.category}` → `{job.title}` (only shown if exists)
+
+8. **Jobs List View** (`src/components/dashboard/jobs-list-view.tsx`) — Renamed column "Category" → "Job"; simplified to show `row.original.title` only (no category subtitle)
+
+9. **Customer Detail Page** (`src/app/(dashboard)/customers/[id]/page.tsx`) — Removed `category` from query select; changed `{job.title || job.category || "General"}` → `{job.title || "General"}`
+
+10. **Jobs Page + Category Filter** (`src/app/(dashboard)/jobs/page.tsx`, `src/lib/actions/jobs.ts`) — Replaced `getJobCategories()` with `getLineItemCategories()` querying `job_line_items` table; category filter now queries line items to find matching job IDs; removed `category.ilike` from free-text search; kept `getJobCategories` as alias for backward compatibility
+
+11. **Reports** (`src/lib/actions/reports.ts`) — Job counts now derived from highest-revenue line-item category per job (was using `job.category`); inspection count uses line-item category filter instead of `job.category === "Inspection"`; `getInspectionCount()` filters by `li.category === "Inspection"` instead of `jobs.category`; daily summary derives category from line items
+
+12. **Dashboard** (`src/app/(dashboard)/dashboard/page.tsx`) — Removed `category` from query selects; inspection count now derived from line items with `category === "Inspection"`; recent jobs display uses title only
+
+13. **AI Tools** (`src/lib/ai/tools.ts`) — Removed `category` from `create_job`, `update_job`, `search_jobs` schemas; updated `get_job_categories` description to "service categories used in line items"; updated `create_line_item` category description
+
+14. **AI Handlers** (`src/lib/ai/handlers.ts`) — Removed `category` from `create_job` and `update_job` handlers; removed category filter from `search_jobs`
+
+15. **AI System Prompt** (`src/lib/ai/system-prompt.ts`) — Updated data model: jobs have "title" not "category"; line-item categories described as "single source of truth"
+
+16. **Estimates + Invoices** — Invoice creation (`src/lib/actions/invoices.ts`) derives `jobCategory` from highest-revenue line-item category; estimate approval (`src/lib/actions/estimates.ts`) passes `null` for `jobCategory`; estimate detail/approval pages use `job.title` instead of `job.category`; estimate queries select `title` instead of `category` from jobs
+
+### Files Changed (19)
+- `src/lib/validators/job.ts` — category optional
+- `src/components/forms/job-form.tsx` — Removed category field + props
+- `src/app/(dashboard)/jobs/new/page.tsx` — Removed categories prop
+- `src/app/(dashboard)/jobs/[id]/edit/page.tsx` — Removed categories prop
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — Removed category display + jobCategory prop
+- `src/components/dashboard/line-items-list.tsx` — Add Service flow, removed jobCategory
+- `src/components/forms/line-item-form.tsx` — defaultCategory prop, category lock mode
+- `src/components/dashboard/job-card.tsx` — Title only
+- `src/components/dashboard/jobs-list-view.tsx` — "Job" column, title only
+- `src/app/(dashboard)/customers/[id]/page.tsx` — Title only
+- `src/app/(dashboard)/jobs/page.tsx` — getLineItemCategories
+- `src/lib/actions/jobs.ts` — Line-item-based category filter + getLineItemCategories
+- `src/lib/actions/reports.ts` — Derive job counts + inspections from line items
+- `src/app/(dashboard)/dashboard/page.tsx` — Line-item-derived inspections, removed category from queries
+- `src/lib/ai/tools.ts` — Removed category from job tools
+- `src/lib/ai/handlers.ts` — Removed category from job handlers
+- `src/lib/ai/system-prompt.ts` — Updated data model
+- `src/lib/actions/invoices.ts` — Derive jobCategory from line items
+- `src/lib/actions/estimates.ts` — Removed job.category references
+- `src/app/(dashboard)/estimates/[id]/page.tsx` — Use title instead of category
+- `src/app/estimates/approve/[token]/page.tsx` — Use title instead of category
+
+### Backward Compatibility
+- `jobs.category` DB column stays — no destructive migration. Column still exists in types, just unused going forward.
+- Existing line items with `category = NULL` now show as "Uncategorized" (was falling back to job.category)
+- Historical jobs without titles show "Job" or "General" as fallback display text
+- Reports count jobs under highest-revenue line-item category ("Uncategorized" for jobs with no categorized line items)
+- Presets still have top-level category for organizing/tagging line items (unchanged)
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] Register WisePOS E reader in Stripe Dashboard to get `tmr_xxx` reader ID
+- [ ] Run terminal migration against Supabase
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Resend transactional email integration
+- [ ] Message templates (estimate ready, car ready, payment reminder)
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory)
+- [ ] Stripe live mode activation
+- [ ] Wix customer data import (1000+ contacts)
+
+### What's Next
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Resend email integration
+- Optional: voice input, chat persistence
+
+### Known Issues / Notes
+- No migration needed — `jobs.category` column stays in DB, just no longer set or displayed
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

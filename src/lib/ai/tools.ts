@@ -161,7 +161,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "search_jobs",
     description:
-      "Search jobs by customer name, vehicle, category, or notes. Can also filter by status and/or category. Returns jobs with customer and vehicle info.",
+      "Search jobs by customer name, vehicle, title, or notes. Can also filter by status. Returns jobs with customer and vehicle info.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -171,7 +171,6 @@ export const tools: Anthropic.Tool[] = [
           enum: ["not_started", "waiting_for_parts", "in_progress", "complete"],
           description: "Filter by job status",
         },
-        category: { type: "string", description: "Filter by job category" },
       },
       required: [],
     },
@@ -190,7 +189,7 @@ export const tools: Anthropic.Tool[] = [
   },
   {
     name: "get_job_categories",
-    description: "Get a list of all job categories that have been used.",
+    description: "Get a list of all service categories used in line items.",
     input_schema: {
       type: "object" as const,
       properties: {},
@@ -200,7 +199,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "create_job",
     description:
-      "Create a new job. Requires a customer_id. Optionally link a vehicle, set title, category, assign a tech, etc. Title is a free-text description of the full scope of work (e.g. 'Brake job and coolant filter'). Category is for reporting/filtering (e.g. 'Brake Service').",
+      "Create a new job. Requires a customer_id. Optionally link a vehicle, set title, assign a tech, etc. Title is a free-text description of the full scope of work (e.g. 'Brake job and coolant filter'). Service categories are set on individual line items, not the job.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -212,7 +211,6 @@ export const tools: Anthropic.Tool[] = [
           description: "Job status (defaults to not_started)",
         },
         title: { type: "string", description: "Free-text job title describing the full scope of work (e.g. 'Brake job and coolant filter')" },
-        category: { type: "string", description: "Job category for reporting (e.g. 'Brake Service', 'Oil Change')" },
         assigned_tech: { type: "string", description: "Technician user UUID" },
         date_received: { type: "string", description: "Date received (YYYY-MM-DD, defaults to today)" },
         date_finished: { type: "string", description: "Date finished (YYYY-MM-DD)" },
@@ -246,7 +244,6 @@ export const tools: Anthropic.Tool[] = [
           enum: ["not_started", "waiting_for_parts", "in_progress", "complete"],
         },
         title: { type: "string", description: "Free-text job title" },
-        category: { type: "string" },
         assigned_tech: { type: "string" },
         date_received: { type: "string" },
         date_finished: { type: "string" },
@@ -306,7 +303,7 @@ export const tools: Anthropic.Tool[] = [
         quantity: { type: "number", description: "Quantity (required)" },
         unit_cost: { type: "number", description: "Cost per unit in dollars (required)" },
         part_number: { type: "string", description: "Part number (optional, for parts)" },
-        category: { type: "string", description: "Service category for this line item (e.g. 'Brake Service', 'Oil Change'). Defaults to the job's category if not specified." },
+        category: { type: "string", description: "Service category for this line item (e.g. 'Brake Service', 'Oil Change'). Used for grouping and reporting." },
       },
       required: ["job_id", "type", "description", "quantity", "unit_cost"],
     },

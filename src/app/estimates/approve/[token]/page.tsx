@@ -43,7 +43,7 @@ export default async function EstimateApprovalPage({
 
   const job = estimate.jobs as {
     id: string;
-    category: string | null;
+    title: string | null;
     customers: Customer | null;
     vehicles: Vehicle | null;
   } | null;
@@ -64,7 +64,7 @@ export default async function EstimateApprovalPage({
       <div>
         <h2 className="text-xl font-bold">Estimate</h2>
         <p className="text-sm text-muted-foreground">
-          {job?.category || "Auto Repair Services"}
+          {job?.title || "Auto Repair Services"}
         </p>
       </div>
 

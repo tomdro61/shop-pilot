@@ -35,7 +35,7 @@ import type { JobLineItem } from "@/types";
 interface LineItemFormProps {
   jobId: string;
   lineItem?: JobLineItem;
-  jobCategory?: string | null;
+  defaultCategory?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -43,11 +43,12 @@ interface LineItemFormProps {
 export function LineItemForm({
   jobId,
   lineItem,
-  jobCategory,
+  defaultCategory,
   open,
   onOpenChange,
 }: LineItemFormProps) {
   const isEditing = !!lineItem;
+  const categoryLocked = !isEditing && !!defaultCategory;
 
   const form = useForm<LineItemFormData>({
     resolver: zodResolver(lineItemSchema),
@@ -58,7 +59,7 @@ export function LineItemForm({
       quantity: lineItem?.quantity || 1,
       unit_cost: lineItem?.unit_cost || 0,
       part_number: lineItem?.part_number || "",
-      category: lineItem?.category || jobCategory || "",
+      category: lineItem?.category || defaultCategory || "",
     },
   });
 
@@ -95,7 +96,7 @@ export function LineItemForm({
       quantity: 1,
       unit_cost: 0,
       part_number: "",
-      category: jobCategory || "",
+      category: "",
     });
   }
 
@@ -104,7 +105,7 @@ export function LineItemForm({
       <SheetContent side="bottom" className="h-auto max-h-[85vh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {isEditing ? "Edit Line Item" : "Add Line Item"}
+            {isEditing ? "Edit Line Item" : defaultCategory ? `Add ${defaultCategory} Item` : "Add Line Item"}
           </SheetTitle>
         </SheetHeader>
         <Form {...form}>
@@ -136,31 +137,33 @@ export function LineItemForm({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select value={field.value || "__none__"} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Same as job" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="__none__">Same as job</SelectItem>
-                      {DEFAULT_JOB_CATEGORIES.map((cat) => (
-                        <SelectItem key={cat} value={cat}>
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!categoryLocked && (
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select value={field.value || "__none__"} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="No category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">No category</SelectItem>
+                        {DEFAULT_JOB_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

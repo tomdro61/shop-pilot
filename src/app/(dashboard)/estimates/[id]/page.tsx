@@ -50,7 +50,7 @@ export default async function EstimateDetailPage({
 
   const job = estimate.jobs as {
     id: string;
-    category: string | null;
+    title: string | null;
     customer_id: string;
     vehicle_id: string | null;
     customers: Customer | null;
@@ -77,7 +77,7 @@ export default async function EstimateDetailPage({
           <div>
             <h2 className="text-2xl font-bold">Estimate</h2>
             <p className="text-sm text-muted-foreground">
-              {job?.category || "Auto Repair"} &middot; Created{" "}
+              {job?.title || "Auto Repair"} &middot; Created{" "}
               {new Date(estimate.created_at).toLocaleDateString()}
             </p>
           </div>
