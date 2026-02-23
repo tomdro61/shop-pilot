@@ -27,6 +27,7 @@ export type PresetLineItem = {
   quantity: number;
   unit_cost: number;
   part_number?: string;
+  category?: string;
 };
 
 export type Estimate = Database["public"]["Tables"]["estimates"]["Row"];

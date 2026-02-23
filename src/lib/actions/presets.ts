@@ -96,7 +96,7 @@ export async function applyPresetToJob(jobId: string, presetId: string) {
 
   const { data: preset, error: presetError } = await supabase
     .from("job_presets")
-    .select("line_items")
+    .select("line_items, category")
     .eq("id", presetId)
     .single();
 
@@ -116,6 +116,7 @@ export async function applyPresetToJob(jobId: string, presetId: string) {
     quantity: item.quantity,
     unit_cost: item.unit_cost,
     part_number: item.part_number || null,
+    category: item.category || preset.category || null,
   }));
 
   const { error } = await supabase.from("job_line_items").insert(rows);

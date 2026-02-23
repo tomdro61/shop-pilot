@@ -167,7 +167,7 @@ export default async function JobDetailPage({
 
       {/* Line Items */}
       <div className="animate-in-up stagger-3">
-        <LineItemsList jobId={id} lineItems={lineItems} />
+        <LineItemsList jobId={id} lineItems={lineItems} jobCategory={job.category} />
       </div>
 
       {/* Estimate */}

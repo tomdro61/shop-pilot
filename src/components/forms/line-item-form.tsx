@@ -29,11 +29,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { formatCurrency } from "@/lib/utils/format";
+import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
 import type { JobLineItem } from "@/types";
 
 interface LineItemFormProps {
   jobId: string;
   lineItem?: JobLineItem;
+  jobCategory?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -41,6 +43,7 @@ interface LineItemFormProps {
 export function LineItemForm({
   jobId,
   lineItem,
+  jobCategory,
   open,
   onOpenChange,
 }: LineItemFormProps) {
@@ -55,6 +58,7 @@ export function LineItemForm({
       quantity: lineItem?.quantity || 1,
       unit_cost: lineItem?.unit_cost || 0,
       part_number: lineItem?.part_number || "",
+      category: lineItem?.category || jobCategory || "",
     },
   });
 
@@ -91,6 +95,7 @@ export function LineItemForm({
       quantity: 1,
       unit_cost: 0,
       part_number: "",
+      category: jobCategory || "",
     });
   }
 
@@ -124,6 +129,32 @@ export function LineItemForm({
                     <SelectContent>
                       <SelectItem value="labor">Labor</SelectItem>
                       <SelectItem value="part">Part</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Same as job" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Same as job</SelectItem>
+                      {DEFAULT_JOB_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

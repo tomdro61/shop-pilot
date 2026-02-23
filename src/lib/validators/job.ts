@@ -46,6 +46,7 @@ export const lineItemSchema = z.object({
   quantity: z.number().min(0.01, "Quantity must be greater than 0"),
   unit_cost: z.number().min(0, "Cost must be 0 or greater"),
   part_number: z.string().max(100),
+  category: z.string().max(100).optional(),
 });
 
 export type LineItemFormData = z.infer<typeof lineItemSchema>;
@@ -58,5 +59,6 @@ export function prepareLineItemData(data: LineItemFormData) {
     quantity: data.quantity,
     unit_cost: data.unit_cost,
     part_number: data.part_number || null,
+    category: data.category || null,
   };
 }

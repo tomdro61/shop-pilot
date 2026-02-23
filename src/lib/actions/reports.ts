@@ -29,7 +29,7 @@ export async function getReportData(params: {
   // ONE query for current period — includes category, tech, and line item type for all aggregations
   const currentPromise = supabase
     .from("jobs")
-    .select("id, category, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity)")
+    .select("id, category, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, category)")
     .eq("status", "complete")
     .gte("date_finished", start)
     .lte("date_finished", end);
@@ -51,7 +51,7 @@ export async function getReportData(params: {
 
   // --- Aggregate everything from the single current-period result ---
 
-  type LineItem = { type: string; total: number; quantity: number };
+  type LineItem = { type: string; total: number; quantity: number; category: string | null };
 
   function getLineItems(job: { job_line_items: unknown }): LineItem[] {
     return (job.job_line_items as LineItem[]) || [];
@@ -92,28 +92,31 @@ export async function getReportData(params: {
   const techRevenue: Record<string, number> = {};
 
   currentJobs.forEach((job) => {
-    const cat = job.category || "Uncategorized";
+    const jobCat = job.category || "Uncategorized";
     const user = job.users as { name: string } | null;
     const techName = user?.name || "Unassigned";
     const lineItems = getLineItems(job);
     const jobTotal = lineItems.reduce((s, li) => s + (li.total || 0), 0);
 
-    // Category counts + revenue
-    catCounts[cat] = (catCounts[cat] || 0) + 1;
-    catRevenue[cat] = (catRevenue[cat] || 0) + jobTotal;
+    // Job counts use job-level category (one job = one count)
+    catCounts[jobCat] = (catCounts[jobCat] || 0) + 1;
 
     // Tech counts + revenue
     techCounts[techName] = (techCounts[techName] || 0) + 1;
     techRevenue[techName] = (techRevenue[techName] || 0) + jobTotal;
 
-    // Profitability
-    if (!catProfitability[cat]) {
-      catProfitability[cat] = { revenue: 0, partsCost: 0 };
-    }
+    // Revenue + profitability use line-item-level category for accurate multi-service splits
     lineItems.forEach((li) => {
-      catProfitability[cat].revenue += li.total || 0;
+      const liCat = li.category || jobCat;
+
+      catRevenue[liCat] = (catRevenue[liCat] || 0) + (li.total || 0);
+
+      if (!catProfitability[liCat]) {
+        catProfitability[liCat] = { revenue: 0, partsCost: 0 };
+      }
+      catProfitability[liCat].revenue += li.total || 0;
       if (li.type === "part") {
-        catProfitability[cat].partsCost += li.total || 0;
+        catProfitability[liCat].partsCost += li.total || 0;
         partsRevenue += li.total || 0;
       } else if (li.type === "labor") {
         laborRevenue += li.total || 0;
@@ -121,7 +124,7 @@ export async function getReportData(params: {
     });
 
     // Inspection count
-    if (cat === "Inspection") {
+    if (jobCat === "Inspection") {
       inspectionCount += lineItems.reduce((s, li) => s + (li.quantity || 0), 0);
     }
   });

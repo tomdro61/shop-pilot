@@ -16,17 +16,14 @@ import type { JobLineItem } from "@/types";
 interface LineItemsListProps {
   jobId: string;
   lineItems: JobLineItem[];
+  jobCategory?: string | null;
 }
 
-export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
+export function LineItemsList({ jobId, lineItems, jobCategory }: LineItemsListProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
 
-  const laborItems = lineItems.filter((li) => li.type === "labor");
-  const partItems = lineItems.filter((li) => li.type === "part");
-  const laborTotal = laborItems.reduce((sum, li) => sum + (li.total || 0), 0);
-  const partsTotal = partItems.reduce((sum, li) => sum + (li.total || 0), 0);
-  const grandTotal = laborTotal + partsTotal;
+  const grandTotal = lineItems.reduce((sum, li) => sum + (li.total || 0), 0);
 
   async function handleDelete(id: string) {
     const result = await deleteLineItem(id, jobId);
@@ -88,6 +85,16 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
     );
   }
 
+  // Group line items by category
+  const categoryGroups: Record<string, JobLineItem[]> = {};
+  lineItems.forEach((li) => {
+    const cat = li.category || jobCategory || "Uncategorized";
+    if (!categoryGroups[cat]) categoryGroups[cat] = [];
+    categoryGroups[cat].push(li);
+  });
+
+  const categoryNames = Object.keys(categoryGroups);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
@@ -104,21 +111,24 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
           </p>
         ) : (
           <>
-            {renderItems(laborItems, "Labor")}
-            {renderItems(partItems, "Parts")}
-            <div className="space-y-1 text-right">
-              {laborItems.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Labor: {formatCurrency(laborTotal)}
-                </p>
-              )}
-              {partItems.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Parts: {formatCurrency(partsTotal)}
-                </p>
-              )}
-            </div>
-            <Separator />
+            {categoryNames.map((catName) => {
+              const items = categoryGroups[catName];
+              const laborItems = items.filter((li) => li.type === "labor");
+              const partItems = items.filter((li) => li.type === "part");
+              const catTotal = items.reduce((sum, li) => sum + (li.total || 0), 0);
+
+              return (
+                <div key={catName} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">{catName}</h3>
+                    <span className="text-sm text-muted-foreground">{formatCurrency(catTotal)}</span>
+                  </div>
+                  {renderItems(laborItems, "Labor")}
+                  {renderItems(partItems, "Parts")}
+                  {categoryNames.length > 1 && <Separator />}
+                </div>
+              );
+            })}
             <div className="text-right">
               <p className="text-2xl font-bold tracking-tight">
                 {formatCurrency(grandTotal)}
@@ -130,6 +140,7 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
 
       <LineItemForm
         jobId={jobId}
+        jobCategory={jobCategory}
         open={addOpen}
         onOpenChange={setAddOpen}
       />
@@ -137,6 +148,7 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
       {editItem && (
         <LineItemForm
           jobId={jobId}
+          jobCategory={jobCategory}
           lineItem={editItem}
           open={!!editItem}
           onOpenChange={(open) => {

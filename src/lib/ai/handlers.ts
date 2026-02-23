@@ -242,6 +242,7 @@ export async function executeToolCall(
           quantity: num(toolInput.quantity, 1)!,
           unit_cost: num(toolInput.unit_cost, 0)!,
           part_number: str(toolInput.part_number),
+          category: str(toolInput.category) || undefined,
         });
         return JSON.stringify(result);
       }
@@ -254,6 +255,7 @@ export async function executeToolCall(
           quantity: num(toolInput.quantity, 1)!,
           unit_cost: num(toolInput.unit_cost, 0)!,
           part_number: str(toolInput.part_number),
+          category: str(toolInput.category) || undefined,
         });
         return JSON.stringify(result);
       }

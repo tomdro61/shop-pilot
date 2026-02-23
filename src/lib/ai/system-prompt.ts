@@ -20,7 +20,7 @@ export function getSystemPrompt(): string {
 - **Customers** have vehicles, jobs, and contact info (phone, email, address). Can be "retail" or "fleet" type.
 - **Vehicles** belong to a customer (year, make, model, VIN, mileage)
 - **Jobs** belong to a customer + vehicle, have a status, category, assigned technician, line items, payment_status, payment_method, mileage_in
-- **Job Line Items** are labor or parts with description, quantity, unit cost
+- **Job Line Items** are labor or parts with description, quantity, unit cost, and optional category (for multi-service jobs where line items belong to different service types)
 - **Estimates** are created from a job's line items, sent to customers for approval
 - **Estimate Line Items** can be edited independently (only when estimate is in "draft" status)
 - **Invoices** are created from completed jobs via Stripe (retail only)
