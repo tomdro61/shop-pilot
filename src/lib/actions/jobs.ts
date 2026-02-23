@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
 import { revalidatePath } from "next/cache";
@@ -32,31 +33,41 @@ export async function getJobs(filters?: {
   }
 
   if (filters?.search) {
-    // Search by customer name - we need to filter client-side since
-    // Supabase doesn't support filtering by related table fields directly
+    const searchLower = filters.search.toLowerCase();
+    const supabaseForSearch = await createClient();
+
+    // Server-side: find matching customers and vehicles first, then filter jobs
+    const [customerResult, vehicleResult] = await Promise.all([
+      supabaseForSearch
+        .from("customers")
+        .select("id")
+        .or(`first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%`),
+      supabaseForSearch
+        .from("vehicles")
+        .select("id")
+        .or(`make.ilike.%${searchLower}%,model.ilike.%${searchLower}%`),
+    ]);
+
+    const customerIds = customerResult.data?.map(c => c.id) || [];
+    const vehicleIds = vehicleResult.data?.map(v => v.id) || [];
+
+    // Build OR filter for job's own fields + matched customer/vehicle IDs
+    const orParts: string[] = [
+      `category.ilike.%${searchLower}%`,
+      `notes.ilike.%${searchLower}%`,
+    ];
+    if (customerIds.length > 0) {
+      orParts.push(`customer_id.in.(${customerIds.join(",")})`);
+    }
+    if (vehicleIds.length > 0) {
+      orParts.push(`vehicle_id.in.(${vehicleIds.join(",")})`);
+    }
+
+    query = query.or(orParts.join(","));
+
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-
-    const searchLower = filters.search.toLowerCase();
-    return data.filter((job) => {
-      const customer = job.customers as { first_name: string; last_name: string } | null;
-      const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-      const customerName = customer
-        ? `${customer.first_name} ${customer.last_name}`.toLowerCase()
-        : "";
-      const vehicleStr = vehicle
-        ? [vehicle.year, vehicle.make, vehicle.model]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase()
-        : "";
-      return (
-        customerName.includes(searchLower) ||
-        vehicleStr.includes(searchLower) ||
-        (job.category || "").toLowerCase().includes(searchLower) ||
-        (job.notes || "").toLowerCase().includes(searchLower)
-      );
-    });
+    return data;
   }
 
   const { data, error } = await query;
@@ -64,7 +75,7 @@ export async function getJobs(filters?: {
   return data;
 }
 
-export async function getJob(id: string) {
+export const getJob = cache(async (id: string) => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -77,7 +88,7 @@ export async function getJob(id: string) {
 
   if (error) return null;
   return data;
-}
+});
 
 export async function createJob(formData: JobFormData) {
   const parsed = jobSchema.safeParse(formData);

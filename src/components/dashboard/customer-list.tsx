@@ -3,10 +3,17 @@ import { formatPhone } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight, Users } from "lucide-react";
-import type { Customer } from "@/types";
+interface CustomerListItem {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string | null;
+  customer_type: string | null;
+}
 
 interface CustomerListProps {
-  customers: Customer[];
+  customers: CustomerListItem[];
 }
 
 export function CustomerList({ customers }: CustomerListProps) {

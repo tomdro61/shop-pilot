@@ -41,7 +41,7 @@ export default async function CustomerDetailPage({
       .order("year", { ascending: false }),
     supabase
       .from("jobs")
-      .select("*, vehicles(year, make, model)")
+      .select("id, status, category, date_received, vehicles(year, make, model)")
       .eq("customer_id", id)
       .order("date_received", { ascending: false })
       .limit(20),

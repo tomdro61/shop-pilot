@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { customerSchema, prepareCustomerData } from "@/lib/validators/customer";
 import { revalidatePath } from "next/cache";
@@ -10,7 +11,7 @@ export async function getCustomers(search?: string, customerType?: string) {
 
   let query = supabase
     .from("customers")
-    .select("*")
+    .select("id, first_name, last_name, phone, email, customer_type, fleet_account")
     .order("last_name", { ascending: true });
 
   if (search) {
@@ -39,7 +40,7 @@ export async function getCustomers(search?: string, customerType?: string) {
   return data;
 }
 
-export async function getCustomer(id: string) {
+export const getCustomer = cache(async (id: string) => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -50,7 +51,7 @@ export async function getCustomer(id: string) {
 
   if (error) return null;
   return data;
-}
+});
 
 export async function createCustomer(formData: CustomerFormData) {
   const parsed = customerSchema.safeParse(formData);

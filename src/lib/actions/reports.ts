@@ -7,135 +7,13 @@ function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-async function getJobCount(start: string, end: string) {
-  const supabase = await createClient();
-  const { count } = await supabase
-    .from("jobs")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-  return count || 0;
-}
-
-async function getRevenue(start: string, end: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("jobs")
-    .select("id, job_line_items(total)")
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-
-  return (
-    data?.reduce((sum, job) => {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      );
-      return sum + (jobTotal || 0);
-    }, 0) || 0
-  );
-}
-
-async function getJobsByCategory(start: string, end: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("jobs")
-    .select("category, id")
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-
-  const counts: Record<string, number> = {};
-  data?.forEach((job) => {
-    const cat = job.category || "Uncategorized";
-    counts[cat] = (counts[cat] || 0) + 1;
-  });
-
-  return Object.entries(counts)
-    .map(([category, count]) => ({ category, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
-async function getRevenueByCategory(start: string, end: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("jobs")
-    .select("category, job_line_items(total)")
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-
-  const totals: Record<string, number> = {};
-  data?.forEach((job) => {
-    const cat = job.category || "Uncategorized";
-    const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-      (s, li) => s + (li.total || 0),
-      0
-    );
-    totals[cat] = (totals[cat] || 0) + (jobTotal || 0);
-  });
-
-  return Object.entries(totals)
-    .map(([category, revenue]) => ({ category, revenue }))
-    .sort((a, b) => b.revenue - a.revenue);
-}
-
-async function getJobsByTech(start: string, end: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("jobs")
-    .select("assigned_tech, users!jobs_assigned_tech_fkey(name)")
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-
-  const counts: Record<string, number> = {};
-  data?.forEach((job) => {
-    const user = job.users as { name: string } | null;
-    const name = user?.name || "Unassigned";
-    counts[name] = (counts[name] || 0) + 1;
-  });
-
-  return Object.entries(counts)
-    .map(([category, count]) => ({ category, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
-async function getRevenueByTech(start: string, end: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("jobs")
-    .select(
-      "assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(total)"
-    )
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-
-  const totals: Record<string, number> = {};
-  data?.forEach((job) => {
-    const user = job.users as { name: string } | null;
-    const name = user?.name || "Unassigned";
-    const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-      (s, li) => s + (li.total || 0),
-      0
-    );
-    totals[name] = (totals[name] || 0) + (jobTotal || 0);
-  });
-
-  return Object.entries(totals)
-    .map(([category, revenue]) => ({ category, revenue }))
-    .sort((a, b) => b.revenue - a.revenue);
-}
-
 export async function getReportData(params: {
   from: string;
   to: string;
   isAllTime: boolean;
 }) {
   const { from: start, to: end, isAllTime } = params;
+  const supabase = await createClient();
 
   // Compute prior period of equal length for comparison
   let priorStart: string | null = null;
@@ -148,28 +26,136 @@ export async function getReportData(params: {
     priorEnd = toDateStr(priorEndDate);
   }
 
-  const [
-    jobsCurrent,
-    revenueCurrent,
-    jobsPrior,
-    revenuePrior,
-    jobsByCategory,
-    revenueByCategory,
-    jobsByTech,
-    revenueByTech,
-  ] = await Promise.all([
-    getJobCount(start, end),
-    getRevenue(start, end),
-    priorStart && priorEnd ? getJobCount(priorStart, priorEnd) : Promise.resolve(null),
-    priorStart && priorEnd ? getRevenue(priorStart, priorEnd) : Promise.resolve(null),
-    getJobsByCategory(start, end),
-    getRevenueByCategory(start, end),
-    getJobsByTech(start, end),
-    getRevenueByTech(start, end),
-  ]);
+  // ONE query for current period — includes category, tech, and line item type for all aggregations
+  const currentPromise = supabase
+    .from("jobs")
+    .select("id, category, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity)")
+    .eq("status", "complete")
+    .gte("date_finished", start)
+    .lte("date_finished", end);
 
-  const avgTicket =
-    jobsCurrent > 0 ? revenueCurrent / jobsCurrent : 0;
+  // ONE query for prior period (just count + revenue)
+  const priorPromise = priorStart && priorEnd
+    ? supabase
+        .from("jobs")
+        .select("id, job_line_items(total)")
+        .eq("status", "complete")
+        .gte("date_finished", priorStart)
+        .lte("date_finished", priorEnd)
+    : Promise.resolve({ data: null });
+
+  const [currentResult, priorResult] = await Promise.all([currentPromise, priorPromise]);
+
+  const currentJobs = currentResult.data || [];
+  const priorJobs = priorResult.data || [];
+
+  // --- Aggregate everything from the single current-period result ---
+
+  type LineItem = { type: string; total: number; quantity: number };
+
+  function getLineItems(job: { job_line_items: unknown }): LineItem[] {
+    return (job.job_line_items as LineItem[]) || [];
+  }
+
+  function sumLineItemTotals(job: { job_line_items: unknown }): number {
+    return getLineItems(job).reduce((s, li) => s + (li.total || 0), 0);
+  }
+
+  // Job count + revenue
+  const jobsCurrent = currentJobs.length;
+  const revenueCurrent = currentJobs.reduce((sum, job) => sum + sumLineItemTotals(job), 0);
+
+  // Prior period
+  const jobsPrior = priorJobs.length > 0 ? priorJobs.length : null;
+  const revenuePrior = priorJobs.length > 0
+    ? priorJobs.reduce((sum, job) => {
+        const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
+          (s, li) => s + (li.total || 0), 0
+        );
+        return sum + (jobTotal || 0);
+      }, 0)
+    : null;
+
+  // Jobs by category
+  const catCounts: Record<string, number> = {};
+  const catRevenue: Record<string, number> = {};
+  // Profitability by category (revenue + parts cost breakdown)
+  const catProfitability: Record<string, { revenue: number; partsCost: number }> = {};
+  // Revenue breakdown (labor vs parts)
+  let laborRevenue = 0;
+  let partsRevenue = 0;
+  // Inspection count
+  let inspectionCount = 0;
+
+  // Jobs by tech
+  const techCounts: Record<string, number> = {};
+  const techRevenue: Record<string, number> = {};
+
+  currentJobs.forEach((job) => {
+    const cat = job.category || "Uncategorized";
+    const user = job.users as { name: string } | null;
+    const techName = user?.name || "Unassigned";
+    const lineItems = getLineItems(job);
+    const jobTotal = lineItems.reduce((s, li) => s + (li.total || 0), 0);
+
+    // Category counts + revenue
+    catCounts[cat] = (catCounts[cat] || 0) + 1;
+    catRevenue[cat] = (catRevenue[cat] || 0) + jobTotal;
+
+    // Tech counts + revenue
+    techCounts[techName] = (techCounts[techName] || 0) + 1;
+    techRevenue[techName] = (techRevenue[techName] || 0) + jobTotal;
+
+    // Profitability
+    if (!catProfitability[cat]) {
+      catProfitability[cat] = { revenue: 0, partsCost: 0 };
+    }
+    lineItems.forEach((li) => {
+      catProfitability[cat].revenue += li.total || 0;
+      if (li.type === "part") {
+        catProfitability[cat].partsCost += li.total || 0;
+        partsRevenue += li.total || 0;
+      } else if (li.type === "labor") {
+        laborRevenue += li.total || 0;
+      }
+    });
+
+    // Inspection count
+    if (cat === "Inspection") {
+      inspectionCount += lineItems.reduce((s, li) => s + (li.quantity || 0), 0);
+    }
+  });
+
+  const jobsByCategory = Object.entries(catCounts)
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const revenueByCategory = Object.entries(catRevenue)
+    .map(([category, revenue]) => ({ category, revenue }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  const jobsByTech = Object.entries(techCounts)
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const revenueByTech = Object.entries(techRevenue)
+    .map(([category, revenue]) => ({ category, revenue }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  const profitability = Object.entries(catProfitability)
+    .map(([category, { revenue, partsCost }]) => ({
+      category,
+      revenue,
+      partsCost,
+      laborRevenue: revenue - partsCost,
+      margin: revenue > 0 ? ((revenue - partsCost) / revenue) * 100 : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  const totalRevenue = laborRevenue + partsRevenue;
+  const estimatedGrossProfit = laborRevenue + partsRevenue * 0.4;
+
+  const avgTicket = jobsCurrent > 0 ? revenueCurrent / jobsCurrent : 0;
 
   return {
     jobsCurrent,
@@ -182,42 +168,11 @@ export async function getReportData(params: {
     revenueByTech,
     avgTicket,
     isAllTime,
+    // Folded-in data (previously separate queries)
+    profitability,
+    breakdown: { laborRevenue, partsRevenue, totalRevenue, estimatedGrossProfit },
+    inspectionCount,
   };
-}
-
-export async function getServiceProfitability(start: string, end: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("jobs")
-    .select("category, job_line_items(type, total)")
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-
-  const categories: Record<string, { revenue: number; partsCost: number }> = {};
-
-  data?.forEach((job) => {
-    const cat = job.category || "Uncategorized";
-    if (!categories[cat]) {
-      categories[cat] = { revenue: 0, partsCost: 0 };
-    }
-    (job.job_line_items as { type: string; total: number }[])?.forEach((li) => {
-      categories[cat].revenue += li.total || 0;
-      if (li.type === "part") {
-        categories[cat].partsCost += li.total || 0;
-      }
-    });
-  });
-
-  return Object.entries(categories)
-    .map(([category, { revenue, partsCost }]) => ({
-      category,
-      revenue,
-      partsCost,
-      laborRevenue: revenue - partsCost,
-      margin: revenue > 0 ? ((revenue - partsCost) / revenue) * 100 : 0,
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
 }
 
 export async function getFleetARSummary() {
@@ -319,39 +274,6 @@ export async function getDailyRevenueSparkline(days: number) {
   return Object.entries(revenueByDate)
     .map(([date, revenue]) => ({ date, revenue }))
     .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-export async function getRevenueBreakdown(start?: string, end?: string) {
-  const supabase = await createClient();
-  const now = new Date();
-  const monthStart = start ?? toDateStr(new Date(now.getFullYear(), now.getMonth(), 1));
-  const monthEnd = end ?? toDateStr(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-
-  const { data } = await supabase
-    .from("jobs")
-    .select("job_line_items(type, total)")
-    .eq("status", "complete")
-    .gte("date_finished", monthStart)
-    .lte("date_finished", monthEnd);
-
-  let laborRevenue = 0;
-  let partsRevenue = 0;
-
-  data?.forEach((job) => {
-    (job.job_line_items as { type: string; total: number }[])?.forEach((li) => {
-      if (li.type === "labor") {
-        laborRevenue += li.total || 0;
-      } else if (li.type === "part") {
-        partsRevenue += li.total || 0;
-      }
-    });
-  });
-
-  const totalRevenue = laborRevenue + partsRevenue;
-  // Gross profit estimate: labor (100% margin) + parts (40% margin)
-  const estimatedGrossProfit = laborRevenue + partsRevenue * 0.4;
-
-  return { laborRevenue, partsRevenue, totalRevenue, estimatedGrossProfit };
 }
 
 export async function getStaleJobsCount() {

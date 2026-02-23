@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getReportData, getFleetARSummary, getServiceProfitability, getRevenueBreakdown, getInspectionCount } from "@/lib/actions/reports";
+import { getReportData, getFleetARSummary } from "@/lib/actions/reports";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -18,17 +18,16 @@ export default async function ReportsPage({
 }) {
   const { range, from, to } = await searchParams;
   const resolved = resolveDateRange(range, from, to);
-  const [data, fleetAR, profitability, breakdown, inspectionCount] = await Promise.all([
+  const [data, fleetAR] = await Promise.all([
     getReportData({
       from: resolved.from,
       to: resolved.to,
       isAllTime: resolved.isAllTime,
     }),
     getFleetARSummary(),
-    getServiceProfitability(resolved.from, resolved.to),
-    getRevenueBreakdown(resolved.from, resolved.to),
-    getInspectionCount(resolved.from, resolved.to),
   ]);
+
+  const { profitability, breakdown, inspectionCount } = data;
 
   const jobsChartData = data.jobsByCategory.map((d) => ({
     category: d.category,
