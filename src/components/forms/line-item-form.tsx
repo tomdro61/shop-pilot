@@ -142,14 +142,14 @@ export function LineItemForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                  <Select value={field.value || "__none__"} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Same as job" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Same as job</SelectItem>
+                      <SelectItem value="__none__">Same as job</SelectItem>
                       {DEFAULT_JOB_CATEGORIES.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
