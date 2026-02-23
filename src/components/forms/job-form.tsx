@@ -94,6 +94,7 @@ export function JobForm({ job, defaultCustomerId, categories, presets }: JobForm
       customer_id: job?.customer_id || defaultCustomerId || "",
       vehicle_id: job?.vehicle_id || undefined,
       status: job?.status || "not_started",
+      title: job?.title || "",
       category: job?.category || "",
       assigned_tech: job?.assigned_tech || undefined,
       date_received: job?.date_received || new Date().toISOString().split("T")[0],
@@ -387,10 +388,31 @@ export function JobForm({ job, defaultCustomerId, categories, presets }: JobForm
           <CardContent className="pt-5">
             <SectionHeader
               title="Job Details"
-              description="Category, status, and assignment"
+              description="Title, category, status, and assignment"
             />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-4">
+              {/* Title — full width */}
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Job Title</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. Brake job and coolant filter"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Category — half */}
               <FormField
                 control={form.control}

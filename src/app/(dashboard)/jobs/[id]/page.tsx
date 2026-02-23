@@ -53,8 +53,11 @@ export default async function JobDetailPage({
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-xl font-semibold tracking-tight lg:text-2xl">
-              {job.category || "Job"}
+              {job.title || job.category || "Job"}
             </h2>
+            {job.title && job.category && (
+              <p className="mt-0.5 text-xs font-medium text-muted-foreground">{job.category}</p>
+            )}
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />

@@ -113,6 +113,7 @@ export type Database = {
           customer_id: string;
           vehicle_id: string | null;
           status: Database["public"]["Enums"]["job_status"];
+          title: string | null;
           category: string | null;
           assigned_tech: string | null;
           date_received: string;
@@ -130,6 +131,7 @@ export type Database = {
           customer_id: string;
           vehicle_id?: string | null;
           status?: Database["public"]["Enums"]["job_status"];
+          title?: string | null;
           category?: string | null;
           assigned_tech?: string | null;
           date_received?: string;
@@ -147,6 +149,7 @@ export type Database = {
           customer_id?: string;
           vehicle_id?: string | null;
           status?: Database["public"]["Enums"]["job_status"];
+          title?: string | null;
           category?: string | null;
           assigned_tech?: string | null;
           date_received?: string;

@@ -180,6 +180,7 @@ export async function executeToolCall(
           customer_id: str(toolInput.customer_id),
           vehicle_id: str(toolInput.vehicle_id) || null,
           status: (str(toolInput.status, "not_started") as "not_started"),
+          title: str(toolInput.title) || undefined,
           category: str(toolInput.category),
           assigned_tech: str(toolInput.assigned_tech) || null,
           date_received: str(toolInput.date_received, today),
@@ -200,6 +201,9 @@ export async function executeToolCall(
             ? (str(toolInput.vehicle_id) || null)
             : (currentJob.vehicle_id ?? null),
           status: str(toolInput.status, currentJob.status) as "not_started",
+          title: toolInput.title !== undefined
+            ? (str(toolInput.title) || undefined)
+            : (currentJob.title ?? undefined),
           category: str(toolInput.category, currentJob.category ?? ""),
           assigned_tech: toolInput.assigned_tech !== undefined
             ? (str(toolInput.assigned_tech) || null)

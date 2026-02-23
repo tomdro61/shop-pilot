@@ -200,7 +200,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "create_job",
     description:
-      "Create a new job. Requires a customer_id. Optionally link a vehicle, set category, assign a tech, etc.",
+      "Create a new job. Requires a customer_id. Optionally link a vehicle, set title, category, assign a tech, etc. Title is a free-text description of the full scope of work (e.g. 'Brake job and coolant filter'). Category is for reporting/filtering (e.g. 'Brake Service').",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -211,7 +211,8 @@ export const tools: Anthropic.Tool[] = [
           enum: ["not_started", "waiting_for_parts", "in_progress", "complete"],
           description: "Job status (defaults to not_started)",
         },
-        category: { type: "string", description: "Job category (e.g. 'Brake Service', 'Oil Change')" },
+        title: { type: "string", description: "Free-text job title describing the full scope of work (e.g. 'Brake job and coolant filter')" },
+        category: { type: "string", description: "Job category for reporting (e.g. 'Brake Service', 'Oil Change')" },
         assigned_tech: { type: "string", description: "Technician user UUID" },
         date_received: { type: "string", description: "Date received (YYYY-MM-DD, defaults to today)" },
         date_finished: { type: "string", description: "Date finished (YYYY-MM-DD)" },
@@ -244,6 +245,7 @@ export const tools: Anthropic.Tool[] = [
           type: "string",
           enum: ["not_started", "waiting_for_parts", "in_progress", "complete"],
         },
+        title: { type: "string", description: "Free-text job title" },
         category: { type: "string" },
         assigned_tech: { type: "string" },
         date_received: { type: "string" },

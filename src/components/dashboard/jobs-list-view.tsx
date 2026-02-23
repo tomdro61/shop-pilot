@@ -30,6 +30,7 @@ import type { JobStatus } from "@/types";
 type JobRow = {
   id: string;
   status: string;
+  title?: string | null;
   category: string | null;
   date_received: string;
   date_finished: string | null;
@@ -95,7 +96,8 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           row.original.vehicles ? formatVehicle(row.original.vehicles) : null,
       },
       {
-        accessorKey: "category",
+        id: "category",
+        accessorFn: (row) => row.title || row.category || "",
         header: ({ column }) => (
           <Button
             variant="ghost"
@@ -106,6 +108,14 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             Category
             <ArrowUpDown className="ml-1 h-3 w-3" />
           </Button>
+        ),
+        cell: ({ row }) => (
+          <div>
+            <span>{row.original.title || row.original.category}</span>
+            {row.original.title && row.original.category && (
+              <span className="ml-1.5 text-xs text-muted-foreground">{row.original.category}</span>
+            )}
+          </div>
         ),
       },
       {

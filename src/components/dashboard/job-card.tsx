@@ -8,6 +8,7 @@ interface JobCardProps {
   job: {
     id: string;
     status: string;
+    title?: string | null;
     category: string | null;
     date_received: string;
     notes: string | null;
@@ -36,7 +37,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
                 </p>
               )}
               <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-                {job.category && <span>{job.category}</span>}
+                {(job.title || job.category) && <span>{job.title || job.category}</span>}
                 {job.users && (
                   <>
                     <span className="text-border">·</span>

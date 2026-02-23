@@ -41,7 +41,7 @@ export default async function CustomerDetailPage({
       .order("year", { ascending: false }),
     supabase
       .from("jobs")
-      .select("id, status, category, date_received, vehicles(year, make, model)")
+      .select("id, status, title, category, date_received, vehicles(year, make, model)")
       .eq("customer_id", id)
       .order("date_received", { ascending: false })
       .limit(20),
@@ -150,7 +150,7 @@ export default async function CustomerDetailPage({
                     <Link key={job.id} href={`/jobs/${job.id}`} className="block">
                       <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium">{job.category || "General"}</p>
+                          <p className="text-sm font-medium">{job.title || job.category || "General"}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {[vehicle ? formatVehicle(vehicle) : null, job.date_received ? new Date(job.date_received).toLocaleDateString() : null].filter(Boolean).join(" · ")}
                           </p>

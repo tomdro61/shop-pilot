@@ -53,6 +53,7 @@ export async function getJobs(filters?: {
 
     // Build OR filter for job's own fields + matched customer/vehicle IDs
     const orParts: string[] = [
+      `title.ilike.%${searchLower}%`,
       `category.ilike.%${searchLower}%`,
       `notes.ilike.%${searchLower}%`,
     ];

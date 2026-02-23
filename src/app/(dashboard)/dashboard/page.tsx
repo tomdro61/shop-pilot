@@ -67,7 +67,7 @@ const getDashboardData = unstable_cache(async () => {
       .lte("date_finished", lastWeekEnd),
     supabase
       .from("jobs")
-      .select("id, status, category, date_received, payment_status, job_line_items(total), customers(first_name, last_name), vehicles(year, make, model)")
+      .select("id, status, title, category, date_received, payment_status, job_line_items(total), customers(first_name, last_name), vehicles(year, make, model)")
       .order("date_received", { ascending: false })
       .limit(8),
   ]);
@@ -378,7 +378,7 @@ export default async function DashboardPage() {
                           {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {[job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
+                          {[job.title || job.category, vehicle ? formatVehicle(vehicle) : null].filter(Boolean).join(" · ")}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5 pl-4">
