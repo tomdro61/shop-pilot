@@ -10,7 +10,7 @@ import { formatPhone, formatVehicle } from "@/lib/utils/format";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
 import { VehicleSection } from "@/components/dashboard/vehicle-section";
-import { Pencil, Wrench, Phone, Mail, MapPin } from "lucide-react";
+import { ArrowLeft, Pencil, Wrench, Phone, Mail, MapPin } from "lucide-react";
 import type { JobStatus } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -54,9 +54,15 @@ export default async function CustomerDetailPage({
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-6">
       <div className="mb-6 animate-in-up">
+        <Link href="/customers">
+          <Button variant="ghost" size="sm" className="mb-2">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Customers
+          </Button>
+        </Link>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary lg:h-12 lg:w-12 lg:text-base">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-sm font-semibold text-blue-700 dark:text-blue-400 lg:h-12 lg:w-12 lg:text-base">
               {initials}
             </div>
             <div>
@@ -65,12 +71,12 @@ export default async function CustomerDetailPage({
                   {customer.first_name} {customer.last_name}
                 </h2>
                 {customer.customer_type === "fleet" && (
-                  <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-400 text-[10px]">
+                  <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400 text-[10px]">
                     Fleet{customer.fleet_account ? ` — ${customer.fleet_account}` : ""}
                   </Badge>
                 )}
               </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
                 {customer.phone && (
                   <span className="inline-flex items-center gap-1">
                     <Phone className="h-3 w-3" />
@@ -107,7 +113,7 @@ export default async function CustomerDetailPage({
       {customer.notes && (
         <Card className="mb-4 animate-in-up stagger-1">
           <CardContent className="p-4">
-            <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Notes</p>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Notes</p>
             <p className="text-sm leading-relaxed">{customer.notes}</p>
           </CardContent>
         </Card>
@@ -121,7 +127,7 @@ export default async function CustomerDetailPage({
       <div className="animate-in-up stagger-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-            <CardTitle className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
               <Wrench className="h-3.5 w-3.5" />
               Jobs ({jobs.length})
             </CardTitle>
@@ -148,7 +154,7 @@ export default async function CustomerDetailPage({
                   const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
                   return (
                     <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50">
+                      <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{job.title || "General"}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -156,8 +162,7 @@ export default async function CustomerDetailPage({
                           </p>
                         </div>
                         <Badge
-                          variant="outline"
-                          className={`shrink-0 text-[10px] ${colors.bg} ${colors.text} ${colors.border}`}
+                          className={`shrink-0 text-[10px] border-transparent ${colors.bg} ${colors.text}`}
                         >
                           {JOB_STATUS_LABELS[status]}
                         </Badge>

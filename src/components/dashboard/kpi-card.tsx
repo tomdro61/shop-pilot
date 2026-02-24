@@ -8,7 +8,15 @@ interface KpiCardProps {
   subtitle?: string;
   previousValue?: number;
   currentValue?: number;
+  accentColor?: "blue" | "emerald" | "amber" | "purple";
 }
+
+const accentBorderMap = {
+  blue: "border-l-blue-500",
+  emerald: "border-l-emerald-500",
+  amber: "border-l-amber-500",
+  purple: "border-l-purple-500",
+} as const;
 
 export function KpiCard({
   title,
@@ -16,6 +24,7 @@ export function KpiCard({
   subtitle,
   previousValue,
   currentValue,
+  accentColor,
 }: KpiCardProps) {
   let changePercent: number | null = null;
 
@@ -30,12 +39,12 @@ export function KpiCard({
   }
 
   return (
-    <Card>
+    <Card className={accentColor ? `border-l-4 ${accentBorderMap[accentColor]}` : undefined}>
       <CardContent className="p-4">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
           {title}
         </p>
-        <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight">{value}</p>
+        <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{value}</p>
         {subtitle && (
           <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
         )}

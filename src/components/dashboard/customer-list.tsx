@@ -33,7 +33,7 @@ export function CustomerList({ customers }: CustomerListProps) {
     <Card>
       <CardContent className="p-0">
         {/* Table header — hidden on mobile */}
-        <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] border-b bg-muted/40 px-5 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] border-b bg-stone-50 dark:bg-stone-800/50 px-5 py-2.5 text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
           <span>Name</span>
           <span>Email</span>
           <span>Phone</span>
@@ -51,9 +51,9 @@ export function CustomerList({ customers }: CustomerListProps) {
             return (
               <Link key={customer.id} href={`/customers/${customer.id}`} className="block">
                 {/* Desktop: columnar table row */}
-                <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] items-center px-5 py-3 transition-colors hover:bg-accent/50">
+                <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] items-center px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-semibold text-blue-700 dark:text-blue-400">
                       {initials}
                     </div>
                     <span className="text-sm font-medium truncate">
@@ -68,7 +68,7 @@ export function CustomerList({ customers }: CustomerListProps) {
                   </span>
                   <span className="w-16 flex justify-center">
                     {customer.customer_type === "fleet" ? (
-                      <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-400 text-[10px] py-0">
+                      <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400 text-[10px] py-0">
                         Fleet
                       </Badge>
                     ) : (
@@ -78,8 +78,8 @@ export function CustomerList({ customers }: CustomerListProps) {
                 </div>
 
                 {/* Mobile: compact stacked row */}
-                <div className="flex items-center gap-3 px-4 py-3 md:hidden transition-colors hover:bg-accent/50">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                <div className="flex items-center gap-3 px-4 py-3 md:hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-semibold text-blue-700 dark:text-blue-400">
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -88,7 +88,7 @@ export function CustomerList({ customers }: CustomerListProps) {
                         {customer.first_name} {customer.last_name}
                       </p>
                       {customer.customer_type === "fleet" && (
-                        <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-400 text-[10px] py-0 shrink-0">
+                        <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400 text-[10px] py-0 shrink-0">
                           Fleet
                         </Badge>
                       )}

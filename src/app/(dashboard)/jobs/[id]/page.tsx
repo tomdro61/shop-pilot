@@ -14,7 +14,7 @@ import { formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/form
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
-import { Pencil, User, Car, HardHat, Calendar } from "lucide-react";
+import { ArrowLeft, Pencil, User, Car, HardHat, Calendar } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -50,12 +50,18 @@ export default async function JobDetailPage({
     <><div className="mx-auto max-w-4xl p-4 pb-20 lg:p-6 lg:pb-20">
       {/* Header */}
       <div className="mb-6 animate-in-up">
+        <Link href="/jobs">
+          <Button variant="ghost" size="sm" className="mb-2">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Jobs
+          </Button>
+        </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight lg:text-2xl">
+            <h2 className="text-xl font-semibold tracking-tight lg:text-2xl text-stone-900 dark:text-stone-50">
               {job.title || "Job"}
             </h2>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {new Date(job.date_received).toLocaleDateString()}
@@ -76,8 +82,7 @@ export default async function JobDetailPage({
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {job.payment_status && (
                 <Badge
-                  variant="outline"
-                  className={`${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].bg} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].text} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].border}`}
+                  className={`border-transparent ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].bg} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].text}`}
                 >
                   {PAYMENT_STATUS_LABELS[job.payment_status as PaymentStatus]}
                 </Badge>
@@ -108,14 +113,14 @@ export default async function JobDetailPage({
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-xs font-semibold text-blue-700 dark:text-blue-400">
                   {customer.first_name?.[0]}{customer.last_name?.[0]}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Customer</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Customer</p>
                   <Link
                     href={`/customers/${customer.id}`}
-                    className="text-sm font-medium hover:text-primary transition-colors"
+                    className="text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                   >
                     {formatCustomerName(customer)}
                   </Link>
@@ -134,11 +139,11 @@ export default async function JobDetailPage({
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Car className="h-4 w-4 text-muted-foreground" />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950">
+                  <Car className="h-4 w-4 text-blue-700 dark:text-blue-400" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Vehicle</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Vehicle</p>
                   <p className="text-sm font-medium">{formatVehicle(vehicle)}</p>
                   {vehicle.vin && (
                     <p className="font-mono text-xs text-muted-foreground">
@@ -156,7 +161,7 @@ export default async function JobDetailPage({
       {job.notes && (
         <Card className="mb-4 animate-in-up stagger-2">
           <CardContent className="p-4">
-            <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Notes</p>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Notes</p>
             <p className="whitespace-pre-wrap text-sm leading-relaxed">{job.notes}</p>
           </CardContent>
         </Card>
@@ -167,13 +172,9 @@ export default async function JobDetailPage({
         <LineItemsList jobId={id} lineItems={lineItems} />
       </div>
 
-      {/* Estimate */}
-      <div className="mt-4 animate-in-up stagger-4">
+      {/* Estimate + Invoice */}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 animate-in-up stagger-4">
         <EstimateSection jobId={id} estimate={estimate} />
-      </div>
-
-      {/* Invoice */}
-      <div className="mt-4 animate-in-up stagger-5">
         <InvoiceSection
           jobId={id}
           jobStatus={job.status as JobStatus}

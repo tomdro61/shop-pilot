@@ -62,7 +62,7 @@ export function JobPaymentFooter({
   }
 
   return (
-    <div className="sticky bottom-0 z-20 border-t bg-background/80 backdrop-blur-xl">
+    <div className="sticky bottom-0 z-20 border-t border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 lg:px-6">
         <div className="flex items-center gap-3">
           <p className="text-2xl font-bold tabular-nums tracking-tight">
@@ -70,7 +70,7 @@ export function JobPaymentFooter({
           </p>
           <Badge
             variant="outline"
-            className={`${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
+            className={`${statusColors?.bg ?? ""} ${statusColors?.text ?? ""}`}
           >
             {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
           </Badge>

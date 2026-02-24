@@ -34,7 +34,7 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
     <div className="mb-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-          <CardTitle className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <CardTitle className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
             <Car className="h-3.5 w-3.5" />
             Vehicles ({vehicles.length})
           </CardTitle>
@@ -48,7 +48,7 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
           ) : (
             <div className="-mx-5 divide-y">
               {vehicles.map((vehicle) => (
-                <div key={vehicle.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50">
+                <div key={vehicle.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold">{formatVehicle(vehicle)}</p>
                     <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">

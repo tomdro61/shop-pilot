@@ -4,8 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Popover,
   PopoverContent,
@@ -53,54 +51,11 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
     setAddOpen(true);
   }
 
-  function renderItems(items: JobLineItem[], label: string) {
-    if (items.length === 0) return null;
-    return (
-      <div className="space-y-2">
-        <h4 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</h4>
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center justify-between rounded-md border p-3"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="font-medium">{item.description}</p>
-                {item.part_number && (
-                  <Badge variant="outline" className="text-xs">
-                    #{item.part_number}
-                  </Badge>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {item.quantity} x {formatCurrency(item.unit_cost)} ={" "}
-                {formatCurrency(item.total)}
-              </p>
-            </div>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setEditItem(item)}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <DeleteConfirmDialog
-                title="Delete Line Item"
-                description={`Delete "${item.description}"?`}
-                onConfirm={() => handleDelete(item.id)}
-                trigger={
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                }
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  function formatDetail(item: JobLineItem) {
+    if (item.type === "labor") {
+      return `${item.quantity} hrs × ${formatCurrency(item.unit_cost)}/hr`;
+    }
+    return `${item.quantity} × ${formatCurrency(item.unit_cost)}`;
   }
 
   // Group line items by category
@@ -116,7 +71,7 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-        <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Line Items</CardTitle>
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Line Items</CardTitle>
         <div className="flex gap-2">
           <Popover open={servicePickerOpen} onOpenChange={setServicePickerOpen}>
             <PopoverTrigger asChild>
@@ -155,37 +110,73 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
           <>
             {categoryNames.map((catName) => {
               const items = categoryGroups[catName];
-              const laborItems = items.filter((li) => li.type === "labor");
-              const partItems = items.filter((li) => li.type === "part");
               const catTotal = items.reduce((sum, li) => sum + (li.total || 0), 0);
 
               return (
-                <div key={catName} className="space-y-2">
+                <div key={catName} className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">{catName}</h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">{formatCurrency(catTotal)}</span>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{catName}</h3>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="h-5 w-5"
                         onClick={() => handleAddItem(catName)}
                         title={`Add item to ${catName}`}
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="h-3 w-3" />
                       </Button>
                     </div>
+                    <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">{formatCurrency(catTotal)}</span>
                   </div>
-                  {renderItems(laborItems, "Labor")}
-                  {renderItems(partItems, "Parts")}
-                  {categoryNames.length > 1 && <Separator />}
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 rounded-lg bg-stone-50 dark:bg-stone-950 px-4 py-3"
+                    >
+                      <div className={`w-1 h-8 shrink-0 rounded-full ${item.type === "labor" ? "bg-blue-400" : "bg-amber-400"}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-stone-800 dark:text-stone-200">
+                            {item.description}
+                            {item.part_number && (
+                              <span className="ml-2 text-xs text-stone-400 dark:text-stone-500">#{item.part_number}</span>
+                            )}
+                          </p>
+                          <span className="ml-3 shrink-0 text-sm font-semibold text-stone-900 dark:text-stone-50">{formatCurrency(item.total)}</span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">{formatDetail(item)}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => setEditItem(item)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <DeleteConfirmDialog
+                          title="Delete Line Item"
+                          description={`Delete "${item.description}"?`}
+                          onConfirm={() => handleDelete(item.id)}
+                          trigger={
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               );
             })}
-            <div className="text-right">
-              <p className="text-2xl font-bold tracking-tight">
-                {formatCurrency(grandTotal)}
-              </p>
+            <div className="border-t border-stone-200 dark:border-stone-800 pt-3 flex justify-end">
+              <div className="text-right">
+                <p className="text-[11px] font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-[0.06em]">Total</p>
+                <p className="text-2xl font-bold text-stone-900 dark:text-stone-50 tracking-tight">{formatCurrency(grandTotal)}</p>
+              </div>
             </div>
           </>
         )}

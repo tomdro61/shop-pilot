@@ -151,15 +151,15 @@ export function TerminalPayButton({ jobId, amountCents }: TerminalPayButtonProps
 
             {state === "succeeded" && (
               <>
-                <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-                <p className="text-sm font-medium text-emerald-600">Payment Complete</p>
+                <CheckCircle2 className="h-10 w-10 text-emerald-500 dark:text-emerald-400" />
+                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Payment Complete</p>
               </>
             )}
 
             {state === "failed" && (
               <>
-                <XCircle className="h-10 w-10 text-red-500" />
-                <p className="text-sm text-red-600">Payment failed. Try again.</p>
+                <XCircle className="h-10 w-10 text-red-500 dark:text-red-400" />
+                <p className="text-sm text-red-600 dark:text-red-400">Payment failed. Try again.</p>
                 <Button variant="outline" size="sm" onClick={() => { setDialogOpen(false); setState("idle"); }}>
                   Close
                 </Button>

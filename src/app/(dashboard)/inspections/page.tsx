@@ -162,7 +162,7 @@ export default function InspectionsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Check className="h-5 w-5 text-green-600" />
+              <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
               Day Closed — {date}
             </CardTitle>
           </CardHeader>
@@ -204,7 +204,7 @@ export default function InspectionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Inspection Counter</CardTitle>
+          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Inspection Counter</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {INSPECTION_ROWS.map((row) => {

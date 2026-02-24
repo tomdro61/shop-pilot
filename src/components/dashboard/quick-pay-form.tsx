@@ -190,8 +190,8 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
 
           {state === "succeeded" && (
             <>
-              <CheckCircle2 className="h-12 w-12 text-emerald-500" />
-              <p className="text-lg font-medium text-emerald-600">Payment Complete</p>
+              <CheckCircle2 className="h-12 w-12 text-emerald-500 dark:text-emerald-400" />
+              <p className="text-lg font-medium text-emerald-600 dark:text-emerald-400">Payment Complete</p>
               <div className="flex gap-2">
                 {completedJobId && (
                   <Link href={`/jobs/${completedJobId}`}>
@@ -205,8 +205,8 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
 
           {state === "failed" && (
             <>
-              <XCircle className="h-12 w-12 text-red-500" />
-              <p className="text-sm text-red-600">Payment failed</p>
+              <XCircle className="h-12 w-12 text-red-500 dark:text-red-400" />
+              <p className="text-sm text-red-600 dark:text-red-400">Payment failed</p>
               <Button variant="outline" onClick={handleReset}>Try Again</Button>
             </>
           )}
@@ -236,7 +236,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
       {/* Service presets */}
       {presets.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
             Quick Services
           </p>
           <div className="flex flex-wrap gap-2">
@@ -247,8 +247,8 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
                 onClick={() => handlePresetSelect(preset)}
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   selectedPresetId === preset.id
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-card text-foreground hover:bg-accent"
+                    ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400"
+                    : "border-stone-200 dark:border-stone-700 bg-card text-foreground hover:bg-stone-50 dark:hover:bg-stone-800"
                 }`}
               >
                 {preset.name} · {formatCurrency(preset.total)}

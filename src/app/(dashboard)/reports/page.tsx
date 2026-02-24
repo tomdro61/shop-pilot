@@ -59,10 +59,10 @@ export default async function ReportsPage({
 
       {/* Revenue Breakdown */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KpiCard title={`Revenue (${resolved.label})`} value={formatCurrency(breakdown.totalRevenue)} />
-        <KpiCard title="Labor" value={formatCurrency(breakdown.laborRevenue)} />
-        <KpiCard title="Parts" value={formatCurrency(breakdown.partsRevenue)} />
-        <KpiCard title="Est. Gross Profit" value={formatCurrency(breakdown.estimatedGrossProfit)} subtitle="Assumes 40% parts margin" />
+        <KpiCard title={`Revenue (${resolved.label})`} value={formatCurrency(breakdown.totalRevenue)} accentColor="blue" />
+        <KpiCard title="Labor" value={formatCurrency(breakdown.laborRevenue)} accentColor="emerald" />
+        <KpiCard title="Parts" value={formatCurrency(breakdown.partsRevenue)} accentColor="amber" />
+        <KpiCard title="Est. Gross Profit" value={formatCurrency(breakdown.estimatedGrossProfit)} subtitle="Assumes 40% parts margin" accentColor="purple" />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -73,14 +73,17 @@ export default async function ReportsPage({
           previousValue={
             data.isAllTime ? undefined : (data.jobsPrior ?? undefined)
           }
+          accentColor="blue"
         />
         <KpiCard
           title={`Inspections (${resolved.label})`}
           value={inspectionCount.toString()}
+          accentColor="purple"
         />
         <KpiCard
           title="Avg Ticket Size"
           value={formatCurrency(data.avgTicket)}
+          accentColor="emerald"
         />
       </div>
 
@@ -115,13 +118,13 @@ export default async function ReportsPage({
         <div className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Service Profitability ({resolved.label})</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Service Profitability ({resolved.label})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-muted-foreground">
+                    <tr className="border-b border-stone-100 dark:border-stone-800 text-left text-stone-500 dark:text-stone-400">
                       <th className="pb-2 pr-4 font-medium">Category</th>
                       <th className="pb-2 pr-4 text-right font-medium">Revenue</th>
                       <th className="pb-2 pr-4 text-right font-medium">Parts Cost</th>
@@ -131,12 +134,12 @@ export default async function ReportsPage({
                   </thead>
                   <tbody>
                     {profitability.map((row) => (
-                      <tr key={row.category} className="border-b last:border-0">
+                      <tr key={row.category} className="border-b border-stone-100 dark:border-stone-800 last:border-0">
                         <td className="py-2 pr-4 font-medium">{row.category}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.revenue)}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.partsCost)}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.laborRevenue)}</td>
-                        <td className={`py-2 text-right font-medium ${row.margin >= 50 ? "text-green-600" : row.margin >= 30 ? "text-yellow-600" : "text-red-600"}`}>
+                        <td className={`py-2 text-right font-medium ${row.margin >= 50 ? "text-green-600 dark:text-green-400" : row.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
                           {row.margin.toFixed(1)}%
                         </td>
                       </tr>
@@ -154,13 +157,13 @@ export default async function ReportsPage({
         <div className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Fleet A/R Aging</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Fleet A/R Aging</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-muted-foreground">
+                    <tr className="border-b border-stone-100 dark:border-stone-800 text-left text-stone-500 dark:text-stone-400">
                       <th className="pb-2 pr-4 font-medium">Account</th>
                       <th className="pb-2 pr-4 text-right font-medium">0-30 Days</th>
                       <th className="pb-2 pr-4 text-right font-medium">31-60 Days</th>
@@ -170,11 +173,11 @@ export default async function ReportsPage({
                   </thead>
                   <tbody>
                     {fleetAR.map((row) => (
-                      <tr key={row.account} className="border-b last:border-0">
+                      <tr key={row.account} className="border-b border-stone-100 dark:border-stone-800 last:border-0">
                         <td className="py-2 pr-4 font-medium">{row.account}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.current)}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.days31to60)}</td>
-                        <td className="py-2 pr-4 text-right text-red-600">{row.days60plus > 0 ? formatCurrency(row.days60plus) : "-"}</td>
+                        <td className="py-2 pr-4 text-right text-red-600 dark:text-red-400">{row.days60plus > 0 ? formatCurrency(row.days60plus) : "-"}</td>
                         <td className="py-2 text-right font-medium">{formatCurrency(row.total)}</td>
                       </tr>
                     ))}

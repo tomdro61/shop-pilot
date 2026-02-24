@@ -63,14 +63,14 @@ export function InvoiceSection({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           <FileText className="h-3.5 w-3.5" />
           Invoice
         </CardTitle>
         {status && statusColors && (
           <Badge
             variant="outline"
-            className={`${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
+            className={`${statusColors.bg} ${statusColors.text}`}
           >
             {INVOICE_STATUS_LABELS[status]}
           </Badge>
