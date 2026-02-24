@@ -1146,3 +1146,65 @@
 - Test mode: with no `RESEND_API_KEY`, emails log to console and messages table gets `channel: "email"`, `status: "sent"` entries
 - Resend free tier: 100 emails/day, 3000/month — sufficient for a single shop
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 15 — 2026-02-24 — Wix Customer Import + Customer List Pagination
+
+### What Was Completed
+
+**Imported ~3,000 Wix customer contacts and added server-side pagination to handle the larger dataset:**
+
+1. **Wix Customer CSV Import Script** (`scripts/import-wix-customers.ts`) — One-time Node script using `csv-parse` + Supabase admin client:
+   - Reads Wix CSV export with `First Name`, `Last Name`, `Phone 1`, `Email 1`, `Address 1 - *`, `Labels`, `Created At` columns
+   - Filters: removes parking-only contacts (has "airport parking" label without "customers"), no-name rows, no-contact rows
+   - Normalizes: E.164 phone formatting, lowercase email, strips shop placeholder emails, builds address from parts
+   - Deduplicates: within CSV by phone (keeps record with highest data quality score), then against existing DB customers
+   - Dry run by default (`npx tsx scripts/import-wix-customers.ts contacts.csv`), `--commit` flag to actually insert
+   - Batch inserts (100 per batch) with progress counter
+   - Detailed summary: total rows, filtered counts by reason, duplicate counts, imported count
+   - Added `csv-parse` and `dotenv` as dependencies
+
+2. **Customer List Server-Side Pagination** — Fixed Supabase 1,000-row default limit:
+   - `getCustomers()` in `src/lib/actions/customers.ts` — Added `page` parameter (default 1), `{ count: "exact" }` on `.select()` for total count in same query, `.range()` for 50 items per page, returns `{ data, totalCount }` instead of raw array
+   - `customers/page.tsx` — Reads `page` from URL searchParams, passes to `getCustomers()`, displays `totalCount` in header, renders pagination below list
+   - `customer-pagination.tsx` (new) — Client component with Previous/Next buttons + "Page X of Y" label, hides when single page, uses `useSearchParams` to preserve `search` and `type` params
+   - `customer-list.tsx` — Added `totalCount` prop, mobile count header shows accurate total
+   - `customer-search.tsx` — Resets `page` param when search changes (back to page 1)
+   - `customer-type-filter.tsx` — Resets `page` param when type filter changes
+
+### New Files (2)
+- `scripts/import-wix-customers.ts` — Wix CSV import script
+- `src/components/dashboard/customer-pagination.tsx` — Pagination component
+
+### Modified Files (5)
+- `src/lib/actions/customers.ts` — Pagination support (page param, range, count)
+- `src/app/(dashboard)/customers/page.tsx` — Page param + pagination rendering
+- `src/components/dashboard/customer-list.tsx` — totalCount prop
+- `src/components/forms/customer-search.tsx` — Reset page on search
+- `src/components/dashboard/customer-type-filter.tsx` — Reset page on filter change
+
+### Dependencies Added
+- `csv-parse` — CSV parser for import script
+- `dotenv` — Loads `.env.local` for import script
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+- Pushed to GitHub, Vercel auto-deploying
+
+### What's NOT Done Yet
+- [ ] Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
+- [ ] Run terminal migration against Supabase
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Message templates (estimate ready, car ready, payment reminder)
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory)
+
+### What's Next
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Production readiness checklist items (Supabase Pro, Vercel Pro, Sentry, uptime monitoring)
+
+### Known Issues / Notes
+- Import script requires `csv-parse` and `dotenv` packages (added to `package.json`)
+- `contacts.csv` remains untracked in project root (intentional — contains customer PII)
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

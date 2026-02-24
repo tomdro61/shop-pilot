@@ -240,6 +240,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 12:** Remove job-level category — line items as single source of truth
 **Session 13:** Design system refactor — stone/blue palette, layered depth, component polish
 **Session 14:** Resend transactional email integration — client, templates, server actions, auto-send, AI tool
+**Session 15:** Wix customer CSV import (~3,000 contacts), customer list server-side pagination
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -252,6 +253,8 @@ Read `PROGRESS.md` first to pick up where we left off.
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
 - Job Presets: reusable templates with pre-filled line items, `/presets` management page
 - Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
+- Customer list: server-side pagination (50 per page) with URL params, handles 3,000+ imported contacts
+- Wix import: one-time script (`scripts/import-wix-customers.ts`) with filtering, dedup, dry-run mode
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
@@ -260,7 +263,6 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Run Terminal migration against Supabase
 - A2P registration on Quo (blocked on number port + paid plan)
 - Message templates (estimate ready, car ready, payment reminder)
-- Wix customer data import/export (1000+ contacts)
 
 **Production readiness (before going live):**
 - Upgrade Supabase to Pro ($25/mo) — free tier pauses DB after 1 week inactivity, 500MB/50K row limits
