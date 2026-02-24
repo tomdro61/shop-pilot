@@ -1060,3 +1060,89 @@
 - Badge `variant="outline"` should NOT be used with colored backgrounds (washes out colors). Use `border-transparent` instead.
 - Status badge colors were bumped from `-50/-950` to `-100/-900` for better contrast
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 14 — 2026-02-23 — Resend Transactional Email Integration
+
+### What Was Completed
+
+**Full email infrastructure: Resend API client, branded HTML templates, server actions, auto-send on estimates + payments, and AI `send_email` tool.**
+
+1. **Resend Client** (`src/lib/resend/client.ts`) — API client mirroring the Quo SMS pattern:
+   - `isResendConfigured()` — checks `RESEND_API_KEY` env var
+   - `getFromAddress()` — returns `RESEND_FROM_EMAIL` if set; throws if API key is set but from address is missing (prevents unverified domain bounces); falls back to `onboarding@resend.dev` in test mode
+   - `sendEmail({ to, subject, html })` — sends via Resend SDK in live mode, logs to console in test mode
+   - Returns `{ success, testMode, emailId?, error? }`
+
+2. **HTML Email Templates** (`src/lib/resend/templates.ts`) — 4 template functions:
+   - `baseLayout(content)` — responsive HTML email wrapper with Broadway Motors header (dark stone), content area, footer with shop info
+   - `estimateReadyEmail({ customerName, jobTitle, vehicleDesc, approvalUrl, lineItems, taxRate })` — itemized estimate with labor/parts/tax subtotals, prominent blue "View & Approve Estimate" CTA button
+   - `paymentReceiptEmail({ customerName, jobTitle, vehicleDesc, amount, paymentMethod, lineItems, taxRate })` — green "Payment Received" hero with amount + method + date, itemized breakdown
+   - `genericEmail({ customerName, body })` — for AI ad-hoc emails, converts newlines to `<br>`
+   - Shared `lineItemsTable()` helper renders itemized table with qty/unit/total columns + subtotal breakdown
+
+3. **Email Server Actions** (`src/lib/actions/email.ts`) — 3 functions:
+   - `sendCustomerEmail({ customerId, subject, html, jobId? })` — core function: looks up customer email, sends via Resend, logs to `messages` table with `channel: "email"` and `status: "sent"` or `"failed"`
+   - `sendEstimateEmail({ estimateId })` — fetches estimate + job + customer + vehicle + line items, builds branded email, sends via `sendCustomerEmail()`
+   - `sendPaymentReceiptEmail({ jobId })` — fetches job + customer + vehicle + line items, calculates totals with MA tax, sends receipt
+
+4. **Database Migration** (`supabase/migrations/20250223200000_message_status.sql`) — Added `status text DEFAULT 'sent'` column to `messages` table for delivery tracking (benefits both email and SMS)
+
+5. **TypeScript Types** (`src/types/supabase.ts`) — Added `status: string | null` to messages Row/Insert/Update
+
+6. **Estimate Auto-Email** (`src/lib/actions/estimates.ts`) — `sendEstimate()` now sends fire-and-forget email alongside existing SMS when customer has email on file; expanded query to fetch customer email
+
+7. **Payment Receipt Auto-Email** (`src/app/api/stripe/webhooks/route.ts`) — `handleInvoicePaid()` now sends fire-and-forget receipt email after marking payment
+
+8. **AI `send_email` Tool** (35th tool):
+   - Tool definition in `tools.ts`: `customer_id` (required), `subject` (required), `body` (required), `job_id` (optional)
+   - Handler in `handlers.ts`: checks email on file first (returns clear error if missing), builds HTML via `genericEmail()` template, dispatches to `sendCustomerEmail()`
+   - System prompt updated: email capability described alongside SMS, `send_email` added to confirmation-required list
+
+### New Files (3)
+- `src/lib/resend/client.ts` — Resend API client with test mode
+- `src/lib/resend/templates.ts` — HTML email templates (4 functions)
+- `src/lib/actions/email.ts` — Email server actions (3 functions)
+
+### New Migration (1)
+- `supabase/migrations/20250223200000_message_status.sql` — status column on messages
+
+### Modified Files (6)
+- `src/types/supabase.ts` — status on messages types
+- `src/lib/actions/estimates.ts` — Fire-and-forget estimate email + email in query
+- `src/app/api/stripe/webhooks/route.ts` — Fire-and-forget receipt email
+- `src/lib/ai/tools.ts` — send_email tool (35 tools total)
+- `src/lib/ai/handlers.ts` — send_email handler
+- `src/lib/ai/system-prompt.ts` — Email capability + confirmation rule
+
+### Environment Variables Added
+- `RESEND_API_KEY` — Resend API key (empty = test mode)
+- `RESEND_FROM_EMAIL` — Verified from address (e.g. `Broadway Motors <noreply@broadwaymotors.com>`). Required when API key is set.
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] Verify domain in Resend dashboard + set `RESEND_FROM_EMAIL`
+- [ ] Set `RESEND_API_KEY` in `.env.local` and Vercel env vars
+- [ ] Run message_status migration against Supabase
+- [ ] Register WisePOS E reader in Stripe Dashboard
+- [ ] Run terminal migration against Supabase
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Message templates (estimate ready, car ready, payment reminder)
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory)
+- [ ] Stripe live mode activation
+- [ ] Wix customer data import (1000+ contacts)
+
+### What's Next
+- Verify domain in Resend, set env vars, test live email delivery
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Optional: voice input, chat persistence
+
+### Known Issues / Notes
+- Migration must be run against Supabase (`npx supabase db push` or SQL Editor)
+- Test mode: with no `RESEND_API_KEY`, emails log to console and messages table gets `channel: "email"`, `status: "sent"` entries
+- Resend free tier: 100 emails/day, 3000/month — sufficient for a single shop
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

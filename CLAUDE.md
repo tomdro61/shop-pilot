@@ -20,7 +20,7 @@ ShopPilot is a custom shop management system for Broadway Motors, an independent
 | AI Assistant | Claude API (Anthropic) | Function calling / tool use for all CRUD and external operations |
 | Payments | Stripe | Invoicing, webhooks, Terminal (WisePOS E) for in-person card payments, Quick Pay for walk-ins |
 | SMS | Quo (formerly OpenPhone) API | Integrated — send/receive/webhook wired. Blocked on A2P registration + number port. |
-| Email | Resend | Transactional email for estimates, invoices, receipts |
+| Email | Resend | Integrated — branded HTML templates for estimates + receipts, AI send_email tool, test mode fallback. Needs domain verification for live sending. |
 | Hosting | Vercel (free tier) | Auto-deploy from Git, edge functions, free SSL |
 | Parts (future) | Parts Tech API (TBD) | Needs API access investigation |
 | Accounting (future) | Wave Apps or QuickBooks API | TBD which one |
@@ -37,7 +37,7 @@ Core tables in Supabase PostgreSQL:
 - **estimates** — id, job_id, status (draft/sent/approved/declined), sent_at, approved_at, declined_at, approval_token, tax_rate, created_at
 - **estimate_line_items** — id, estimate_id, type, description, quantity, unit_cost, total, part_number
 - **invoices** — id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status (draft/sent/paid), amount, paid_at
-- **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, sent_at
+- **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
 
 **Job statuses:** Not Started → Waiting for Parts → In Progress → Complete
@@ -227,8 +227,8 @@ Read `PROGRESS.md` first to pick up where we left off.
 ## Current Status
 
 **Phase 1: COMPLETE** — Deployed and live on Vercel
-**Phase 2: MOSTLY COMPLETE** — Stripe invoicing + estimates + Quo SMS + Terminal built; Resend email not started
-**Phase 3: COMPLETE** — AI Assistant with Claude API, 34 tools, streaming chat UI
+**Phase 2: COMPLETE** — Stripe invoicing + estimates + Quo SMS + Terminal + Resend email all built
+**Phase 3: COMPLETE** — AI Assistant with Claude API, 35 tools, streaming chat UI
 **Session 4:** Team management, tech assignment on jobs, reports date filtering + tech charts
 **Session 5:** Full AI chat assistant (Phase 3)
 **Session 6:** Dashboard operational intelligence, UI refresh phase 2
@@ -239,6 +239,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 11:** Line item categories for multi-service jobs
 **Session 12:** Remove job-level category — line items as single source of truth
 **Session 13:** Design system refactor — stone/blue palette, layered depth, component polish
+**Session 14:** Resend transactional email integration — client, templates, server actions, auto-send, AI tool
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -246,7 +247,8 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Stripe invoicing + estimate builder with public approval page fully working (sandbox mode)
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
 - Quo SMS: fully wired (send/receive/webhook), auto-texts estimate approval links + invoice payment links; blocked on A2P registration
-- AI Assistant: conversational chat at `/chat` with 34 tools covering all CRUD + SMS operations, streaming SSE, floating chat bubble on all pages
+- Resend Email: full transactional email — branded HTML templates (estimate, receipt, generic), auto-send on estimate send + invoice paid, AI `send_email` tool, test mode with console logging, delivery status tracking in `messages` table
+- AI Assistant: conversational chat at `/chat` with 35 tools covering all CRUD + SMS + email operations, streaming SSE, floating chat bubble on all pages
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
 - Job Presets: reusable templates with pre-filled line items, `/presets` management page
 - Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
@@ -255,9 +257,9 @@ Read `PROGRESS.md` first to pick up where we left off.
 
 **Remaining work:**
 - Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
-- Run Terminal migration against Supabase
+- Run Terminal + message_status migrations against Supabase
 - A2P registration on Quo (blocked on number port + paid plan)
-- Resend transactional email
+- Verify domain in Resend + set `RESEND_API_KEY` + `RESEND_FROM_EMAIL` env vars
 - Message templates (estimate ready, car ready, payment reminder)
 - Stripe live mode activation
 - Wix customer data import/export (1000+ contacts)

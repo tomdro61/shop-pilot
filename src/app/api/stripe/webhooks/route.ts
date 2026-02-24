@@ -74,6 +74,13 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       payment_method: "stripe",
     })
     .eq("id", invoice.job_id);
+
+  // Fire-and-forget receipt email
+  import("@/lib/actions/email")
+    .then(({ sendPaymentReceiptEmail }) =>
+      sendPaymentReceiptEmail({ jobId: invoice.job_id })
+    )
+    .catch((err) => console.error("Failed to send receipt email:", err));
 }
 
 async function handleTerminalPayment(pi: Stripe.PaymentIntent) {

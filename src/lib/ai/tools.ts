@@ -567,6 +567,21 @@ export const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "send_email",
+    description:
+      "Send an email to a customer. The customer must have an email address on file. Confirm with the user before calling this.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        customer_id: { type: "string", description: "Customer UUID (required)" },
+        subject: { type: "string", description: "Email subject line (required)" },
+        body: { type: "string", description: "Email body text (required). Plain text — newlines are converted to line breaks." },
+        job_id: { type: "string", description: "Job UUID to link this email to (optional)" },
+      },
+      required: ["customer_id", "subject", "body"],
+    },
+  },
+  {
     name: "get_customer_messages",
     description:
       "Get the SMS/email message history for a customer. Returns the last 50 messages in reverse chronological order.",

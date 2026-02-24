@@ -364,6 +364,38 @@ export async function executeToolCall(
       }
 
       // ── Messaging ──────────────────────────────────────────
+      case "send_email": {
+        // Check customer has email before building template
+        const emailCustomer = await getCustomer(str(toolInput.customer_id));
+        if (!emailCustomer) return JSON.stringify({ error: "Customer not found" });
+        if (!emailCustomer.email) {
+          return JSON.stringify({
+            error: "This customer doesn't have an email address on file",
+          });
+        }
+
+        const { genericEmail } = await import("@/lib/resend/templates");
+        const { sendCustomerEmail } = await import("@/lib/actions/email");
+        const emailTemplate = genericEmail({
+          customerName: emailCustomer.first_name,
+          body: str(toolInput.body),
+        });
+        const emailResult = await sendCustomerEmail({
+          customerId: str(toolInput.customer_id),
+          subject: str(toolInput.subject) || emailTemplate.subject,
+          html: emailTemplate.html,
+          jobId: toolInput.job_id ? str(toolInput.job_id) : undefined,
+        });
+        return JSON.stringify({
+          data: {
+            sent: emailResult.sent,
+            testMode: emailResult.testMode,
+            to: emailCustomer.email,
+            customerName: `${emailCustomer.first_name} ${emailCustomer.last_name}`,
+            error: emailResult.error,
+          },
+        });
+      }
       case "send_sms": {
         const result = await sendCustomerSMS({
           customerId: str(toolInput.customer_id),

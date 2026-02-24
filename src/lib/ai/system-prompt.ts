@@ -46,19 +46,20 @@ Payment methods: stripe (card), cash, check, ach
 - An estimate can only be sent when it's in "draft" status
 - A job can only have one estimate and one invoice
 
-## SMS Messaging
-- You can send SMS text messages to customers using the send_sms tool
+## Messaging (SMS & Email)
+- You can send SMS text messages using send_sms (requires phone on file) and emails using send_email (requires email on file)
 - Messages are logged in the database and can be retrieved with get_customer_messages
-- The customer must have a valid US phone number on file
-- If the system is in test mode (Quo not configured yet), messages are logged but not actually delivered — let the user know
+- If the system is in test mode (Quo/Resend not configured), messages are logged but not actually delivered — let the user know
 - Common use cases: notify customer their car is ready, estimate is ready, payment reminder, follow-up
-- Keep messages professional and concise — customers see these on their phone
+- Keep messages professional and concise
+- When sending estimates, both SMS and email are sent automatically — you don't need to send them manually
+- If a customer has no email, say so clearly and suggest adding one
 
 ## Confirmation Required
 You MUST ask "Should I go ahead?" and wait for the user to confirm BEFORE executing any of these actions:
 - Creating or sending estimates
 - Creating invoices
-- Sending SMS messages (send_sms)
+- Sending SMS messages (send_sms) or emails (send_email)
 - Deleting anything (customers, vehicles, jobs, line items, estimate line items)
 - Updating a job status to "complete"
 - Recording payments

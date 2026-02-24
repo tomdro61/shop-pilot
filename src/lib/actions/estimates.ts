@@ -116,7 +116,7 @@ export async function sendEstimate(id: string) {
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select(
-      "id, status, job_id, jobs(id, customer_id, customers(id, first_name, phone))"
+      "id, status, job_id, jobs(id, customer_id, customers(id, first_name, phone, email))"
     )
     .eq("id", id)
     .single();
@@ -143,7 +143,7 @@ export async function sendEstimate(id: string) {
   const job = estimate.jobs as {
     id: string;
     customer_id: string;
-    customers: { id: string; first_name: string; phone: string | null } | null;
+    customers: { id: string; first_name: string; phone: string | null; email: string | null } | null;
   } | null;
   const customer = job?.customers;
   if (customer?.phone) {
@@ -156,6 +156,13 @@ export async function sendEstimate(id: string) {
         })
       )
       .catch((err) => console.error("Failed to send estimate SMS:", err));
+  }
+
+  // Fire-and-forget email notification
+  if (customer?.email) {
+    import("@/lib/actions/email")
+      .then(({ sendEstimateEmail }) => sendEstimateEmail({ estimateId: id }))
+      .catch((err) => console.error("Failed to send estimate email:", err));
   }
 
   revalidatePath(`/estimates/${id}`);

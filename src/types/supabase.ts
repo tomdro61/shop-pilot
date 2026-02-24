@@ -414,6 +414,7 @@ export type Database = {
           channel: Database["public"]["Enums"]["message_channel"];
           direction: Database["public"]["Enums"]["message_direction"];
           body: string;
+          status: string | null;
           sent_at: string;
           created_at: string;
         };
@@ -424,6 +425,7 @@ export type Database = {
           channel: Database["public"]["Enums"]["message_channel"];
           direction: Database["public"]["Enums"]["message_direction"];
           body: string;
+          status?: string | null;
           sent_at?: string;
           created_at?: string;
         };
@@ -434,6 +436,7 @@ export type Database = {
           channel?: Database["public"]["Enums"]["message_channel"];
           direction?: Database["public"]["Enums"]["message_direction"];
           body?: string;
+          status?: string | null;
           sent_at?: string;
           created_at?: string;
         };
