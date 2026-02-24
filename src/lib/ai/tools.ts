@@ -161,7 +161,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "search_jobs",
     description:
-      "Search jobs by customer name, vehicle, title, or notes. Can also filter by status. Returns jobs with customer and vehicle info.",
+      "Search jobs by customer name, vehicle, title, or notes. Can also filter by status. Returns jobs with customer, vehicle info, and RO number (ro_number).",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -178,7 +178,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "get_job",
     description:
-      "Get full details for a single job including customer, vehicle, technician, and all line items.",
+      "Get full details for a single job including customer, vehicle, technician, RO number (ro_number), and all line items.",
     input_schema: {
       type: "object" as const,
       properties: {

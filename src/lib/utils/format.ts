@@ -34,6 +34,12 @@ export function formatVehicle(vehicle: {
   return [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
 }
 
+// Format RO number for display: 1 -> "RO-0001"
+export function formatRONumber(n: number | null): string {
+  if (n == null) return "\u2014";
+  return `RO-${String(n).padStart(4, "0")}`;
+}
+
 // Format customer name
 export function formatCustomerName(customer: {
   first_name: string;

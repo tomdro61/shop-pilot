@@ -31,7 +31,7 @@ Core tables in Supabase PostgreSQL:
 
 - **customers** — id, first_name, last_name, phone, email, address, notes, customer_type (retail/fleet), fleet_account, stripe_customer_id, created_at
 - **vehicles** — id, customer_id, year, make, model, vin, license_plate, mileage, color, notes
-- **jobs** — id, customer_id, vehicle_id, status, title, category (deprecated — exists in DB but no longer set/displayed), assigned_tech, date_received, date_finished, notes, payment_status, payment_method, mileage_in, stripe_payment_intent_id
+- **jobs** — id, customer_id, vehicle_id, status, title, category (deprecated — exists in DB but no longer set/displayed), assigned_tech, date_received, date_finished, notes, payment_status, payment_method, mileage_in, stripe_payment_intent_id, ro_number (auto-assigned sequential integer via `ro_number_seq`)
 - **job_line_items** — id, job_id, type (labor/part), description, quantity, unit_cost, total, part_number, category (single source of truth for service categorization)
 - **job_presets** — id, name, category, line_items (JSONB), created_at
 - **estimates** — id, job_id, status (draft/sent/approved/declined), sent_at, approved_at, declined_at, approval_token, tax_rate, created_at
@@ -241,6 +241,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 13:** Design system refactor — stone/blue palette, layered depth, component polish
 **Session 14:** Resend transactional email integration — client, templates, server actions, auto-send, AI tool
 **Session 15:** Wix customer CSV import (~3,000 contacts), customer list server-side pagination
+**Session 16:** RO numbers (sequential, auto-assigned) + printable repair order page
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -255,17 +256,20 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
 - Customer list: server-side pagination (50 per page) with URL params, handles 3,000+ imported contacts
 - Wix import: one-time script (`scripts/import-wix-customers.ts`) with filtering, dedup, dry-run mode
+- RO Numbers: auto-assigned sequential repair order numbers (RO-0001 format) on all jobs via PostgreSQL sequence
+- Printable Repair Order: `/jobs/[id]/print` — print-optimized document with shop header, customer/vehicle info, itemized line items, tax, totals
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
 **Remaining work:**
+- Run RO number migration against Supabase (SQL Editor)
 - Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
 - Run Terminal migration against Supabase
 - A2P registration on Quo (blocked on number port + paid plan)
 - Message templates (estimate ready, car ready, payment reminder)
 
 **Production readiness (before going live):**
-- Upgrade Supabase to Pro ($25/mo) — free tier pauses DB after 1 week inactivity, 500MB/50K row limits
+- ~~Upgrade Supabase to Pro ($25/mo)~~ DONE
 - Upgrade Vercel to Pro ($20/mo) — SLA, higher function duration limits for AI chat
 - Add Sentry error monitoring (free tier) — captures runtime errors, sends alerts
 - Add uptime monitoring (BetterUptime or UptimeRobot, free) — texts/emails if site goes down

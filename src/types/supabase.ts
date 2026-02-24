@@ -123,6 +123,7 @@ export type Database = {
           payment_status: Database["public"]["Enums"]["payment_status"];
           mileage_in: number | null;
           stripe_payment_intent_id: string | null;
+          ro_number: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -141,6 +142,7 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"];
           mileage_in?: number | null;
           stripe_payment_intent_id?: string | null;
+          ro_number?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -159,6 +161,7 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"];
           mileage_in?: number | null;
           stripe_payment_intent_id?: string | null;
+          ro_number?: number;
           created_at?: string;
           updated_at?: string;
         };

@@ -10,11 +10,11 @@ import { LineItemsList } from "@/components/dashboard/line-items-list";
 import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
-import { formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/format";
+import { formatPhone, formatVehicle, formatCustomerName, formatRONumber } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
-import { ArrowLeft, Pencil, User, Car, HardHat, Calendar } from "lucide-react";
+import { ArrowLeft, Pencil, User, Car, HardHat, Calendar, Printer } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -58,9 +58,16 @@ export default async function JobDetailPage({
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight lg:text-2xl text-stone-900 dark:text-stone-50">
-              {job.title || "Job"}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold tracking-tight lg:text-2xl text-stone-900 dark:text-stone-50">
+                {job.title || "Job"}
+              </h2>
+              {job.ro_number && (
+                <span className="text-sm font-medium text-stone-400 dark:text-stone-500">
+                  {formatRONumber(job.ro_number)}
+                </span>
+              )}
+            </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
@@ -96,6 +103,12 @@ export default async function JobDetailPage({
           </div>
           <div className="flex items-center gap-2">
             <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
+            <Link href={`/jobs/${id}/print`}>
+              <Button variant="outline" size="sm">
+                <Printer className="mr-1.5 h-3.5 w-3.5" />
+                Print RO
+              </Button>
+            </Link>
             <Link href={`/jobs/${id}/edit`}>
               <Button variant="outline" size="sm">
                 <Pencil className="mr-1.5 h-3.5 w-3.5" />

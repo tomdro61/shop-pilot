@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusSelect } from "./status-select";
-import { formatCustomerName, formatVehicle } from "@/lib/utils/format";
+import { formatCustomerName, formatVehicle, formatRONumber } from "@/lib/utils/format";
 import type { JobStatus } from "@/types";
 
 interface JobCardProps {
@@ -10,6 +10,7 @@ interface JobCardProps {
     status: string;
     title?: string | null;
     category: string | null;
+    ro_number?: number | null;
     date_received: string;
     notes: string | null;
     customers: { id: string; first_name: string; last_name: string; phone: string | null } | null;
@@ -37,7 +38,15 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
                 </p>
               )}
               <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-stone-500 dark:text-stone-400">
-                {job.title && <span>{job.title}</span>}
+                {job.ro_number && (
+                  <span className="font-mono">{formatRONumber(job.ro_number)}</span>
+                )}
+                {job.title && (
+                  <>
+                    {job.ro_number && <span className="text-border">·</span>}
+                    <span>{job.title}</span>
+                  </>
+                )}
                 {job.users && (
                   <>
                     <span className="text-border">·</span>

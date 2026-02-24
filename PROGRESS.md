@@ -1208,3 +1208,77 @@
 - Import script requires `csv-parse` and `dotenv` packages (added to `package.json`)
 - `contacts.csv` remains untracked in project root (intentional — contains customer PII)
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 16 — 2026-02-24 — RO Numbers + Printable Repair Order
+
+### What Was Completed
+
+**Sequential repair order (RO) numbers on jobs and a printable repair order document:**
+
+1. **Database Migration** (`supabase/migrations/20250224000000_ro_number.sql`) — Creates `ro_number_seq` sequence, adds `ro_number integer UNIQUE` column to `jobs` with `DEFAULT nextval('ro_number_seq')`, backfills existing jobs in creation order, advances sequence past max
+
+2. **TypeScript Types** (`src/types/supabase.ts`) — Added `ro_number: number | null` to jobs Row, `ro_number?: number` to Insert/Update
+
+3. **Format Helper** (`src/lib/utils/format.ts`) — `formatRONumber(n)` returns `"RO-0001"` (zero-padded to 4 digits), `"—"` if null
+
+4. **Job Detail Page** (`src/app/(dashboard)/jobs/[id]/page.tsx`) — RO number displayed next to job title in muted text; "Print RO" button with Printer icon links to `/jobs/[id]/print`
+
+5. **Jobs List View** (`src/components/dashboard/jobs-list-view.tsx`) — RO# as first column (monospace, muted text); added `ro_number` to `JobRow` type
+
+6. **Job Card** (`src/components/dashboard/job-card.tsx`) — RO# shown in monospace in metadata line; added `ro_number` to card props
+
+7. **Print Page** (`src/app/(dashboard)/jobs/[id]/print/page.tsx`) — Full print-optimized repair order:
+   - Shop header: "Broadway Motors" + address + phone
+   - RO number + dates (received, finished)
+   - Customer info: name, phone, email, address
+   - Vehicle info: year/make/model, VIN, license plate, mileage
+   - Line items table grouped by category with description, type, qty, unit price, total
+   - Totals: labor subtotal, parts subtotal, tax (6.25% on parts), grand total
+   - Notes section (if any)
+   - Footer: "Thank you for your business!"
+   - Print button (client component, hidden via `print:hidden`)
+
+8. **Print CSS** (`src/app/globals.css`) — `@media print` rules hide sidebar, header, nav, fixed elements (chat bubble); white background, no shadows, clean `@page` margins
+
+9. **AI Tools** (`src/lib/ai/tools.ts`) — Updated `get_job` and `search_jobs` descriptions to mention `ro_number`
+
+10. **AI System Prompt** (`src/lib/ai/system-prompt.ts`) — Updated data model to include RO numbers; response style includes RO number when showing job details
+
+### New Files (2)
+- `supabase/migrations/20250224000000_ro_number.sql`
+- `src/app/(dashboard)/jobs/[id]/print/page.tsx`
+- `src/app/(dashboard)/jobs/[id]/print/print-button.tsx`
+
+### Modified Files (8)
+- `src/types/supabase.ts` — ro_number on jobs types
+- `src/lib/utils/format.ts` — formatRONumber helper
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — RO display + Print RO button
+- `src/components/dashboard/jobs-list-view.tsx` — RO# column + type update
+- `src/components/dashboard/job-card.tsx` — RO# display + type update
+- `src/app/globals.css` — @media print rules
+- `src/lib/ai/tools.ts` — ro_number in tool descriptions
+- `src/lib/ai/system-prompt.ts` — RO number in data model + response style
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] Run RO number migration against Supabase (SQL Editor)
+- [ ] Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
+- [ ] Run terminal migration against Supabase
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Message templates (estimate ready, car ready, payment reminder)
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory)
+
+### What's Next
+- Run migration, verify backfilled RO numbers, test print page
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+
+### Known Issues / Notes
+- Migration must be run against Supabase (`npx supabase db push` or SQL Editor)
+- RO numbers auto-increment via PostgreSQL sequence — no application logic needed for assignment
+- Print page fetches expanded data (customer address, vehicle VIN/plate) via direct Supabase query
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

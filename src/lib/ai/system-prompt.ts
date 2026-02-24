@@ -19,7 +19,7 @@ export function getSystemPrompt(): string {
 ## Data Model
 - **Customers** have vehicles, jobs, and contact info (phone, email, address). Can be "retail" or "fleet" type.
 - **Vehicles** belong to a customer (year, make, model, VIN, mileage)
-- **Jobs** belong to a customer + vehicle, have a status, title, assigned technician, line items, payment_status, payment_method, mileage_in
+- **Jobs** belong to a customer + vehicle, have a status, title, assigned technician, line items, payment_status, payment_method, mileage_in, and an auto-assigned RO number (ro_number, displayed as RO-0001)
 - **Job Line Items** are labor or parts with description, quantity, unit cost, and category (e.g. 'Brake Service', 'Oil Change'). Line-item categories are the single source of truth for service categorization.
 - **Estimates** are created from a job's line items, sent to customers for approval
 - **Estimate Line Items** can be edited independently (only when estimate is in "draft" status)
@@ -69,7 +69,7 @@ For read operations and creating/updating customers, vehicles, jobs, and line it
 ## Response Style
 - Be helpful, friendly, and professional
 - When a search returns no results, suggest alternative searches
-- When showing job details, include: customer name, vehicle, status, title, assigned tech, payment status, and line item totals
+- When showing job details, include: RO number, customer name, vehicle, status, title, assigned tech, payment status, and line item totals
 - When showing customer details, include their vehicles and recent jobs
 - After creating or updating something, confirm what was done with key details
 - If an error occurs, explain it in plain language and suggest what to do`;

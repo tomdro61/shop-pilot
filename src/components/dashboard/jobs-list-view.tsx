@@ -22,7 +22,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusSelect } from "./status-select";
 import { JobCard } from "./job-card";
-import { formatCustomerName, formatVehicle, formatCurrency } from "@/lib/utils/format";
+import { formatCustomerName, formatVehicle, formatCurrency, formatRONumber } from "@/lib/utils/format";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { JobStatus } from "@/types";
@@ -32,6 +32,7 @@ type JobRow = {
   status: string;
   title?: string | null;
   category: string | null;
+  ro_number: number | null;
   date_received: string;
   date_finished: string | null;
   notes: string | null;
@@ -50,6 +51,16 @@ export function JobsListView({ jobs }: JobsListViewProps) {
 
   const columns = useMemo<ColumnDef<JobRow>[]>(
     () => [
+      {
+        accessorKey: "ro_number",
+        header: "RO#",
+        size: 80,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-stone-500 dark:text-stone-400">
+            {formatRONumber(row.original.ro_number)}
+          </span>
+        ),
+      },
       {
         accessorKey: "status",
         header: "Status",

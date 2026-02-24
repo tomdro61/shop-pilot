@@ -185,6 +185,42 @@
   .stagger-5 { animation-delay: 0.25s; }
   .stagger-6 { animation-delay: 0.3s; }
 
+  /* Print styles — hide app chrome, clean page */
+  @media print {
+    body {
+      background: white !important;
+      color: black !important;
+    }
+
+    /* Hide sidebar, header, bottom nav, chat bubble, and all fixed elements */
+    nav,
+    header,
+    aside {
+      display: none !important;
+    }
+
+    .fixed {
+      display: none !important;
+    }
+
+    /* Remove shadows */
+    .print-ro * {
+      box-shadow: none !important;
+    }
+
+    /* Full width, no padding from layout */
+    main {
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: visible !important;
+      background: white !important;
+    }
+
+    @page {
+      margin: 0.5in;
+    }
+  }
+
   /* Noise grain overlay — adds subtle texture to dark backgrounds */
   .grain::before {
     content: "";
