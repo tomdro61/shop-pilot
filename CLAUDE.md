@@ -238,8 +238,10 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 10:** Quick Pay presets, inspections update, dashboard overhaul, typography system
 **Session 11:** Line item categories for multi-service jobs
 **Session 12:** Remove job-level category — line items as single source of truth
+**Session 13:** Design system refactor — stone/blue palette, layered depth, component polish
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
+- **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
 - **Service categorization:** Line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
 - Stripe invoicing + estimate builder with public approval page fully working (sandbox mode)
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI

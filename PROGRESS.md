@@ -962,3 +962,101 @@
 ### Known Issues / Notes
 - No migration needed — `jobs.category` column stays in DB, just no longer set or displayed
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 13 — 2026-02-23 — Design System Refactor
+
+### What Was Completed
+
+**Comprehensive UI design system refactor aligning every visual element to a stone/blue color palette with layered depth. 48 files changed across 9 phases, merged via PR #4.**
+
+1. **CSS Variables + Page Background** — Updated `:root` and `.dark` CSS variables in `globals.css` to map to stone palette (oklch hue 75). Page background set to `stone-100`/`stone-950`, cards float on muted background. Added `animate-in-up` stagger keyframes for entrance animations.
+
+2. **Component Primitives** — Updated base shadcn/ui components:
+   - `button.tsx`: Blue-600 primary, subtle red destructive (`bg-red-100 dark:bg-red-900`), stone outline/secondary/ghost variants
+   - `badge.tsx`: Ensured `rounded-full` pill, `border-transparent` default
+   - `input.tsx`: `bg-white dark:bg-stone-800`, stone borders, blue focus ring
+   - `select.tsx`: Explicit `bg-white dark:bg-stone-800` on trigger (fixes invisible selects on stone page bg)
+   - `card.tsx`: Removed glow shadow, depth comes from bg contrast
+
+3. **Status Colors** (`constants.ts`) — All status badge colors updated:
+   - `not_started`: red-100/900 (was stone — design system says red for urgency)
+   - `in_progress`: blue-100/900
+   - `waiting_for_parts`: amber-100/900
+   - `complete`: green-100/900
+   - `unpaid`: red-100/900 (matches not_started treatment)
+   - `paid`/`approved`: green-50/950
+   - `draft`/`waived`: stone-100/800
+   - `sent`/`invoiced`: blue-50/950
+   - `declined`: red-50/950
+   - Bumped from `-50/-950` to `-100/-900` for stronger visibility after user feedback
+
+4. **Layout Shell** — Sidebar, header, bottom nav:
+   - Sidebar: `bg-white dark:bg-stone-900`, active nav = `bg-blue-50 dark:bg-blue-950` with blue left accent bar
+   - Header: `bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl`
+   - Bottom nav: `bg-white/90 dark:bg-stone-900/90`, blue active indicator
+
+5. **Dashboard** — Removed `bg-muted/50` section wrappers (cards float directly on page bg). Fixed badge variants (removed `variant="outline"`, added `border-transparent`). Quick Pay button: solid emerald-600 green.
+
+6. **Line Items Redesign** (`line-items-list.tsx`, `estimate-line-items-list.tsx`) — Full redesign:
+   - Flat rows with vertical color accent bars (blue=labor, amber=parts)
+   - Category headers: `text-xs font-semibold uppercase tracking-wider`
+   - Calculation detail below description ("2.4 hrs × $130.00/hr")
+   - Grand total: right-aligned `text-2xl font-bold`
+   - Estimate line items matched to same style
+
+7. **KPI Card Accent Borders** (`kpi-card.tsx`) — Added `accentColor` prop with `border-l-4` colored left border (blue, emerald, amber, purple). Applied to all 7 KPI cards on reports page.
+
+8. **Job Detail** — Estimate + Invoice sections in 2-column side-by-side grid. Added "Back to Jobs" button with ArrowLeft icon. Fixed payment badge variants.
+
+9. **Customer Detail** — Added avatar circle with initials, fleet badge (`bg-violet-50`), contact info with icons (Phone, Mail, MapPin). Added "Back to Customers" button. Fixed job history badge variants.
+
+10. **Chat Bubbles** — Changed from `bg-muted` to `bg-white dark:bg-stone-800 border` for visibility against stone page background.
+
+11. **Remaining Pages** — Applied stone hover states, section heading patterns, and dark mode pairs to: team-list, preset-list, vehicle-section, customers page, reports page, inspections page, settings page, forms, estimates, delete dialogs, empty states.
+
+### Files Modified (48)
+**Foundation (2):** `globals.css`, `(dashboard)/layout.tsx`
+**Primitives (5):** `card.tsx`, `button.tsx`, `badge.tsx`, `input.tsx`, `constants.ts`
+**Layout (3):** `sidebar.tsx`, `header.tsx`, `bottom-nav.tsx`
+**Dashboard (2):** `dashboard/page.tsx`, `kpi-card.tsx`
+**Jobs (6):** `jobs/[id]/page.tsx`, `line-items-list.tsx`, `jobs-list-view.tsx`, `jobs-board-view.tsx`, `job-card.tsx`, `jobs-toolbar.tsx`
+**Customers & Reports (4):** `customers/[id]/page.tsx`, `customer-list.tsx`, `reports/page.tsx`, `category-bar-chart.tsx`
+**Estimates & Misc (11):** `estimates/[id]/page.tsx`, `approve/[token]/page.tsx`, `estimate-approval-buttons.tsx`, `estimate-section.tsx`, `invoice-section.tsx`, `job-payment-footer.tsx`, `empty-state.tsx`, `delete-confirm-dialog.tsx`, `terminal-pay-button.tsx`, `revenue-sparkline-card.tsx`, `quick-pay-form.tsx`
+**Forms (4):** `job-form.tsx`, `line-item-form.tsx`, `estimate-line-item-form.tsx`, `preset-form.tsx`
+**Remaining (6):** `inspections/page.tsx`, `settings/page.tsx`, `customers/page.tsx`, `team-list.tsx`, `preset-list.tsx`, `vehicle-section.tsx`
+**Chat (3):** `chat-message.tsx`, `chat-messages-list.tsx`, `select.tsx`
+**Status (2):** `status-select.tsx`, `estimate-line-items-list.tsx`
+
+### Git Workflow
+- Created `design-system-refactor` feature branch
+- 48 files committed in single commit
+- PR #4 created via `gh pr create`, reviewed, merged to master
+- Branch cleaned up after merge
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors) after every phase
+- Deployed to Vercel via merge to master
+
+### What's NOT Done Yet
+- [ ] Register WisePOS E reader in Stripe Dashboard to get `tmr_xxx` reader ID
+- [ ] Run terminal migration against Supabase
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Resend transactional email integration
+- [ ] Message templates (estimate ready, car ready, payment reminder)
+- [ ] Voice input (Web Speech API or Whisper) for the chat
+- [ ] Chat history persistence (currently in-memory)
+- [ ] Stripe live mode activation
+- [ ] Wix customer data import (1000+ contacts)
+
+### What's Next
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+- Resend email integration
+- Optional: voice input, chat persistence
+
+### Known Issues / Notes
+- Design system is fully applied — all components have light + dark mode pairs
+- Badge `variant="outline"` should NOT be used with colored backgrounds (washes out colors). Use `border-transparent` instead.
+- Status badge colors were bumped from `-50/-950` to `-100/-900` for better contrast
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
