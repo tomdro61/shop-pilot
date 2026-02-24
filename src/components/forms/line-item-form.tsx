@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -62,6 +63,20 @@ export function LineItemForm({
       category: lineItem?.category || defaultCategory || "",
     },
   });
+
+  useEffect(() => {
+    if (open && !isEditing) {
+      form.reset({
+        job_id: jobId,
+        type: "labor",
+        description: "",
+        quantity: 1,
+        unit_cost: 0,
+        part_number: "",
+        category: defaultCategory || "",
+      });
+    }
+  }, [open, defaultCategory, isEditing, form, jobId]);
 
   const quantity = form.watch("quantity");
   const unitCost = form.watch("unit_cost");
