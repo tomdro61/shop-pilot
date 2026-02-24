@@ -121,7 +121,7 @@ export function TerminalPayButton({ jobId, amountCents }: TerminalPayButtonProps
 
   return (
     <>
-      <Button size="sm" variant="outline" onClick={handleCollect} disabled={state === "processing"}>
+      <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleCollect} disabled={state === "processing"}>
         <Smartphone className="mr-1.5 h-3.5 w-3.5" />
         Collect at Counter
       </Button>
