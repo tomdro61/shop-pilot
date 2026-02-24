@@ -244,7 +244,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
 - **Service categorization:** Line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
-- Stripe invoicing + estimate builder with public approval page fully working (sandbox mode)
+- Stripe invoicing + estimate builder with public approval page fully working (live mode)
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
 - Quo SMS: fully wired (send/receive/webhook), auto-texts estimate approval links + invoice payment links; blocked on A2P registration
 - Resend Email: full transactional email — branded HTML templates (estimate, receipt, generic), auto-send on estimate send + invoice paid, AI `send_email` tool, test mode with console logging, delivery status tracking in `messages` table
@@ -257,12 +257,18 @@ Read `PROGRESS.md` first to pick up where we left off.
 
 **Remaining work:**
 - Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
-- Run Terminal + message_status migrations against Supabase
+- Run Terminal migration against Supabase
 - A2P registration on Quo (blocked on number port + paid plan)
-- Verify domain in Resend + set `RESEND_API_KEY` + `RESEND_FROM_EMAIL` env vars
 - Message templates (estimate ready, car ready, payment reminder)
-- Stripe live mode activation
 - Wix customer data import/export (1000+ contacts)
+
+**Production readiness (before going live):**
+- Upgrade Supabase to Pro ($25/mo) — free tier pauses DB after 1 week inactivity, 500MB/50K row limits
+- Upgrade Vercel to Pro ($20/mo) — SLA, higher function duration limits for AI chat
+- Add Sentry error monitoring (free tier) — captures runtime errors, sends alerts
+- Add uptime monitoring (BetterUptime or UptimeRobot, free) — texts/emails if site goes down
+- Set up weekly database backup export of critical tables (customers, jobs, invoices)
+- Audit environment variables — ensure no secrets committed or exposed
 
 **Optional enhancements:**
 - Voice input (Web Speech API or Whisper)
