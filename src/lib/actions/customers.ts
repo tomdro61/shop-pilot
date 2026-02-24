@@ -6,12 +6,14 @@ import { customerSchema, prepareCustomerData } from "@/lib/validators/customer";
 import { revalidatePath } from "next/cache";
 import type { CustomerFormData } from "@/lib/validators/customer";
 
-export async function getCustomers(search?: string, customerType?: string) {
+const PAGE_SIZE = 50;
+
+export async function getCustomers(search?: string, customerType?: string, page = 1) {
   const supabase = await createClient();
 
   let query = supabase
     .from("customers")
-    .select("id, first_name, last_name, phone, email, customer_type, fleet_account")
+    .select("id, first_name, last_name, phone, email, customer_type, fleet_account", { count: "exact" })
     .order("last_name", { ascending: true });
 
   if (search) {
@@ -34,10 +36,14 @@ export async function getCustomers(search?: string, customerType?: string) {
     query = query.eq("customer_type", customerType as "retail" | "fleet");
   }
 
-  const { data, error } = await query;
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  query = query.range(from, to);
+
+  const { data, count, error } = await query;
 
   if (error) throw new Error(error.message);
-  return data;
+  return { data: data ?? [], totalCount: count ?? 0 };
 }
 
 export const getCustomer = cache(async (id: string) => {

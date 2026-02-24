@@ -14,9 +14,10 @@ interface CustomerListItem {
 
 interface CustomerListProps {
   customers: CustomerListItem[];
+  totalCount?: number;
 }
 
-export function CustomerList({ customers }: CustomerListProps) {
+export function CustomerList({ customers, totalCount }: CustomerListProps) {
   if (customers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -42,7 +43,7 @@ export function CustomerList({ customers }: CustomerListProps) {
 
         {/* Customer count — mobile only */}
         <div className="md:hidden border-b px-5 py-2.5 text-xs font-semibold text-muted-foreground">
-          {customers.length} customers
+          {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
 
         <div className="divide-y">

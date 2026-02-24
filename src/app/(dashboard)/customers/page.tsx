@@ -4,6 +4,7 @@ import { getCustomers } from "@/lib/actions/customers";
 import { CustomerSearch } from "@/components/forms/customer-search";
 import { CustomerTypeFilter } from "@/components/dashboard/customer-type-filter";
 import { CustomerList } from "@/components/dashboard/customer-list";
+import { CustomerPagination } from "@/components/dashboard/customer-pagination";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -14,10 +15,11 @@ export const metadata = {
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; type?: string }>;
+  searchParams: Promise<{ search?: string; type?: string; page?: string }>;
 }) {
-  const { search, type } = await searchParams;
-  const customers = await getCustomers(search, type);
+  const { search, type, page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const { data: customers, totalCount } = await getCustomers(search, type, page);
 
   return (
     <div className="p-4 lg:p-6">
@@ -27,7 +29,7 @@ export default async function CustomersPage({
         </Suspense>
         <div className="hidden md:flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
           <span className="font-semibold text-stone-900 dark:text-stone-50">All Customers</span>
-          <span>({customers.length})</span>
+          <span>({totalCount.toLocaleString()})</span>
         </div>
         <Suspense>
           <CustomerTypeFilter />
@@ -42,7 +44,8 @@ export default async function CustomersPage({
           </Link>
         </div>
       </div>
-      <CustomerList customers={customers} />
+      <CustomerList customers={customers} totalCount={totalCount} />
+      <CustomerPagination totalCount={totalCount} page={page} pageSize={50} />
     </div>
   );
 }

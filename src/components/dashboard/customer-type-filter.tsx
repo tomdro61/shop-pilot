@@ -21,6 +21,7 @@ export function CustomerTypeFilter() {
     } else {
       params.delete("type");
     }
+    params.delete("page");
     router.push(`/customers?${params.toString()}`);
   }
 
