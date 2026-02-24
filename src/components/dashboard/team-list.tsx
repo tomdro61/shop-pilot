@@ -48,7 +48,7 @@ export function TeamList({ members }: TeamListProps) {
           ) : (
             <div className="-mx-5 divide-y">
               {members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50">
+                <div key={member.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
                   <div>
                     <p className="text-sm font-semibold">{member.name}</p>
                     <p className="text-xs text-muted-foreground">{member.email}</p>

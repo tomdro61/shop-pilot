@@ -46,7 +46,7 @@ export function PresetList({ presets }: PresetListProps) {
     <div>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-          <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
             Job Presets ({presets.length})
           </CardTitle>
           <Button size="sm" onClick={() => setAddOpen(true)}>
@@ -67,7 +67,7 @@ export function PresetList({ presets }: PresetListProps) {
                 return (
                   <div
                     key={preset.id}
-                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-accent/50"
+                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">

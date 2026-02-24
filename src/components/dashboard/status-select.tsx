@@ -35,8 +35,7 @@ export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
       <SelectTrigger className="w-auto">
         <SelectValue>
           <Badge
-            variant="outline"
-            className={`${colors.bg} ${colors.text} ${colors.border}`}
+            className={`border-transparent ${colors.bg} ${colors.text}`}
           >
             {JOB_STATUS_LABELS[currentStatus]}
           </Badge>
@@ -48,8 +47,7 @@ export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
           return (
             <SelectItem key={status} value={status}>
               <Badge
-                variant="outline"
-                className={`${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
+                className={`border-transparent ${statusColors.bg} ${statusColors.text}`}
               >
                 {JOB_STATUS_LABELS[status]}
               </Badge>

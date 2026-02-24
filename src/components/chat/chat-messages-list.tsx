@@ -19,7 +19,7 @@ export function ChatMessagesList({ messages }: { messages: ChatMessage[] }) {
       <div className="mx-auto flex max-w-2xl flex-col gap-3">
         {messages.length === 0 && (
           <div className="flex justify-start">
-            <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-muted px-4 py-2.5 text-sm leading-relaxed">
+            <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-800 px-4 py-2.5 text-sm leading-relaxed">
               {WELCOME_MESSAGE}
             </div>
           </div>

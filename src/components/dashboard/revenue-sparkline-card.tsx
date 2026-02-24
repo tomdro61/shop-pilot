@@ -29,17 +29,17 @@ export function RevenueSparklineCard({
   const isUp = diff >= 0;
 
   return (
-    <Card className="border-t-2 border-t-emerald-500 gap-0 py-0 overflow-hidden">
+    <Card className="border-t-2 border-t-emerald-500 dark:border-t-emerald-400 gap-0 py-0 overflow-hidden">
       <CardContent className="px-4 pt-3 pb-0">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
             {label}
           </p>
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 dark:bg-emerald-400/10">
             <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
         </div>
-        <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight">
+        <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">
           {formatCurrency(value)}
         </p>
         <div className="mt-1 flex items-center gap-1">

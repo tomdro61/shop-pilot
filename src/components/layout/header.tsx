@@ -59,19 +59,19 @@ export function Header({ user }: { user: User | null }) {
     : "SP";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-white/80 backdrop-blur-xl dark:bg-background/80 px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl px-4 lg:px-6">
       <div className="flex items-center gap-2.5 lg:hidden">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
           <Wrench className="h-3.5 w-3.5 text-primary-foreground" />
         </div>
         <span className="text-sm font-semibold tracking-tight">Broadway Motors</span>
       </div>
-      <h1 className="text-sm font-semibold tracking-tight lg:text-base">{title}</h1>
+      <h1 className="text-sm font-semibold tracking-tight lg:text-base text-stone-900 dark:text-stone-50">{title}</h1>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
             <Avatar className="h-7 w-7">
-              <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
+              <AvatarFallback className="bg-blue-50 dark:bg-blue-950 text-[10px] font-semibold text-blue-700 dark:text-blue-400">
                 {initials}
               </AvatarFallback>
             </Avatar>

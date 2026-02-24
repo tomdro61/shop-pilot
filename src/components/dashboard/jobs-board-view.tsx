@@ -73,7 +73,7 @@ function BoardColumn({
           <CardTitle className="flex items-center justify-between text-sm">
             <Badge
               variant="outline"
-              className={`${colors.bg} ${colors.text} ${colors.border}`}
+              className={`${colors.bg} ${colors.text}`}
             >
               {JOB_STATUS_LABELS[status]}
             </Badge>

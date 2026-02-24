@@ -170,7 +170,7 @@ export default async function EstimateApprovalPage({
       {status === "approved" && (
         <Card>
           <CardContent className="flex items-center gap-3 py-6">
-            <CheckCircle className="h-6 w-6 text-green-600" />
+            <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
             <div>
               <p className="font-medium">Estimate Approved</p>
               <p className="text-sm text-muted-foreground">
@@ -184,7 +184,7 @@ export default async function EstimateApprovalPage({
       {status === "declined" && (
         <Card>
           <CardContent className="flex items-center gap-3 py-6">
-            <XCircle className="h-6 w-6 text-red-600" />
+            <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
             <div>
               <p className="font-medium">Estimate Declined</p>
               <p className="text-sm text-muted-foreground">

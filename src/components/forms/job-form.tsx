@@ -65,9 +65,9 @@ type TechOption = { id: string; name: string };
 function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className="mb-3">
-      <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{title}</h3>
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">{title}</h3>
       {description && (
-        <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{description}</p>
       )}
     </div>
   );
@@ -236,8 +236,8 @@ export function JobForm({ job, defaultCustomerId, presets }: JobFormProps) {
                       className={cn(
                         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all",
                         isSelected
-                          ? "border-primary bg-primary/10 text-primary font-medium shadow-sm"
-                          : "border-border text-muted-foreground/70 hover:border-border hover:bg-accent hover:text-foreground"
+                          ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 font-medium shadow-sm"
+                          : "border-stone-300 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-stone-100"
                       )}
                     >
                       {preset.name}
@@ -421,7 +421,7 @@ export function JobForm({ job, defaultCustomerId, presets }: JobFormProps) {
                               {field.value && (
                                 <Badge
                                   variant="outline"
-                                  className={`${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
+                                  className={`${statusColors.bg} ${statusColors.text}`}
                                 >
                                   {JOB_STATUS_LABELS[field.value as JobStatus]}
                                 </Badge>
@@ -436,7 +436,7 @@ export function JobForm({ job, defaultCustomerId, presets }: JobFormProps) {
                               <SelectItem key={status} value={status}>
                                 <Badge
                                   variant="outline"
-                                  className={`${colors.bg} ${colors.text} ${colors.border}`}
+                                  className={`${colors.bg} ${colors.text}`}
                                 >
                                   {JOB_STATUS_LABELS[status]}
                                 </Badge>

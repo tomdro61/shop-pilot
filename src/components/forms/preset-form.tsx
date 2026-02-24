@@ -237,8 +237,8 @@ export function PresetForm({ preset, open, onOpenChange }: PresetFormProps) {
             ))}
           </div>
 
-          <div className="rounded-md bg-muted p-3 text-center">
-            <span className="text-sm text-muted-foreground">Total: </span>
+          <div className="rounded-md bg-stone-100 dark:bg-stone-950 p-3 text-center">
+            <span className="text-sm text-stone-500 dark:text-stone-400">Total: </span>
             <span className="text-lg font-semibold">{formatCurrency(total)}</span>
           </div>
 

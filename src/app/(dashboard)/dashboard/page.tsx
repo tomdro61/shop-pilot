@@ -176,7 +176,7 @@ export default async function DashboardPage() {
           </Button>
         </Link>
         <Link href="/quick-pay" className="flex-1">
-          <Button variant="outline" className="w-full gap-2">
+          <Button className="w-full gap-2 bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-semibold">
             <DollarSign className="h-4 w-4" />
             Quick Pay
           </Button>
@@ -186,18 +186,18 @@ export default async function DashboardPage() {
       {/* ═══════════════════════════════════════════
           Section 1: REVENUE
       ═══════════════════════════════════════════ */}
-      <section className="rounded-xl border bg-muted/50 p-4 lg:p-5">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           Revenue
         </h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Today</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.todayRevenue)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Today</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrency(stats.todayRevenue)}</p>
           </div>
           <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Week</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.weeklyRevenue)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Week</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrency(stats.weeklyRevenue)}</p>
             <div className="mt-1 flex items-center gap-1">
               {weekChange >= 0 ? (
                 <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
@@ -211,12 +211,12 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">This Month</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.monthlyRevenue)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Month</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrency(stats.monthlyRevenue)}</p>
           </div>
           <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Avg Ticket (Week)</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight">{formatCurrency(stats.avgTicketWeek)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Avg Ticket (Week)</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrency(stats.avgTicketWeek)}</p>
           </div>
         </div>
       </section>
@@ -224,8 +224,8 @@ export default async function DashboardPage() {
       {/* ═══════════════════════════════════════════
           Section 2: OPERATIONS
       ═══════════════════════════════════════════ */}
-      <section className="rounded-xl border bg-muted/50 p-4 lg:p-5">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <section>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           Operations
         </h2>
 
@@ -235,34 +235,34 @@ export default async function DashboardPage() {
             <div className="space-y-1.5">
               {stats.unpaidJobs > 0 && (
                 <Link href="/jobs?paymentStatus=unpaid&status=complete" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 transition-colors hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/5 dark:hover:bg-red-500/10">
+                  <div className="flex items-center gap-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 px-4 py-2 transition-colors hover:bg-red-100 dark:hover:bg-red-900">
                     <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-                    <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                    <span className="text-sm font-medium text-red-800 dark:text-red-300">
                       {stats.unpaidJobs} unpaid {stats.unpaidJobs === 1 ? "job" : "jobs"}
                     </span>
-                    <span className="ml-auto hidden text-xs text-red-500 dark:text-red-400/70 sm:inline">Complete but not paid</span>
+                    <span className="ml-auto hidden text-xs text-red-600 dark:text-red-400 sm:inline">Complete but not paid</span>
                   </div>
                 </Link>
               )}
               {stats.unassignedJobs > 0 && (
                 <Link href="/jobs?status=not_started" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
+                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:hover:bg-amber-900">
                     <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                    <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
                       {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
                     </span>
-                    <span className="ml-auto hidden text-xs text-amber-500 dark:text-amber-400/70 sm:inline">Not started, no tech</span>
+                    <span className="ml-auto hidden text-xs text-amber-600 dark:text-amber-400 sm:inline">Not started, no tech</span>
                   </div>
                 </Link>
               )}
               {staleJobs > 0 && (
                 <Link href="/jobs" className="block">
-                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/5 dark:hover:bg-amber-500/10">
+                  <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:hover:bg-amber-900">
                     <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                    <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
                       {staleJobs} {staleJobs === 1 ? "job needs" : "jobs need"} review
                     </span>
-                    <span className="ml-auto hidden text-xs text-amber-500 dark:text-amber-400/70 sm:inline">Open &gt; 2 days</span>
+                    <span className="ml-auto hidden text-xs text-amber-600 dark:text-amber-400 sm:inline">Open &gt; 2 days</span>
                   </div>
                 </Link>
               )}
@@ -272,7 +272,7 @@ export default async function DashboardPage() {
           {/* Shop Floor + Tech Activity */}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <div className="rounded-lg border bg-card p-4">
-              <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shop Floor</p>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Shop Floor</p>
               <div className="flex items-center gap-5">
                 <div className="flex items-center gap-2.5">
                   <Car className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -302,7 +302,7 @@ export default async function DashboardPage() {
 
             <div className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tech Activity</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Tech Activity</p>
               </div>
               {techActivity.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -337,14 +337,14 @@ export default async function DashboardPage() {
       {/* ═══════════════════════════════════════════
           Section 3: RECENT JOBS
       ═══════════════════════════════════════════ */}
-      <section className="rounded-xl border bg-muted/50 p-4 lg:p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
             Recent Jobs
           </h2>
           <Link
             href="/jobs"
-            className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+            className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 transition-colors hover:text-blue-700 dark:hover:text-blue-300"
           >
             View all
             <ArrowRight className="h-3 w-3" />
@@ -370,7 +370,7 @@ export default async function DashboardPage() {
                 ) || 0;
                 return (
                   <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                    <div className="flex items-center justify-between px-5 py-2.5 transition-colors hover:bg-accent/50">
+                    <div className="flex items-center justify-between px-5 py-2.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
                       <div className="min-w-0">
                         <p className="text-sm font-medium">
                           {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
@@ -386,14 +386,12 @@ export default async function DashboardPage() {
                           </span>
                         )}
                         <Badge
-                          variant="outline"
-                          className={`text-[10px] ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""} ${statusColors?.border ?? ""}`}
+                          className={`text-[10px] border-transparent ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""}`}
                         >
                           {JOB_STATUS_LABELS[status] || status}
                         </Badge>
                         <Badge
-                          variant="outline"
-                          className={`text-[10px] ${paymentColors?.bg ?? ""} ${paymentColors?.text ?? ""} ${paymentColors?.border ?? ""}`}
+                          className={`text-[10px] border-transparent ${paymentColors?.bg ?? ""} ${paymentColors?.text ?? ""}`}
                         >
                           {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
                         </Badge>

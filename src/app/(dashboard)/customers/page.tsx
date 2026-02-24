@@ -25,8 +25,8 @@ export default async function CustomersPage({
         <Suspense>
           <CustomerSearch />
         </Suspense>
-        <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground">All Customers</span>
+        <div className="hidden md:flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
+          <span className="font-semibold text-stone-900 dark:text-stone-50">All Customers</span>
           <span>({customers.length})</span>
         </div>
         <Suspense>

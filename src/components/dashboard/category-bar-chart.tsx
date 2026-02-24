@@ -44,10 +44,10 @@ export function CategoryBarChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{title}</CardTitle>
+          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="py-8 text-center text-sm text-muted-foreground">
+          <p className="py-8 text-center text-sm text-stone-400 dark:text-stone-500">
             No data for this period
           </p>
         </CardContent>
@@ -65,7 +65,7 @@ export function CategoryBarChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px] w-full">

@@ -32,10 +32,10 @@ export default function SettingsPage() {
       <div className="space-y-2">
         {settingsItems.map((item) => (
           <Link key={item.href} href={item.href}>
-            <Card className="transition-colors hover:bg-accent/50">
+            <Card className="transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
               <CardContent className="flex items-center gap-4 py-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                  <item.icon className="h-5 w-5 text-primary" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950">
+                  <item.icon className="h-5 w-5 text-blue-600 dark:text-blue-500" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{item.label}</p>
