@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getJobs, getLineItemCategories } from "@/lib/actions/jobs";
+import { getShopSettings } from "@/lib/actions/settings";
 import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
 import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
 import { JobsListView } from "@/components/dashboard/jobs-list-view";
@@ -24,7 +25,7 @@ export default async function JobsPage({
   const params = await searchParams;
   const view = params.view || "list";
 
-  const [jobs, dbCategories] = await Promise.all([
+  const [jobs, dbCategories, settings] = await Promise.all([
     getJobs({
       search: params.search,
       status: params.status as JobStatus | undefined,
@@ -32,10 +33,12 @@ export default async function JobsPage({
       paymentStatus: params.payment_status as PaymentStatus | undefined,
     }),
     getLineItemCategories(),
+    getShopSettings(),
   ]);
 
+  const configuredCategories = settings?.job_categories ?? DEFAULT_JOB_CATEGORIES;
   const allCategories = [
-    ...new Set([...DEFAULT_JOB_CATEGORIES, ...dbCategories]),
+    ...new Set([...configuredCategories, ...dbCategories]),
   ].sort();
 
   return (

@@ -20,7 +20,7 @@ export function getSystemPrompt(): string {
 - **Customers** have vehicles, jobs, and contact info (phone, email, address). Can be "retail" or "fleet" type.
 - **Vehicles** belong to a customer (year, make, model, VIN, mileage)
 - **Jobs** belong to a customer + vehicle, have a status, title, assigned technician, line items, payment_status, payment_method, mileage_in, and an auto-assigned RO number (ro_number, displayed as RO-0001)
-- **Job Line Items** are labor or parts with description, quantity, unit cost, and category (e.g. 'Brake Service', 'Oil Change'). Line-item categories are the single source of truth for service categorization.
+- **Job Line Items** are labor or parts with description, quantity, unit cost, and category (e.g. 'Brake Service', 'Oil Change'). Line-item categories are the single source of truth for service categorization. Categories are configurable via shop settings (Settings > Job Categories) and returned by get_shop_settings.
 - **Estimates** are created from a job's line items, sent to customers for approval
 - **Estimate Line Items** can be edited independently (only when estimate is in "draft" status)
 - **Invoices** are created from completed jobs via Stripe (retail only)

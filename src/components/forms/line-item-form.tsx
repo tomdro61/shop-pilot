@@ -30,13 +30,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { formatCurrency } from "@/lib/utils/format";
-import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
 import type { JobLineItem } from "@/types";
 
 interface LineItemFormProps {
   jobId: string;
   lineItem?: JobLineItem;
   defaultCategory?: string;
+  categories?: string[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -45,6 +45,7 @@ export function LineItemForm({
   jobId,
   lineItem,
   defaultCategory,
+  categories = [],
   open,
   onOpenChange,
 }: LineItemFormProps) {
@@ -167,7 +168,7 @@ export function LineItemForm({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="__none__">No category</SelectItem>
-                        {DEFAULT_JOB_CATEGORIES.map((cat) => (
+                        {categories.map((cat) => (
                           <SelectItem key={cat} value={cat}>
                             {cat}
                           </SelectItem>

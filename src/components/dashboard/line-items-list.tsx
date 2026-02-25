@@ -13,8 +13,7 @@ import { LineItemForm } from "@/components/forms/line-item-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteLineItem } from "@/lib/actions/job-line-items";
 import { formatCurrency } from "@/lib/utils/format";
-import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
-import { calculateTotals } from "@/lib/utils/totals";
+import { calculateTotals, DEFAULT_SETTINGS } from "@/lib/utils/totals";
 import { Plus, Pencil, Trash2, Wrench } from "lucide-react";
 import type { JobLineItem, ShopSettings } from "@/types";
 
@@ -84,7 +83,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
             </PopoverTrigger>
             <PopoverContent className="w-56 p-2" align="end">
               <div className="space-y-1">
-                {DEFAULT_JOB_CATEGORIES.map((cat) => (
+                {(settings?.job_categories ?? DEFAULT_SETTINGS.job_categories).map((cat) => (
                   <button
                     key={cat}
                     type="button"
@@ -208,6 +207,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
       <LineItemForm
         jobId={jobId}
         defaultCategory={defaultCategory}
+        categories={settings?.job_categories ?? DEFAULT_SETTINGS.job_categories}
         open={addOpen}
         onOpenChange={(open) => {
           setAddOpen(open);
@@ -219,6 +219,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
         <LineItemForm
           jobId={jobId}
           lineItem={editItem}
+          categories={settings?.job_categories ?? DEFAULT_SETTINGS.job_categories}
           open={!!editItem}
           onOpenChange={(open) => {
             if (!open) setEditItem(null);

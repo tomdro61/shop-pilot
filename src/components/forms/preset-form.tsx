@@ -19,13 +19,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils/format";
 import { Plus, Trash2 } from "lucide-react";
 import type { JobPreset, PresetLineItem } from "@/types";
 
 interface PresetFormProps {
   preset?: JobPreset;
+  categories?: string[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -37,7 +37,7 @@ const emptyLineItem: PresetLineItem = {
   unit_cost: 0,
 };
 
-export function PresetForm({ preset, open, onOpenChange }: PresetFormProps) {
+export function PresetForm({ preset, categories = [], open, onOpenChange }: PresetFormProps) {
   const isEditing = !!preset;
 
   const [name, setName] = useState(preset?.name || "");
@@ -139,7 +139,7 @@ export function PresetForm({ preset, open, onOpenChange }: PresetFormProps) {
                 <SelectValue placeholder="Select category..." />
               </SelectTrigger>
               <SelectContent>
-                {DEFAULT_JOB_CATEGORIES.map((cat) => (
+                {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
                   </SelectItem>

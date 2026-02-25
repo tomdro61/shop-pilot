@@ -471,6 +471,7 @@ export type Database = {
           hazmat_enabled: boolean;
           hazmat_amount: number;
           hazmat_label: string;
+          job_categories: string[];
           created_at: string;
           updated_at: string;
         };
@@ -484,6 +485,7 @@ export type Database = {
           hazmat_enabled?: boolean;
           hazmat_amount?: number;
           hazmat_label?: string;
+          job_categories?: string[];
           created_at?: string;
           updated_at?: string;
         };
@@ -497,6 +499,7 @@ export type Database = {
           hazmat_enabled?: boolean;
           hazmat_amount?: number;
           hazmat_label?: string;
+          job_categories?: string[];
           created_at?: string;
           updated_at?: string;
         };

@@ -14,9 +14,10 @@ import type { JobPreset, PresetLineItem } from "@/types";
 
 interface PresetListProps {
   presets: JobPreset[];
+  categories: string[];
 }
 
-export function PresetList({ presets }: PresetListProps) {
+export function PresetList({ presets, categories }: PresetListProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editPreset, setEditPreset] = useState<JobPreset | null>(null);
 
@@ -117,6 +118,7 @@ export function PresetList({ presets }: PresetListProps) {
       </Card>
 
       <PresetForm
+        categories={categories}
         open={addOpen}
         onOpenChange={setAddOpen}
       />
@@ -124,6 +126,7 @@ export function PresetList({ presets }: PresetListProps) {
       {editPreset && (
         <PresetForm
           preset={editPreset}
+          categories={categories}
           open={!!editPreset}
           onOpenChange={(open) => {
             if (!open) setEditPreset(null);

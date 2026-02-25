@@ -14,6 +14,7 @@ export const shopSettingsSchema = z.object({
   hazmat_enabled: z.boolean(),
   hazmat_amount: z.number().min(0),
   hazmat_label: z.string().min(1).max(100),
+  job_categories: z.array(z.string().min(1).max(100)).min(1),
 });
 
 export type ShopSettingsFormData = z.infer<typeof shopSettingsSchema>;

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { HardHat, ClipboardList, DollarSign, ChevronRight } from "lucide-react";
+import { HardHat, ClipboardList, DollarSign, Tag, ChevronRight } from "lucide-react";
 
 export const metadata = {
   title: "Settings | ShopPilot",
@@ -12,6 +12,12 @@ const settingsItems = [
     label: "Rates & Fees",
     description: "Tax rate, shop supplies, and environmental fees",
     icon: DollarSign,
+  },
+  {
+    href: "/settings/categories",
+    label: "Job Categories",
+    description: "Service categories for line items and presets",
+    icon: Tag,
   },
   {
     href: "/team",

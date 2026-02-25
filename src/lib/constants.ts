@@ -86,6 +86,7 @@ export const CUSTOMER_TYPE_LABELS: Record<CustomerType, string> = {
   fleet: "Fleet",
 };
 
+/** @deprecated Use shop_settings.job_categories from database instead. Kept as fallback in DEFAULT_SETTINGS. */
 export const DEFAULT_JOB_CATEGORIES = [
   "Oil Change",
   "Brake Service",

@@ -1,4 +1,4 @@
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { MA_SALES_TAX_RATE, DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
 import type { ShopSettings, ShopSuppliesMethod } from "@/types";
 
 export interface TotalsBreakdown {
@@ -25,6 +25,7 @@ export const DEFAULT_SETTINGS: Pick<
   | "hazmat_enabled"
   | "hazmat_amount"
   | "hazmat_label"
+  | "job_categories"
 > = {
   tax_rate: MA_SALES_TAX_RATE,
   shop_supplies_enabled: false,
@@ -34,6 +35,7 @@ export const DEFAULT_SETTINGS: Pick<
   hazmat_enabled: false,
   hazmat_amount: 3.0,
   hazmat_label: "Environmental Fee",
+  job_categories: DEFAULT_JOB_CATEGORIES,
 };
 
 interface LineItemLike {

@@ -54,8 +54,10 @@ export async function updateShopSettings(
   }
 
   revalidatePath("/settings/rates");
+  revalidatePath("/settings/categories");
   revalidatePath("/jobs");
   revalidatePath("/estimates");
+  revalidatePath("/presets");
 
   return { data };
 }
