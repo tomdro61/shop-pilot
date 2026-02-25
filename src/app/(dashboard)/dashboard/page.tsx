@@ -234,7 +234,7 @@ export default async function DashboardPage() {
           {alertCount > 0 && (
             <div className="space-y-1.5">
               {stats.unpaidJobs > 0 && (
-                <Link href="/jobs?paymentStatus=unpaid&status=complete" className="block">
+                <Link href="/jobs?payment_status=unpaid&status=complete" className="block">
                   <div className="flex items-center gap-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 px-4 py-2 transition-colors hover:bg-red-100 dark:hover:bg-red-900">
                     <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
                     <span className="text-sm font-medium text-red-800 dark:text-red-300">
