@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
 import { getInvoiceForJob } from "@/lib/actions/invoices";
 import { getEstimateForJob } from "@/lib/actions/estimates";
+import { getShopSettings } from "@/lib/actions/settings";
+import { calculateTotals } from "@/lib/utils/totals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/dashboard/status-select";
@@ -33,10 +35,11 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, invoice, estimate] = await Promise.all([
+  const [job, invoice, estimate, settings] = await Promise.all([
     getJob(id),
     getInvoiceForJob(id),
     getEstimateForJob(id),
+    getShopSettings(),
   ]);
   if (!job) notFound();
 
@@ -44,7 +47,8 @@ export default async function JobDetailPage({
   const vehicle = job.vehicles as Vehicle | null;
   const tech = job.users as Pick<UserType, "id" | "name"> | null;
   const lineItems = (job.job_line_items || []) as JobLineItem[];
-  const grandTotal = lineItems.reduce((sum, li) => sum + (li.total || 0), 0);
+  const totals = calculateTotals(lineItems, settings);
+  const grandTotal = totals.grandTotal;
 
   return (
     <><div className="mx-auto max-w-4xl p-4 pb-20 lg:p-6 lg:pb-20">
@@ -182,7 +186,7 @@ export default async function JobDetailPage({
 
       {/* Line Items */}
       <div className="animate-in-up stagger-3">
-        <LineItemsList jobId={id} lineItems={lineItems} />
+        <LineItemsList jobId={id} lineItems={lineItems} settings={settings} />
       </div>
 
       {/* Estimate + Invoice */}

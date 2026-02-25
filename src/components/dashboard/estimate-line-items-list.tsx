@@ -8,30 +8,27 @@ import { EstimateLineItemForm } from "@/components/forms/estimate-line-item-form
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteEstimateLineItem } from "@/lib/actions/estimates";
 import { formatCurrency } from "@/lib/utils/format";
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { calculateTotals } from "@/lib/utils/totals";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import type { EstimateLineItem } from "@/types";
+import type { EstimateLineItem, ShopSettings } from "@/types";
 
 interface EstimateLineItemsListProps {
   estimateId: string;
   lineItems: EstimateLineItem[];
   readOnly?: boolean;
+  settings?: ShopSettings | null;
 }
 
 export function EstimateLineItemsList({
   estimateId,
   lineItems,
   readOnly = false,
+  settings,
 }: EstimateLineItemsListProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<EstimateLineItem | null>(null);
 
-  const laborItems = lineItems.filter((li) => li.type === "labor");
-  const partItems = lineItems.filter((li) => li.type === "part");
-  const laborTotal = laborItems.reduce((sum, li) => sum + (li.total || 0), 0);
-  const partsTotal = partItems.reduce((sum, li) => sum + (li.total || 0), 0);
-  const taxAmount = partsTotal * MA_SALES_TAX_RATE;
-  const grandTotal = laborTotal + partsTotal + taxAmount;
+  const totals = calculateTotals(lineItems, settings);
 
   async function handleDelete(id: string) {
     const result = await deleteEstimateLineItem(id, estimateId);
@@ -114,18 +111,28 @@ export function EstimateLineItemsList({
             </div>
             <div className="border-t border-stone-200 dark:border-stone-800 pt-3 space-y-1">
               <div className="flex justify-end gap-6 text-sm text-stone-500 dark:text-stone-400">
-                {laborItems.length > 0 && <span>Labor: {formatCurrency(laborTotal)}</span>}
-                {partItems.length > 0 && <span>Parts: {formatCurrency(partsTotal)}</span>}
+                {totals.laborTotal > 0 && <span>Labor: {formatCurrency(totals.laborTotal)}</span>}
+                {totals.partsTotal > 0 && <span>Parts: {formatCurrency(totals.partsTotal)}</span>}
               </div>
-              {partItems.length > 0 && (
+              {totals.shopSuppliesEnabled && totals.shopSupplies > 0 && (
                 <div className="flex justify-end text-sm text-stone-500 dark:text-stone-400">
-                  Tax ({(MA_SALES_TAX_RATE * 100).toFixed(2)}% on parts): {formatCurrency(taxAmount)}
+                  Shop Supplies: {formatCurrency(totals.shopSupplies)}
+                </div>
+              )}
+              {totals.hazmatEnabled && totals.hazmat > 0 && (
+                <div className="flex justify-end text-sm text-stone-500 dark:text-stone-400">
+                  {totals.hazmatLabel}: {formatCurrency(totals.hazmat)}
+                </div>
+              )}
+              {totals.taxAmount > 0 && (
+                <div className="flex justify-end text-sm text-stone-500 dark:text-stone-400">
+                  Tax ({(totals.taxRate * 100).toFixed(2)}%): {formatCurrency(totals.taxAmount)}
                 </div>
               )}
               <div className="flex justify-end">
                 <div className="text-right">
                   <p className="text-[11px] font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-[0.06em]">Total</p>
-                  <p className="text-2xl font-bold text-stone-900 dark:text-stone-50 tracking-tight">{formatCurrency(grandTotal)}</p>
+                  <p className="text-2xl font-bold text-stone-900 dark:text-stone-50 tracking-tight">{formatCurrency(totals.grandTotal)}</p>
                 </div>
               </div>
             </div>

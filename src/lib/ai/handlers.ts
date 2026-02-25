@@ -43,6 +43,7 @@ import {
 import { getTeamMembers, getTechnicians } from "@/lib/actions/team";
 import { getReportData, getFleetARSummary, getDailySummary } from "@/lib/actions/reports";
 import { sendCustomerSMS, getCustomerMessages } from "@/lib/actions/messages";
+import { getShopSettings, updateShopSettings } from "@/lib/actions/settings";
 
 type Input = Record<string, unknown>;
 
@@ -406,6 +407,25 @@ export async function executeToolCall(
       }
       case "get_customer_messages": {
         const result = await getCustomerMessages(str(toolInput.customer_id));
+        return JSON.stringify(result);
+      }
+
+      // ── Shop Settings ──────────────────────────────────────
+      case "get_shop_settings": {
+        const result = await getShopSettings();
+        return JSON.stringify(result ?? { error: "Settings not found" });
+      }
+      case "update_shop_settings": {
+        const updates: Record<string, unknown> = {};
+        if (toolInput.tax_rate !== undefined) updates.tax_rate = num(toolInput.tax_rate);
+        if (toolInput.shop_supplies_enabled !== undefined) updates.shop_supplies_enabled = toolInput.shop_supplies_enabled;
+        if (toolInput.shop_supplies_method !== undefined) updates.shop_supplies_method = str(toolInput.shop_supplies_method);
+        if (toolInput.shop_supplies_rate !== undefined) updates.shop_supplies_rate = num(toolInput.shop_supplies_rate);
+        if (toolInput.shop_supplies_cap !== undefined) updates.shop_supplies_cap = toolInput.shop_supplies_cap === null ? null : num(toolInput.shop_supplies_cap);
+        if (toolInput.hazmat_enabled !== undefined) updates.hazmat_enabled = toolInput.hazmat_enabled;
+        if (toolInput.hazmat_amount !== undefined) updates.hazmat_amount = num(toolInput.hazmat_amount);
+        if (toolInput.hazmat_label !== undefined) updates.hazmat_label = str(toolInput.hazmat_label);
+        const result = await updateShopSettings(updates);
         return JSON.stringify(result);
       }
 

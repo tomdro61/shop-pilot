@@ -593,4 +593,39 @@ export const tools: Anthropic.Tool[] = [
       required: ["customer_id"],
     },
   },
+
+  // ── Shop Settings tools ──────────────────────────────────────
+  {
+    name: "get_shop_settings",
+    description:
+      "Get the current shop settings including tax rate, shop supplies fee, and environmental/hazmat fee configuration. Use this before quoting totals to a customer.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "update_shop_settings",
+    description:
+      "Update shop settings (tax rate, shop supplies fee, environmental fee). Only pass fields you want to change. Confirm with the user before calling this.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        tax_rate: { type: "number", description: "Tax rate as a decimal (e.g. 0.0625 for 6.25%)" },
+        shop_supplies_enabled: { type: "boolean", description: "Enable/disable shop supplies fee" },
+        shop_supplies_method: {
+          type: "string",
+          enum: ["percent_of_labor", "percent_of_parts", "percent_of_total", "flat"],
+          description: "How shop supplies fee is calculated",
+        },
+        shop_supplies_rate: { type: "number", description: "Rate as decimal for percent methods (e.g. 0.05 for 5%) or dollar amount for flat method" },
+        shop_supplies_cap: { type: "number", description: "Maximum shop supplies fee in dollars (null for no cap)" },
+        hazmat_enabled: { type: "boolean", description: "Enable/disable environmental/hazmat fee" },
+        hazmat_amount: { type: "number", description: "Environmental fee amount in dollars" },
+        hazmat_label: { type: "string", description: "Display label for the environmental fee" },
+      },
+      required: [],
+    },
+  },
 ];

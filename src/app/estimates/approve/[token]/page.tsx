@@ -1,4 +1,6 @@
 import { getEstimateByToken } from "@/lib/actions/estimates";
+import { getShopSettings } from "@/lib/actions/settings";
+import { calculateTotals } from "@/lib/utils/totals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -6,7 +8,6 @@ import { EstimateApprovalButtons } from "@/components/dashboard/estimate-approva
 import {
   ESTIMATE_STATUS_LABELS,
   ESTIMATE_STATUS_COLORS,
-  MA_SALES_TAX_RATE,
 } from "@/lib/constants";
 import { formatCurrency, formatVehicle, formatCustomerName } from "@/lib/utils/format";
 import { CheckCircle, XCircle } from "lucide-react";
@@ -22,7 +23,10 @@ export default async function EstimateApprovalPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const estimate = await getEstimateByToken(token);
+  const [estimate, settings] = await Promise.all([
+    getEstimateByToken(token),
+    getShopSettings(),
+  ]);
 
   if (!estimate) {
     return (
@@ -53,10 +57,7 @@ export default async function EstimateApprovalPage({
 
   const laborItems = lineItems.filter((li) => li.type === "labor");
   const partItems = lineItems.filter((li) => li.type === "part");
-  const laborTotal = laborItems.reduce((sum, li) => sum + (li.total || 0), 0);
-  const partsTotal = partItems.reduce((sum, li) => sum + (li.total || 0), 0);
-  const taxAmount = partsTotal * MA_SALES_TAX_RATE;
-  const grandTotal = laborTotal + partsTotal + taxAmount;
+  const totals = calculateTotals(lineItems, settings);
 
   return (
     <div className="space-y-4">
@@ -139,24 +140,34 @@ export default async function EstimateApprovalPage({
           <Separator />
 
           <div className="space-y-1 text-right">
-            {laborItems.length > 0 && (
+            {totals.laborTotal > 0 && (
               <p className="text-sm text-muted-foreground">
-                Labor: {formatCurrency(laborTotal)}
+                Labor: {formatCurrency(totals.laborTotal)}
               </p>
             )}
-            {partItems.length > 0 && (
+            {totals.partsTotal > 0 && (
               <p className="text-sm text-muted-foreground">
-                Parts: {formatCurrency(partsTotal)}
+                Parts: {formatCurrency(totals.partsTotal)}
               </p>
             )}
-            {partItems.length > 0 && (
+            {totals.shopSuppliesEnabled && totals.shopSupplies > 0 && (
               <p className="text-sm text-muted-foreground">
-                Tax ({(MA_SALES_TAX_RATE * 100).toFixed(2)}% on parts):{" "}
-                {formatCurrency(taxAmount)}
+                Shop Supplies: {formatCurrency(totals.shopSupplies)}
+              </p>
+            )}
+            {totals.hazmatEnabled && totals.hazmat > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {totals.hazmatLabel}: {formatCurrency(totals.hazmat)}
+              </p>
+            )}
+            {totals.taxAmount > 0 && (
+              <p className="text-sm text-muted-foreground">
+                Tax ({(totals.taxRate * 100).toFixed(2)}%):{" "}
+                {formatCurrency(totals.taxAmount)}
               </p>
             )}
             <p className="text-lg font-bold">
-              Total: {formatCurrency(grandTotal)}
+              Total: {formatCurrency(totals.grandTotal)}
             </p>
           </div>
         </CardContent>

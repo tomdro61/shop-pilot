@@ -6,7 +6,8 @@ import {
   estimateReadyEmail,
   paymentReceiptEmail,
 } from "@/lib/resend/templates";
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { getShopSettings } from "@/lib/actions/settings";
+import { calculateTotals } from "@/lib/utils/totals";
 
 interface SendCustomerEmailParams {
   customerId: string;
@@ -67,13 +68,16 @@ export async function sendEstimateEmail({
 }): Promise<{ sent: boolean; testMode?: boolean; error?: string }> {
   const supabase = await createClient();
 
-  const { data: estimate, error: fetchError } = await supabase
-    .from("estimates")
-    .select(
-      "id, approval_token, tax_rate, jobs(id, title, customer_id, vehicle_id, customers(id, first_name, last_name, email), vehicles(id, year, make, model)), estimate_line_items(type, description, quantity, unit_cost)"
-    )
-    .eq("id", estimateId)
-    .single();
+  const [{ data: estimate, error: fetchError }, settings] = await Promise.all([
+    supabase
+      .from("estimates")
+      .select(
+        "id, approval_token, tax_rate, jobs(id, title, customer_id, vehicle_id, customers(id, first_name, last_name, email), vehicles(id, year, make, model)), estimate_line_items(type, description, quantity, unit_cost)"
+      )
+      .eq("id", estimateId)
+      .single(),
+    getShopSettings(),
+  ]);
 
   if (fetchError || !estimate) return { sent: false, error: "Estimate not found" };
 
@@ -104,13 +108,15 @@ export async function sendEstimateEmail({
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const approvalUrl = `${appUrl}/estimates/approve/${estimate.approval_token}`;
 
+  const totals = calculateTotals(lineItems, settings);
+
   const { subject, html } = estimateReadyEmail({
     customerName: job.customers.first_name,
     jobTitle: job.title,
     vehicleDesc,
     approvalUrl,
     lineItems,
-    taxRate: estimate.tax_rate ?? MA_SALES_TAX_RATE,
+    totals,
   });
 
   return sendCustomerEmail({
@@ -128,13 +134,16 @@ export async function sendPaymentReceiptEmail({
 }): Promise<{ sent: boolean; testMode?: boolean; error?: string }> {
   const supabase = await createClient();
 
-  const { data: job, error: fetchError } = await supabase
-    .from("jobs")
-    .select(
-      "id, title, customer_id, vehicle_id, payment_method, customers(id, first_name, last_name, email), vehicles(id, year, make, model), job_line_items(type, description, quantity, unit_cost)"
-    )
-    .eq("id", jobId)
-    .single();
+  const [{ data: job, error: fetchError }, settings] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select(
+        "id, title, customer_id, vehicle_id, payment_method, customers(id, first_name, last_name, email), vehicles(id, year, make, model), job_line_items(type, description, quantity, unit_cost)"
+      )
+      .eq("id", jobId)
+      .single(),
+    getShopSettings(),
+  ]);
 
   if (fetchError || !job) return { sent: false, error: "Job not found" };
 
@@ -166,23 +175,16 @@ export async function sendPaymentReceiptEmail({
     unit_cost: number;
   }[];
 
-  const laborTotal = lineItems
-    .filter((li) => li.type === "labor")
-    .reduce((sum, li) => sum + li.quantity * li.unit_cost, 0);
-  const partsTotal = lineItems
-    .filter((li) => li.type === "part")
-    .reduce((sum, li) => sum + li.quantity * li.unit_cost, 0);
-  const tax = partsTotal * MA_SALES_TAX_RATE;
-  const total = laborTotal + partsTotal + tax;
+  const totals = calculateTotals(lineItems, settings);
 
   const { subject, html } = paymentReceiptEmail({
     customerName: customer.first_name,
     jobTitle: job.title,
     vehicleDesc,
-    amount: total,
+    amount: totals.grandTotal,
     paymentMethod: job.payment_method || "stripe",
     lineItems,
-    taxRate: MA_SALES_TAX_RATE,
+    totals,
   });
 
   return sendCustomerEmail({

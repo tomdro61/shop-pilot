@@ -460,6 +460,48 @@ export type Database = {
           },
         ];
       };
+      shop_settings: {
+        Row: {
+          id: string;
+          tax_rate: number;
+          shop_supplies_enabled: boolean;
+          shop_supplies_method: string;
+          shop_supplies_rate: number;
+          shop_supplies_cap: number | null;
+          hazmat_enabled: boolean;
+          hazmat_amount: number;
+          hazmat_label: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tax_rate?: number;
+          shop_supplies_enabled?: boolean;
+          shop_supplies_method?: string;
+          shop_supplies_rate?: number;
+          shop_supplies_cap?: number | null;
+          hazmat_enabled?: boolean;
+          hazmat_amount?: number;
+          hazmat_label?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          tax_rate?: number;
+          shop_supplies_enabled?: boolean;
+          shop_supplies_method?: string;
+          shop_supplies_rate?: number;
+          shop_supplies_cap?: number | null;
+          hazmat_enabled?: boolean;
+          hazmat_amount?: number;
+          hazmat_label?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       users: {
         Row: {
           id: string;

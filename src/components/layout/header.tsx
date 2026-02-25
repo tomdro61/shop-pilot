@@ -24,6 +24,7 @@ const pageTitles: Record<string, string> = {
   "/settings": "Settings",
   "/team": "Team",
   "/presets": "Job Presets",
+  "/settings/rates": "Rates & Fees",
   "/reports": "Reports",
   "/quick-pay": "Quick Pay",
   "/chat": "AI Assistant",
@@ -34,6 +35,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/customers")) return "Customers";
   if (pathname.startsWith("/jobs")) return "Jobs";
   if (pathname.startsWith("/inspections")) return "Inspections";
+  if (pathname.startsWith("/settings/rates")) return "Rates & Fees";
   if (pathname.startsWith("/settings")) return "Settings";
   if (pathname.startsWith("/team")) return "Team";
   if (pathname.startsWith("/presets")) return "Job Presets";

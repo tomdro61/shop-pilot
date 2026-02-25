@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getEstimate } from "@/lib/actions/estimates";
+import { getShopSettings } from "@/lib/actions/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,10 @@ export default async function EstimateDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const estimate = await getEstimate(id);
+  const [estimate, settings] = await Promise.all([
+    getEstimate(id),
+    getShopSettings(),
+  ]);
   if (!estimate) notFound();
 
   const status = estimate.status as EstimateStatus;
@@ -153,6 +157,7 @@ export default async function EstimateDetailPage({
         estimateId={id}
         lineItems={lineItems}
         readOnly={!isDraft}
+        settings={settings}
       />
 
       {/* Actions */}

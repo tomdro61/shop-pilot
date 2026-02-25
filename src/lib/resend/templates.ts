@@ -1,12 +1,10 @@
+import type { TotalsBreakdown } from "@/lib/utils/totals";
+
 interface LineItem {
   type: "labor" | "part";
   description: string;
   quantity: number;
   unit_cost: number;
-}
-
-function formatMoney(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
 }
 
 function formatMoneyDollars(dollars: number): string {
@@ -56,16 +54,7 @@ function baseLayout(content: string): string {
 </html>`;
 }
 
-function lineItemsTable(lineItems: LineItem[], taxRate: number): string {
-  const laborTotal = lineItems
-    .filter((li) => li.type === "labor")
-    .reduce((sum, li) => sum + li.quantity * li.unit_cost, 0);
-  const partsTotal = lineItems
-    .filter((li) => li.type === "part")
-    .reduce((sum, li) => sum + li.quantity * li.unit_cost, 0);
-  const tax = partsTotal * taxRate;
-  const grandTotal = laborTotal + partsTotal + tax;
-
+function lineItemsTable(lineItems: LineItem[], totals: TotalsBreakdown): string {
   const rows = lineItems
     .map(
       (li) => `
@@ -81,6 +70,38 @@ function lineItemsTable(lineItems: LineItem[], taxRate: number): string {
     )
     .join("");
 
+  let summaryRows = `
+    <tr>
+      <td style="padding:4px 0;color:#78716c;font-size:14px;">Labor</td>
+      <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(totals.laborTotal)}</td>
+    </tr>
+    <tr>
+      <td style="padding:4px 0;color:#78716c;font-size:14px;">Parts</td>
+      <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(totals.partsTotal)}</td>
+    </tr>`;
+
+  if (totals.shopSuppliesEnabled && totals.shopSupplies > 0) {
+    summaryRows += `
+    <tr>
+      <td style="padding:4px 0;color:#78716c;font-size:14px;">Shop Supplies</td>
+      <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(totals.shopSupplies)}</td>
+    </tr>`;
+  }
+
+  if (totals.hazmatEnabled && totals.hazmat > 0) {
+    summaryRows += `
+    <tr>
+      <td style="padding:4px 0;color:#78716c;font-size:14px;">${totals.hazmatLabel}</td>
+      <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(totals.hazmat)}</td>
+    </tr>`;
+  }
+
+  summaryRows += `
+    <tr>
+      <td style="padding:4px 0;color:#78716c;font-size:14px;">Tax (${(totals.taxRate * 100).toFixed(2)}%)</td>
+      <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(totals.taxAmount)}</td>
+    </tr>`;
+
   return `
   <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
     <tr style="background-color:#fafaf9;">
@@ -92,21 +113,10 @@ function lineItemsTable(lineItems: LineItem[], taxRate: number): string {
     ${rows}
   </table>
   <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
-    <tr>
-      <td style="padding:4px 0;color:#78716c;font-size:14px;">Labor</td>
-      <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(laborTotal)}</td>
-    </tr>
-    <tr>
-      <td style="padding:4px 0;color:#78716c;font-size:14px;">Parts</td>
-      <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(partsTotal)}</td>
-    </tr>
-    <tr>
-      <td style="padding:4px 0;color:#78716c;font-size:14px;">Tax (${(taxRate * 100).toFixed(2)}% on parts)</td>
-      <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(tax)}</td>
-    </tr>
+    ${summaryRows}
     <tr>
       <td style="padding:8px 0;border-top:2px solid #1c1917;color:#1c1917;font-size:16px;font-weight:700;">Total</td>
-      <td style="padding:8px 0;border-top:2px solid #1c1917;color:#1c1917;font-size:16px;font-weight:700;text-align:right;">${formatMoneyDollars(grandTotal)}</td>
+      <td style="padding:8px 0;border-top:2px solid #1c1917;color:#1c1917;font-size:16px;font-weight:700;text-align:right;">${formatMoneyDollars(totals.grandTotal)}</td>
     </tr>
   </table>`;
 }
@@ -117,14 +127,14 @@ export function estimateReadyEmail({
   vehicleDesc,
   approvalUrl,
   lineItems,
-  taxRate,
+  totals,
 }: {
   customerName: string;
   jobTitle: string | null;
   vehicleDesc: string;
   approvalUrl: string;
   lineItems: LineItem[];
-  taxRate: number;
+  totals: TotalsBreakdown;
 }): { subject: string; html: string } {
   const content = `
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
@@ -147,7 +157,7 @@ export function estimateReadyEmail({
         </td>
       </tr>
     </table>
-    ${lineItemsTable(lineItems, taxRate)}
+    ${lineItemsTable(lineItems, totals)}
     <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
       <tr>
         <td align="center">
@@ -174,7 +184,7 @@ export function paymentReceiptEmail({
   amount,
   paymentMethod,
   lineItems,
-  taxRate,
+  totals,
 }: {
   customerName: string;
   jobTitle: string | null;
@@ -182,7 +192,7 @@ export function paymentReceiptEmail({
   amount: number;
   paymentMethod: string;
   lineItems: LineItem[];
-  taxRate: number;
+  totals: TotalsBreakdown;
 }): { subject: string; html: string } {
   const methodLabel =
     paymentMethod === "stripe"
@@ -223,7 +233,7 @@ export function paymentReceiptEmail({
         </td>
       </tr>
     </table>
-    ${lineItemsTable(lineItems, taxRate)}`;
+    ${lineItemsTable(lineItems, totals)}`;
 
   return {
     subject: "Payment receipt from Broadway Motors",

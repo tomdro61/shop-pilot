@@ -1282,3 +1282,86 @@
 - RO numbers auto-increment via PostgreSQL sequence — no application logic needed for assignment
 - Print page fetches expanded data (customer address, vehicle VIN/plate) via direct Supabase query
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+---
+
+## Session 17 — 2026-02-24 — Shop Settings: Configurable Tax, Shop Supplies & Environmental Fee
+
+### What Was Completed
+
+1. **Database: `shop_settings` table** — New migration (`20250224100000_shop_settings.sql`) creates single-row settings table with: tax_rate (default 6.25%), shop_supplies_enabled/method/rate/cap, hazmat_enabled/amount/label. RLS: authenticated read, manager update. Seeded with defaults. Uses existing `update_updated_at()` trigger.
+
+2. **TypeScript types** — Added `shop_settings` Row/Insert/Update to `supabase.ts`, plus `ShopSettings`, `ShopSettingsUpdate`, `ShopSuppliesMethod` aliases in `index.ts`.
+
+3. **Shared `calculateTotals()` utility** (`src/lib/utils/totals.ts`) — Single function replaces all duplicated labor/parts/tax math. Returns `TotalsBreakdown` with: laborTotal, partsTotal, shopSupplies, hazmat, taxableAmount, taxAmount, taxRate, grandTotal, plus enabled flags and labels. Handles all 4 shop supplies methods (percent_of_labor/parts/total, flat) + cap logic. `DEFAULT_SETTINGS` constant for fallback. Tax rule: `taxableAmount = parts + shopSupplies` (not labor, not hazmat).
+
+4. **Server actions + validator** — `getShopSettings()` and `updateShopSettings()` in `src/lib/actions/settings.ts`. Zod schema in `src/lib/validators/settings.ts`.
+
+5. **Updated all calculation sites** to use `calculateTotals`:
+   - `line-items-list.tsx` — accepts `settings` prop, shows full breakdown (labor/parts/supplies/hazmat/tax/total)
+   - `estimate-line-items-list.tsx` — accepts `settings` prop, shows supplies + hazmat rows
+   - `jobs/[id]/page.tsx` — fetches settings, passes to LineItemsList, computes grandTotal via calculateTotals
+   - `jobs/[id]/print/page.tsx` — fetches settings, full totals section with supplies + hazmat rows
+   - `estimates/[id]/page.tsx` — fetches settings, passes to EstimateLineItemsList
+   - `estimates/approve/[token]/page.tsx` — fetches settings, full breakdown on public page
+   - `stripe/create-invoice.ts` — accepts settings, adds Stripe line items for supplies + hazmat + tax
+   - `resend/templates.ts` — `lineItemsTable()` accepts `TotalsBreakdown`, adds supplies + hazmat rows
+   - `actions/email.ts` — fetches settings, computes totals, passes to templates
+   - `actions/estimates.ts` — uses `settings.tax_rate` for new estimates; passes settings to `createStripeInvoice`
+   - `actions/invoices.ts` — passes settings to `createStripeInvoice`
+
+6. **Deprecated `MA_SALES_TAX_RATE`** — Added `@deprecated` JSDoc comment. Kept as fallback in `DEFAULT_SETTINGS`.
+
+7. **Settings UI** — `/settings/rates` page with `ShopSettingsForm` client component:
+   - **Sales Tax**: rate input (percentage)
+   - **Shop Supplies Fee**: toggle, method selector (% of labor/parts/total, flat), rate input, cap input
+   - **Environmental Fee**: toggle, label input, amount input
+   - Save button with toast feedback. Added shadcn Switch component.
+   - Updated `/settings` page with "Rates & Fees" card (DollarSign icon)
+
+8. **AI Tools** — 2 new tools (`get_shop_settings`, `update_shop_settings`) with handlers. System prompt updated: mentions configurable rates, instructs AI to check settings before quoting totals, `update_shop_settings` requires confirmation.
+
+9. **Navigation** — Added `/settings/rates` → "Rates & Fees" to header page titles map.
+
+### New Files (6)
+- `supabase/migrations/20250224100000_shop_settings.sql`
+- `src/lib/utils/totals.ts`
+- `src/lib/actions/settings.ts`
+- `src/lib/validators/settings.ts`
+- `src/app/(dashboard)/settings/rates/page.tsx`
+- `src/components/forms/shop-settings-form.tsx`
+
+### Modified Files (19)
+- `src/types/supabase.ts` — shop_settings Row/Insert/Update
+- `src/types/index.ts` — ShopSettings, ShopSettingsUpdate, ShopSuppliesMethod
+- `src/lib/constants.ts` — MA_SALES_TAX_RATE deprecated
+- `src/components/dashboard/line-items-list.tsx` — settings prop, full totals breakdown
+- `src/components/dashboard/estimate-line-items-list.tsx` — settings prop, totals breakdown
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — fetch settings, pass to LineItemsList
+- `src/app/(dashboard)/jobs/[id]/print/page.tsx` — fetch settings, calculateTotals
+- `src/app/(dashboard)/estimates/[id]/page.tsx` — fetch settings, pass to list
+- `src/app/estimates/approve/[token]/page.tsx` — fetch settings, calculateTotals
+- `src/lib/stripe/create-invoice.ts` — settings param, supplies+hazmat+tax line items
+- `src/lib/resend/templates.ts` — TotalsBreakdown in lineItemsTable
+- `src/lib/actions/email.ts` — fetch settings, pass totals to templates
+- `src/lib/actions/estimates.ts` — settings.tax_rate, pass settings to Stripe
+- `src/lib/actions/invoices.ts` — pass settings to createStripeInvoice
+- `src/app/(dashboard)/settings/page.tsx` — Rates & Fees card
+- `src/lib/ai/tools.ts` — get_shop_settings, update_shop_settings
+- `src/lib/ai/handlers.ts` — settings tool handlers
+- `src/lib/ai/system-prompt.ts` — configurable rates, confirmation rule
+- `src/components/layout/header.tsx` — /settings/rates page title
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] Run shop_settings migration against Supabase (`npx supabase db push` or SQL Editor)
+- [ ] Run RO number migration against Supabase
+- [ ] Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+
+### What's Next
+- Run migration, verify defaults, test settings page
+- Enable fees and verify totals on job detail, print RO, estimate pages
+- Phase 4: vehicle service history, work orders, labor rates, inventory

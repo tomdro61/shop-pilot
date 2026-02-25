@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
 import { createStripeInvoice } from "@/lib/stripe/create-invoice";
+import { getShopSettings } from "@/lib/actions/settings";
 import { revalidatePath } from "next/cache";
 
 export async function getOrCreateStripeCustomer(customerId: string) {
@@ -119,13 +120,15 @@ export async function createInvoiceFromJob(jobId: string) {
     return { error: stripeResult.error || "Failed to get Stripe customer" };
   }
 
-  // Create Stripe invoice
+  // Create Stripe invoice with current shop settings
+  const shopSettings = await getShopSettings();
   try {
     const { stripeInvoiceId, hostedInvoiceUrl, amountDue } =
       await createStripeInvoice({
         stripeCustomerId: stripeResult.data,
         lineItems,
         jobCategory: derivedCategory !== "Uncategorized" ? derivedCategory : null,
+        settings: shopSettings,
       });
 
     // Insert invoice record

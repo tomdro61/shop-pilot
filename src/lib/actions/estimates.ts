@@ -9,7 +9,7 @@ import {
 import { getOrCreateStripeCustomer } from "./invoices";
 import { createStripeInvoice } from "@/lib/stripe/create-invoice";
 import { revalidatePath } from "next/cache";
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { getShopSettings } from "@/lib/actions/settings";
 import type { EstimateLineItemFormData } from "@/lib/validators/estimate";
 import crypto from "crypto";
 
@@ -27,19 +27,19 @@ export async function createEstimateFromJob(jobId: string) {
     return { error: "An estimate already exists for this job" };
   }
 
-  // Get job line items to copy
-  const { data: lineItems } = await supabase
-    .from("job_line_items")
-    .select("*")
-    .eq("job_id", jobId);
+  // Get job line items to copy and current settings
+  const [{ data: lineItems }, settings] = await Promise.all([
+    supabase.from("job_line_items").select("*").eq("job_id", jobId),
+    getShopSettings(),
+  ]);
 
-  // Create estimate
+  // Create estimate with current tax rate from settings
   const { data: estimate, error } = await supabase
     .from("estimates")
     .insert({
       job_id: jobId,
       status: "draft",
-      tax_rate: MA_SALES_TAX_RATE,
+      tax_rate: settings?.tax_rate ?? 0.0625,
     })
     .select()
     .single();
@@ -227,13 +227,15 @@ export async function approveEstimate(token: string) {
       .eq("id", job.customers.id);
   }
 
-  // Create Stripe invoice
+  // Create Stripe invoice with current shop settings
+  const shopSettings = await getShopSettings();
   try {
     const { stripeInvoiceId, hostedInvoiceUrl, amountDue } =
       await createStripeInvoice({
         stripeCustomerId,
         lineItems,
         jobCategory: null,
+        settings: shopSettings,
       });
 
     // Insert invoice record

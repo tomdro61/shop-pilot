@@ -14,21 +14,23 @@ import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteLineItem } from "@/lib/actions/job-line-items";
 import { formatCurrency } from "@/lib/utils/format";
 import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
+import { calculateTotals } from "@/lib/utils/totals";
 import { Plus, Pencil, Trash2, Wrench } from "lucide-react";
-import type { JobLineItem } from "@/types";
+import type { JobLineItem, ShopSettings } from "@/types";
 
 interface LineItemsListProps {
   jobId: string;
   lineItems: JobLineItem[];
+  settings?: ShopSettings | null;
 }
 
-export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
+export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
   const [defaultCategory, setDefaultCategory] = useState<string | undefined>(undefined);
 
-  const grandTotal = lineItems.reduce((sum, li) => sum + (li.total || 0), 0);
+  const totals = calculateTotals(lineItems, settings);
 
   async function handleDelete(id: string) {
     const result = await deleteLineItem(id, jobId);
@@ -172,10 +174,31 @@ export function LineItemsList({ jobId, lineItems }: LineItemsListProps) {
                 </div>
               );
             })}
-            <div className="border-t border-stone-200 dark:border-stone-800 pt-3 flex justify-end">
-              <div className="text-right">
-                <p className="text-[11px] font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-[0.06em]">Total</p>
-                <p className="text-2xl font-bold text-stone-900 dark:text-stone-50 tracking-tight">{formatCurrency(grandTotal)}</p>
+            <div className="border-t border-stone-200 dark:border-stone-800 pt-3 space-y-1">
+              <div className="flex justify-end gap-6 text-sm text-stone-500 dark:text-stone-400">
+                {totals.laborTotal > 0 && <span>Labor: {formatCurrency(totals.laborTotal)}</span>}
+                {totals.partsTotal > 0 && <span>Parts: {formatCurrency(totals.partsTotal)}</span>}
+              </div>
+              {totals.shopSuppliesEnabled && totals.shopSupplies > 0 && (
+                <div className="flex justify-end text-sm text-stone-500 dark:text-stone-400">
+                  Shop Supplies: {formatCurrency(totals.shopSupplies)}
+                </div>
+              )}
+              {totals.hazmatEnabled && totals.hazmat > 0 && (
+                <div className="flex justify-end text-sm text-stone-500 dark:text-stone-400">
+                  {totals.hazmatLabel}: {formatCurrency(totals.hazmat)}
+                </div>
+              )}
+              {totals.taxAmount > 0 && (
+                <div className="flex justify-end text-sm text-stone-500 dark:text-stone-400">
+                  Tax ({(totals.taxRate * 100).toFixed(2)}%): {formatCurrency(totals.taxAmount)}
+                </div>
+              )}
+              <div className="flex justify-end">
+                <div className="text-right">
+                  <p className="text-[11px] font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-[0.06em]">Total</p>
+                  <p className="text-2xl font-bold text-stone-900 dark:text-stone-50 tracking-tight">{formatCurrency(totals.grandTotal)}</p>
+                </div>
               </div>
             </div>
           </>

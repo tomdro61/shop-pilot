@@ -103,6 +103,7 @@ export const DEFAULT_JOB_CATEGORIES = [
   "Other",
 ];
 
+/** @deprecated Use shop_settings.tax_rate from database instead. Kept as fallback in DEFAULT_SETTINGS. */
 export const MA_SALES_TAX_RATE = 0.0625; // 6.25%
 
 // Estimate Status

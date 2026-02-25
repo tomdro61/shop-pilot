@@ -1,5 +1,6 @@
 import { getStripe } from "./index";
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { calculateTotals } from "@/lib/utils/totals";
+import type { ShopSettings } from "@/types";
 
 interface LineItem {
   type: "labor" | "part";
@@ -12,6 +13,7 @@ interface CreateStripeInvoiceParams {
   stripeCustomerId: string;
   lineItems: LineItem[];
   jobCategory?: string | null;
+  settings?: ShopSettings | null;
 }
 
 interface CreateStripeInvoiceResult {
@@ -24,8 +26,10 @@ export async function createStripeInvoice({
   stripeCustomerId,
   lineItems,
   jobCategory,
+  settings,
 }: CreateStripeInvoiceParams): Promise<CreateStripeInvoiceResult> {
   const stripe = getStripe();
+  const totals = calculateTotals(lineItems, settings);
 
   const invoice = await stripe.invoices.create({
     customer: stripeCustomerId,
@@ -47,18 +51,35 @@ export async function createStripeInvoice({
     });
   }
 
-  // Calculate parts tax (MA 6.25% on parts only)
-  const partsTotal = lineItems
-    .filter((li) => li.type === "part")
-    .reduce((sum, li) => sum + li.quantity * li.unit_cost, 0);
-
-  if (partsTotal > 0) {
-    const taxAmountCents = Math.round(partsTotal * MA_SALES_TAX_RATE * 100);
+  // Shop supplies fee
+  if (totals.shopSuppliesEnabled && totals.shopSupplies > 0) {
     await stripe.invoiceItems.create({
       customer: stripeCustomerId,
       invoice: invoice.id,
-      description: `MA Sales Tax (${(MA_SALES_TAX_RATE * 100).toFixed(2)}% on parts)`,
-      amount: taxAmountCents,
+      description: "Shop Supplies",
+      amount: Math.round(totals.shopSupplies * 100),
+      currency: "usd",
+    });
+  }
+
+  // Hazmat / environmental fee
+  if (totals.hazmatEnabled && totals.hazmat > 0) {
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      invoice: invoice.id,
+      description: totals.hazmatLabel,
+      amount: Math.round(totals.hazmat * 100),
+      currency: "usd",
+    });
+  }
+
+  // Tax (on parts + shop supplies)
+  if (totals.taxAmount > 0) {
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      invoice: invoice.id,
+      description: `MA Sales Tax (${(totals.taxRate * 100).toFixed(2)}%)`,
+      amount: Math.round(totals.taxAmount * 100),
       currency: "usd",
     });
   }

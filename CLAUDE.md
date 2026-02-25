@@ -39,6 +39,7 @@ Core tables in Supabase PostgreSQL:
 - **invoices** — id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status (draft/sent/paid), amount, paid_at
 - **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
+- **shop_settings** — single-row config: tax_rate, shop_supplies_enabled, shop_supplies_method (percent_of_labor/parts/total/flat), shop_supplies_rate, shop_supplies_cap, hazmat_enabled, hazmat_amount, hazmat_label
 
 **Job statuses:** Not Started → Waiting for Parts → In Progress → Complete
 **Payment tracked separately:** payment_status (unpaid → invoiced → paid / waived), payment_method (stripe/cash/check/ach/terminal)
@@ -150,7 +151,7 @@ shop-pilot/
 **Goal:** Voice/text-first shop management from a phone.
 
 - ~~Claude API integration with function calling (tool use)~~ DONE — `@anthropic-ai/sdk`, Haiku 4.5
-- ~~Define full tool suite: customer lookup, job CRUD, estimate/invoice generation, messaging, status updates~~ DONE — 34 tools in `src/lib/ai/tools.ts`
+- ~~Define full tool suite: customer lookup, job CRUD, estimate/invoice generation, messaging, status updates~~ DONE — 37 tools in `src/lib/ai/tools.ts`
 - ~~Mobile-optimized chat interface~~ DONE — `/chat` page + floating chat bubble
 - ~~Confirmation step before any financial action (invoice, payment, etc.)~~ DONE — system prompt enforces confirmation pattern
 - Voice input (Web Speech API or Whisper) — deferred
@@ -228,7 +229,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 
 **Phase 1: COMPLETE** — Deployed and live on Vercel
 **Phase 2: COMPLETE** — Stripe invoicing + estimates + Quo SMS + Terminal + Resend email all built
-**Phase 3: COMPLETE** — AI Assistant with Claude API, 35 tools, streaming chat UI
+**Phase 3: COMPLETE** — AI Assistant with Claude API, 37 tools, streaming chat UI
 **Session 4:** Team management, tech assignment on jobs, reports date filtering + tech charts
 **Session 5:** Full AI chat assistant (Phase 3)
 **Session 6:** Dashboard operational intelligence, UI refresh phase 2
@@ -242,6 +243,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 14:** Resend transactional email integration — client, templates, server actions, auto-send, AI tool
 **Session 15:** Wix customer CSV import (~3,000 contacts), customer list server-side pagination
 **Session 16:** RO numbers (sequential, auto-assigned) + printable repair order page
+**Session 17:** Shop settings — configurable tax rate, shop supplies fee, environmental fee
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -250,7 +252,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
 - Quo SMS: fully wired (send/receive/webhook), auto-texts estimate approval links + invoice payment links; blocked on A2P registration
 - Resend Email: full transactional email — branded HTML templates (estimate, receipt, generic), auto-send on estimate send + invoice paid, AI `send_email` tool, test mode with console logging, delivery status tracking in `messages` table
-- AI Assistant: conversational chat at `/chat` with 35 tools covering all CRUD + SMS + email operations, streaming SSE, floating chat bubble on all pages
+- AI Assistant: conversational chat at `/chat` with 37 tools covering all CRUD + SMS + email + settings operations, streaming SSE, floating chat bubble on all pages
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
 - Job Presets: reusable templates with pre-filled line items, `/presets` management page
 - Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
@@ -258,10 +260,12 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Wix import: one-time script (`scripts/import-wix-customers.ts`) with filtering, dedup, dry-run mode
 - RO Numbers: auto-assigned sequential repair order numbers (RO-0001 format) on all jobs via PostgreSQL sequence
 - Printable Repair Order: `/jobs/[id]/print` — print-optimized document with shop header, customer/vehicle info, itemized line items, tax, totals
+- **Shop Settings:** Configurable tax rate, shop supplies fee (4 calculation methods + cap), environmental/hazmat fee. Settings page at `/settings/rates`. All totals computed via shared `calculateTotals()` utility. Fees default to disabled. Tax rule: parts + shop supplies are taxable; labor and hazmat are not.
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
 **Remaining work:**
+- Run shop_settings migration against Supabase (SQL Editor or `npx supabase db push`)
 - Run RO number migration against Supabase (SQL Editor)
 - Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
 - Run Terminal migration against Supabase

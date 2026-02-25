@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatRONumber, formatCurrency, formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/format";
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { getShopSettings } from "@/lib/actions/settings";
+import { calculateTotals } from "@/lib/utils/totals";
 import { PrintButton } from "./print-button";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -80,14 +81,8 @@ export default async function PrintRepairOrderPage({
   }
 
   // Calculate totals
-  const laborTotal = lineItems
-    .filter((li) => li.type === "labor")
-    .reduce((sum, li) => sum + (li.total || 0), 0);
-  const partsTotal = lineItems
-    .filter((li) => li.type === "part")
-    .reduce((sum, li) => sum + (li.total || 0), 0);
-  const tax = partsTotal * MA_SALES_TAX_RATE;
-  const grandTotal = laborTotal + partsTotal + tax;
+  const settings = await getShopSettings();
+  const totals = calculateTotals(lineItems, settings);
 
   return (
     <div className="print-ro mx-auto max-w-3xl bg-white p-8 text-stone-900">
@@ -233,19 +228,31 @@ export default async function PrintRepairOrderPage({
         <div className="w-64 text-sm">
           <div className="flex justify-between py-1">
             <span>Labor Subtotal</span>
-            <span className="tabular-nums">{formatCurrency(laborTotal)}</span>
+            <span className="tabular-nums">{formatCurrency(totals.laborTotal)}</span>
           </div>
           <div className="flex justify-between py-1">
             <span>Parts Subtotal</span>
-            <span className="tabular-nums">{formatCurrency(partsTotal)}</span>
+            <span className="tabular-nums">{formatCurrency(totals.partsTotal)}</span>
           </div>
+          {totals.shopSuppliesEnabled && totals.shopSupplies > 0 && (
+            <div className="flex justify-between py-1 text-stone-500">
+              <span>Shop Supplies</span>
+              <span className="tabular-nums">{formatCurrency(totals.shopSupplies)}</span>
+            </div>
+          )}
+          {totals.hazmatEnabled && totals.hazmat > 0 && (
+            <div className="flex justify-between py-1 text-stone-500">
+              <span>{totals.hazmatLabel}</span>
+              <span className="tabular-nums">{formatCurrency(totals.hazmat)}</span>
+            </div>
+          )}
           <div className="flex justify-between py-1 text-stone-500">
-            <span>Tax ({(MA_SALES_TAX_RATE * 100).toFixed(2)}% on parts)</span>
-            <span className="tabular-nums">{formatCurrency(tax)}</span>
+            <span>Tax ({(totals.taxRate * 100).toFixed(2)}%)</span>
+            <span className="tabular-nums">{formatCurrency(totals.taxAmount)}</span>
           </div>
           <div className="mt-1 flex justify-between border-t-2 border-stone-900 pt-2 text-base font-bold">
             <span>Total</span>
-            <span className="tabular-nums">{formatCurrency(grandTotal)}</span>
+            <span className="tabular-nums">{formatCurrency(totals.grandTotal)}</span>
           </div>
         </div>
       </div>
