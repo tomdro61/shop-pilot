@@ -60,9 +60,9 @@ export default async function JobDetailPage({
             Back to Jobs
           </Button>
         </Link>
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <h2 className="text-xl font-semibold tracking-tight lg:text-2xl text-stone-900 dark:text-stone-50">
                 {job.title || "Job"}
               </h2>
@@ -105,7 +105,7 @@ export default async function JobDetailPage({
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
             <Link href={`/jobs/${id}/print`}>
               <Button variant="outline" size="sm">
