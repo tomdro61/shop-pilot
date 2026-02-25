@@ -1365,3 +1365,78 @@
 - Run migration, verify defaults, test settings page
 - Enable fees and verify totals on job detail, print RO, estimate pages
 - Phase 4: vehicle service history, work orders, labor rates, inventory
+
+---
+
+## Session 18 — 2026-02-25 — Part Cost Tracking for Accurate Profitability
+
+### What Was Completed
+
+**Added wholesale cost tracking on part line items so the system can report actual profit margins instead of the hardcoded 40% estimate:**
+
+1. **Database Migration** (`supabase/migrations/20250226000000_add_part_cost.sql`) — Added `cost numeric(10, 2) DEFAULT NULL` column to `job_line_items`. Nullable: existing rows get NULL (cost unknown), labor rows stay NULL.
+
+2. **TypeScript Types** (`src/types/supabase.ts`) — Added `cost: number | null` to `job_line_items` Row, `cost?: number | null` to Insert/Update
+
+3. **PresetLineItem Type** (`src/types/index.ts`) — Added `cost?: number | null` to `PresetLineItem`
+
+4. **Validator + Prepare** (`src/lib/validators/job.ts`) — Added `cost: z.number().min(0).nullable().optional()` to `lineItemSchema`; `prepareLineItemData` includes `cost`, clears to `null` for labor type
+
+5. **Line Item Form** (`src/components/forms/line-item-form.tsx`) — Renamed "Unit Cost" label → "Price" (distinguishes from new cost field); added "Your Cost" input shown only for part type (alongside part number in 2-col grid); shows margin % indicator when both cost and price are filled; wired into defaultValues, reset, and submit
+
+6. **Line Items List** (`src/components/dashboard/line-items-list.tsx`) — `formatDetail()` for parts with `cost` set now appends `(cost: $X.XX, XX% margin)` to detail text
+
+7. **Reports — Core Change** (`src/lib/actions/reports.ts`) — Query now selects `unit_cost, cost` from line items; tracks actual vs estimated parts cost separately (parts with `cost` → actual, parts without → 60% of retail estimate); replaced `partsRevenue * 0.4` gross profit with computed `totalRevenue - totalPartsCost`; added `costDataCoverage` percentage (% of parts with actual cost data); profitability table rows include `hasEstimatedCosts` flag and `grossProfit`
+
+8. **Reports Page** (`src/app/(dashboard)/reports/page.tsx`) — KPI card: "Est. Gross Profit" → "Gross Profit" with coverage % subtitle; profitability table: renamed "Parts Cost" to actual cost (was displaying parts revenue), replaced "Labor Revenue" column with "Gross Profit" column, `~` indicator on rows with estimated costs
+
+9. **AI Tools** (`src/lib/ai/tools.ts`) — Added `cost` param to `create_line_item` and `update_line_item` (optional, parts only); renamed `unit_cost` description to "Retail price per unit"
+
+10. **AI Handlers** (`src/lib/ai/handlers.ts`) — Wired `cost` through in both `create_line_item` and `update_line_item` cases
+
+11. **Preset Form** (`src/components/forms/preset-form.tsx`) — Added "Your cost" input for part-type preset line items; included in form data submission
+
+12. **Presets Action** (`src/lib/actions/presets.ts`) — `applyPresetToJob` includes `cost` in row mapping for part-type items
+
+### Customer-Facing: NO Changes (Verified)
+- `src/lib/stripe/create-invoice.ts` — Sends retail price only
+- `src/app/(dashboard)/jobs/[id]/print/page.tsx` — Print RO, customer-facing
+- `src/lib/actions/estimates.ts` — Copies unit_cost only to estimate line items
+- Estimate approval page — Customer-facing
+
+### New Files (1)
+- `supabase/migrations/20250226000000_add_part_cost.sql`
+
+### Modified Files (11)
+- `src/types/supabase.ts` — cost on job_line_items types
+- `src/types/index.ts` — cost on PresetLineItem
+- `src/lib/validators/job.ts` — cost on lineItemSchema + prepareLineItemData
+- `src/components/forms/line-item-form.tsx` — "Your Cost" field + Price rename + margin indicator
+- `src/components/dashboard/line-items-list.tsx` — cost/margin in detail text
+- `src/lib/actions/reports.ts` — actual vs estimated cost tracking, grossProfit calc
+- `src/app/(dashboard)/reports/page.tsx` — Gross Profit KPI + profitability table columns
+- `src/lib/ai/tools.ts` — cost param on line item tools
+- `src/lib/ai/handlers.ts` — cost wired through handlers
+- `src/components/forms/preset-form.tsx` — cost field for part-type presets
+- `src/lib/actions/presets.ts` — cost in applyPresetToJob
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] Run part_cost migration against Supabase (`npx supabase db push` or SQL Editor)
+- [ ] Run shop_settings migration against Supabase
+- [ ] Run RO number migration against Supabase
+- [ ] Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+
+### What's Next
+- Run migration, add cost data to existing parts, verify reports
+- Phase 4: vehicle service history, work orders, labor rates, inventory
+
+### Known Issues / Notes
+- Migration must be run against Supabase (`npx supabase db push` or SQL Editor)
+- Existing parts have `cost = NULL` — reports fall back to 40% margin estimate for these
+- Coverage indicator on reports shows what % of parts have actual cost data
+- Cost is never exposed to customers (invoices, estimates, print RO all use retail price only)
+- `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)

@@ -29,7 +29,7 @@ export async function getReportData(params: {
   // ONE query for current period — includes tech and line item data for all aggregations
   const currentPromise = supabase
     .from("jobs")
-    .select("id, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, category)")
+    .select("id, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, unit_cost, cost, category)")
     .eq("status", "complete")
     .gte("date_finished", start)
     .lte("date_finished", end);
@@ -51,7 +51,7 @@ export async function getReportData(params: {
 
   // --- Aggregate everything from the single current-period result ---
 
-  type LineItem = { type: string; total: number; quantity: number; category: string | null };
+  type LineItem = { type: string; total: number; quantity: number; unit_cost: number; cost: number | null; category: string | null };
 
   function getLineItems(job: { job_line_items: unknown }): LineItem[] {
     return (job.job_line_items as LineItem[]) || [];
@@ -79,11 +79,16 @@ export async function getReportData(params: {
   // Jobs by category
   const catCounts: Record<string, number> = {};
   const catRevenue: Record<string, number> = {};
-  // Profitability by category (revenue + parts cost breakdown)
-  const catProfitability: Record<string, { revenue: number; partsCost: number }> = {};
+  // Profitability by category (revenue + actual/estimated parts cost breakdown)
+  const catProfitability: Record<string, { revenue: number; actualPartsCost: number; estimatedPartsCost: number; partsRevenue: number }> = {};
   // Revenue breakdown (labor vs parts)
   let laborRevenue = 0;
   let partsRevenue = 0;
+  // Parts cost tracking (actual vs estimated)
+  let totalActualPartsCost = 0;
+  let totalEstimatedPartsCost = 0;
+  let partsWithCostCount = 0;
+  let totalPartsCount = 0;
   // Inspection count
   let inspectionCount = 0;
 
@@ -119,12 +124,25 @@ export async function getReportData(params: {
       catRevenue[liCat] = (catRevenue[liCat] || 0) + (li.total || 0);
 
       if (!catProfitability[liCat]) {
-        catProfitability[liCat] = { revenue: 0, partsCost: 0 };
+        catProfitability[liCat] = { revenue: 0, actualPartsCost: 0, estimatedPartsCost: 0, partsRevenue: 0 };
       }
       catProfitability[liCat].revenue += li.total || 0;
       if (li.type === "part") {
-        catProfitability[liCat].partsCost += li.total || 0;
+        catProfitability[liCat].partsRevenue += li.total || 0;
         partsRevenue += li.total || 0;
+        totalPartsCount++;
+        if (li.cost != null) {
+          // Actual cost known
+          const actualCost = li.cost * li.quantity;
+          catProfitability[liCat].actualPartsCost += actualCost;
+          totalActualPartsCost += actualCost;
+          partsWithCostCount++;
+        } else {
+          // Estimate: assume 60% of retail price is cost (40% margin)
+          const estimatedCost = (li.total || 0) * 0.6;
+          catProfitability[liCat].estimatedPartsCost += estimatedCost;
+          totalEstimatedPartsCost += estimatedCost;
+        }
       } else if (li.type === "labor") {
         laborRevenue += li.total || 0;
       }
@@ -156,17 +174,28 @@ export async function getReportData(params: {
     .sort((a, b) => b.revenue - a.revenue);
 
   const profitability = Object.entries(catProfitability)
-    .map(([category, { revenue, partsCost }]) => ({
-      category,
-      revenue,
-      partsCost,
-      laborRevenue: revenue - partsCost,
-      margin: revenue > 0 ? ((revenue - partsCost) / revenue) * 100 : 0,
-    }))
+    .map(([category, { revenue, actualPartsCost, estimatedPartsCost, partsRevenue: catPartsRev }]) => {
+      const totalPartsCost = actualPartsCost + estimatedPartsCost;
+      const grossProfit = revenue - totalPartsCost;
+      const hasEstimatedCosts = estimatedPartsCost > 0;
+      return {
+        category,
+        revenue,
+        partsCost: totalPartsCost,
+        partsRevenue: catPartsRev,
+        grossProfit,
+        margin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
+        hasEstimatedCosts,
+      };
+    })
     .sort((a, b) => b.revenue - a.revenue);
 
   const totalRevenue = laborRevenue + partsRevenue;
-  const estimatedGrossProfit = laborRevenue + partsRevenue * 0.4;
+  const totalPartsCost = totalActualPartsCost + totalEstimatedPartsCost;
+  const grossProfit = totalRevenue - totalPartsCost;
+  const costDataCoverage = totalPartsCount > 0
+    ? Math.round((partsWithCostCount / totalPartsCount) * 100)
+    : 100;
 
   const avgTicket = jobsCurrent > 0 ? revenueCurrent / jobsCurrent : 0;
 
@@ -183,7 +212,7 @@ export async function getReportData(params: {
     isAllTime,
     // Folded-in data (previously separate queries)
     profitability,
-    breakdown: { laborRevenue, partsRevenue, totalRevenue, estimatedGrossProfit },
+    breakdown: { laborRevenue, partsRevenue, totalRevenue, grossProfit, costDataCoverage },
     inspectionCount,
   };
 }

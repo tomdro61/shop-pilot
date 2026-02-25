@@ -45,6 +45,7 @@ export const lineItemSchema = z.object({
   description: z.string().min(1, "Description is required").max(500),
   quantity: z.number().min(0.01, "Quantity must be greater than 0"),
   unit_cost: z.number().min(0, "Cost must be 0 or greater"),
+  cost: z.number().min(0).nullable().optional(),
   part_number: z.string().max(100),
   category: z.string().max(100).optional(),
 });
@@ -58,6 +59,7 @@ export function prepareLineItemData(data: LineItemFormData) {
     description: data.description,
     quantity: data.quantity,
     unit_cost: data.unit_cost,
+    cost: data.type === "part" ? (data.cost ?? null) : null,
     part_number: data.part_number || null,
     category: data.category || null,
   };

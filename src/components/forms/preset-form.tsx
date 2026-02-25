@@ -90,6 +90,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
         description: item.description.trim(),
         quantity: Number(item.quantity) || 1,
         unit_cost: Number(item.unit_cost) || 0,
+        ...(item.type === "part" && item.cost != null ? { cost: Number(item.cost) } : {}),
         ...(item.part_number ? { part_number: item.part_number } : {}),
       })),
     };
@@ -212,7 +213,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="Unit cost"
+                      placeholder="Price"
                       value={item.unit_cost}
                       onChange={(e) =>
                         updateLineItem(index, { unit_cost: Number(e.target.value) || 0 })
@@ -220,14 +221,28 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
                     />
                   </div>
                   {item.type === "part" && (
-                    <Input
-                      placeholder="Part #"
-                      className="flex-1"
-                      value={item.part_number || ""}
-                      onChange={(e) =>
-                        updateLineItem(index, { part_number: e.target.value })
-                      }
-                    />
+                    <>
+                      <div className="w-24">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Your cost"
+                          value={item.cost ?? ""}
+                          onChange={(e) =>
+                            updateLineItem(index, { cost: e.target.value ? Number(e.target.value) : null })
+                          }
+                        />
+                      </div>
+                      <Input
+                        placeholder="Part #"
+                        className="flex-1"
+                        value={item.part_number || ""}
+                        onChange={(e) =>
+                          updateLineItem(index, { part_number: e.target.value })
+                        }
+                      />
+                    </>
                   )}
                   <div className="flex w-24 items-center justify-end text-sm font-medium">
                     {formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_cost) || 0))}

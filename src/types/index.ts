@@ -26,6 +26,7 @@ export type PresetLineItem = {
   description: string;
   quantity: number;
   unit_cost: number;
+  cost?: number | null;
   part_number?: string;
   category?: string;
 };

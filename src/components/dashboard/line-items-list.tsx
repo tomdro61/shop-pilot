@@ -56,7 +56,14 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
     if (item.type === "labor") {
       return `${item.quantity} hrs × ${formatCurrency(item.unit_cost)}/hr`;
     }
-    return `${item.quantity} × ${formatCurrency(item.unit_cost)}`;
+    let detail = `${item.quantity} × ${formatCurrency(item.unit_cost)}`;
+    if (item.cost != null) {
+      const margin = item.unit_cost > 0
+        ? ((item.unit_cost - item.cost) / item.unit_cost) * 100
+        : 0;
+      detail += ` (cost: ${formatCurrency(item.cost)}, ${margin.toFixed(0)}% margin)`;
+    }
+    return detail;
   }
 
   // Group line items by category

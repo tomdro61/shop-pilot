@@ -32,7 +32,7 @@ Core tables in Supabase PostgreSQL:
 - **customers** — id, first_name, last_name, phone, email, address, notes, customer_type (retail/fleet), fleet_account, stripe_customer_id, created_at
 - **vehicles** — id, customer_id, year, make, model, vin, license_plate, mileage, color, notes
 - **jobs** — id, customer_id, vehicle_id, status, title, category (deprecated — exists in DB but no longer set/displayed), assigned_tech, date_received, date_finished, notes, payment_status, payment_method, mileage_in, stripe_payment_intent_id, ro_number (auto-assigned sequential integer via `ro_number_seq`)
-- **job_line_items** — id, job_id, type (labor/part), description, quantity, unit_cost, total, part_number, category (single source of truth for service categorization)
+- **job_line_items** — id, job_id, type (labor/part), description, quantity, unit_cost, total, cost (nullable — wholesale price for parts, used for profit margin tracking), part_number, category (single source of truth for service categorization)
 - **job_presets** — id, name, category, line_items (JSONB), created_at
 - **estimates** — id, job_id, status (draft/sent/approved/declined), sent_at, approved_at, declined_at, approval_token, tax_rate, created_at
 - **estimate_line_items** — id, estimate_id, type, description, quantity, unit_cost, total, part_number
@@ -244,6 +244,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 15:** Wix customer CSV import (~3,000 contacts), customer list server-side pagination
 **Session 16:** RO numbers (sequential, auto-assigned) + printable repair order page
 **Session 17:** Shop settings — configurable tax rate, shop supplies fee, environmental fee
+**Session 18:** Part cost tracking — wholesale cost on parts for actual profit margin reporting
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -261,10 +262,12 @@ Read `PROGRESS.md` first to pick up where we left off.
 - RO Numbers: auto-assigned sequential repair order numbers (RO-0001 format) on all jobs via PostgreSQL sequence
 - Printable Repair Order: `/jobs/[id]/print` — print-optimized document with shop header, customer/vehicle info, itemized line items, tax, totals
 - **Shop Settings:** Configurable tax rate, shop supplies fee (4 calculation methods + cap), environmental/hazmat fee. Settings page at `/settings/rates`. All totals computed via shared `calculateTotals()` utility. Fees default to disabled. Tax rule: parts + shop supplies are taxable; labor and hazmat are not.
+- **Part Cost Tracking:** Optional `cost` (wholesale price) field on part line items. Reports compute actual gross profit when cost is available, fall back to 40% margin estimate when not. Cost data coverage % shown on reports. Cost is never exposed to customers (invoices, estimates, print RO all use retail price only).
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
 **Remaining work:**
+- Run part_cost migration against Supabase (SQL Editor or `npx supabase db push`)
 - Run shop_settings migration against Supabase (SQL Editor or `npx supabase db push`)
 - Run RO number migration against Supabase (SQL Editor)
 - Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var

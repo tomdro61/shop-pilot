@@ -115,6 +115,7 @@ export async function applyPresetToJob(jobId: string, presetId: string) {
     description: item.description,
     quantity: item.quantity,
     unit_cost: item.unit_cost,
+    cost: item.type === "part" && item.cost != null ? item.cost : null,
     part_number: item.part_number || null,
     category: item.category || preset.category || null,
   }));

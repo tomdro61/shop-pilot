@@ -62,7 +62,12 @@ export default async function ReportsPage({
         <KpiCard title={`Revenue (${resolved.label})`} value={formatCurrency(breakdown.totalRevenue)} accentColor="blue" />
         <KpiCard title="Labor" value={formatCurrency(breakdown.laborRevenue)} accentColor="emerald" />
         <KpiCard title="Parts" value={formatCurrency(breakdown.partsRevenue)} accentColor="amber" />
-        <KpiCard title="Est. Gross Profit" value={formatCurrency(breakdown.estimatedGrossProfit)} subtitle="Assumes 40% parts margin" accentColor="purple" />
+        <KpiCard
+          title="Gross Profit"
+          value={formatCurrency(breakdown.grossProfit)}
+          subtitle={breakdown.costDataCoverage < 100 ? `${breakdown.costDataCoverage}% actual cost data` : "Based on actual costs"}
+          accentColor="purple"
+        />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -128,7 +133,7 @@ export default async function ReportsPage({
                       <th className="pb-2 pr-4 font-medium">Category</th>
                       <th className="pb-2 pr-4 text-right font-medium">Revenue</th>
                       <th className="pb-2 pr-4 text-right font-medium">Parts Cost</th>
-                      <th className="pb-2 pr-4 text-right font-medium">Labor Revenue</th>
+                      <th className="pb-2 pr-4 text-right font-medium">Gross Profit</th>
                       <th className="pb-2 text-right font-medium">Margin %</th>
                     </tr>
                   </thead>
@@ -137,9 +142,13 @@ export default async function ReportsPage({
                       <tr key={row.category} className="border-b border-stone-100 dark:border-stone-800 last:border-0">
                         <td className="py-2 pr-4 font-medium">{row.category}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.revenue)}</td>
-                        <td className="py-2 pr-4 text-right">{formatCurrency(row.partsCost)}</td>
-                        <td className="py-2 pr-4 text-right">{formatCurrency(row.laborRevenue)}</td>
+                        <td className="py-2 pr-4 text-right">
+                          {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500" title="Includes estimated costs">~</span>}
+                          {formatCurrency(row.partsCost)}
+                        </td>
+                        <td className="py-2 pr-4 text-right">{formatCurrency(row.grossProfit)}</td>
                         <td className={`py-2 text-right font-medium ${row.margin >= 50 ? "text-green-600 dark:text-green-400" : row.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                          {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500">~</span>}
                           {row.margin.toFixed(1)}%
                         </td>
                       </tr>

@@ -198,6 +198,7 @@ export type Database = {
           quantity: number;
           unit_cost: number;
           total: number;
+          cost: number | null;
           part_number: string | null;
           category: string | null;
           created_at: string;
@@ -210,6 +211,7 @@ export type Database = {
           description: string;
           quantity?: number;
           unit_cost?: number;
+          cost?: number | null;
           part_number?: string | null;
           category?: string | null;
           created_at?: string;
@@ -222,6 +224,7 @@ export type Database = {
           description?: string;
           quantity?: number;
           unit_cost?: number;
+          cost?: number | null;
           part_number?: string | null;
           category?: string | null;
           created_at?: string;
