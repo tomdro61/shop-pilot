@@ -104,7 +104,7 @@ export default async function PrintRepairOrderPage({
         </div>
         <div className="text-right text-sm">
           <p>
-            <span className="font-medium">Date In:</span>{" "}
+            <span className="font-medium">Job Date:</span>{" "}
             {new Date(job.date_received).toLocaleDateString()}
           </p>
           {job.date_finished && (

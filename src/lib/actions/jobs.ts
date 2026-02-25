@@ -155,9 +155,11 @@ export async function updateJobStatus(id: string, status: JobStatus) {
 
   const updateData: Record<string, unknown> = { status };
 
-  // Auto-set date_finished when completing
+  // Auto-set date_finished when completing, clear it when moving back
   if (status === "complete") {
     updateData.date_finished = new Date().toISOString().split("T")[0];
+  } else {
+    updateData.date_finished = null;
   }
 
   const { error } = await supabase

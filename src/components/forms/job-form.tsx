@@ -481,13 +481,13 @@ export function JobForm({ job, defaultCustomerId, presets }: JobFormProps) {
                 )}
               />
 
-              {/* Date Received — half */}
+              {/* Job Date — half */}
               <FormField
                 control={form.control}
                 name="date_received"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Date Received</FormLabel>
+                    <FormLabel>Job Date</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>

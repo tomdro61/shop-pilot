@@ -212,7 +212,7 @@ export const tools: Anthropic.Tool[] = [
         },
         title: { type: "string", description: "Free-text job title describing the full scope of work (e.g. 'Brake job and coolant filter')" },
         assigned_tech: { type: "string", description: "Technician user UUID" },
-        date_received: { type: "string", description: "Date received (YYYY-MM-DD, defaults to today)" },
+        date_received: { type: "string", description: "Job date (YYYY-MM-DD, defaults to today)" },
         date_finished: { type: "string", description: "Date finished (YYYY-MM-DD)" },
         notes: { type: "string", description: "Job notes" },
         payment_status: {
@@ -264,7 +264,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "update_job_status",
     description:
-      "Update only the job status. Automatically sets date_finished when status is 'complete'. Confirm with user before setting to 'complete'.",
+      "Update only the job status. Automatically sets date_finished when status is 'complete' and clears it when moving out of 'complete'. Confirm with user before setting to 'complete'.",
     input_schema: {
       type: "object" as const,
       properties: {
