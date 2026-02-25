@@ -3,7 +3,7 @@ import { getReportData, getFleetARSummary } from "@/lib/actions/reports";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { CategoryBarChart } from "@/components/dashboard/category-bar-chart";
+import { HorizontalBarChart } from "@/components/dashboard/horizontal-bar-chart";
 import { ReportsToolbar } from "@/components/dashboard/reports-toolbar";
 import { formatCurrency } from "@/lib/utils/format";
 
@@ -27,27 +27,22 @@ export default async function ReportsPage({
     getFleetARSummary(),
   ]);
 
-  const { profitability, breakdown, inspectionCount } = data;
+  const { profitability, breakdown, inspectionCount, estimateCloseRate } = data;
 
-  const jobsChartData = data.jobsByCategory.map((d) => ({
-    category: d.category,
-    value: d.count,
+  const categoryChartData = data.categoryBreakdown.map((d) => ({
+    label: d.category,
+    revenue: d.revenue,
+    jobCount: d.jobCount,
   }));
 
-  const revenueChartData = data.revenueByCategory.map((d) => ({
-    category: d.category,
-    value: d.revenue,
+  const techChartData = data.techBreakdown.map((d) => ({
+    label: d.name,
+    revenue: d.revenue,
+    jobCount: d.jobCount,
   }));
 
-  const jobsByTechData = data.jobsByTech.map((d) => ({
-    category: d.category,
-    value: d.count,
-  }));
-
-  const revenueByTechData = data.revenueByTech.map((d) => ({
-    category: d.category,
-    value: d.revenue,
-  }));
+  const laborPct = breakdown.totalRevenue > 0 ? Math.round((breakdown.laborRevenue / breakdown.totalRevenue) * 100) : 0;
+  const partsPct = breakdown.totalRevenue > 0 ? Math.round((breakdown.partsRevenue / breakdown.totalRevenue) * 100) : 0;
 
   return (
     <div className="p-4 lg:p-6">
@@ -57,11 +52,11 @@ export default async function ReportsPage({
         </Suspense>
       </div>
 
-      {/* Revenue Breakdown */}
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      {/* Row 1 — Money */}
+      <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard title={`Revenue (${resolved.label})`} value={formatCurrency(breakdown.totalRevenue)} accentColor="blue" />
-        <KpiCard title="Labor" value={formatCurrency(breakdown.laborRevenue)} accentColor="emerald" />
-        <KpiCard title="Parts" value={formatCurrency(breakdown.partsRevenue)} accentColor="amber" />
+        <KpiCard title="Labor Revenue" value={formatCurrency(breakdown.laborRevenue)} subtitle={`${laborPct}% of total`} accentColor="emerald" />
+        <KpiCard title="Parts Revenue" value={formatCurrency(breakdown.partsRevenue)} subtitle={`${partsPct}% of total`} accentColor="amber" />
         <KpiCard
           title="Gross Profit"
           value={formatCurrency(breakdown.grossProfit)}
@@ -70,54 +65,45 @@ export default async function ReportsPage({
         />
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Row 2 — Operations */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard
-          title={`Jobs (${resolved.label})`}
+          title="Jobs Completed"
           value={data.jobsCurrent.toString()}
           currentValue={data.isAllTime ? undefined : data.jobsCurrent}
-          previousValue={
-            data.isAllTime ? undefined : (data.jobsPrior ?? undefined)
-          }
+          previousValue={data.isAllTime ? undefined : (data.jobsPrior ?? undefined)}
           accentColor="blue"
         />
         <KpiCard
-          title={`Inspections (${resolved.label})`}
-          value={inspectionCount.toString()}
-          accentColor="purple"
-        />
-        <KpiCard
-          title="Avg Ticket Size"
+          title="Avg Ticket"
           value={formatCurrency(data.avgTicket)}
           accentColor="emerald"
         />
+        <KpiCard
+          title="Inspections"
+          value={inspectionCount.toString()}
+          accentColor="amber"
+        />
+        <KpiCard
+          title="Estimate Close Rate"
+          value={`${estimateCloseRate.rate.toFixed(0)}%`}
+          subtitle={estimateCloseRate.sent > 0 ? `${estimateCloseRate.approved} of ${estimateCloseRate.sent} sent` : "No estimates sent"}
+          accentColor="purple"
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <CategoryBarChart
-          title={`Jobs by Category (${resolved.label})`}
-          data={jobsChartData}
-          valueLabel="Jobs"
-        />
-        <CategoryBarChart
+      {/* Horizontal Bar Charts */}
+      <div className="space-y-6">
+        <HorizontalBarChart
           title={`Revenue by Category (${resolved.label})`}
-          data={revenueChartData}
-          valueLabel="Revenue"
-          isCurrency
+          data={categoryChartData}
         />
-        <CategoryBarChart
-          title={`Jobs by Technician (${resolved.label})`}
-          data={jobsByTechData}
-          valueLabel="Jobs"
-        />
-        <CategoryBarChart
+        <HorizontalBarChart
           title={`Revenue by Technician (${resolved.label})`}
-          data={revenueByTechData}
-          valueLabel="Revenue"
-          isCurrency
+          data={techChartData}
         />
       </div>
 
-      {/* Fleet A/R Aging */}
       {/* Service Profitability */}
       {profitability.length > 0 && (
         <div className="mt-6">
@@ -133,6 +119,7 @@ export default async function ReportsPage({
                       <th className="pb-2 pr-4 font-medium">Category</th>
                       <th className="pb-2 pr-4 text-right font-medium">Revenue</th>
                       <th className="pb-2 pr-4 text-right font-medium">Parts Cost</th>
+                      <th className="pb-2 pr-4 text-right font-medium">Labor Rev</th>
                       <th className="pb-2 pr-4 text-right font-medium">Gross Profit</th>
                       <th className="pb-2 text-right font-medium">Margin %</th>
                     </tr>
@@ -146,6 +133,7 @@ export default async function ReportsPage({
                           {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500" title="Includes estimated costs">~</span>}
                           {formatCurrency(row.partsCost)}
                         </td>
+                        <td className="py-2 pr-4 text-right">{formatCurrency(row.laborRevenue)}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.grossProfit)}</td>
                         <td className={`py-2 text-right font-medium ${row.margin >= 50 ? "text-green-600 dark:text-green-400" : row.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
                           {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500">~</span>}

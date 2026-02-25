@@ -44,10 +44,19 @@ export async function getReportData(params: {
         .lte("date_finished", priorEnd)
     : Promise.resolve({ data: null });
 
-  const [currentResult, priorResult] = await Promise.all([currentPromise, priorPromise]);
+  // Estimate close rate: estimates sent within this period
+  const estimatesPromise = supabase
+    .from("estimates")
+    .select("id, status, sent_at")
+    .in("status", ["sent", "approved"])
+    .gte("sent_at", start)
+    .lte("sent_at", end);
+
+  const [currentResult, priorResult, estimatesResult] = await Promise.all([currentPromise, priorPromise, estimatesPromise]);
 
   const currentJobs = currentResult.data || [];
   const priorJobs = priorResult.data || [];
+  const estimates = estimatesResult.data || [];
 
   // --- Aggregate everything from the single current-period result ---
 
@@ -80,7 +89,7 @@ export async function getReportData(params: {
   const catCounts: Record<string, number> = {};
   const catRevenue: Record<string, number> = {};
   // Profitability by category (revenue + actual/estimated parts cost breakdown)
-  const catProfitability: Record<string, { revenue: number; actualPartsCost: number; estimatedPartsCost: number; partsRevenue: number }> = {};
+  const catProfitability: Record<string, { revenue: number; actualPartsCost: number; estimatedPartsCost: number; partsRevenue: number; laborRevenue: number }> = {};
   // Revenue breakdown (labor vs parts)
   let laborRevenue = 0;
   let partsRevenue = 0;
@@ -124,7 +133,7 @@ export async function getReportData(params: {
       catRevenue[liCat] = (catRevenue[liCat] || 0) + (li.total || 0);
 
       if (!catProfitability[liCat]) {
-        catProfitability[liCat] = { revenue: 0, actualPartsCost: 0, estimatedPartsCost: 0, partsRevenue: 0 };
+        catProfitability[liCat] = { revenue: 0, actualPartsCost: 0, estimatedPartsCost: 0, partsRevenue: 0, laborRevenue: 0 };
       }
       catProfitability[liCat].revenue += li.total || 0;
       if (li.type === "part") {
@@ -145,6 +154,7 @@ export async function getReportData(params: {
         }
       } else if (li.type === "labor") {
         laborRevenue += li.total || 0;
+        catProfitability[liCat].laborRevenue += li.total || 0;
       }
     });
 
@@ -174,7 +184,7 @@ export async function getReportData(params: {
     .sort((a, b) => b.revenue - a.revenue);
 
   const profitability = Object.entries(catProfitability)
-    .map(([category, { revenue, actualPartsCost, estimatedPartsCost, partsRevenue: catPartsRev }]) => {
+    .map(([category, { revenue, actualPartsCost, estimatedPartsCost, partsRevenue: catPartsRev, laborRevenue: catLaborRev }]) => {
       const totalPartsCost = actualPartsCost + estimatedPartsCost;
       const grossProfit = revenue - totalPartsCost;
       const hasEstimatedCosts = estimatedPartsCost > 0;
@@ -183,6 +193,7 @@ export async function getReportData(params: {
         revenue,
         partsCost: totalPartsCost,
         partsRevenue: catPartsRev,
+        laborRevenue: catLaborRev,
         grossProfit,
         margin: revenue > 0 ? (grossProfit / revenue) * 100 : 0,
         hasEstimatedCosts,
@@ -199,6 +210,29 @@ export async function getReportData(params: {
 
   const avgTicket = jobsCurrent > 0 ? revenueCurrent / jobsCurrent : 0;
 
+  // Merged category breakdown (revenue + job count in one array)
+  const categoryBreakdown = Object.entries(catRevenue)
+    .map(([category, revenue]) => ({
+      category,
+      revenue,
+      jobCount: catCounts[category] || 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // Merged tech breakdown (revenue + job count in one array)
+  const techBreakdown = Object.entries(techRevenue)
+    .map(([name, revenue]) => ({
+      name,
+      revenue,
+      jobCount: techCounts[name] || 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // Estimate close rate
+  const estimatesSent = estimates.length;
+  const estimatesApproved = estimates.filter((e) => e.status === "approved").length;
+  const estimateCloseRate = estimatesSent > 0 ? (estimatesApproved / estimatesSent) * 100 : 0;
+
   return {
     jobsCurrent,
     revenueCurrent,
@@ -208,6 +242,9 @@ export async function getReportData(params: {
     revenueByCategory,
     jobsByTech,
     revenueByTech,
+    categoryBreakdown,
+    techBreakdown,
+    estimateCloseRate: { rate: estimateCloseRate, approved: estimatesApproved, sent: estimatesSent },
     avgTicket,
     isAllTime,
     // Folded-in data (previously separate queries)
