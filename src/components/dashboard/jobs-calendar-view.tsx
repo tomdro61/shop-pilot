@@ -9,10 +9,11 @@ import {
   endOfWeek,
   eachDayOfInterval,
   isSameMonth,
-  isSameDay,
   isToday,
   addMonths,
   subMonths,
+  addWeeks,
+  subWeeks,
   format,
 } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -47,16 +48,46 @@ interface JobsCalendarViewProps {
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MAX_VISIBLE = 2;
+const MONTH_MAX_VISIBLE = 2;
+
+type CalendarMode = "month" | "week";
 
 export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [mode, setMode] = useState<CalendarMode>("month");
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const calendarStart = startOfWeek(monthStart);
-  const calendarEnd = endOfWeek(monthEnd);
-  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  // Compute days based on mode
+  let days: Date[];
+  let headerLabel: string;
+
+  if (mode === "week") {
+    const weekStart = startOfWeek(currentDate);
+    const weekEnd = endOfWeek(currentDate);
+    days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+    // Show range like "Feb 23 – Mar 1, 2026"
+    const startMonth = format(weekStart, "MMM d");
+    const endFormatted =
+      weekStart.getMonth() === weekEnd.getMonth()
+        ? format(weekEnd, "d, yyyy")
+        : format(weekEnd, "MMM d, yyyy");
+    headerLabel = `${startMonth} – ${endFormatted}`;
+  } else {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    days = eachDayOfInterval({
+      start: startOfWeek(monthStart),
+      end: endOfWeek(monthEnd),
+    });
+    headerLabel = format(currentDate, "MMMM yyyy");
+  }
+
+  function navigateBack() {
+    setCurrentDate((d) => (mode === "week" ? subWeeks(d, 1) : subMonths(d, 1)));
+  }
+
+  function navigateForward() {
+    setCurrentDate((d) => (mode === "week" ? addWeeks(d, 1) : addMonths(d, 1)));
+  }
 
   // Group jobs by date string (YYYY-MM-DD)
   const jobsByDate = new Map<string, JobRow[]>();
@@ -72,24 +103,50 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
 
   return (
     <div>
-      {/* Month navigation */}
+      {/* Navigation header */}
       <div className="mb-4 flex items-center justify-between">
         <Button
           variant="outline"
           size="icon"
           className="h-8 w-8"
-          onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
+          onClick={navigateBack}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
-          {format(currentMonth, "MMMM yyyy")}
-        </h3>
+
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
+            {headerLabel}
+          </h3>
+          <div className="flex rounded-md border border-stone-200 dark:border-stone-700 overflow-hidden text-xs">
+            <button
+              className={`px-2.5 py-1 transition-colors ${
+                mode === "month"
+                  ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
+                  : "bg-white text-stone-600 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
+              }`}
+              onClick={() => setMode("month")}
+            >
+              Month
+            </button>
+            <button
+              className={`px-2.5 py-1 transition-colors ${
+                mode === "week"
+                  ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
+                  : "bg-white text-stone-600 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
+              }`}
+              onClick={() => setMode("week")}
+            >
+              Week
+            </button>
+          </div>
+        </div>
+
         <Button
           variant="outline"
           size="icon"
           className="h-8 w-8"
-          onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
+          onClick={navigateForward}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -111,14 +168,17 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
         {days.map((day) => {
           const dateKey = format(day, "yyyy-MM-dd");
           const dayJobs = jobsByDate.get(dateKey) || [];
-          const inMonth = isSameMonth(day, currentMonth);
+          const inMonth = mode === "week" || isSameMonth(day, currentDate);
           const today = isToday(day);
-          const overflow = dayJobs.length - MAX_VISIBLE;
+          const maxVisible = mode === "week" ? Infinity : MONTH_MAX_VISIBLE;
+          const overflow = dayJobs.length - maxVisible;
 
           return (
             <div
               key={dateKey}
-              className={`border-b border-r border-stone-200 dark:border-stone-800 min-h-[80px] sm:min-h-[100px] p-1 ${
+              className={`border-b border-r border-stone-200 dark:border-stone-800 p-1 ${
+                mode === "week" ? "min-h-[160px]" : "min-h-[80px] sm:min-h-[100px]"
+              } ${
                 !inMonth
                   ? "bg-stone-50/50 dark:bg-stone-950/50"
                   : "bg-white dark:bg-stone-950"
@@ -141,8 +201,8 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
 
               {/* Job entries */}
               <div className="space-y-0.5">
-                {dayJobs.slice(0, MAX_VISIBLE).map((job) => (
-                  <CalendarJobEntry key={job.id} job={job} />
+                {dayJobs.slice(0, maxVisible).map((job) => (
+                  <CalendarJobEntry key={job.id} job={job} expanded={mode === "week"} />
                 ))}
                 {overflow > 0 && (
                   <p className="text-[10px] font-medium text-stone-400 dark:text-stone-500 pl-1">
@@ -165,7 +225,7 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   complete: "bg-green-500",
 };
 
-function CalendarJobEntry({ job }: { job: JobRow }) {
+function CalendarJobEntry({ job, expanded }: { job: JobRow; expanded?: boolean }) {
   const customerName = job.customers
     ? job.customers.last_name
     : "Unknown";
@@ -183,8 +243,13 @@ function CalendarJobEntry({ job }: { job: JobRow }) {
         {customerName}
       </span>
       {vehicle && (
-        <span className="hidden truncate text-stone-400 dark:text-stone-500 sm:inline">
+        <span className={`truncate text-stone-400 dark:text-stone-500 ${expanded ? "inline" : "hidden sm:inline"}`}>
           {vehicle}
+        </span>
+      )}
+      {expanded && job.title && (
+        <span className="hidden truncate text-stone-400 dark:text-stone-500 sm:inline">
+          · {job.title}
         </span>
       )}
     </Link>
