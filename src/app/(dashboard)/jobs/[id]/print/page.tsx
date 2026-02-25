@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatRONumber, formatCurrency, formatPhone, formatVehicle, formatCustomerName } from "@/lib/utils/format";
+import { formatRONumber, formatCurrency, formatPhone, formatVehicle, formatCustomerName, formatDate } from "@/lib/utils/format";
 import { getShopSettings } from "@/lib/actions/settings";
 import { calculateTotals } from "@/lib/utils/totals";
 import { PrintButton } from "./print-button";
@@ -105,12 +105,12 @@ export default async function PrintRepairOrderPage({
         <div className="text-right text-sm">
           <p>
             <span className="font-medium">Job Date:</span>{" "}
-            {new Date(job.date_received).toLocaleDateString()}
+            {formatDate(job.date_received)}
           </p>
           {job.date_finished && (
             <p>
               <span className="font-medium">Date Out:</span>{" "}
-              {new Date(job.date_finished).toLocaleDateString()}
+              {formatDate(job.date_finished)}
             </p>
           )}
         </div>

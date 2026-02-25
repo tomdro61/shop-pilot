@@ -22,7 +22,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusSelect } from "./status-select";
 import { JobCard } from "./job-card";
-import { formatCustomerName, formatVehicle, formatCurrency, formatRONumber } from "@/lib/utils/format";
+import { formatCustomerName, formatVehicle, formatCurrency, formatRONumber, formatDate } from "@/lib/utils/format";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { JobStatus } from "@/types";
@@ -167,7 +167,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           </Button>
         ),
         cell: ({ row }) =>
-          new Date(row.original.date_received).toLocaleDateString(),
+          formatDate(row.original.date_received),
       },
     ],
     []

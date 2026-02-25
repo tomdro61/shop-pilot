@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { createInvoiceFromJob } from "@/lib/actions/invoices";
 import { INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { FileText, ExternalLink } from "lucide-react";
 import type { Invoice, InvoiceStatus, JobStatus } from "@/types";
 
@@ -131,7 +131,7 @@ export function InvoiceSection({
             {invoice.paid_at && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Paid</span>
-                <span>{new Date(invoice.paid_at).toLocaleDateString()}</span>
+                <span>{formatDate(invoice.paid_at)}</span>
               </div>
             )}
             {invoice.stripe_hosted_invoice_url && (

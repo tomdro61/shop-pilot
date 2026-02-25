@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusSelect } from "./status-select";
-import { formatCustomerName, formatVehicle, formatRONumber } from "@/lib/utils/format";
+import { formatCustomerName, formatVehicle, formatRONumber, formatDate } from "@/lib/utils/format";
 import type { JobStatus } from "@/types";
 
 interface JobCardProps {
@@ -54,7 +54,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
                   </>
                 )}
                 <span className="text-border">·</span>
-                <span className="tabular-nums">{new Date(job.date_received).toLocaleDateString()}</span>
+                <span className="tabular-nums">{formatDate(job.date_received)}</span>
               </div>
             </div>
           </Link>

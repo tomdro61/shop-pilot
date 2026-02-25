@@ -12,7 +12,7 @@ import { LineItemsList } from "@/components/dashboard/line-items-list";
 import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
-import { formatPhone, formatVehicle, formatCustomerName, formatRONumber } from "@/lib/utils/format";
+import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
@@ -75,10 +75,10 @@ export default async function JobDetailPage({
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {new Date(job.date_received).toLocaleDateString()}
+                {formatDate(job.date_received)}
               </span>
               {job.date_finished && (
-                <span>Finished {new Date(job.date_finished).toLocaleDateString()}</span>
+                <span>Finished {formatDate(job.date_finished)}</span>
               )}
               {tech && (
                 <span className="inline-flex items-center gap-1">

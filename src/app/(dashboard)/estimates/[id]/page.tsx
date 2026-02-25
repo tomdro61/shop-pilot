@@ -16,6 +16,7 @@ import {
   formatCustomerName,
   formatVehicle,
   formatPhone,
+  formatDate,
 } from "@/lib/utils/format";
 import { ArrowLeft, User, Car } from "lucide-react";
 import type {
@@ -82,7 +83,7 @@ export default async function EstimateDetailPage({
             <h2 className="text-2xl font-bold">Estimate</h2>
             <p className="text-sm text-muted-foreground">
               {job?.title || "Auto Repair"} &middot; Created{" "}
-              {new Date(estimate.created_at).toLocaleDateString()}
+              {formatDate(estimate.created_at)}
             </p>
           </div>
           <Badge
@@ -142,11 +143,11 @@ export default async function EstimateDetailPage({
       {/* Status-specific info */}
       {estimate.sent_at && (
         <p className="mb-4 text-sm text-muted-foreground">
-          Sent {new Date(estimate.sent_at).toLocaleDateString()}
+          Sent {formatDate(estimate.sent_at)}
           {estimate.approved_at &&
-            ` · Approved ${new Date(estimate.approved_at).toLocaleDateString()}`}
+            ` · Approved ${formatDate(estimate.approved_at)}`}
           {estimate.declined_at &&
-            ` · Declined ${new Date(estimate.declined_at).toLocaleDateString()}`}
+            ` · Declined ${formatDate(estimate.declined_at)}`}
         </p>
       )}
 

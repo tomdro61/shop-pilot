@@ -40,6 +40,14 @@ export function formatRONumber(n: number | null): string {
   return `RO-${String(n).padStart(4, "0")}`;
 }
 
+// Format a date string (YYYY-MM-DD or ISO) for display without timezone shift.
+// new Date("2026-02-27") parses as UTC midnight which shows as the previous
+// day in US timezones. Appending T00:00:00 forces local-time interpretation.
+export function formatDate(dateStr: string): string {
+  const d = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString();
+}
+
 // Format customer name
 export function formatCustomerName(customer: {
   first_name: string;

@@ -11,7 +11,7 @@ import {
   ESTIMATE_STATUS_LABELS,
   ESTIMATE_STATUS_COLORS,
 } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
 import { ClipboardList, ExternalLink } from "lucide-react";
 import type { Estimate, EstimateStatus } from "@/types";
@@ -76,14 +76,14 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Created</span>
               <span>
-                {new Date(estimate.created_at).toLocaleDateString()}
+                {formatDate(estimate.created_at)}
               </span>
             </div>
             {estimate.sent_at && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Sent</span>
                 <span>
-                  {new Date(estimate.sent_at).toLocaleDateString()}
+                  {formatDate(estimate.sent_at)}
                 </span>
               </div>
             )}

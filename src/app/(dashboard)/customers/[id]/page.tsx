@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-import { formatPhone, formatVehicle } from "@/lib/utils/format";
+import { formatPhone, formatVehicle, formatDate } from "@/lib/utils/format";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
 import { VehicleSection } from "@/components/dashboard/vehicle-section";
@@ -158,7 +158,7 @@ export default async function CustomerDetailPage({
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{job.title || "General"}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
-                            {[vehicle ? formatVehicle(vehicle) : null, job.date_received ? new Date(job.date_received).toLocaleDateString() : null].filter(Boolean).join(" · ")}
+                            {[vehicle ? formatVehicle(vehicle) : null, job.date_received ? formatDate(job.date_received) : null].filter(Boolean).join(" · ")}
                           </p>
                         </div>
                         <Badge
