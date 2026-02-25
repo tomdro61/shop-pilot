@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getJobs, getLineItemCategories } from "@/lib/actions/jobs";
 import { getShopSettings } from "@/lib/actions/settings";
 import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
+import { resolveDateRange } from "@/lib/utils/date-range";
 import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
 import { JobsListView } from "@/components/dashboard/jobs-list-view";
 import { JobsBoardView } from "@/components/dashboard/jobs-board-view";
@@ -20,10 +21,22 @@ export default async function JobsPage({
     status?: string;
     category?: string;
     payment_status?: string;
+    range?: string;
+    from?: string;
+    to?: string;
   }>;
 }) {
   const params = await searchParams;
   const view = params.view || "list";
+
+  // Only apply date filter when a range param is explicitly set
+  let dateFrom: string | undefined;
+  let dateTo: string | undefined;
+  if (params.range) {
+    const resolved = resolveDateRange(params.range, params.from, params.to);
+    dateFrom = resolved.from;
+    dateTo = resolved.to;
+  }
 
   const [jobs, dbCategories, settings] = await Promise.all([
     getJobs({
@@ -31,6 +44,8 @@ export default async function JobsPage({
       status: params.status as JobStatus | undefined,
       category: params.category,
       paymentStatus: params.payment_status as PaymentStatus | undefined,
+      dateFrom,
+      dateTo,
     }),
     getLineItemCategories(),
     getShopSettings(),

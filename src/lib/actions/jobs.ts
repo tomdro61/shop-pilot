@@ -12,6 +12,8 @@ export async function getJobs(filters?: {
   status?: JobStatus;
   category?: string;
   paymentStatus?: PaymentStatus;
+  dateFrom?: string;
+  dateTo?: string;
 }) {
   const supabase = await createClient();
 
@@ -19,6 +21,14 @@ export async function getJobs(filters?: {
     .from("jobs")
     .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model), users(id, name), job_line_items(total)")
     .order("date_received", { ascending: false });
+
+  if (filters?.dateFrom) {
+    query = query.gte("date_received", filters.dateFrom);
+  }
+
+  if (filters?.dateTo) {
+    query = query.lte("date_received", filters.dateTo);
+  }
 
   if (filters?.status) {
     query = query.eq("status", filters.status);

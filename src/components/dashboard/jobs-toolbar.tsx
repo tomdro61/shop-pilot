@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, List, Columns3 } from "lucide-react";
+import { Search, Plus, List, Columns3, Calendar } from "lucide-react";
 
 interface JobsToolbarProps {
   categories: string[];
@@ -29,6 +29,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   const category = searchParams.get("category") || "all";
   const status = searchParams.get("status") || "all";
   const paymentStatus = searchParams.get("payment_status") || "all";
+  const range = searchParams.get("range") || "all";
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -115,6 +116,23 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
               {cat}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={range}
+        onValueChange={(val) => updateParams({ range: val })}
+      >
+        <SelectTrigger className="w-[140px] text-xs">
+          <Calendar className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+          <SelectValue placeholder="All Time" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Time</SelectItem>
+          <SelectItem value="this_week">This Week</SelectItem>
+          <SelectItem value="this_month">This Month</SelectItem>
+          <SelectItem value="this_quarter">This Quarter</SelectItem>
+          <SelectItem value="this_year">This Year</SelectItem>
         </SelectContent>
       </Select>
 
