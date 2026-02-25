@@ -113,6 +113,17 @@ export function JobCategoriesForm({ categories: initial }: JobCategoriesFormProp
 
   return (
     <div className="space-y-4">
+      {isDirty && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50 p-3">
+          <p className="flex-1 text-sm text-blue-700 dark:text-blue-400">
+            You have unsaved changes
+          </p>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      )}
+
       <Card>
         <CardContent className="p-0">
           <div className="divide-y divide-stone-100 dark:divide-stone-800">
@@ -215,16 +226,6 @@ export function JobCategoriesForm({ categories: initial }: JobCategoriesFormProp
         </Button>
       </div>
 
-      {isDirty && (
-        <div className="flex items-center gap-3 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50 p-3">
-          <p className="flex-1 text-sm text-blue-700 dark:text-blue-400">
-            You have unsaved changes
-          </p>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
