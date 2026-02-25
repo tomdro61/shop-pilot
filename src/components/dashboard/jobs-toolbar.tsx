@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, List, Columns3, Calendar } from "lucide-react";
+import { Search, Plus, List, Columns3, Calendar, CalendarDays } from "lucide-react";
 
 interface JobsToolbarProps {
   categories: string[];
@@ -146,6 +146,9 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           </TabsTrigger>
           <TabsTrigger value="board">
             <Columns3 className="h-4 w-4" />
+          </TabsTrigger>
+          <TabsTrigger value="calendar">
+            <CalendarDays className="h-4 w-4" />
           </TabsTrigger>
         </TabsList>
       </Tabs>

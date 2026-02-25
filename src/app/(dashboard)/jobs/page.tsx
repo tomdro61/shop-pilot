@@ -6,6 +6,7 @@ import { resolveDateRange } from "@/lib/utils/date-range";
 import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
 import { JobsListView } from "@/components/dashboard/jobs-list-view";
 import { JobsBoardView } from "@/components/dashboard/jobs-board-view";
+import { JobsCalendarView } from "@/components/dashboard/jobs-calendar-view";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -65,6 +66,8 @@ export default async function JobsPage({
       <div className="mt-4">
         {view === "board" ? (
           <JobsBoardView jobs={jobs} />
+        ) : view === "calendar" ? (
+          <JobsCalendarView jobs={jobs} />
         ) : (
           <JobsListView jobs={jobs} />
         )}
