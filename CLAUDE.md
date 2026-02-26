@@ -35,7 +35,7 @@ Core tables in Supabase PostgreSQL:
 - **job_line_items** — id, job_id, type (labor/part), description, quantity, unit_cost, total, cost (nullable — wholesale price for parts, used for profit margin tracking), part_number, category (single source of truth for service categorization)
 - **job_presets** — id, name, category, line_items (JSONB), created_at
 - **estimates** — id, job_id, status (draft/sent/approved/declined), sent_at, approved_at, declined_at, approval_token, tax_rate, created_at
-- **estimate_line_items** — id, estimate_id, type, description, quantity, unit_cost, total, part_number
+- **estimate_line_items** — id, estimate_id, type, description, quantity, unit_cost, total, part_number, category
 - **invoices** — id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status (draft/sent/paid), amount, paid_at
 - **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
@@ -247,11 +247,12 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 18:** Part cost tracking — wholesale cost on parts for actual profit margin reporting
 **Session 19:** Calendar views, date fixes, job form rename
 **Session 20:** Category-scoped shop supplies & hazmat fees
+**Session 21:** Estimate delete, category grouping on estimates, Add Service overflow fix
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
 - **Service categorization:** Line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
-- Stripe invoicing + estimate builder with public approval page fully working (live mode)
+- Stripe invoicing + estimate builder with public approval page fully working (live mode). Estimates can be deleted and recreated to pick up updated job line items. Estimate line items carry categories and are grouped by service category on both internal and customer-facing views.
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
 - Quo SMS: fully wired (send/receive/webhook), auto-texts estimate approval links + invoice payment links; blocked on A2P registration
 - Resend Email: full transactional email — branded HTML templates (estimate, receipt, generic), auto-send on estimate send + invoice paid, AI `send_email` tool, test mode with console logging, delivery status tracking in `messages` table

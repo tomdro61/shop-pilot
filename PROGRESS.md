@@ -1533,6 +1533,32 @@
 ### Build Status
 - `npm run build` passes cleanly (0 type errors)
 
+---
+
+## Session 21 — 2026-02-26 — Estimate Improvements
+
+### What Was Completed
+
+1. **Add Service dropdown overflow fix** — Popover now has `max-h-72 overflow-y-auto` so all categories are scrollable
+2. **Delete estimate** — Draft and sent estimates can be deleted (with confirmation dialog) so they can be recreated with updated job line items. Delete button on both estimate detail page and estimate card on job detail page. Approved estimates cannot be deleted.
+3. **Estimate line items grouped by category** — Added `category` column to `estimate_line_items` table. Categories are copied from job line items when creating an estimate. Both the internal estimate view and public customer approval page now group items by service category with headers and subtotals, matching the job detail page layout.
+
+### New Files (1)
+- `supabase/migrations/20250226200000_estimate_line_item_category.sql` — adds `category text` to estimate_line_items
+
+### Modified Files (8)
+- `src/lib/actions/estimates.ts` — `deleteEstimate()` server action, copy `category` in `createEstimateFromJob()`
+- `src/components/dashboard/estimate-actions.tsx` — Delete button with confirmation (draft + sent), `jobId` prop, redirect after delete
+- `src/components/dashboard/estimate-section.tsx` — Delete button on estimate card in job detail page
+- `src/app/(dashboard)/estimates/[id]/page.tsx` — Pass `jobId` to EstimateActions
+- `src/components/dashboard/estimate-line-items-list.tsx` — Group line items by category with headers and subtotals
+- `src/app/estimates/approve/[token]/page.tsx` — Group by category instead of labor/parts split
+- `src/components/dashboard/line-items-list.tsx` — Add Service popover overflow fix
+- `src/types/supabase.ts` — `category` field on estimate_line_items Row/Insert/Update
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
 ### What's NOT Done Yet
 - [ ] Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
 - [ ] A2P registration on Quo (blocked on number port + paid plan)
