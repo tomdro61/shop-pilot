@@ -35,23 +35,20 @@ function CategorySelector({
   onChange: (value: string[] | null) => void;
   label: string;
 }) {
-  const isAll = selected === null || selected.length === 0;
+  const isAll = selected === null;
 
   function toggleAll() {
-    onChange(null);
+    // Toggle between "all" (null) and "none selected" (empty array)
+    onChange(isAll ? [] : null);
   }
 
   function toggleCategory(cat: string) {
-    if (isAll) {
-      // Switching from "all" to a specific selection — select only this one
-      onChange([cat]);
-      return;
-    }
-    const next = selected!.includes(cat)
-      ? selected!.filter((c) => c !== cat)
-      : [...selected!, cat];
-    // If none selected or all selected, revert to "all"
-    if (next.length === 0 || next.length === allCategories.length) {
+    const current = selected ?? [];
+    const next = current.includes(cat)
+      ? current.filter((c) => c !== cat)
+      : [...current, cat];
+    // If all categories selected, revert to null
+    if (next.length === allCategories.length) {
       onChange(null);
     } else {
       onChange(next);
@@ -75,12 +72,11 @@ function CategorySelector({
           <label key={cat} className="flex items-center gap-2 text-sm cursor-pointer pl-4">
             <input
               type="checkbox"
-              checked={!isAll && selected!.includes(cat)}
-              disabled={isAll}
+              checked={isAll || (selected?.includes(cat) ?? false)}
               onChange={() => toggleCategory(cat)}
-              className="rounded border-stone-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 disabled:opacity-40"
+              className="rounded border-stone-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
             />
-            <span className={isAll ? "text-muted-foreground" : ""}>{cat}</span>
+            <span>{cat}</span>
           </label>
         ))}
       </div>
