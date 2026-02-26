@@ -55,6 +55,7 @@ export async function createEstimateFromJob(jobId: string) {
       quantity: li.quantity,
       unit_cost: li.unit_cost,
       part_number: li.part_number,
+      category: li.category,
     }));
 
     await supabase.from("estimate_line_items").insert(estimateLineItems);

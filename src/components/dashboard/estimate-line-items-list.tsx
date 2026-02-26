@@ -65,50 +65,68 @@ export function EstimateLineItemsList({
           </p>
         ) : (
           <>
-            <div className="space-y-1.5">
-              {lineItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 rounded-lg bg-stone-50 dark:bg-stone-950 px-4 py-3"
-                >
-                  <div className={`w-1 h-8 shrink-0 rounded-full ${item.type === "labor" ? "bg-blue-400" : "bg-amber-400"}`} />
-                  <div className="min-w-0 flex-1">
+            {(() => {
+              const categoryGroups: Record<string, EstimateLineItem[]> = {};
+              lineItems.forEach((li) => {
+                const cat = li.category || "Uncategorized";
+                if (!categoryGroups[cat]) categoryGroups[cat] = [];
+                categoryGroups[cat].push(li);
+              });
+
+              return Object.entries(categoryGroups).map(([catName, items]) => {
+                const catTotal = items.reduce((sum, li) => sum + (li.total || 0), 0);
+                return (
+                  <div key={catName} className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-stone-800 dark:text-stone-200">
-                        {item.description}
-                        {item.part_number && (
-                          <span className="ml-2 text-xs text-stone-400 dark:text-stone-500">#{item.part_number}</span>
-                        )}
-                      </p>
-                      <span className="ml-3 shrink-0 text-sm font-semibold text-stone-900 dark:text-stone-50">{formatCurrency(item.total)}</span>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{catName}</h3>
+                      <span className="text-xs font-semibold text-stone-500 dark:text-stone-400">{formatCurrency(catTotal)}</span>
                     </div>
-                    <p className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">{formatDetail(item)}</p>
-                  </div>
-                  {!readOnly && (
-                    <div className="flex shrink-0 gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => setEditItem(item)}
+                    {items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 rounded-lg bg-stone-50 dark:bg-stone-950 px-4 py-3"
                       >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <DeleteConfirmDialog
-                        title="Delete Line Item"
-                        description={`Delete "${item.description}"?`}
-                        onConfirm={() => handleDelete(item.id)}
-                        trigger={
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        }
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                        <div className={`w-1 h-8 shrink-0 rounded-full ${item.type === "labor" ? "bg-blue-400" : "bg-amber-400"}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-stone-800 dark:text-stone-200">
+                              {item.description}
+                              {item.part_number && (
+                                <span className="ml-2 text-xs text-stone-400 dark:text-stone-500">#{item.part_number}</span>
+                              )}
+                            </p>
+                            <span className="ml-3 shrink-0 text-sm font-semibold text-stone-900 dark:text-stone-50">{formatCurrency(item.total)}</span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">{formatDetail(item)}</p>
+                        </div>
+                        {!readOnly && (
+                          <div className="flex shrink-0 gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setEditItem(item)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <DeleteConfirmDialog
+                              title="Delete Line Item"
+                              description={`Delete "${item.description}"?`}
+                              onConfirm={() => handleDelete(item.id)}
+                              trigger={
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </Button>
+                              }
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              });
+            })()}
             <div className="border-t border-stone-200 dark:border-stone-800 pt-3 space-y-1">
               <div className="flex justify-end gap-6 text-sm text-stone-500 dark:text-stone-400">
                 {totals.laborTotal > 0 && <span>Labor: {formatCurrency(totals.laborTotal)}</span>}

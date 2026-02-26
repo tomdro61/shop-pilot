@@ -55,9 +55,15 @@ export default async function EstimateApprovalPage({
   const customer = job?.customers || null;
   const vehicle = job?.vehicles || null;
 
-  const laborItems = lineItems.filter((li) => li.type === "labor");
-  const partItems = lineItems.filter((li) => li.type === "part");
   const totals = calculateTotals(lineItems, settings);
+
+  // Group by category
+  const categoryGroups: Record<string, EstimateLineItem[]> = {};
+  lineItems.forEach((li) => {
+    const cat = li.category || "Uncategorized";
+    if (!categoryGroups[cat]) categoryGroups[cat] = [];
+    categoryGroups[cat].push(li);
+  });
 
   return (
     <div className="space-y-4">
@@ -92,50 +98,36 @@ export default async function EstimateApprovalPage({
           <CardTitle className="text-base">Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {laborItems.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                Labor
-              </h4>
-              {laborItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between rounded-md border p-3"
-                >
-                  <div>
-                    <p className="font-medium">{item.description}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.quantity} x {formatCurrency(item.unit_cost)}
-                    </p>
-                  </div>
-                  <p className="font-medium">{formatCurrency(item.total)}</p>
+          {Object.entries(categoryGroups).map(([catName, items]) => {
+            const catTotal = items.reduce((sum, li) => sum + (li.total || 0), 0);
+            return (
+              <div key={catName} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    {catName}
+                  </h4>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {formatCurrency(catTotal)}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {partItems.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-muted-foreground">
-                Parts
-              </h4>
-              {partItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between rounded-md border p-3"
-                >
-                  <div>
-                    <p className="font-medium">{item.description}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.quantity} x {formatCurrency(item.unit_cost)}
-                      {item.part_number && ` · #${item.part_number}`}
-                    </p>
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex justify-between rounded-md border p-3"
+                  >
+                    <div>
+                      <p className="font-medium">{item.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.quantity} x {formatCurrency(item.unit_cost)}
+                        {item.part_number && ` · #${item.part_number}`}
+                      </p>
+                    </div>
+                    <p className="font-medium">{formatCurrency(item.total)}</p>
                   </div>
-                  <p className="font-medium">{formatCurrency(item.total)}</p>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            );
+          })}
 
           <Separator />
 

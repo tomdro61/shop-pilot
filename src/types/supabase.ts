@@ -330,6 +330,7 @@ export type Database = {
           unit_cost: number;
           total: number;
           part_number: string | null;
+          category: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -341,6 +342,7 @@ export type Database = {
           quantity?: number;
           unit_cost?: number;
           part_number?: string | null;
+          category?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -352,6 +354,7 @@ export type Database = {
           quantity?: number;
           unit_cost?: number;
           part_number?: string | null;
+          category?: string | null;
           created_at?: string;
           updated_at?: string;
         };
