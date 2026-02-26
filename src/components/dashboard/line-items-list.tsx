@@ -88,7 +88,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
                 Add Service
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-56 p-2" align="end">
+            <PopoverContent className="w-56 max-h-72 overflow-y-auto p-2" align="end">
               <div className="space-y-1">
                 {(settings?.job_categories ?? DEFAULT_SETTINGS.job_categories).map((cat) => (
                   <button
