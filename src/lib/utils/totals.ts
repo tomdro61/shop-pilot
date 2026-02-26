@@ -26,6 +26,8 @@ export const DEFAULT_SETTINGS: Pick<
   | "hazmat_amount"
   | "hazmat_label"
   | "job_categories"
+  | "shop_supplies_categories"
+  | "hazmat_categories"
 > = {
   tax_rate: MA_SALES_TAX_RATE,
   shop_supplies_enabled: false,
@@ -36,6 +38,8 @@ export const DEFAULT_SETTINGS: Pick<
   hazmat_amount: 3.0,
   hazmat_label: "Environmental Fee",
   job_categories: DEFAULT_JOB_CATEGORIES,
+  shop_supplies_categories: null,
+  hazmat_categories: null,
 };
 
 interface LineItemLike {
@@ -43,6 +47,7 @@ interface LineItemLike {
   quantity: number;
   unit_cost: number;
   total?: number;
+  category?: string | null;
 }
 
 function computeShopSupplies(
@@ -75,6 +80,25 @@ function computeShopSupplies(
   return Math.round(amount * 100) / 100;
 }
 
+/**
+ * Check whether a fee should apply based on its category scope.
+ * If `feeCategories` is null or empty, the fee applies to all jobs.
+ * Otherwise, it only applies if the job has at least one line item
+ * whose category matches one of the fee's categories.
+ */
+function feeAppliesToJob(
+  feeCategories: string[] | null | undefined,
+  lineItems: LineItemLike[]
+): boolean {
+  if (!feeCategories || feeCategories.length === 0) return true;
+  const jobCategories = new Set(
+    lineItems
+      .map((li) => li.category)
+      .filter((c): c is string => c != null)
+  );
+  return feeCategories.some((fc) => jobCategories.has(fc));
+}
+
 export function calculateTotals(
   lineItems: LineItemLike[],
   settings?: Pick<
@@ -87,6 +111,8 @@ export function calculateTotals(
     | "hazmat_enabled"
     | "hazmat_amount"
     | "hazmat_label"
+    | "shop_supplies_categories"
+    | "hazmat_categories"
   > | null
 ): TotalsBreakdown {
   const s = settings ?? DEFAULT_SETTINGS;
@@ -99,7 +125,12 @@ export function calculateTotals(
     .filter((li) => li.type === "part")
     .reduce((sum, li) => sum + (li.total ?? li.quantity * li.unit_cost), 0);
 
-  const shopSuppliesEnabled = s.shop_supplies_enabled;
+  const shopSuppliesEnabled =
+    s.shop_supplies_enabled &&
+    feeAppliesToJob(
+      "shop_supplies_categories" in s ? s.shop_supplies_categories : null,
+      lineItems
+    );
   const shopSupplies = shopSuppliesEnabled
     ? computeShopSupplies(
         s.shop_supplies_method as ShopSuppliesMethod,
@@ -110,7 +141,12 @@ export function calculateTotals(
       )
     : 0;
 
-  const hazmatEnabled = s.hazmat_enabled;
+  const hazmatEnabled =
+    s.hazmat_enabled &&
+    feeAppliesToJob(
+      "hazmat_categories" in s ? s.hazmat_categories : null,
+      lineItems
+    );
   const hazmat = hazmatEnabled ? s.hazmat_amount : 0;
 
   // Tax applies to parts + shop supplies (NOT labor, NOT hazmat)

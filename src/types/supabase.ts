@@ -475,6 +475,8 @@ export type Database = {
           hazmat_amount: number;
           hazmat_label: string;
           job_categories: string[];
+          shop_supplies_categories: string[] | null;
+          hazmat_categories: string[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -489,6 +491,8 @@ export type Database = {
           hazmat_amount?: number;
           hazmat_label?: string;
           job_categories?: string[];
+          shop_supplies_categories?: string[] | null;
+          hazmat_categories?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -503,6 +507,8 @@ export type Database = {
           hazmat_amount?: number;
           hazmat_label?: string;
           job_categories?: string[];
+          shop_supplies_categories?: string[] | null;
+          hazmat_categories?: string[] | null;
           created_at?: string;
           updated_at?: string;
         };

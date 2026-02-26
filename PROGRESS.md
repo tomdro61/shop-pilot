@@ -1440,3 +1440,104 @@
 - Coverage indicator on reports shows what % of parts have actual cost data
 - Cost is never exposed to customers (invoices, estimates, print RO all use retail price only)
 - `ShopPilot_PRD_BroadwayMotors.docx` remains untracked in project root (intentional)
+
+## Session 19 — 2026-02-25 — Jobs Page Enhancements, Mobile Fixes, Date Bug Fix
+
+### What Was Completed
+
+1. **Date Range Filtering on Jobs Page** — Added time range dropdown (All Time, This Week, This Month, This Quarter, This Year) to the jobs toolbar. Reuses `resolveDateRange()` utility from reports. Default is "All Time" (no date filter), unlike reports which defaults to "This Month". Wired `dateFrom`/`dateTo` params through `getJobs()` with `.gte()`/`.lte()` on `date_received`.
+
+2. **Job Detail Mobile Layout Fix** — Fixed three overflow issues on the job detail page at narrow viewports:
+   - Header: title/metadata and action buttons now stack vertically on mobile (`flex-col` → `sm:flex-row`)
+   - Title + RO number: `flex-wrap` with `items-baseline` so RO wraps below long titles
+   - Action buttons (StatusSelect, Print RO, Edit, Delete): `flex-wrap` prevents overflow
+   - Payment footer: `flex-wrap` with `gap-y-2` so payment buttons wrap below total on mobile
+
+3. **Rename "Date Received" → "Job Date"** — All user-facing labels changed across job form, print RO, and AI tool descriptions. Database column stays `date_received`.
+
+4. **Auto-clear `date_finished`** — `updateJobStatus()` now sets `date_finished` to today when status → Complete, and clears it to `null` when status moves back out of Complete. Previously only set on complete, never cleared.
+
+5. **Date Display Timezone Bug Fix** — `new Date("2026-02-27")` parses as UTC midnight, showing as the previous day in US timezones. Added `formatDate()` utility to `src/lib/utils/format.ts` that appends `T00:00:00` to date-only strings to force local-time interpretation. Replaced all 14 instances of `new Date(...).toLocaleDateString()` across display components.
+
+6. **Calendar View for Jobs Page** — New third view option (alongside list and board) with:
+   - Monthly grid: 7-column layout, jobs plotted on `date_received`, status color dots, customer last name, vehicle (hidden on mobile)
+   - Weekly view: Month/Week toggle, single 7-day row with taller cells, no job cap, expanded entries with vehicle + job title
+   - Month/week navigation with prev/next buttons
+   - Today highlighting (blue circle)
+   - Outside-month days faded
+   - Each job entry links to `/jobs/[id]`
+   - All existing filters apply (jobs are pre-filtered at page level)
+
+### New Files (1)
+- `src/components/dashboard/jobs-calendar-view.tsx` — Monthly/weekly calendar grid component
+
+### Modified Files (14)
+- `src/lib/actions/jobs.ts` — `dateFrom`/`dateTo` filter params + `date_finished` clear logic
+- `src/app/(dashboard)/jobs/page.tsx` — Date range params, calendar view import + conditional
+- `src/components/dashboard/jobs-toolbar.tsx` — Date range dropdown + CalendarDays tab trigger
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — Mobile layout fixes + `formatDate()` usage
+- `src/components/dashboard/job-payment-footer.tsx` — Mobile flex-wrap fix
+- `src/components/forms/job-form.tsx` — "Date Received" → "Job Date" label
+- `src/app/(dashboard)/jobs/[id]/print/page.tsx` — "Date In" → "Job Date" + `formatDate()`
+- `src/lib/ai/tools.ts` — AI tool description updates
+- `src/lib/utils/format.ts` — New `formatDate()` utility
+- `src/components/dashboard/jobs-list-view.tsx` — `formatDate()` usage
+- `src/components/dashboard/job-card.tsx` — `formatDate()` usage
+- `src/components/dashboard/estimate-section.tsx` — `formatDate()` usage
+- `src/components/dashboard/invoice-section.tsx` — `formatDate()` usage
+- `src/app/(dashboard)/customers/[id]/page.tsx` — `formatDate()` usage
+- `src/app/(dashboard)/estimates/[id]/page.tsx` — `formatDate()` usage
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] Run part_cost migration against Supabase
+- [ ] Run shop_settings migration against Supabase
+- [ ] Run RO number migration against Supabase
+- [ ] Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+
+### What's Next
+- Phase 4: vehicle service history, work orders, labor rates, inventory, accounting
+- Voice input for AI assistant
+- Chat history persistence
+
+### Known Issues / Notes
+- Calendar view is client-side state (month/week navigation doesn't change URL params)
+- All date-related filters work server-side; the calendar just renders the pre-filtered job list
+
+---
+
+## Session 20 — 2026-02-26 — Category-Scoped Fees
+
+### What Was Completed
+
+**Category-scoped shop supplies & hazmat fees:** Shop supplies and environmental/hazmat fees can now be scoped to specific job categories. If a job has at least one line item in a matching category, the full fee applies. If the category list is null/empty (default), the fee applies to all jobs — fully backward compatible.
+
+1. **Database migration** — Added `shop_supplies_categories` and `hazmat_categories` jsonb columns to `shop_settings` (nullable, default NULL)
+2. **TypeScript types** — Added both fields to Row/Insert/Update in `supabase.ts`
+3. **Zod validation** — Added `z.array(z.string()).nullable().optional()` for both fields
+4. **Totals calculation** — `calculateTotals()` now checks line item categories against fee category arrays via `feeAppliesToJob()` helper before applying each fee
+5. **Settings UI** — Category multi-select (checkboxes) under both Shop Supplies and Environmental Fee sections on `/settings/rates`
+
+### New Files (1)
+- `supabase/migrations/20250226100000_fee_categories.sql` — ALTER TABLE adds 2 jsonb columns
+
+### Modified Files (4)
+- `src/types/supabase.ts` — 2 new fields on shop_settings Row/Insert/Update
+- `src/lib/validators/settings.ts` — 2 new Zod fields
+- `src/lib/utils/totals.ts` — `feeAppliesToJob()` helper, category-aware fee logic, updated DEFAULT_SETTINGS
+- `src/components/forms/shop-settings-form.tsx` — `CategorySelector` component, category state, wired to save
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+
+### What's Next
+- Phase 4: vehicle service history, work orders, labor rates, inventory, accounting
+- Voice input for AI assistant
+- Chat history persistence

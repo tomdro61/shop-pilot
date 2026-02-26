@@ -39,7 +39,7 @@ Core tables in Supabase PostgreSQL:
 - **invoices** — id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status (draft/sent/paid), amount, paid_at
 - **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
-- **shop_settings** — single-row config: tax_rate, shop_supplies_enabled, shop_supplies_method (percent_of_labor/parts/total/flat), shop_supplies_rate, shop_supplies_cap, hazmat_enabled, hazmat_amount, hazmat_label
+- **shop_settings** — single-row config: tax_rate, shop_supplies_enabled, shop_supplies_method (percent_of_labor/parts/total/flat), shop_supplies_rate, shop_supplies_cap, shop_supplies_categories (jsonb, nullable — scopes fee to specific job categories), hazmat_enabled, hazmat_amount, hazmat_label, hazmat_categories (jsonb, nullable — scopes fee to specific job categories)
 
 **Job statuses:** Not Started → Waiting for Parts → In Progress → Complete
 **Payment tracked separately:** payment_status (unpaid → invoiced → paid / waived), payment_method (stripe/cash/check/ach/terminal)
@@ -245,6 +245,8 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 16:** RO numbers (sequential, auto-assigned) + printable repair order page
 **Session 17:** Shop settings — configurable tax rate, shop supplies fee, environmental fee
 **Session 18:** Part cost tracking — wholesale cost on parts for actual profit margin reporting
+**Session 19:** Calendar views, date fixes, job form rename
+**Session 20:** Category-scoped shop supplies & hazmat fees
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -261,17 +263,13 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Wix import: one-time script (`scripts/import-wix-customers.ts`) with filtering, dedup, dry-run mode
 - RO Numbers: auto-assigned sequential repair order numbers (RO-0001 format) on all jobs via PostgreSQL sequence
 - Printable Repair Order: `/jobs/[id]/print` — print-optimized document with shop header, customer/vehicle info, itemized line items, tax, totals
-- **Shop Settings:** Configurable tax rate, shop supplies fee (4 calculation methods + cap), environmental/hazmat fee. Settings page at `/settings/rates`. All totals computed via shared `calculateTotals()` utility. Fees default to disabled. Tax rule: parts + shop supplies are taxable; labor and hazmat are not.
+- **Shop Settings:** Configurable tax rate, shop supplies fee (4 calculation methods + cap), environmental/hazmat fee. Both fees can be scoped to specific job categories (null = all categories, backward compatible). Settings page at `/settings/rates`. All totals computed via shared `calculateTotals()` utility. Fees default to disabled. Tax rule: parts + shop supplies are taxable; labor and hazmat are not.
 - **Part Cost Tracking:** Optional `cost` (wholesale price) field on part line items. Reports compute actual gross profit when cost is available, fall back to 40% margin estimate when not. Cost data coverage % shown on reports. Cost is never exposed to customers (invoices, estimates, print RO all use retail price only).
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
 **Remaining work:**
-- Run part_cost migration against Supabase (SQL Editor or `npx supabase db push`)
-- Run shop_settings migration against Supabase (SQL Editor or `npx supabase db push`)
-- Run RO number migration against Supabase (SQL Editor)
 - Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
-- Run Terminal migration against Supabase
 - A2P registration on Quo (blocked on number port + paid plan)
 - Message templates (estimate ready, car ready, payment reminder)
 

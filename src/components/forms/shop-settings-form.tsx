@@ -24,6 +24,70 @@ const METHOD_LABELS: Record<ShopSuppliesMethod, string> = {
   flat: "Flat Amount",
 };
 
+function CategorySelector({
+  allCategories,
+  selected,
+  onChange,
+  label,
+}: {
+  allCategories: string[];
+  selected: string[] | null;
+  onChange: (value: string[] | null) => void;
+  label: string;
+}) {
+  const isAll = selected === null || selected.length === 0;
+
+  function toggleAll() {
+    onChange(null);
+  }
+
+  function toggleCategory(cat: string) {
+    if (isAll) {
+      // Switching from "all" to a specific selection — select only this one
+      onChange([cat]);
+      return;
+    }
+    const next = selected!.includes(cat)
+      ? selected!.filter((c) => c !== cat)
+      : [...selected!, cat];
+    // If none selected or all selected, revert to "all"
+    if (next.length === 0 || next.length === allCategories.length) {
+      onChange(null);
+    } else {
+      onChange(next);
+    }
+  }
+
+  return (
+    <div>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="mt-2 space-y-1.5">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isAll}
+            onChange={toggleAll}
+            className="rounded border-stone-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+          />
+          <span className={isAll ? "font-medium" : ""}>All Categories</span>
+        </label>
+        {allCategories.map((cat) => (
+          <label key={cat} className="flex items-center gap-2 text-sm cursor-pointer pl-4">
+            <input
+              type="checkbox"
+              checked={!isAll && selected!.includes(cat)}
+              disabled={isAll}
+              onChange={() => toggleCategory(cat)}
+              className="rounded border-stone-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 disabled:opacity-40"
+            />
+            <span className={isAll ? "text-muted-foreground" : ""}>{cat}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
   const [saving, setSaving] = useState(false);
 
@@ -50,12 +114,22 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
       : ""
   );
 
+  // Shop Supplies Categories
+  const [suppliesCategories, setSuppliesCategories] = useState<string[] | null>(
+    settings.shop_supplies_categories ?? null
+  );
+
   // Hazmat / Environmental
   const [hazmatEnabled, setHazmatEnabled] = useState(settings.hazmat_enabled);
   const [hazmatAmount, setHazmatAmount] = useState(
     settings.hazmat_amount.toFixed(2)
   );
   const [hazmatLabel, setHazmatLabel] = useState(settings.hazmat_label);
+
+  // Hazmat Categories
+  const [hazmatCategories, setHazmatCategories] = useState<string[] | null>(
+    settings.hazmat_categories ?? null
+  );
 
   function handleMethodChange(value: ShopSuppliesMethod) {
     // Convert the rate display when switching to/from flat
@@ -86,9 +160,11 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
         shop_supplies_method: suppliesMethod,
         shop_supplies_rate: parsedSuppliesRate,
         shop_supplies_cap: parsedCap,
+        shop_supplies_categories: suppliesCategories,
         hazmat_enabled: hazmatEnabled,
         hazmat_amount: parseFloat(hazmatAmount) || 0,
         hazmat_label: hazmatLabel || "Environmental Fee",
+        hazmat_categories: hazmatCategories,
       });
 
       if (result.error) {
@@ -230,6 +306,12 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
                 </div>
               )}
             </div>
+            <CategorySelector
+              allCategories={settings.job_categories}
+              selected={suppliesCategories}
+              onChange={setSuppliesCategories}
+              label="Apply to categories"
+            />
           </CardContent>
         )}
       </Card>
@@ -287,6 +369,12 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
                 Flat fee per job. Not taxed.
               </p>
             </div>
+            <CategorySelector
+              allCategories={settings.job_categories}
+              selected={hazmatCategories}
+              onChange={setHazmatCategories}
+              label="Apply to categories"
+            />
           </CardContent>
         )}
       </Card>
