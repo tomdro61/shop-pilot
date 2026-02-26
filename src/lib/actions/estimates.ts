@@ -289,6 +289,33 @@ export async function declineEstimate(token: string) {
   return { data: { success: true } };
 }
 
+export async function deleteEstimate(id: string) {
+  const supabase = await createClient();
+
+  const { data: estimate, error: fetchError } = await supabase
+    .from("estimates")
+    .select("id, status, job_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !estimate) return { error: "Estimate not found" };
+
+  if (estimate.status === "approved") {
+    return { error: "Cannot delete an approved estimate that has an invoice" };
+  }
+
+  // Delete estimate line items first, then the estimate
+  await supabase.from("estimate_line_items").delete().eq("estimate_id", id);
+
+  const { error } = await supabase.from("estimates").delete().eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/jobs/${estimate.job_id}`);
+  revalidatePath(`/estimates/${id}`);
+  return { success: true };
+}
+
 // Estimate Line Item CRUD (only allowed when estimate is draft)
 
 export async function createEstimateLineItem(formData: EstimateLineItemFormData) {

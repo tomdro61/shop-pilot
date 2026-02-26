@@ -165,6 +165,7 @@ export default async function EstimateDetailPage({
       <div className="mt-4">
         <EstimateActions
           estimateId={id}
+          jobId={job?.id || ""}
           status={status}
           approvalToken={estimate.approval_token}
         />

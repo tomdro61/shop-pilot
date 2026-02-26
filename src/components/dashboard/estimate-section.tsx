@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { createEstimateFromJob } from "@/lib/actions/estimates";
+import { createEstimateFromJob, deleteEstimate } from "@/lib/actions/estimates";
+import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import {
   ESTIMATE_STATUS_LABELS,
   ESTIMATE_STATUS_COLORS,
@@ -41,8 +42,20 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
     }
   }
 
+  async function handleDelete() {
+    if (!estimate) return { error: "No estimate" };
+    const result = await deleteEstimate(estimate.id);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Estimate deleted");
+    }
+    return result;
+  }
+
   const status = estimate?.status as EstimateStatus | undefined;
   const statusColors = status ? ESTIMATE_STATUS_COLORS[status] : null;
+  const canDelete = status === "draft" || status === "sent";
 
   return (
     <Card>
@@ -87,12 +100,25 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
                 </span>
               </div>
             )}
-            <a href={`/estimates/${estimate.id}`}>
-              <Button variant="outline" size="sm" className="mt-2 w-full">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View Estimate
-              </Button>
-            </a>
+            <div className="mt-2 flex gap-2">
+              <a href={`/estimates/${estimate.id}`} className="flex-1">
+                <Button variant="outline" size="sm" className="w-full">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View Estimate
+                </Button>
+              </a>
+              {canDelete && (
+                <DeleteConfirmDialog
+                  title="Delete Estimate"
+                  description={
+                    status === "sent"
+                      ? "This estimate has been sent to the customer. Deleting it will invalidate the approval link. You can create a new one from the job's current line items."
+                      : "This will delete the estimate. You can create a new one from the job's current line items."
+                  }
+                  onConfirm={handleDelete}
+                />
+              )}
+            </div>
           </div>
         )}
       </CardContent>
