@@ -16,7 +16,7 @@ export default async function DashboardLayout({
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header user={user} />
-        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0 bg-stone-100 dark:bg-stone-950">
+        <main className="flex-1 overflow-y-auto pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 bg-stone-100 dark:bg-stone-950">
           {children}
         </main>
         <BottomNav />

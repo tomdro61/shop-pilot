@@ -63,7 +63,8 @@ export function Header({ user }: { user: User | null }) {
     : "SP";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl px-4 lg:px-6">
+    <header className="sticky top-0 z-30 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
+      <div className="flex h-14 items-center justify-between px-4 lg:px-6">
       <div className="flex items-center gap-2.5 lg:hidden">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
           <Wrench className="h-3.5 w-3.5 text-primary-foreground" />
@@ -118,6 +119,7 @@ export function Header({ user }: { user: User | null }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </header>
   );
 }
