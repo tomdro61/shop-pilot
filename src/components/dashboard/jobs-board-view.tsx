@@ -87,7 +87,7 @@ function BoardColumn({
             </div>
           ) : (
             jobs.map((job) => (
-              <JobCard key={job.id} job={job} showStatus={false} />
+              <JobCard key={job.id} job={job} />
             ))
           )}
         </CardContent>
