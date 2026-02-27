@@ -9,6 +9,7 @@ const ALLOWED_ORIGINS = [
   "https://www.broadwaymotorsma.com",
   "https://broadwaymotorsrevere.com",
   "https://www.broadwaymotorsrevere.com",
+  "https://broadway-motors-web.vercel.app",
   ...(process.env.NODE_ENV === "development"
     ? ["http://localhost:3000", "http://localhost:3001"]
     : []),
