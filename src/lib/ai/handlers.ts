@@ -480,15 +480,11 @@ export async function executeToolCall(
             plate: r.license_plate,
             time: r.pick_up_time,
             lot: r.lot,
-            spot: r.spot_number,
           })),
         });
       }
       case "check_in_parking": {
-        const result = await checkInReservation(
-          str(toolInput.id),
-          str(toolInput.spot_number) || undefined
-        );
+        const result = await checkInReservation(str(toolInput.id));
         return JSON.stringify(result);
       }
       case "check_out_parking": {
@@ -496,9 +492,7 @@ export async function executeToolCall(
         return JSON.stringify(result);
       }
       case "update_parking_reservation": {
-        const updates: { spot_number?: string | null; staff_notes?: string | null } = {};
-        if (toolInput.spot_number !== undefined)
-          updates.spot_number = str(toolInput.spot_number) || null;
+        const updates: { staff_notes?: string | null } = {};
         if (toolInput.staff_notes !== undefined)
           updates.staff_notes = str(toolInput.staff_notes) || null;
         const result = await updateParkingReservation(

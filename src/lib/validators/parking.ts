@@ -32,7 +32,6 @@ export type ParkingSubmitData = z.infer<typeof parkingSubmitSchema>;
 // Schema for staff operations (check in, check out, update notes, etc.)
 export const parkingUpdateSchema = z.object({
   status: z.enum(["reserved", "checked_in", "checked_out", "no_show", "cancelled"]).optional(),
-  spot_number: z.string().max(20).nullable().optional(),
   staff_notes: z.string().max(5000).nullable().optional(),
 });
 

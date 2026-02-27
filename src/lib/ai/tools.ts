@@ -676,12 +676,11 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "check_in_parking",
     description:
-      "Check in a parking reservation (customer has dropped off their car). Optionally assign a spot number.",
+      "Check in a parking reservation (customer has dropped off their car).",
     input_schema: {
       type: "object" as const,
       properties: {
         id: { type: "string", description: "Reservation UUID (required)" },
-        spot_number: { type: "string", description: "Spot number to assign (e.g. 'A1', 'B12')" },
       },
       required: ["id"],
     },
@@ -701,12 +700,11 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "update_parking_reservation",
     description:
-      "Update a parking reservation's spot number or staff notes.",
+      "Update a parking reservation's staff notes.",
     input_schema: {
       type: "object" as const,
       properties: {
         id: { type: "string", description: "Reservation UUID (required)" },
-        spot_number: { type: "string", description: "New spot number (or empty string to clear)" },
         staff_notes: { type: "string", description: "Staff notes to save" },
       },
       required: ["id"],

@@ -150,7 +150,7 @@ export async function getParkingDashboard(lot?: string) {
 
 // ── Check in ────────────────────────────────────────────────────
 
-export async function checkInReservation(id: string, spotNumber?: string) {
+export async function checkInReservation(id: string) {
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -158,7 +158,6 @@ export async function checkInReservation(id: string, spotNumber?: string) {
     .update({
       status: "checked_in" as const,
       checked_in_at: new Date().toISOString(),
-      spot_number: spotNumber || null,
     })
     .eq("id", id);
 
@@ -219,7 +218,7 @@ export async function cancelReservation(id: string) {
 
 export async function updateReservation(
   id: string,
-  data: { spot_number?: string | null; staff_notes?: string | null }
+  data: { staff_notes?: string | null }
 ) {
   const supabase = await createClient();
 

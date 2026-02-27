@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { updateReservation } from "@/lib/actions/parking";
@@ -12,25 +11,20 @@ import { Save } from "lucide-react";
 
 export function ParkingNotesForm({
   id,
-  spotNumber,
   staffNotes,
 }: {
   id: string;
-  spotNumber: string | null;
   staffNotes: string | null;
 }) {
-  const [spot, setSpot] = useState(spotNumber || "");
   const [notes, setNotes] = useState(staffNotes || "");
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
-  const hasChanges =
-    spot !== (spotNumber || "") || notes !== (staffNotes || "");
+  const hasChanges = notes !== (staffNotes || "");
 
   async function handleSave() {
     setSaving(true);
     const result = await updateReservation(id, {
-      spot_number: spot || null,
       staff_notes: notes || null,
     });
     setSaving(false);
@@ -46,19 +40,6 @@ export function ParkingNotesForm({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="spot" className="text-xs">
-          Spot Number
-        </Label>
-        <Input
-          id="spot"
-          placeholder="e.g. A1, B12"
-          value={spot}
-          onChange={(e) => setSpot(e.target.value)}
-          className="h-8 text-sm"
-        />
-      </div>
-
       <div className="space-y-1.5">
         <Label htmlFor="notes" className="text-xs">
           Staff Notes

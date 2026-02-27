@@ -18,7 +18,6 @@ import {
   Clock,
   Phone,
   Mail,
-  MapPin,
   Hash,
   Palette,
 } from "lucide-react";
@@ -156,12 +155,6 @@ export default async function ParkingDetailPage({
                 {reservation.color}
               </div>
             )}
-            {reservation.spot_number && (
-              <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
-                <MapPin className="h-4 w-4 shrink-0 text-stone-400" />
-                Spot {reservation.spot_number}
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -252,7 +245,7 @@ export default async function ParkingDetailPage({
           </Card>
         )}
 
-        {/* Notes & Spot */}
+        {/* Staff Notes */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Staff Notes</CardTitle>
@@ -260,7 +253,6 @@ export default async function ParkingDetailPage({
           <CardContent>
             <ParkingNotesForm
               id={reservation.id}
-              spotNumber={reservation.spot_number}
               staffNotes={reservation.staff_notes}
             />
           </CardContent>
