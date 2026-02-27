@@ -73,7 +73,7 @@ export async function createStripeInvoice({
     });
   }
 
-  // Tax (on parts + shop supplies)
+  // Tax (on parts only)
   if (totals.taxAmount > 0) {
     await stripe.invoiceItems.create({
       customer: stripeCustomerId,

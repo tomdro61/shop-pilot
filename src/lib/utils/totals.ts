@@ -149,8 +149,8 @@ export function calculateTotals(
     );
   const hazmat = hazmatEnabled ? s.hazmat_amount : 0;
 
-  // Tax applies to parts + shop supplies (NOT labor, NOT hazmat)
-  const taxableAmount = partsTotal + shopSupplies;
+  // Tax applies to parts only (NOT labor, NOT shop supplies, NOT hazmat)
+  const taxableAmount = partsTotal;
   const taxRate = s.tax_rate;
   const taxAmount = Math.round(taxableAmount * taxRate * 100) / 100;
 
