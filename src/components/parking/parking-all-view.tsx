@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -16,13 +17,19 @@ import {
   PARKING_STATUS_ORDER,
   PARKING_STATUS_LABELS,
 } from "@/lib/constants";
-import { Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 export function ParkingAllView({
   reservations,
+  page,
+  totalPages,
+  total,
 }: {
   reservations: ParkingReservation[];
+  page: number;
+  totalPages: number;
+  total: number;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,12 +56,12 @@ export function ParkingAllView({
     [router, searchParams]
   );
 
-  // Debounced search
+  // Debounced search — reset to page 1
   useEffect(() => {
     const timeout = setTimeout(() => {
       const current = searchParams.get("search") || "";
       if (searchInput !== current) {
-        updateParams({ search: searchInput });
+        updateParams({ search: searchInput, page: "" });
       }
     }, 300);
     return () => clearTimeout(timeout);
@@ -79,7 +86,7 @@ export function ParkingAllView({
         <Select
           value={currentView}
           onValueChange={(value) =>
-            updateParams({ view: value === "all" ? "" : value, date: currentDate })
+            updateParams({ view: value === "all" ? "" : value, date: currentDate, page: "" })
           }
         >
           <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs">
@@ -95,12 +102,12 @@ export function ParkingAllView({
           type="date"
           className="w-full sm:w-[160px] h-9 text-xs"
           value={currentDate}
-          onChange={(e) => updateParams({ date: e.target.value })}
+          onChange={(e) => updateParams({ date: e.target.value, page: "" })}
         />
         <Select
           value={currentStatus || "all"}
           onValueChange={(value) =>
-            updateParams({ status: value === "all" ? "" : value })
+            updateParams({ status: value === "all" ? "" : value, page: "" })
           }
         >
           <SelectTrigger className="w-full sm:w-[160px] h-9 text-xs">
@@ -117,10 +124,15 @@ export function ParkingAllView({
         </Select>
       </div>
 
-      {/* Results count */}
-      <p className="text-xs text-stone-500 dark:text-stone-400">
-        {reservations.length} reservation{reservations.length !== 1 ? "s" : ""}
-      </p>
+      {/* Results count + pagination info */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-stone-500 dark:text-stone-400">
+          {total} reservation{total !== 1 ? "s" : ""}
+          {totalPages > 1 && (
+            <span> · Page {page} of {totalPages}</span>
+          )}
+        </p>
+      </div>
 
       {/* List */}
       {reservations.length === 0 ? (
@@ -144,6 +156,35 @@ export function ParkingAllView({
               }
             />
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 text-xs"
+            disabled={page <= 1}
+            onClick={() => updateParams({ page: String(page - 1) })}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Previous
+          </Button>
+          <span className="text-xs text-stone-500 dark:text-stone-400 px-2">
+            {page} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 text-xs"
+            disabled={page >= totalPages}
+            onClick={() => updateParams({ page: String(page + 1) })}
+          >
+            Next
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
         </div>
       )}
     </div>

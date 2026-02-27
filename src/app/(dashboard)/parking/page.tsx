@@ -22,11 +22,13 @@ export default async function ParkingPage({
     date?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }) {
   const params = await searchParams;
   const tab = params.tab || "today";
   const lot = params.lot || undefined;
+  const page = parseInt(params.page || "1", 10) || 1;
 
   if (tab === "today") {
     const dashboard = await getParkingDashboard(lot);
@@ -54,7 +56,7 @@ export default async function ParkingPage({
 
   // "all" tab — full list with filters
   const view = params.view || "all";
-  const reservations = await getParkingReservations({
+  const result = await getParkingReservations({
     search: params.search,
     status: params.status as ParkingStatus | undefined,
     lot,
@@ -63,6 +65,7 @@ export default async function ParkingPage({
     dropOffDate: view === "arrivals" ? params.date : undefined,
     pickUpDate: view === "pickups" ? params.date : undefined,
     dateAny: view === "all" ? params.date : undefined,
+    page,
   });
 
   return (
@@ -70,7 +73,12 @@ export default async function ParkingPage({
       <Suspense>
         <ParkingTabs />
       </Suspense>
-      <ParkingAllView reservations={reservations} />
+      <ParkingAllView
+        reservations={result.data}
+        page={result.page}
+        totalPages={result.totalPages}
+        total={result.total}
+      />
     </div>
   );
 }

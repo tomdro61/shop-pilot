@@ -7,6 +7,8 @@ import type { ParkingStatus } from "@/types";
 
 // ── Fetch reservations with filters ─────────────────────────────
 
+const PAGE_SIZE = 50;
+
 export async function getParkingReservations(filters?: {
   search?: string;
   status?: ParkingStatus;
@@ -17,14 +19,19 @@ export async function getParkingReservations(filters?: {
   pickUpDate?: string;
   dateAny?: string;
   hasServices?: boolean;
+  page?: number;
 }) {
   const supabase = await createClient();
+  const page = filters?.page || 1;
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
 
   let query = supabase
     .from("parking_reservations")
-    .select("*")
-    .order("drop_off_date", { ascending: true })
-    .order("drop_off_time", { ascending: true });
+    .select("*", { count: "exact" })
+    .order("drop_off_date", { ascending: false })
+    .order("drop_off_time", { ascending: false })
+    .range(from, to);
 
   if (filters?.status) {
     query = query.eq("status", filters.status);
@@ -59,9 +66,15 @@ export async function getParkingReservations(filters?: {
     );
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw new Error(error.message);
-  return data;
+  return {
+    data: data || [],
+    total: count || 0,
+    page,
+    pageSize: PAGE_SIZE,
+    totalPages: Math.ceil((count || 0) / PAGE_SIZE),
+  };
 }
 
 // ── Get single reservation ──────────────────────────────────────
