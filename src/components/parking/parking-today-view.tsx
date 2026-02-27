@@ -5,7 +5,7 @@ import {
   ParkingReservationCardCompact,
 } from "@/components/parking/parking-reservation-card";
 import { CheckInButton, CheckOutButton } from "@/components/parking/parking-actions";
-import { PlaneLanding, PlaneTakeoff, Car, Wrench } from "lucide-react";
+import { PlaneLanding, PlaneTakeoff, Car } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 interface DashboardData {
@@ -89,10 +89,10 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
           accent="bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400"
         />
         <KPICard
-          label="Service Leads"
-          value={data.serviceLeads.length}
-          icon={Wrench}
-          accent="bg-violet-50 dark:bg-violet-950 text-violet-600 dark:text-violet-400"
+          label="Picking Up Tomorrow"
+          value={data.tomorrowPickups.length}
+          icon={PlaneTakeoff}
+          accent="bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-400"
         />
       </div>
 
