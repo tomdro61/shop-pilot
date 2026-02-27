@@ -20,6 +20,7 @@ import {
   Mail,
   MapPin,
   Hash,
+  Palette,
 } from "lucide-react";
 
 export async function generateMetadata({
@@ -149,6 +150,12 @@ export default async function ParkingDetailPage({
               <Hash className="h-4 w-4 shrink-0 text-stone-400" />
               {reservation.license_plate}
             </div>
+            {reservation.color && (
+              <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
+                <Palette className="h-4 w-4 shrink-0 text-stone-400" />
+                {reservation.color}
+              </div>
+            )}
             {reservation.spot_number && (
               <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
                 <MapPin className="h-4 w-4 shrink-0 text-stone-400" />

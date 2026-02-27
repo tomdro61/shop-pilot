@@ -13,6 +13,7 @@ export const parkingSubmitSchema = z.object({
   make: z.string().min(1, "Vehicle make is required").max(50),
   model: z.string().min(1, "Vehicle model is required").max(50),
   license_plate: z.string().min(1, "License plate is required").max(15),
+  color: z.string().max(30).optional().default(""),
   lot: z.string().min(1, "Lot is required"),
   confirmation_number: z.string().min(1, "Confirmation number is required").max(100),
   services_interested: z

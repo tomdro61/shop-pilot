@@ -106,10 +106,11 @@ export async function POST(request: Request) {
 
   // Write to Supabase
   const supabase = createAdminClient();
-  const { website: _, ...insertData } = parsed.data;
+  const { website: _, color: rawColor, ...insertData } = parsed.data;
 
   const { error } = await supabase.from("parking_reservations").insert({
     ...insertData,
+    color: rawColor || null,
     status: "reserved" as const,
     customer_id: customerId,
   });

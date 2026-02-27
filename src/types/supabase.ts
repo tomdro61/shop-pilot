@@ -541,6 +541,7 @@ export type Database = {
           spot_number: string | null;
           staff_notes: string | null;
           customer_id: string | null;
+          color: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -567,6 +568,7 @@ export type Database = {
           spot_number?: string | null;
           staff_notes?: string | null;
           customer_id?: string | null;
+          color?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -593,6 +595,7 @@ export type Database = {
           spot_number?: string | null;
           staff_notes?: string | null;
           customer_id?: string | null;
+          color?: string | null;
           created_at?: string;
           updated_at?: string;
         };
