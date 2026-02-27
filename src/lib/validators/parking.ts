@@ -17,7 +17,7 @@ export const parkingSubmitSchema = z.object({
   lot: z.string().min(1, "Lot is required"),
   confirmation_number: z.string().min(1, "Confirmation number is required").max(100),
   services_interested: z
-    .array(z.string().max(100))
+    .array(z.string().max(50))
     .optional()
     .default([]),
   liability_acknowledged: z.boolean().refine((val) => val === true, {
