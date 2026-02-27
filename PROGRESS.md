@@ -1499,6 +1499,7 @@
 - [ ] A2P registration on Quo (blocked on number port + paid plan)
 
 ### What's Next
+- Airport Parking Management
 - Phase 4: vehicle service history, work orders, labor rates, inventory, accounting
 - Voice input for AI assistant
 - Chat history persistence
@@ -1567,3 +1568,101 @@
 - Phase 4: vehicle service history, work orders, labor rates, inventory, accounting
 - Voice input for AI assistant
 - Chat history persistence
+
+---
+
+## Session 22 — 2026-02-26 — Airport Parking Management
+
+### What Was Completed
+
+**Complete airport parking management system for 3 lots (Broadway Motors, Airport Parking Boston 1, Airport Parking Boston 2). Includes database table, public API endpoint, staff dashboard with 3 views, reservation detail page, and AI assistant integration (6 new tools).**
+
+1. **Database Migration** (`supabase/migrations/20260226000000_parking_reservations.sql`) — `parking_status` enum (reserved, checked_in, checked_out, no_show, cancelled), `parking_reservations` table with customer info, trip dates, vehicle info, lot (text, not enum), confirmation number, services_interested (text[]), operational fields (status, spot_number, staff_notes, checked_in_at, checked_out_at). 7 indexes, `update_updated_at()` trigger, RLS (managers full, techs read-only). Migration applied to Supabase.
+
+2. **TypeScript Types** — Added `parking_reservations` table types + `parking_status` enum to `supabase.ts`. Added `ParkingReservation`, `ParkingReservationInsert`, `ParkingReservationUpdate`, `ParkingStatus` aliases to `index.ts`.
+
+3. **Constants** (`src/lib/constants.ts`) — `PARKING_STATUS_ORDER`, `PARKING_STATUS_LABELS`, `PARKING_STATUS_COLORS` (reserved=blue, checked_in=green, checked_out=stone, no_show=red, cancelled=amber). `PARKING_SERVICES` array, `PARKING_SERVICE_LABELS` map, `PARKING_LOTS` array.
+
+4. **Zod Validators** (`src/lib/validators/parking.ts`) — `parkingSubmitSchema` for public API (all form fields + `website` honeypot that must be empty), `parkingUpdateSchema` for staff operations.
+
+5. **Public API** (`src/app/api/parking/submit/route.ts`) — POST endpoint using `createAdminClient()` (service role, bypasses RLS). CORS for broadwaymotorsma.com, broadwaymotorsrevere.com (+ www variants + localhost in dev). In-memory rate limiting (5 req/IP/60s). Honeypot: non-empty `website` field returns fake success without DB write. Zod validation with 400 + field errors on failure.
+
+6. **Server Actions** (`src/lib/actions/parking.ts`) — 8 functions: `getParkingReservations(filters?)`, `getParkingReservation(id)`, `getParkingDashboard(lot?)`, `checkInReservation(id, spotNumber?)`, `checkOutReservation(id)`, `markNoShow(id)`, `cancelReservation(id)`, `updateReservation(id, data)`. Dashboard uses `Promise.all` for 4 parallel queries.
+
+7. **Navigation Updates** — Sidebar: added Parking (PlaneLanding icon) after Inspections. Bottom nav: replaced Reports with Parking. Header: added "Airport Parking" page title + Reports link in account dropdown (BarChart3 icon) so Reports remains accessible on mobile.
+
+8. **Dashboard Pages**:
+   - Main page (`/parking`) — 3 tabs via `?tab=` URL param (today/services/all), lot filter via `?lot=` param, server component with URL params
+   - Loading skeleton — 4 KPI cards + 3 section skeletons
+   - Detail page (`/parking/[id]`) — Full reservation details: contact, vehicle, trip dates, timestamps, services interested, staff notes form, contextual action buttons
+
+9. **Dashboard Components** (7 files in `src/components/parking/`):
+   - `parking-tabs.tsx` — Tab switcher + lot filter dropdown, both updating URL params
+   - `parking-today-view.tsx` — 4 KPI cards (arriving/picking up/parked/leads) + 3 sections with compact cards and inline Check In/Check Out buttons
+   - `parking-service-leads.tsx` — Revenue opportunity list with color-coded service badges (oil_change=amber, detailing=violet, brakes=red, tire_replacement=stone, wipers=blue), contact info, dates
+   - `parking-all-view.tsx` — Full list with debounced search (300ms), status filter, results count, reservation cards with contextual action buttons
+   - `parking-reservation-card.tsx` — Two variants: full card (with link) + compact row (for today view)
+   - `parking-actions.tsx` — Check In (with Dialog for spot number), Check Out, No-Show, Cancel buttons. Confirmation dialogs, toast on success/error
+   - `parking-notes-form.tsx` — Inline form for spot number + staff notes with save button (only shows when changes detected)
+
+10. **AI Assistant Integration** — 6 new parking tools (43 total):
+    - `search_parking_reservations` — search by name, plate, confirmation #, optional status/lot filters
+    - `get_parking_reservation` — get one by ID
+    - `get_parking_dashboard` — today's arrivals, pickups, parked count, service leads (optional lot filter)
+    - `check_in_parking` — check in a reservation (with optional spot number)
+    - `check_out_parking` — check out a reservation
+    - `update_parking_reservation` — update spot number or staff notes
+    - System prompt updated with parking context (3 lots, status flow, service leads)
+
+### New Files (14)
+- `supabase/migrations/20260226000000_parking_reservations.sql` — Table, enum, indexes, trigger, RLS
+- `src/lib/validators/parking.ts` — Submit + update Zod schemas
+- `src/app/api/parking/submit/route.ts` — Public POST endpoint with CORS, rate limiting, honeypot
+- `src/lib/actions/parking.ts` — 8 server actions
+- `src/app/(dashboard)/parking/page.tsx` — Main parking dashboard
+- `src/app/(dashboard)/parking/loading.tsx` — Loading skeleton
+- `src/app/(dashboard)/parking/[id]/page.tsx` — Reservation detail page
+- `src/components/parking/parking-tabs.tsx` — Tab switcher + lot filter
+- `src/components/parking/parking-today-view.tsx` — Today view with KPI cards
+- `src/components/parking/parking-service-leads.tsx` — Service leads list
+- `src/components/parking/parking-all-view.tsx` — All reservations with search/filter
+- `src/components/parking/parking-actions.tsx` — Action buttons with confirmation dialogs
+- `src/components/parking/parking-notes-form.tsx` — Staff notes + spot number form
+- `src/components/parking/parking-reservation-card.tsx` — Reusable reservation card (2 variants)
+
+### Modified Files (8)
+- `src/types/supabase.ts` — parking_reservations table types + parking_status enum
+- `src/types/index.ts` — ParkingReservation/ParkingStatus aliases
+- `src/lib/constants.ts` — Parking status labels/colors + service constants + lots array
+- `src/components/layout/sidebar.tsx` — Parking nav item (PlaneLanding icon)
+- `src/components/layout/bottom-nav.tsx` — Replaced Reports with Parking
+- `src/components/layout/header.tsx` — Page title + Reports in account dropdown
+- `src/lib/ai/tools.ts` — 6 new parking tools
+- `src/lib/ai/handlers.ts` — 6 parking tool handlers
+- `src/lib/ai/system-prompt.ts` — Airport parking context
+
+### Build Status
+- `npm run build` passes cleanly (0 type errors)
+- Supabase migration applied successfully
+
+### What's NOT Done Yet
+- [ ] Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
+- [ ] A2P registration on Quo (blocked on number port + paid plan)
+- [ ] Deploy to Vercel (push to GitHub)
+- [ ] Test public API endpoint with curl from production URL
+- [ ] Connect external parking booking forms to `/api/parking/submit`
+
+### What's Next
+- Push to GitHub / deploy to Vercel
+- Connect the three parking lot booking forms to the `/api/parking/submit` endpoint
+- Phase 4: vehicle service history, work orders, labor rates, inventory, accounting
+- Voice input for AI assistant
+- Chat history persistence
+
+### Known Issues / Notes
+- Parking customers are completely separate from shop customers — no FK to `customers` table
+- `lot` is `text` (not enum) so new lots can be added without a migration
+- `confirmation_number` is NOT NULL but not UNIQUE (third-party booking sites may have overlapping formats)
+- Rate limiting is in-memory (resets on serverless cold start) — acceptable for low-traffic endpoint
+- Bottom nav now shows Parking instead of Reports on mobile — Reports moved to header account dropdown
+- Migration used `gen_random_uuid()` (not `uuid_generate_v4()` which requires the uuid-ossp extension)

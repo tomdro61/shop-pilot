@@ -1,0 +1,127 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ParkingReservationCard } from "@/components/parking/parking-reservation-card";
+import { CheckInButton, CheckOutButton } from "@/components/parking/parking-actions";
+import {
+  PARKING_STATUS_ORDER,
+  PARKING_STATUS_LABELS,
+} from "@/lib/constants";
+import { Search } from "lucide-react";
+import type { ParkingReservation } from "@/types";
+
+export function ParkingAllView({
+  reservations,
+}: {
+  reservations: ParkingReservation[];
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchInput, setSearchInput] = useState(
+    searchParams.get("search") || ""
+  );
+
+  const currentStatus = searchParams.get("status") || "";
+
+  const updateParams = useCallback(
+    (updates: Record<string, string>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value) {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      }
+      // Keep tab=all
+      params.set("tab", "all");
+      router.push(`/parking?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
+
+  // Debounced search
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const current = searchParams.get("search") || "";
+      if (searchInput !== current) {
+        updateParams({ search: searchInput });
+      }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchInput, searchParams, updateParams]);
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <Input
+            placeholder="Search name, plate, phone, confirmation #..."
+            className="pl-9 h-9 text-sm"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+        </div>
+        <Select
+          value={currentStatus || "all"}
+          onValueChange={(value) =>
+            updateParams({ status: value === "all" ? "" : value })
+          }
+        >
+          <SelectTrigger className="w-full sm:w-[160px] h-9 text-xs">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {PARKING_STATUS_ORDER.map((status) => (
+              <SelectItem key={status} value={status}>
+                {PARKING_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Results count */}
+      <p className="text-xs text-stone-500 dark:text-stone-400">
+        {reservations.length} reservation{reservations.length !== 1 ? "s" : ""}
+      </p>
+
+      {/* List */}
+      {reservations.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-stone-300 dark:border-stone-700 p-8 text-center">
+          <p className="text-sm text-stone-500 dark:text-stone-400">
+            No reservations found.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {reservations.map((r) => (
+            <ParkingReservationCard
+              key={r.id}
+              reservation={r}
+              showActions={
+                r.status === "reserved" ? (
+                  <CheckInButton id={r.id} size="sm" />
+                ) : r.status === "checked_in" ? (
+                  <CheckOutButton id={r.id} size="sm" />
+                ) : undefined
+              }
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

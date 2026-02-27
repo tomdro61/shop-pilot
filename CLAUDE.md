@@ -40,9 +40,11 @@ Core tables in Supabase PostgreSQL:
 - **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
 - **shop_settings** — single-row config: tax_rate, shop_supplies_enabled, shop_supplies_method (percent_of_labor/parts/total/flat), shop_supplies_rate, shop_supplies_cap, shop_supplies_categories (jsonb, nullable — scopes fee to specific job categories), hazmat_enabled, hazmat_amount, hazmat_label, hazmat_categories (jsonb, nullable — scopes fee to specific job categories)
+- **parking_reservations** — id, first_name, last_name, email, phone, drop_off_date, drop_off_time, pick_up_date, pick_up_time, make, model, license_plate, lot (text), confirmation_number, services_interested (text[]), liability_acknowledged, status (parking_status enum), checked_in_at, checked_out_at, spot_number, staff_notes, created_at, updated_at. No FK to customers — parking customers are separate people.
 
 **Job statuses:** Not Started → Waiting for Parts → In Progress → Complete
 **Payment tracked separately:** payment_status (unpaid → invoiced → paid / waived), payment_method (stripe/cash/check/ach/terminal)
+**Parking statuses:** reserved → checked_in → checked_out (or no_show / cancelled)
 
 ## Project Structure (Target)
 
@@ -58,10 +60,13 @@ shop-pilot/
 │   │   │   ├── estimates/      # Estimate builder
 │   │   │   ├── invoices/       # Invoice management
 │   │   │   ├── team/           # Team/technician management
-│   │   │   └── messages/       # Communication log
+│   │   │   ├── messages/       # Communication log
+│   │   │   └── parking/        # Airport parking management (3 lots)
+│   │   │       └── [id]/       # Reservation detail page
 │   │   ├── chat/               # AI assistant interface
 │   │   └── api/                # API routes
 │   │       ├── ai/             # Claude API integration
+│   │       ├── parking/        # Public parking form submission endpoint
 │   │       ├── stripe/         # Stripe webhooks + payment links
 │   │       ├── messaging/      # Quo (SMS) + Resend (email) integrations
 │   │       └── ...
@@ -69,6 +74,7 @@ shop-pilot/
 │   │   ├── ui/                 # Base UI components (shadcn/ui)
 │   │   ├── forms/              # Form components
 │   │   ├── dashboard/          # Dashboard-specific (board, calendar, list views)
+│   │   ├── parking/            # Parking dashboard components (tabs, views, actions, cards)
 │   │   └── chat/               # AI chat interface components
 │   ├── lib/                    # Utilities and shared logic
 │   │   ├── supabase/           # Supabase client, helpers, types
@@ -229,7 +235,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 
 **Phase 1: COMPLETE** — Deployed and live on Vercel
 **Phase 2: COMPLETE** — Stripe invoicing + estimates + Quo SMS + Terminal + Resend email all built
-**Phase 3: COMPLETE** — AI Assistant with Claude API, 37 tools, streaming chat UI
+**Phase 3: COMPLETE** — AI Assistant with Claude API, 43 tools, streaming chat UI
 **Session 4:** Team management, tech assignment on jobs, reports date filtering + tech charts
 **Session 5:** Full AI chat assistant (Phase 3)
 **Session 6:** Dashboard operational intelligence, UI refresh phase 2
@@ -248,6 +254,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 19:** Calendar views, date fixes, job form rename
 **Session 20:** Category-scoped shop supplies & hazmat fees
 **Session 21:** Estimate delete, category grouping on estimates, Add Service overflow fix
+**Session 22:** Airport Parking Management — 3-lot system with dashboard, public API, AI tools
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -256,7 +263,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
 - Quo SMS: fully wired (send/receive/webhook), auto-texts estimate approval links + invoice payment links; blocked on A2P registration
 - Resend Email: full transactional email — branded HTML templates (estimate, receipt, generic), auto-send on estimate send + invoice paid, AI `send_email` tool, test mode with console logging, delivery status tracking in `messages` table
-- AI Assistant: conversational chat at `/chat` with 37 tools covering all CRUD + SMS + email + settings operations, streaming SSE, floating chat bubble on all pages
+- AI Assistant: conversational chat at `/chat` with 43 tools covering all CRUD + SMS + email + settings + parking operations, streaming SSE, floating chat bubble on all pages
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
 - Job Presets: reusable templates with pre-filled line items, `/presets` management page
 - Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
@@ -266,6 +273,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Printable Repair Order: `/jobs/[id]/print` — print-optimized document with shop header, customer/vehicle info, itemized line items, tax, totals
 - **Shop Settings:** Configurable tax rate, shop supplies fee (4 calculation methods + cap), environmental/hazmat fee. Both fees can be scoped to specific job categories (null = all categories, backward compatible). Settings page at `/settings/rates`. All totals computed via shared `calculateTotals()` utility. Fees default to disabled. Tax rule: parts + shop supplies are taxable; labor and hazmat are not.
 - **Part Cost Tracking:** Optional `cost` (wholesale price) field on part line items. Reports compute actual gross profit when cost is available, fall back to 40% margin estimate when not. Cost data coverage % shown on reports. Cost is never exposed to customers (invoices, estimates, print RO all use retail price only).
+- **Airport Parking:** Dashboard at `/parking` managing 3 lots (Broadway Motors, Airport Parking Boston 1, Airport Parking Boston 2). Three views: Today (arrivals/pickups/parked), Service Leads (parking customers interested in repairs), All Reservations. Public API at `/api/parking/submit` accepts form POSTs with CORS, rate limiting, and honeypot spam protection. 6 AI tools for parking operations. Parking customers are separate from shop customers (no FK to customers table).
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 

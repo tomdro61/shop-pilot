@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, BarChart3, CircleDollarSign } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, PlaneLanding, CircleDollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/jobs", label: "Jobs", icon: Wrench },
   { href: "/customers", label: "Customers", icon: Users },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/parking", label: "Parking", icon: PlaneLanding },
   { href: "/quick-pay", label: "Pay", icon: CircleDollarSign },
 ];
 

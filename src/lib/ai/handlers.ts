@@ -44,6 +44,14 @@ import { getTeamMembers, getTechnicians } from "@/lib/actions/team";
 import { getReportData, getFleetARSummary, getDailySummary } from "@/lib/actions/reports";
 import { sendCustomerSMS, getCustomerMessages } from "@/lib/actions/messages";
 import { getShopSettings, updateShopSettings } from "@/lib/actions/settings";
+import {
+  getParkingReservations,
+  getParkingReservation,
+  getParkingDashboard,
+  checkInReservation,
+  checkOutReservation,
+  updateReservation as updateParkingReservation,
+} from "@/lib/actions/parking";
 
 type Input = Record<string, unknown>;
 
@@ -428,6 +436,75 @@ export async function executeToolCall(
         if (toolInput.hazmat_amount !== undefined) updates.hazmat_amount = num(toolInput.hazmat_amount);
         if (toolInput.hazmat_label !== undefined) updates.hazmat_label = str(toolInput.hazmat_label);
         const result = await updateShopSettings(updates);
+        return JSON.stringify(result);
+      }
+
+      // ── Parking ─────────────────────────────────────────────
+      case "search_parking_reservations": {
+        const result = await getParkingReservations({
+          search: str(toolInput.search) || undefined,
+          status: toolInput.status
+            ? (str(toolInput.status) as Parameters<typeof getParkingReservations>[0] extends { status?: infer S } ? S : never)
+            : undefined,
+          lot: str(toolInput.lot) || undefined,
+        });
+        return JSON.stringify(result);
+      }
+      case "get_parking_reservation": {
+        const result = await getParkingReservation(str(toolInput.id));
+        return JSON.stringify(result ?? { error: "Reservation not found" });
+      }
+      case "get_parking_dashboard": {
+        const result = await getParkingDashboard(
+          str(toolInput.lot) || undefined
+        );
+        return JSON.stringify({
+          arrivals: result.arrivals.length,
+          pickups: result.pickups.length,
+          currently_parked: result.currentlyParked.length,
+          service_leads: result.serviceLeads.length,
+          arrivals_list: result.arrivals.map((r) => ({
+            id: r.id,
+            name: `${r.first_name} ${r.last_name}`,
+            vehicle: `${r.make} ${r.model}`,
+            plate: r.license_plate,
+            time: r.drop_off_time,
+            lot: r.lot,
+            status: r.status,
+            services: r.services_interested,
+          })),
+          pickups_list: result.pickups.map((r) => ({
+            id: r.id,
+            name: `${r.first_name} ${r.last_name}`,
+            vehicle: `${r.make} ${r.model}`,
+            plate: r.license_plate,
+            time: r.pick_up_time,
+            lot: r.lot,
+            spot: r.spot_number,
+          })),
+        });
+      }
+      case "check_in_parking": {
+        const result = await checkInReservation(
+          str(toolInput.id),
+          str(toolInput.spot_number) || undefined
+        );
+        return JSON.stringify(result);
+      }
+      case "check_out_parking": {
+        const result = await checkOutReservation(str(toolInput.id));
+        return JSON.stringify(result);
+      }
+      case "update_parking_reservation": {
+        const updates: { spot_number?: string | null; staff_notes?: string | null } = {};
+        if (toolInput.spot_number !== undefined)
+          updates.spot_number = str(toolInput.spot_number) || null;
+        if (toolInput.staff_notes !== undefined)
+          updates.staff_notes = str(toolInput.staff_notes) || null;
+        const result = await updateParkingReservation(
+          str(toolInput.id),
+          updates
+        );
         return JSON.stringify(result);
       }
 

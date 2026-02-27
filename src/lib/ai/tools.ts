@@ -630,4 +630,86 @@ export const tools: Anthropic.Tool[] = [
       required: [],
     },
   },
+
+  // ── Parking tools ─────────────────────────────────────────────
+  {
+    name: "search_parking_reservations",
+    description:
+      "Search airport parking reservations by customer name, license plate, phone, or confirmation number. Optionally filter by status and lot.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        search: { type: "string", description: "Search query — matches name, plate, phone, confirmation #" },
+        status: {
+          type: "string",
+          enum: ["reserved", "checked_in", "checked_out", "no_show", "cancelled"],
+          description: "Filter by reservation status",
+        },
+        lot: { type: "string", description: "Filter by lot name (e.g. 'Broadway Motors', 'Airport Parking Boston 1')" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_parking_reservation",
+    description: "Get full details for a single parking reservation by ID.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "Reservation UUID" },
+      },
+      required: ["id"],
+    },
+  },
+  {
+    name: "get_parking_dashboard",
+    description:
+      "Get today's parking dashboard: arrivals, pickups, currently parked count, and service leads. Optionally filter by lot.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        lot: { type: "string", description: "Filter by lot name (optional)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "check_in_parking",
+    description:
+      "Check in a parking reservation (customer has dropped off their car). Optionally assign a spot number.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "Reservation UUID (required)" },
+        spot_number: { type: "string", description: "Spot number to assign (e.g. 'A1', 'B12')" },
+      },
+      required: ["id"],
+    },
+  },
+  {
+    name: "check_out_parking",
+    description:
+      "Check out a parking reservation (customer is picking up their car).",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "Reservation UUID (required)" },
+      },
+      required: ["id"],
+    },
+  },
+  {
+    name: "update_parking_reservation",
+    description:
+      "Update a parking reservation's spot number or staff notes.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "Reservation UUID (required)" },
+        spot_number: { type: "string", description: "New spot number (or empty string to clear)" },
+        staff_notes: { type: "string", description: "Staff notes to save" },
+      },
+      required: ["id"],
+    },
+  },
 ];

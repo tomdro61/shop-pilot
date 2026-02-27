@@ -52,6 +52,10 @@ export type UserInsert = Database["public"]["Tables"]["users"]["Insert"];
 export type UserUpdate = Database["public"]["Tables"]["users"]["Update"];
 
 export type ShopSettings = Database["public"]["Tables"]["shop_settings"]["Row"];
+
+export type ParkingReservation = Database["public"]["Tables"]["parking_reservations"]["Row"];
+export type ParkingReservationInsert = Database["public"]["Tables"]["parking_reservations"]["Insert"];
+export type ParkingReservationUpdate = Database["public"]["Tables"]["parking_reservations"]["Update"];
 export type ShopSettingsUpdate = Database["public"]["Tables"]["shop_settings"]["Update"];
 export type ShopSuppliesMethod = "percent_of_labor" | "percent_of_parts" | "percent_of_total" | "flat";
 
@@ -65,6 +69,7 @@ export type MessageDirection = Database["public"]["Enums"]["message_direction"];
 export type UserRole = Database["public"]["Enums"]["user_role"];
 export type CustomerType = Database["public"]["Enums"]["customer_type"];
 export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
+export type ParkingStatus = Database["public"]["Enums"]["parking_status"];
 export type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 
 // Job with relations (commonly used in lists/details)

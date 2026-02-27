@@ -1,0 +1,70 @@
+import { Suspense } from "react";
+import { getParkingDashboard, getParkingReservations } from "@/lib/actions/parking";
+import { ParkingTabs } from "@/components/parking/parking-tabs";
+import { ParkingTodayView } from "@/components/parking/parking-today-view";
+import { ParkingAllView } from "@/components/parking/parking-all-view";
+import { ParkingServiceLeads } from "@/components/parking/parking-service-leads";
+import type { ParkingStatus } from "@/types";
+
+export const metadata = {
+  title: "Airport Parking | ShopPilot",
+};
+
+export default async function ParkingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    tab?: string;
+    lot?: string;
+    search?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const tab = params.tab || "today";
+  const lot = params.lot || undefined;
+
+  if (tab === "today") {
+    const dashboard = await getParkingDashboard(lot);
+    return (
+      <div className="p-4 lg:p-6 space-y-5">
+        <Suspense>
+          <ParkingTabs />
+        </Suspense>
+        <ParkingTodayView data={dashboard} />
+      </div>
+    );
+  }
+
+  if (tab === "services") {
+    const dashboard = await getParkingDashboard(lot);
+    return (
+      <div className="p-4 lg:p-6 space-y-5">
+        <Suspense>
+          <ParkingTabs />
+        </Suspense>
+        <ParkingServiceLeads reservations={dashboard.serviceLeads} />
+      </div>
+    );
+  }
+
+  // "all" tab — full list with filters
+  const reservations = await getParkingReservations({
+    search: params.search,
+    status: params.status as ParkingStatus | undefined,
+    lot,
+    dateFrom: params.from,
+    dateTo: params.to,
+  });
+
+  return (
+    <div className="p-4 lg:p-6 space-y-5">
+      <Suspense>
+        <ParkingTabs />
+      </Suspense>
+      <ParkingAllView reservations={reservations} />
+    </div>
+  );
+}

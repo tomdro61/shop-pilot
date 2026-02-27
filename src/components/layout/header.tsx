@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import { LogOut, Wrench, Sun, Moon, Monitor, Settings } from "lucide-react";
+import { LogOut, Wrench, Sun, Moon, Monitor, Settings, BarChart3 } from "lucide-react";
 import type { User } from "@/types";
 
 const pageTitles: Record<string, string> = {
@@ -26,6 +26,7 @@ const pageTitles: Record<string, string> = {
   "/presets": "Job Presets",
   "/settings/rates": "Rates & Fees",
   "/settings/categories": "Job Categories",
+  "/parking": "Airport Parking",
   "/reports": "Reports",
   "/quick-pay": "Quick Pay",
   "/chat": "AI Assistant",
@@ -41,6 +42,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/settings")) return "Settings";
   if (pathname.startsWith("/team")) return "Team";
   if (pathname.startsWith("/presets")) return "Job Presets";
+  if (pathname.startsWith("/parking")) return "Airport Parking";
   if (pathname.startsWith("/reports")) return "Reports";
   if (pathname.startsWith("/quick-pay")) return "Quick Pay";
   if (pathname.startsWith("/chat")) return "AI Assistant";
@@ -92,6 +94,10 @@ export function Header({ user }: { user: User | null }) {
           <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings className="mr-2 h-4 w-4" />
             Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/reports")}>
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Reports
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">

@@ -57,6 +57,25 @@ Payment methods: stripe (card), cash, check, ach
 - When sending estimates, both SMS and email are sent automatically — you don't need to send them manually
 - If a customer has no email, say so clearly and suggest adding one
 
+## Airport Parking
+Broadway Motors manages three airport parking lots for Boston Logan travelers:
+- **Broadway Motors** (main lot)
+- **Airport Parking Boston 1**
+- **Airport Parking Boston 2**
+
+Parking customers are NOT auto repair customers — they book through third-party sites and their data comes from an external form. They have no customer record in the shop system.
+
+**Parking status flow:** reserved → checked_in → checked_out (or no_show / cancelled)
+- **reserved** — booked but hasn't arrived yet
+- **checked_in** — car is on the lot
+- **checked_out** — customer picked up their car
+- **no_show** — customer never showed up
+- **cancelled** — reservation was cancelled
+
+**Service leads:** Parking customers can request services (oil change, detailing, brakes, tire replacement, wipers) on the booking form. These are potential repair customers whose car is already with us — a revenue opportunity.
+
+When showing parking info, include: customer name, vehicle (make model), plate, lot, confirmation #, drop-off/pick-up dates, and any services requested.
+
 ## Confirmation Required
 You MUST ask "Should I go ahead?" and wait for the user to confirm BEFORE executing any of these actions:
 - Creating or sending estimates
