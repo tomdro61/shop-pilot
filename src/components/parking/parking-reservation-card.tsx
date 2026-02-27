@@ -132,37 +132,54 @@ export function ParkingReservationCardCompact({
         <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
           {reservation.first_name} {reservation.last_name}
         </p>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-stone-500 dark:text-stone-400">
-          <span className="font-medium text-stone-700 dark:text-stone-300">
-            {timeLabel} {timeValue}
-          </span>
-          <span className="text-stone-300 dark:text-stone-600">·</span>
-          <span>{reservation.make} {reservation.model}</span>
-          <span className="text-stone-300 dark:text-stone-600">·</span>
-          <span>{reservation.license_plate}</span>
-          {reservation.color && (
-            <>
+        <div className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-stone-700 dark:text-stone-300">
+              {timeLabel} {timeValue}
+            </span>
+            {/* Car info inline on desktop */}
+            <span className="hidden md:contents">
               <span className="text-stone-300 dark:text-stone-600">·</span>
-              <span>{reservation.color}</span>
-            </>
-          )}
-          {variant !== "parked" && reservation.spot_number && (
-            <>
+              <span>{reservation.make} {reservation.model}</span>
               <span className="text-stone-300 dark:text-stone-600">·</span>
-              <span className="flex items-center gap-0.5">
-                <MapPin className="h-2.5 w-2.5" />
-                {reservation.spot_number}
-              </span>
-            </>
-          )}
-          {reservation.services_interested.length > 0 && (
-            <>
-              <span className="text-stone-300 dark:text-stone-600">·</span>
-              <span className="text-violet-600 dark:text-violet-400">
-                {reservation.services_interested.length} service{reservation.services_interested.length > 1 ? "s" : ""}
-              </span>
-            </>
-          )}
+              <span>{reservation.license_plate}</span>
+              {reservation.color && (
+                <>
+                  <span className="text-stone-300 dark:text-stone-600">·</span>
+                  <span>{reservation.color}</span>
+                </>
+              )}
+            </span>
+            {variant !== "parked" && reservation.spot_number && (
+              <>
+                <span className="text-stone-300 dark:text-stone-600">·</span>
+                <span className="flex items-center gap-0.5">
+                  <MapPin className="h-2.5 w-2.5" />
+                  {reservation.spot_number}
+                </span>
+              </>
+            )}
+            {reservation.services_interested.length > 0 && (
+              <>
+                <span className="text-stone-300 dark:text-stone-600">·</span>
+                <span className="text-violet-600 dark:text-violet-400">
+                  {reservation.services_interested.length} service{reservation.services_interested.length > 1 ? "s" : ""}
+                </span>
+              </>
+            )}
+          </div>
+          {/* Car info on its own line on mobile */}
+          <div className="flex items-center gap-2 mt-0.5 md:hidden">
+            <span>{reservation.make} {reservation.model}</span>
+            <span className="text-stone-300 dark:text-stone-600">·</span>
+            <span>{reservation.license_plate}</span>
+            {reservation.color && (
+              <>
+                <span className="text-stone-300 dark:text-stone-600">·</span>
+                <span>{reservation.color}</span>
+              </>
+            )}
+          </div>
         </div>
       </Link>
       {showActions && <div className="shrink-0">{showActions}</div>}

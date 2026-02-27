@@ -60,6 +60,9 @@ export function ParkingAllView({
     return () => clearTimeout(timeout);
   }, [searchInput, searchParams, updateParams]);
 
+  const currentView = searchParams.get("view") || "all";
+  const currentDate = searchParams.get("date") || "";
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -73,6 +76,27 @@ export function ParkingAllView({
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
+        <Select
+          value={currentView}
+          onValueChange={(value) =>
+            updateParams({ view: value === "all" ? "" : value, date: currentDate })
+          }
+        >
+          <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="arrivals">Arrivals</SelectItem>
+            <SelectItem value="pickups">Pickups</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          type="date"
+          className="w-full sm:w-[160px] h-9 text-xs"
+          value={currentDate}
+          onChange={(e) => updateParams({ date: e.target.value })}
+        />
         <Select
           value={currentStatus || "all"}
           onValueChange={(value) =>

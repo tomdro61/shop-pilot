@@ -13,6 +13,9 @@ export async function getParkingReservations(filters?: {
   lot?: string;
   dateFrom?: string;
   dateTo?: string;
+  dropOffDate?: string;
+  pickUpDate?: string;
+  dateAny?: string;
   hasServices?: boolean;
 }) {
   const supabase = await createClient();
@@ -34,6 +37,17 @@ export async function getParkingReservations(filters?: {
   }
   if (filters?.dateTo) {
     query = query.lte("drop_off_date", filters.dateTo);
+  }
+  if (filters?.dropOffDate) {
+    query = query.eq("drop_off_date", filters.dropOffDate);
+  }
+  if (filters?.pickUpDate) {
+    query = query.eq("pick_up_date", filters.pickUpDate);
+  }
+  if (filters?.dateAny) {
+    query = query.or(
+      `drop_off_date.eq.${filters.dateAny},pick_up_date.eq.${filters.dateAny}`
+    );
   }
   if (filters?.hasServices) {
     query = query.not("services_interested", "eq", "{}");
@@ -76,7 +90,9 @@ export async function getParkingDashboard(lot?: string) {
     return lot ? q.eq("lot", lot) : q;
   }
 
-  const [arrivalsResult, pickupsResult, currentlyParkedResult, serviceLeadsResult] =
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().split("T")[0];
+
+  const [arrivalsResult, pickupsResult, tomorrowPickupsResult, currentlyParkedResult, serviceLeadsResult] =
     await Promise.all([
       // Today's arrivals (reserved or checked_in, dropping off today)
       applyLotFilter(
@@ -93,6 +109,15 @@ export async function getParkingDashboard(lot?: string) {
           .from("parking_reservations")
           .select("*")
           .eq("pick_up_date", today)
+          .eq("status", "checked_in")
+      ).order("pick_up_time", { ascending: true }),
+
+      // Tomorrow's pickups (checked in, picking up tomorrow)
+      applyLotFilter(
+        supabase
+          .from("parking_reservations")
+          .select("*")
+          .eq("pick_up_date", tomorrow)
           .eq("status", "checked_in")
       ).order("pick_up_time", { ascending: true }),
 
@@ -117,6 +142,7 @@ export async function getParkingDashboard(lot?: string) {
   return {
     arrivals: arrivalsResult.data || [],
     pickups: pickupsResult.data || [],
+    tomorrowPickups: tomorrowPickupsResult.data || [],
     currentlyParked: currentlyParkedResult.data || [],
     serviceLeads: serviceLeadsResult.data || [],
   };

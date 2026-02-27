@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { value: "today", label: "Today" },
-  { value: "services", label: "Service Leads" },
   { value: "all", label: "All Reservations" },
+  { value: "services", label: "Service Leads" },
 ];
 
 export function ParkingTabs() {

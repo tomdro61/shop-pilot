@@ -11,6 +11,7 @@ import type { ParkingReservation } from "@/types";
 interface DashboardData {
   arrivals: ParkingReservation[];
   pickups: ParkingReservation[];
+  tomorrowPickups: ParkingReservation[];
   currentlyParked: ParkingReservation[];
   serviceLeads: ParkingReservation[];
 }
@@ -135,6 +136,26 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
                 reservation={r}
                 variant="pickup"
                 showActions={<CheckOutButton id={r.id} size="sm" />}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tomorrow's Pickups */}
+      <div className="space-y-3">
+        <SectionHeader title="Picking Up Tomorrow" count={data.tomorrowPickups.length} />
+        {data.tomorrowPickups.length === 0 ? (
+          <p className="text-sm text-stone-400 dark:text-stone-500">
+            No pickups scheduled for tomorrow.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {data.tomorrowPickups.map((r) => (
+              <ParkingReservationCardCompact
+                key={r.id}
+                reservation={r}
+                variant="pickup"
               />
             ))}
           </div>
