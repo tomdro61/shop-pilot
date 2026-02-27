@@ -4,17 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   checkInReservation,
   checkOutReservation,
@@ -31,14 +20,12 @@ export function CheckInButton({
   id: string;
   size?: "default" | "sm";
 }) {
-  const [open, setOpen] = useState(false);
-  const [spotNumber, setSpotNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleCheckIn() {
     setLoading(true);
-    const result = await checkInReservation(id, spotNumber || undefined);
+    const result = await checkInReservation(id);
     setLoading(false);
 
     if ("error" in result) {
@@ -47,46 +34,19 @@ export function CheckInButton({
     }
 
     toast.success("Checked in");
-    setOpen(false);
-    setSpotNumber("");
     router.refresh();
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size={size} className="gap-1.5">
-          <LogIn className="h-3.5 w-3.5" />
-          Check In
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Check In</DialogTitle>
-          <DialogDescription>
-            Assign an optional spot number for this vehicle.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor="spot">Spot Number</Label>
-          <Input
-            id="spot"
-            placeholder="e.g. A1, B12"
-            value={spotNumber}
-            onChange={(e) => setSpotNumber(e.target.value)}
-            autoFocus
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleCheckIn} disabled={loading}>
-            {loading ? "Checking in..." : "Check In"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Button
+      size={size}
+      className="gap-1.5"
+      onClick={handleCheckIn}
+      disabled={loading}
+    >
+      <LogIn className="h-3.5 w-3.5" />
+      {loading ? "..." : "Check In"}
+    </Button>
   );
 }
 
