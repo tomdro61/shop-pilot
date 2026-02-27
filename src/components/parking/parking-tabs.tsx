@@ -22,7 +22,7 @@ export function ParkingTabs() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") || "today";
-  const currentLot = searchParams.get("lot") || "";
+  const currentLot = searchParams.get("lot") || "Broadway Motors";
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {

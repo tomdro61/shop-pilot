@@ -27,7 +27,7 @@ export default async function ParkingPage({
 }) {
   const params = await searchParams;
   const tab = params.tab || "today";
-  const lot = params.lot || undefined;
+  const lot = params.lot || "Broadway Motors";
   const page = parseInt(params.page || "1", 10) || 1;
 
   if (tab === "today") {
