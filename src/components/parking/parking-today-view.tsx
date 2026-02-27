@@ -71,16 +71,16 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KPICard
-          label="Arriving Today"
-          value={data.arrivals.length}
-          icon={PlaneLanding}
-          accent="bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
-        />
-        <KPICard
           label="Picking Up Today"
           value={data.pickups.length}
           icon={PlaneTakeoff}
           accent="bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400"
+        />
+        <KPICard
+          label="Arriving Today"
+          value={data.arrivals.length}
+          icon={PlaneLanding}
+          accent="bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
         />
         <KPICard
           label="Currently Parked"
@@ -94,31 +94,6 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
           icon={Wrench}
           accent="bg-violet-50 dark:bg-violet-950 text-violet-600 dark:text-violet-400"
         />
-      </div>
-
-      {/* Today's Arrivals */}
-      <div className="space-y-3">
-        <SectionHeader title="Arriving Today" count={data.arrivals.length} />
-        {data.arrivals.length === 0 ? (
-          <p className="text-sm text-stone-400 dark:text-stone-500">
-            No arrivals scheduled for today.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {data.arrivals.map((r) => (
-              <ParkingReservationCardCompact
-                key={r.id}
-                reservation={r}
-                variant="arrival"
-                showActions={
-                  r.status === "reserved" ? (
-                    <CheckInButton id={r.id} size="sm" />
-                  ) : undefined
-                }
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Today's Pickups */}
@@ -156,6 +131,31 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
                 key={r.id}
                 reservation={r}
                 variant="pickup"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Today's Arrivals */}
+      <div className="space-y-3">
+        <SectionHeader title="Arriving Today" count={data.arrivals.length} />
+        {data.arrivals.length === 0 ? (
+          <p className="text-sm text-stone-400 dark:text-stone-500">
+            No arrivals scheduled for today.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {data.arrivals.map((r) => (
+              <ParkingReservationCardCompact
+                key={r.id}
+                reservation={r}
+                variant="arrival"
+                showActions={
+                  r.status === "reserved" ? (
+                    <CheckInButton id={r.id} size="sm" />
+                  ) : undefined
+                }
               />
             ))}
           </div>
