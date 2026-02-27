@@ -1666,3 +1666,44 @@
 - Rate limiting is in-memory (resets on serverless cold start) — acceptable for low-traffic endpoint
 - Bottom nav now shows Parking instead of Reports on mobile — Reports moved to header account dropdown
 - Migration used `gen_random_uuid()` (not `uuid_generate_v4()` which requires the uuid-ossp extension)
+
+---
+
+## Session 23 — 2026-02-27 — Link Parking Reservations to Customers
+
+### What Was Completed
+
+**Parking customers now auto-link to the `customers` table** — when someone submits a parking form, a customer record is found (by email, then phone) or created with `customer_type = "parking"`. The customer detail page shows parking reservation history.
+
+1. **Migration** — Added `'parking'` to `customer_type` enum, `customer_id` FK on `parking_reservations` (nullable, ON DELETE SET NULL), indexes on `customer_id` and `lower(email)`
+2. **TypeScript types** — Updated `supabase.ts` with `"parking"` in enum, `customer_id` in parking_reservations Row/Insert/Update, added Relationships
+3. **Find-or-create function** — New `src/lib/parking-customer.ts` with `findOrCreateParkingCustomer()` — dedup by email (case-insensitive) then phone (E.164), uses admin client
+4. **Parking submit API** — Calls `findOrCreateParkingCustomer()` after honeypot check, includes `customer_id` in insert
+5. **UI updates for parking type** — Added "Parking" to: `CUSTOMER_TYPE_LABELS`, Zod validator, type filter dropdown, customer form select, customer list (green badge in desktop + mobile), `getCustomers` type assertion
+6. **Customer detail page** — Green "Parking" badge in header, parallel query for `parking_reservations` where `customer_id = id`, "Parking History" card section with vehicle/lot/dates/status badges linking to `/parking/[id]`
+7. **AI tools** — Added `"parking"` to `create_customer` and `update_customer` enum arrays in tool definitions + type casts in handlers
+8. **Backfill script** — `scripts/backfill-parking-customers.ts` for linking existing reservations, supports `--dry-run`
+
+### New/Modified Files
+- `supabase/migrations/20260227000000_parking_customer_link.sql` (new)
+- `src/types/supabase.ts` (modified)
+- `src/lib/parking-customer.ts` (new)
+- `src/app/api/parking/submit/route.ts` (modified)
+- `src/lib/constants.ts` (modified)
+- `src/lib/validators/customer.ts` (modified)
+- `src/components/dashboard/customer-type-filter.tsx` (modified)
+- `src/components/forms/customer-form.tsx` (modified)
+- `src/components/dashboard/customer-list.tsx` (modified)
+- `src/lib/actions/customers.ts` (modified)
+- `src/app/(dashboard)/customers/[id]/page.tsx` (modified)
+- `src/lib/ai/tools.ts` (modified)
+- `src/lib/ai/handlers.ts` (modified)
+- `scripts/backfill-parking-customers.ts` (new)
+
+### Build Status
+- `npx tsc --noEmit` passes cleanly (0 type errors)
+
+### What's NOT Done Yet
+- [ ] Run migration against Supabase (`npx supabase db push`)
+- [ ] Run backfill script to link existing parking reservations (`npx tsx scripts/backfill-parking-customers.ts --dry-run`)
+- [ ] Deploy to Vercel

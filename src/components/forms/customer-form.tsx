@@ -176,6 +176,7 @@ export function CustomerForm({ customer }: CustomerFormProps) {
                   <SelectContent>
                     <SelectItem value="retail">Retail</SelectItem>
                     <SelectItem value="fleet">Fleet</SelectItem>
+                    <SelectItem value="parking">Parking</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

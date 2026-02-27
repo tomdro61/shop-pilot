@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import { formatPhone, formatVehicle, formatDate } from "@/lib/utils/format";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/lib/constants";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
 import { VehicleSection } from "@/components/dashboard/vehicle-section";
-import { ArrowLeft, Pencil, Wrench, Phone, Mail, MapPin } from "lucide-react";
-import type { JobStatus } from "@/types";
+import { ArrowLeft, Pencil, Wrench, Phone, Mail, MapPin, Car } from "lucide-react";
+import type { JobStatus, ParkingStatus } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,7 +33,7 @@ export default async function CustomerDetailPage({
 
   const supabase = await createClient();
 
-  const [vehiclesResult, jobsResult] = await Promise.all([
+  const [vehiclesResult, jobsResult, parkingResult] = await Promise.all([
     supabase
       .from("vehicles")
       .select("*")
@@ -45,10 +45,17 @@ export default async function CustomerDetailPage({
       .eq("customer_id", id)
       .order("date_received", { ascending: false })
       .limit(20),
+    supabase
+      .from("parking_reservations")
+      .select("id, status, make, model, license_plate, lot, drop_off_date, pick_up_date")
+      .eq("customer_id", id)
+      .order("drop_off_date", { ascending: false })
+      .limit(20),
   ]);
 
   const vehicles = vehiclesResult.data || [];
   const jobs = jobsResult.data || [];
+  const parkingReservations = parkingResult.data || [];
   const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
 
   return (
@@ -73,6 +80,11 @@ export default async function CustomerDetailPage({
                 {customer.customer_type === "fleet" && (
                   <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400 text-[10px]">
                     Fleet{customer.fleet_account ? ` — ${customer.fleet_account}` : ""}
+                  </Badge>
+                )}
+                {customer.customer_type === "parking" && (
+                  <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-[10px]">
+                    Parking
                   </Badge>
                 )}
               </div>
@@ -175,6 +187,47 @@ export default async function CustomerDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Parking History */}
+      {parkingReservations.length > 0 && (
+        <div className="mt-4 animate-in-up stagger-4">
+          <Card>
+            <CardHeader className="border-b px-5 py-3">
+              <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+                <Car className="h-3.5 w-3.5" />
+                Parking History ({parkingReservations.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y">
+                {parkingReservations.map((res) => {
+                  const status = res.status as ParkingStatus;
+                  const colors = PARKING_STATUS_COLORS[status];
+                  return (
+                    <Link key={res.id} href={`/parking/${res.id}`} className="block">
+                      <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">
+                            {res.make} {res.model} — {res.license_plate}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {[res.lot, formatDate(res.drop_off_date) + " → " + formatDate(res.pick_up_date)].join(" · ")}
+                          </p>
+                        </div>
+                        <Badge
+                          className={`shrink-0 text-[10px] border-transparent ${colors.bg} ${colors.text}`}
+                        >
+                          {PARKING_STATUS_LABELS[status]}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

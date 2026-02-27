@@ -33,7 +33,7 @@ export async function getCustomers(search?: string, customerType?: string, page 
   }
 
   if (customerType && customerType !== "all") {
-    query = query.eq("customer_type", customerType as "retail" | "fleet");
+    query = query.eq("customer_type", customerType as "retail" | "fleet" | "parking");
   }
 
   const from = (page - 1) * PAGE_SIZE;

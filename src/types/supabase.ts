@@ -540,6 +540,7 @@ export type Database = {
           checked_out_at: string | null;
           spot_number: string | null;
           staff_notes: string | null;
+          customer_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -565,6 +566,7 @@ export type Database = {
           checked_out_at?: string | null;
           spot_number?: string | null;
           staff_notes?: string | null;
+          customer_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -590,10 +592,19 @@ export type Database = {
           checked_out_at?: string | null;
           spot_number?: string | null;
           staff_notes?: string | null;
+          customer_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "parking_reservations_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       users: {
         Row: {
@@ -640,7 +651,7 @@ export type Database = {
       };
     };
     Enums: {
-      customer_type: "retail" | "fleet";
+      customer_type: "retail" | "fleet" | "parking";
       job_status:
         | "not_started"
         | "waiting_for_parts"

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parkingSubmitSchema } from "@/lib/validators/parking";
+import { findOrCreateParkingCustomer } from "@/lib/parking-customer";
 
 // ── CORS ────────────────────────────────────────────────────────
 
@@ -95,6 +96,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true }, { headers });
   }
 
+  // Find or create a customer record for this parking reservation
+  const customerId = await findOrCreateParkingCustomer({
+    first_name: parsed.data.first_name,
+    last_name: parsed.data.last_name,
+    email: parsed.data.email,
+    phone: parsed.data.phone,
+  });
+
   // Write to Supabase
   const supabase = createAdminClient();
   const { website: _, ...insertData } = parsed.data;
@@ -102,6 +111,7 @@ export async function POST(request: Request) {
   const { error } = await supabase.from("parking_reservations").insert({
     ...insertData,
     status: "reserved" as const,
+    customer_id: customerId,
   });
 
   if (error) {

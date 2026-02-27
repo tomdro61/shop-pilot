@@ -91,7 +91,7 @@ export async function executeToolCall(
           email: str(toolInput.email),
           address: str(toolInput.address),
           notes: str(toolInput.notes),
-          customer_type: str(toolInput.customer_type, "retail") as "retail" | "fleet",
+          customer_type: str(toolInput.customer_type, "retail") as "retail" | "fleet" | "parking",
           fleet_account: str(toolInput.fleet_account),
         });
         return JSON.stringify(result);
@@ -107,7 +107,7 @@ export async function executeToolCall(
           email: str(toolInput.email, current.email ?? ""),
           address: str(toolInput.address, current.address ?? ""),
           notes: str(toolInput.notes, current.notes ?? ""),
-          customer_type: str(toolInput.customer_type, current.customer_type ?? "retail") as "retail" | "fleet",
+          customer_type: str(toolInput.customer_type, current.customer_type ?? "retail") as "retail" | "fleet" | "parking",
           fleet_account: str(toolInput.fleet_account, current.fleet_account ?? ""),
         });
         return JSON.stringify(result);

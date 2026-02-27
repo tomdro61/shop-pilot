@@ -72,6 +72,10 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
                       <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400 text-[10px] py-0">
                         Fleet
                       </Badge>
+                    ) : customer.customer_type === "parking" ? (
+                      <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-[10px] py-0">
+                        Parking
+                      </Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground/50">Retail</span>
                     )}
@@ -91,6 +95,11 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
                       {customer.customer_type === "fleet" && (
                         <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400 text-[10px] py-0 shrink-0">
                           Fleet
+                        </Badge>
+                      )}
+                      {customer.customer_type === "parking" && (
+                        <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-[10px] py-0 shrink-0">
+                          Parking
                         </Badge>
                       )}
                     </div>

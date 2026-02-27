@@ -42,7 +42,7 @@ export const tools: Anthropic.Tool[] = [
         notes: { type: "string", description: "Notes about the customer" },
         customer_type: {
           type: "string",
-          enum: ["retail", "fleet"],
+          enum: ["retail", "fleet", "parking"],
           description: "Customer type (defaults to retail)",
         },
         fleet_account: { type: "string", description: "Fleet account name (e.g. 'Hertz', 'Sixt', 'DriveWhip') — only for fleet customers" },
@@ -63,7 +63,7 @@ export const tools: Anthropic.Tool[] = [
         email: { type: "string" },
         address: { type: "string" },
         notes: { type: "string" },
-        customer_type: { type: "string", enum: ["retail", "fleet"] },
+        customer_type: { type: "string", enum: ["retail", "fleet", "parking"] },
         fleet_account: { type: "string" },
       },
       required: ["id"],

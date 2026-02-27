@@ -7,7 +7,7 @@ export const customerSchema = z.object({
   email: z.union([z.string().email("Invalid email address").max(255), z.literal("")]),
   address: z.string().max(500),
   notes: z.string().max(2000),
-  customer_type: z.enum(["retail", "fleet"]),
+  customer_type: z.enum(["retail", "fleet", "parking"]),
   fleet_account: z.string().max(200).optional(),
 });
 

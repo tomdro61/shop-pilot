@@ -29,7 +29,7 @@ ShopPilot is a custom shop management system for Broadway Motors, an independent
 
 Core tables in Supabase PostgreSQL:
 
-- **customers** — id, first_name, last_name, phone, email, address, notes, customer_type (retail/fleet), fleet_account, stripe_customer_id, created_at
+- **customers** — id, first_name, last_name, phone, email, address, notes, customer_type (retail/fleet/parking), fleet_account, stripe_customer_id, created_at
 - **vehicles** — id, customer_id, year, make, model, vin, license_plate, mileage, color, notes
 - **jobs** — id, customer_id, vehicle_id, status, title, category (deprecated — exists in DB but no longer set/displayed), assigned_tech, date_received, date_finished, notes, payment_status, payment_method, mileage_in, stripe_payment_intent_id, ro_number (auto-assigned sequential integer via `ro_number_seq`)
 - **job_line_items** — id, job_id, type (labor/part), description, quantity, unit_cost, total, cost (nullable — wholesale price for parts, used for profit margin tracking), part_number, category (single source of truth for service categorization)
@@ -40,7 +40,7 @@ Core tables in Supabase PostgreSQL:
 - **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
 - **shop_settings** — single-row config: tax_rate, shop_supplies_enabled, shop_supplies_method (percent_of_labor/parts/total/flat), shop_supplies_rate, shop_supplies_cap, shop_supplies_categories (jsonb, nullable — scopes fee to specific job categories), hazmat_enabled, hazmat_amount, hazmat_label, hazmat_categories (jsonb, nullable — scopes fee to specific job categories)
-- **parking_reservations** — id, first_name, last_name, email, phone, drop_off_date, drop_off_time, pick_up_date, pick_up_time, make, model, license_plate, lot (text), confirmation_number, services_interested (text[]), liability_acknowledged, status (parking_status enum), checked_in_at, checked_out_at, spot_number, staff_notes, created_at, updated_at. No FK to customers — parking customers are separate people.
+- **parking_reservations** — id, first_name, last_name, email, phone, drop_off_date, drop_off_time, pick_up_date, pick_up_time, make, model, license_plate, lot (text), confirmation_number, services_interested (text[]), liability_acknowledged, status (parking_status enum), checked_in_at, checked_out_at, spot_number, staff_notes, customer_id (FK to customers, nullable, ON DELETE SET NULL), created_at, updated_at. Linked to customers via `findOrCreateParkingCustomer()` on form submit.
 
 **Job statuses:** Not Started → Waiting for Parts → In Progress → Complete
 **Payment tracked separately:** payment_status (unpaid → invoiced → paid / waived), payment_method (stripe/cash/check/ach/terminal)
@@ -255,6 +255,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 20:** Category-scoped shop supplies & hazmat fees
 **Session 21:** Estimate delete, category grouping on estimates, Add Service overflow fix
 **Session 22:** Airport Parking Management — 3-lot system with dashboard, public API, AI tools
+**Session 23:** Link parking reservations to customers — auto find-or-create, parking type, customer detail parking history
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -273,7 +274,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Printable Repair Order: `/jobs/[id]/print` — print-optimized document with shop header, customer/vehicle info, itemized line items, tax, totals
 - **Shop Settings:** Configurable tax rate, shop supplies fee (4 calculation methods + cap), environmental/hazmat fee. Both fees can be scoped to specific job categories (null = all categories, backward compatible). Settings page at `/settings/rates`. All totals computed via shared `calculateTotals()` utility. Fees default to disabled. Tax rule: parts + shop supplies are taxable; labor and hazmat are not.
 - **Part Cost Tracking:** Optional `cost` (wholesale price) field on part line items. Reports compute actual gross profit when cost is available, fall back to 40% margin estimate when not. Cost data coverage % shown on reports. Cost is never exposed to customers (invoices, estimates, print RO all use retail price only).
-- **Airport Parking:** Dashboard at `/parking` managing 3 lots (Broadway Motors, Airport Parking Boston 1, Airport Parking Boston 2). Three views: Today (arrivals/pickups/parked), Service Leads (parking customers interested in repairs), All Reservations. Public API at `/api/parking/submit` accepts form POSTs with CORS, rate limiting, and honeypot spam protection. 6 AI tools for parking operations. Parking customers are separate from shop customers (no FK to customers table).
+- **Airport Parking:** Dashboard at `/parking` managing 3 lots (Broadway Motors, Airport Parking Boston 1, Airport Parking Boston 2). Three views: Today (arrivals/pickups/parked), Service Leads (parking customers interested in repairs), All Reservations. Public API at `/api/parking/submit` accepts form POSTs with CORS, rate limiting, and honeypot spam protection. 6 AI tools for parking operations. Parking reservations auto-link to `customers` table via `findOrCreateParkingCustomer()` (dedup by email, then phone). Customer detail page shows "Parking History" section. Backfill script at `scripts/backfill-parking-customers.ts`.
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 

@@ -84,6 +84,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 export const CUSTOMER_TYPE_LABELS: Record<CustomerType, string> = {
   retail: "Retail",
   fleet: "Fleet",
+  parking: "Parking",
 };
 
 /** @deprecated Use shop_settings.job_categories from database instead. Kept as fallback in DEFAULT_SETTINGS. */

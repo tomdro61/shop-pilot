@@ -34,6 +34,7 @@ export function CustomerTypeFilter() {
         <SelectItem value="all">All Types</SelectItem>
         <SelectItem value="retail">Retail</SelectItem>
         <SelectItem value="fleet">Fleet</SelectItem>
+        <SelectItem value="parking">Parking</SelectItem>
       </SelectContent>
     </Select>
   );
