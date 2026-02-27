@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, PARKING_SERVICE_LABELS } from "@/lib/constants";
-import { Car, Clock, MapPin, Phone } from "lucide-react";
+import { Car, Clock } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 function formatTime(time: string) {
@@ -55,12 +55,6 @@ export function ParkingReservationCard({
               {reservation.make} {reservation.model}
             </span>
             <span>{reservation.license_plate}</span>
-            {reservation.spot_number && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {reservation.spot_number}
-              </span>
-            )}
           </div>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
@@ -117,13 +111,13 @@ export function ParkingReservationCardCompact({
     variant === "pickup"
       ? "Pickup"
       : variant === "parked"
-        ? "Spot"
+        ? "Departs"
         : "Arrival";
   const timeValue =
     variant === "pickup"
       ? formatTime(reservation.pick_up_time)
       : variant === "parked"
-        ? reservation.spot_number || "—"
+        ? `${formatDate(reservation.pick_up_date)} ${formatTime(reservation.pick_up_time)}`
         : formatTime(reservation.drop_off_time);
 
   return (
@@ -150,15 +144,6 @@ export function ParkingReservationCardCompact({
                 </>
               )}
             </span>
-            {variant !== "parked" && reservation.spot_number && (
-              <>
-                <span className="text-stone-300 dark:text-stone-600">·</span>
-                <span className="flex items-center gap-0.5">
-                  <MapPin className="h-2.5 w-2.5" />
-                  {reservation.spot_number}
-                </span>
-              </>
-            )}
             {reservation.services_interested.length > 0 && (
               <>
                 <span className="text-stone-300 dark:text-stone-600">·</span>
