@@ -107,28 +107,48 @@ export function ParkingReservationCard({
 export function ParkingReservationCardCompact({
   reservation,
   showActions,
+  variant = "arrival",
 }: {
   reservation: ParkingReservation;
   showActions?: React.ReactNode;
+  variant?: "arrival" | "pickup" | "parked";
 }) {
+  const timeLabel =
+    variant === "pickup"
+      ? "Pickup"
+      : variant === "parked"
+        ? "Spot"
+        : "Arrival";
+  const timeValue =
+    variant === "pickup"
+      ? formatTime(reservation.pick_up_time)
+      : variant === "parked"
+        ? reservation.spot_number || "—"
+        : formatTime(reservation.drop_off_time);
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-4 py-3">
       <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
-            {reservation.first_name} {reservation.last_name}
+        <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
+          {reservation.first_name} {reservation.last_name}
+        </p>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-stone-500 dark:text-stone-400">
+          <span className="font-medium text-stone-700 dark:text-stone-300">
+            {timeLabel} {timeValue}
           </span>
-          <span className="text-xs text-stone-400 dark:text-stone-500 shrink-0">
-            {formatTime(reservation.drop_off_time || reservation.pick_up_time)}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+          <span className="text-stone-300 dark:text-stone-600">·</span>
           <span>{reservation.make} {reservation.model}</span>
-          <span>·</span>
+          <span className="text-stone-300 dark:text-stone-600">·</span>
           <span>{reservation.license_plate}</span>
-          {reservation.spot_number && (
+          {reservation.color && (
             <>
-              <span>·</span>
+              <span className="text-stone-300 dark:text-stone-600">·</span>
+              <span>{reservation.color}</span>
+            </>
+          )}
+          {variant !== "parked" && reservation.spot_number && (
+            <>
+              <span className="text-stone-300 dark:text-stone-600">·</span>
               <span className="flex items-center gap-0.5">
                 <MapPin className="h-2.5 w-2.5" />
                 {reservation.spot_number}
@@ -137,7 +157,7 @@ export function ParkingReservationCardCompact({
           )}
           {reservation.services_interested.length > 0 && (
             <>
-              <span>·</span>
+              <span className="text-stone-300 dark:text-stone-600">·</span>
               <span className="text-violet-600 dark:text-violet-400">
                 {reservation.services_interested.length} service{reservation.services_interested.length > 1 ? "s" : ""}
               </span>

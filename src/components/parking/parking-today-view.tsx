@@ -108,6 +108,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                variant="arrival"
                 showActions={
                   r.status === "reserved" ? (
                     <CheckInButton id={r.id} size="sm" />
@@ -132,6 +133,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                variant="pickup"
                 showActions={<CheckOutButton id={r.id} size="sm" />}
               />
             ))}
@@ -155,6 +157,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                variant="parked"
                 showActions={<CheckOutButton id={r.id} size="sm" />}
               />
             ))}
