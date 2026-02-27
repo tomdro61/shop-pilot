@@ -130,7 +130,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
-                variant="pickup"
+                variant="pickup-tomorrow"
               />
             ))}
           </div>
