@@ -227,4 +227,5 @@ export const PARKING_LOTS = [
   "Broadway Motors",
   "Airport Parking Boston 1",
   "Airport Parking Boston 2",
+  "Boston Logan Valet",
 ];

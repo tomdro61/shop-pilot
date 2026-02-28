@@ -26,10 +26,10 @@ function splitMakeModel(raw: string): { make: string; model: string } {
 /** Derive lot name from Wix form name */
 function deriveLot(formName: string): string {
   const lower = formName.toLowerCase();
-  if (lower.includes("2050 revere beach")) return "2050 Revere Beach Parkway";
-  if (lower.includes("961 broadway")) return "961 Broadway";
-  if (lower.includes("broadway motors")) return "Broadway Motors";
+  if (lower.includes("2050 revere beach")) return "Airport Parking Boston 2";
+  if (lower.includes("961 broadway")) return "Airport Parking Boston 1";
   if (lower.includes("valet")) return "Boston Logan Valet";
+  if (lower.includes("broadway motors")) return "Broadway Motors";
   return "";
 }
 
