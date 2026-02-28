@@ -84,15 +84,15 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
           accent="bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
         />
         <KPICard
-          label="Currently Parked"
-          value={data.currentlyParked.length}
-          icon={Car}
-        />
-        <KPICard
           label="Picking Up Tomorrow"
           value={data.tomorrowPickups.length}
           icon={PlaneTakeoff}
           accent="bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-400"
+        />
+        <KPICard
+          label="Currently Parked"
+          value={data.currentlyParked.length}
+          icon={Car}
         />
       </div>
 
