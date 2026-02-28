@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Minus, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import {
@@ -97,30 +97,13 @@ export default function InspectionsPage() {
                   <span className="w-16 text-right text-sm text-muted-foreground">
                     {formatCurrency(stateTotal)}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() =>
-                        setStateCount((c) => Math.max(0, c - 1))
-                      }
-                      disabled={stateCount === 0}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-8 text-center text-sm font-semibold tabular-nums">
-                      {stateCount}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setStateCount((c) => c + 1)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={stateCount}
+                    onChange={(e) => setStateCount(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-20 text-center tabular-nums"
+                  />
                 </div>
               </div>
 
@@ -136,30 +119,13 @@ export default function InspectionsPage() {
                   <span className="w-16 text-right text-sm text-muted-foreground">
                     {formatCurrency(tncTotal)}
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() =>
-                        setTncCount((c) => Math.max(0, c - 1))
-                      }
-                      disabled={tncCount === 0}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-8 text-center text-sm font-semibold tabular-nums">
-                      {tncCount}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setTncCount((c) => c + 1)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={tncCount}
+                    onChange={(e) => setTncCount(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-20 text-center tabular-nums"
+                  />
                 </div>
               </div>
 
