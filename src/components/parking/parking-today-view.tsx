@@ -86,7 +86,6 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
           label="Currently Parked"
           value={data.currentlyParked.length}
           icon={Car}
-          accent="bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400"
         />
         <KPICard
           label="Picking Up Tomorrow"
@@ -109,8 +108,8 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
-                variant="pickup"
-                showActions={<CheckOutButton id={r.id} size="sm" />}
+                variant={r.status === "checked_out" ? "checked-out" : "pickup"}
+                showActions={r.status !== "checked_out" ? <CheckOutButton id={r.id} size="sm" /> : undefined}
               />
             ))}
           </div>
