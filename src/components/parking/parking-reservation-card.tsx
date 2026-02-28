@@ -132,7 +132,7 @@ export function ParkingReservationCardCompact({
         : variant === "pickup-tomorrow"
           ? "border-orange-200 dark:border-orange-900 bg-orange-100 dark:bg-orange-950/50"
         : variant === "checked-out"
-          ? "border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/50"
+          ? "border-green-300 dark:border-green-800 bg-green-100 dark:bg-green-950/50"
           : "border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900"
     }`}>
       <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
