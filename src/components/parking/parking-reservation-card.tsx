@@ -109,13 +109,11 @@ export function ParkingReservationCardCompact({
 }) {
   const isPickup = variant === "pickup" || variant === "pickup-tomorrow" || variant === "checked-out";
   const timeLabel =
-    variant === "checked-out"
-      ? "Picked up"
-      : isPickup
-        ? "Pickup"
-        : variant === "parked"
-          ? "Departs"
-          : "Arrival";
+    isPickup
+      ? "Pickup"
+      : variant === "parked"
+        ? "Departs"
+        : "Arrival";
   const timeValue =
     isPickup
       ? formatTime(reservation.pick_up_time)

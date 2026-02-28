@@ -5,6 +5,7 @@ import {
   ParkingReservationCardCompact,
 } from "@/components/parking/parking-reservation-card";
 import { CheckInButton, CheckOutButton } from "@/components/parking/parking-actions";
+import { Badge } from "@/components/ui/badge";
 import { PlaneLanding, PlaneTakeoff, Car } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
@@ -109,7 +110,10 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
                 key={r.id}
                 reservation={r}
                 variant={r.status === "checked_out" ? "checked-out" : "pickup"}
-                showActions={r.status !== "checked_out" ? <CheckOutButton id={r.id} size="sm" /> : undefined}
+                showActions={r.status === "checked_out"
+                  ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
+                  : <CheckOutButton id={r.id} size="sm" />
+                }
               />
             ))}
           </div>
