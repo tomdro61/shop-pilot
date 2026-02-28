@@ -9,7 +9,6 @@ import {
   Clock, UserX, TrendingUp, TrendingDown, ClipboardCheck, Receipt,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, subWeeks } from "date-fns";
-import { getInspectionCounts } from "@/lib/actions/inspections";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/constants";
 import { formatVehicle, formatCurrency } from "@/lib/utils/format";
 import { nowET, formatDateET } from "@/lib/utils";
@@ -126,8 +125,12 @@ const getDashboardData = unstable_cache(async () => {
 
   const weekJobCount = weekCompleted.length;
 
-  // Inspections today — from dedicated daily_inspection_counts table
-  const inspectionData = await getInspectionCounts(today);
+  // Inspections today — from dedicated daily_inspection_counts table (use admin client directly, not server action, since we're inside unstable_cache)
+  const { data: inspectionData } = await supabase
+    .from("daily_inspection_counts")
+    .select("state_count, tnc_count")
+    .eq("date", today)
+    .maybeSingle();
   const inspectionsToday = (inspectionData?.state_count ?? 0) + (inspectionData?.tnc_count ?? 0);
 
   return {
