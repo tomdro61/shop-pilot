@@ -36,7 +36,7 @@ Payment methods: stripe (card), cash, check, ach
 ## Fleet Accounts
 - **Hertz, Sixt, DriveWhip** are fleet customers (customer_type: "fleet")
 - DriveWhip operates on-site with higher volume
-- Inspection rate: $35/vehicle (all accounts)
+- Inspection rates: $35/vehicle (State), $15/vehicle (TNC)
 - Fleet accounts are billed separately — **never create Stripe invoices for fleet customers**
 - Fleet terms: net-30
 

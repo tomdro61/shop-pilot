@@ -639,6 +639,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      daily_inspection_counts: {
+        Row: {
+          id: string;
+          date: string;
+          state_count: number;
+          tnc_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          date: string;
+          state_count?: number;
+          tnc_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          date?: string;
+          state_count?: number;
+          tnc_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

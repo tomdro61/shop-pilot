@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { subDays, differenceInDays, parseISO } from "date-fns";
 import { todayET, formatDateET } from "@/lib/utils";
+import { getInspectionCountsRange } from "@/lib/actions/inspections";
+import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -99,8 +101,7 @@ export async function getReportData(params: {
   let totalEstimatedPartsCost = 0;
   let partsWithCostCount = 0;
   let totalPartsCount = 0;
-  // Inspection count
-  let inspectionCount = 0;
+  // Inspection count — fetched from daily_inspection_counts table below
 
   // Jobs by tech
   const techCounts: Record<string, number> = {};
@@ -159,13 +160,6 @@ export async function getReportData(params: {
       }
     });
 
-    // Inspection count — check if any line items have "Inspection" category
-    const hasInspection = lineItems.some((li) => li.category === "Inspection");
-    if (hasInspection) {
-      inspectionCount += lineItems
-        .filter((li) => li.category === "Inspection")
-        .reduce((s, li) => s + (li.quantity || 0), 0);
-    }
   });
 
   const jobsByCategory = Object.entries(catCounts)
@@ -229,6 +223,13 @@ export async function getReportData(params: {
     }))
     .sort((a, b) => b.revenue - a.revenue);
 
+  // Inspections from dedicated table
+  const inspectionTotals = await getInspectionCountsRange(start, end);
+  const inspectionCount = inspectionTotals.state_count + inspectionTotals.tnc_count;
+  const inspectionRevenue =
+    inspectionTotals.state_count * INSPECTION_RATE_STATE +
+    inspectionTotals.tnc_count * INSPECTION_RATE_TNC;
+
   // Estimate close rate
   const estimatesSent = estimates.length;
   const estimatesApproved = estimates.filter((e) => e.status === "approved").length;
@@ -252,6 +253,7 @@ export async function getReportData(params: {
     profitability,
     breakdown: { laborRevenue, partsRevenue, totalRevenue, grossProfit, costDataCoverage },
     inspectionCount,
+    inspectionRevenue,
   };
 }
 
@@ -296,25 +298,6 @@ export async function getFleetARSummary() {
   return Object.entries(accounts)
     .map(([account, buckets]) => ({ account, ...buckets }))
     .sort((a, b) => b.total - a.total);
-}
-
-export async function getInspectionCount(start: string, end: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("jobs")
-    .select("id, job_line_items(quantity, category)")
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-
-  return (
-    data?.reduce((sum, job) => {
-      const inspectionItems = (job.job_line_items as { quantity: number; category: string | null }[])
-        ?.filter((li) => li.category === "Inspection") || [];
-      const jobCount = inspectionItems.reduce((s, li) => s + (li.quantity || 0), 0);
-      return sum + jobCount;
-    }, 0) || 0
-  );
 }
 
 export async function getDailyRevenueSparkline(days: number) {

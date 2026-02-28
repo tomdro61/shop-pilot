@@ -9,6 +9,7 @@ import {
   Clock, UserX, TrendingUp, TrendingDown, ClipboardCheck, Receipt,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, subWeeks } from "date-fns";
+import { getInspectionCounts } from "@/lib/actions/inspections";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/constants";
 import { formatVehicle, formatCurrency } from "@/lib/utils/format";
 import { nowET, formatDateET } from "@/lib/utils";
@@ -57,7 +58,7 @@ const getDashboardData = unstable_cache(async () => {
       .in("status", ["not_started", "in_progress", "waiting_for_parts"]),
     supabase
       .from("jobs")
-      .select("id, date_finished, payment_status, job_line_items(total, quantity, category)")
+      .select("id, date_finished, payment_status, job_line_items(total)")
       .eq("status", "complete")
       .gte("date_finished", monthStart)
       .lte("date_finished", monthEnd),
@@ -95,9 +96,6 @@ const getDashboardData = unstable_cache(async () => {
     techs[name].jobs += 1;
     if (job.status === "complete") techs[name].completed += 1;
   });
-  // Also check completed jobs finished today for tech activity
-  const completedToday = monthCompleted.filter(j => j.date_finished === today);
-
   const techActivity = Object.entries(techs)
     .map(([name, counts]) => ({ name, ...counts }))
     .sort((a, b) => b.jobs - a.jobs);
@@ -128,13 +126,9 @@ const getDashboardData = unstable_cache(async () => {
 
   const weekJobCount = weekCompleted.length;
 
-  // Inspections today — derive from line items with "Inspection" category
-  const inspectionsToday = completedToday
-    .reduce((sum, job) => {
-      const inspectionItems = (job.job_line_items as { quantity: number; category: string | null }[])
-        ?.filter(li => li.category === "Inspection") || [];
-      return sum + inspectionItems.reduce((s, li) => s + (li.quantity || 0), 0);
-    }, 0);
+  // Inspections today — from dedicated daily_inspection_counts table
+  const inspectionData = await getInspectionCounts(today);
+  const inspectionsToday = (inspectionData?.state_count ?? 0) + (inspectionData?.tnc_count ?? 0);
 
   return {
     stats: {

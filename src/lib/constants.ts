@@ -163,6 +163,10 @@ export const INVOICE_STATUS_COLORS: Record<
   },
 };
 
+// ── Inspections ─────────────────────────────────────────────────
+export const INSPECTION_RATE_STATE = 35;
+export const INSPECTION_RATE_TNC = 15;
+
 // ── Parking ─────────────────────────────────────────────────────
 
 export const PARKING_STATUS_ORDER: ParkingStatus[] = [

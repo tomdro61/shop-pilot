@@ -59,6 +59,15 @@ export type ParkingReservationUpdate = Database["public"]["Tables"]["parking_res
 export type ShopSettingsUpdate = Database["public"]["Tables"]["shop_settings"]["Update"];
 export type ShopSuppliesMethod = "percent_of_labor" | "percent_of_parts" | "percent_of_total" | "flat";
 
+export interface DailyInspectionCount {
+  id: string;
+  date: string;
+  state_count: number;
+  tnc_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // Enum types
 export type JobStatus = Database["public"]["Enums"]["job_status"];
 export type LineItemType = Database["public"]["Enums"]["line_item_type"];
