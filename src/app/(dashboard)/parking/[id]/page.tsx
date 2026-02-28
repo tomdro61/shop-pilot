@@ -11,6 +11,7 @@ import {
 } from "@/lib/constants";
 import { ParkingActionButtons } from "@/components/parking/parking-actions";
 import { ParkingNotesForm } from "@/components/parking/parking-notes-form";
+import { ParkingServicesForm } from "@/components/parking/parking-services-form";
 import {
   ArrowLeft,
   Car,
@@ -223,27 +224,18 @@ export default async function ParkingDetailPage({
           </CardContent>
         </Card>
 
-        {/* Services Interested */}
-        {reservation.services_interested.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Services Interested</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-1.5">
-                {reservation.services_interested.map((service) => (
-                  <Badge
-                    key={service}
-                    variant="secondary"
-                    className="bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300 border-0"
-                  >
-                    {PARKING_SERVICE_LABELS[service] || service}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Services */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Services</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ParkingServicesForm
+              id={reservation.id}
+              services={reservation.services_interested}
+            />
+          </CardContent>
+        </Card>
 
         {/* Staff Notes */}
         <Card>

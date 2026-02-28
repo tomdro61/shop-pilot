@@ -234,7 +234,7 @@ export async function cancelReservation(id: string) {
 
 export async function updateReservation(
   id: string,
-  data: { staff_notes?: string | null }
+  data: { staff_notes?: string | null; services_interested?: string[] }
 ) {
   const supabase = await createClient();
 
@@ -245,5 +245,6 @@ export async function updateReservation(
 
   if (error) return { error: error.message };
   revalidatePath("/parking");
+  revalidatePath(`/parking/${id}`);
   return { success: true };
 }
