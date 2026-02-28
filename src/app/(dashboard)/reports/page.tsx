@@ -27,7 +27,7 @@ export default async function ReportsPage({
     getFleetARSummary(),
   ]);
 
-  const { profitability, breakdown, inspectionCount, estimateCloseRate } = data;
+  const { profitability, breakdown, inspectionCount, inspectionRevenue, estimateCloseRate } = data;
 
   const categoryChartData = data.categoryBreakdown.map((d) => ({
     label: d.category,
@@ -41,8 +41,10 @@ export default async function ReportsPage({
     jobCount: d.jobCount,
   }));
 
-  const laborPct = breakdown.totalRevenue > 0 ? Math.round((breakdown.laborRevenue / breakdown.totalRevenue) * 100) : 0;
-  const partsPct = breakdown.totalRevenue > 0 ? Math.round((breakdown.partsRevenue / breakdown.totalRevenue) * 100) : 0;
+  const totalRevenue = breakdown.totalRevenue + inspectionRevenue;
+  const laborPct = totalRevenue > 0 ? Math.round((breakdown.laborRevenue / totalRevenue) * 100) : 0;
+  const partsPct = totalRevenue > 0 ? Math.round((breakdown.partsRevenue / totalRevenue) * 100) : 0;
+  const inspectionPct = totalRevenue > 0 ? Math.round((inspectionRevenue / totalRevenue) * 100) : 0;
 
   return (
     <div className="p-4 lg:p-6">
@@ -54,12 +56,12 @@ export default async function ReportsPage({
 
       {/* Row 1 — Money */}
       <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KpiCard title={`Revenue (${resolved.label})`} value={formatCurrency(breakdown.totalRevenue)} accentColor="blue" />
+        <KpiCard title={`Revenue (${resolved.label})`} value={formatCurrency(totalRevenue)} accentColor="blue" />
         <KpiCard title="Labor Revenue" value={formatCurrency(breakdown.laborRevenue)} subtitle={`${laborPct}% of total`} accentColor="emerald" />
         <KpiCard title="Parts Revenue" value={formatCurrency(breakdown.partsRevenue)} subtitle={`${partsPct}% of total`} accentColor="amber" />
         <KpiCard
           title="Gross Profit"
-          value={formatCurrency(breakdown.grossProfit)}
+          value={formatCurrency(breakdown.grossProfit + inspectionRevenue)}
           subtitle={breakdown.costDataCoverage < 100 ? `${breakdown.costDataCoverage}% actual cost data` : "Based on actual costs"}
           accentColor="purple"
         />
@@ -82,6 +84,7 @@ export default async function ReportsPage({
         <KpiCard
           title="Inspections"
           value={inspectionCount.toString()}
+          subtitle={inspectionRevenue > 0 ? `${formatCurrency(inspectionRevenue)} (${inspectionPct}%)` : undefined}
           accentColor="amber"
         />
         <KpiCard
