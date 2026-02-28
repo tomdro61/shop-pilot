@@ -44,6 +44,7 @@ import { getTeamMembers, getTechnicians } from "@/lib/actions/team";
 import { getReportData, getFleetARSummary, getDailySummary } from "@/lib/actions/reports";
 import { sendCustomerSMS, getCustomerMessages } from "@/lib/actions/messages";
 import { getShopSettings, updateShopSettings } from "@/lib/actions/settings";
+import { todayET } from "@/lib/utils";
 import {
   getParkingReservations,
   getParkingReservation,
@@ -183,7 +184,7 @@ export async function executeToolCall(
         return JSON.stringify(result);
       }
       case "create_job": {
-        const today = new Date().toISOString().split("T")[0];
+        const today = todayET();
         const result = await createJob({
           customer_id: str(toolInput.customer_id),
           vehicle_id: str(toolInput.vehicle_id) || null,
@@ -345,7 +346,7 @@ export async function executeToolCall(
       // ── Reports ────────────────────────────────────────────
       case "get_report_data": {
         const isAllTime = toolInput.is_all_time === true;
-        const today = new Date().toISOString().split("T")[0];
+        const today = todayET();
         const result = await getReportData({
           from: str(toolInput.from, "2020-01-01"),
           to: str(toolInput.to, today),

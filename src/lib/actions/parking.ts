@@ -3,6 +3,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { todayET, formatDateET } from "@/lib/utils";
 import type { ParkingStatus } from "@/types";
 
 // ── Fetch reservations with filters ─────────────────────────────
@@ -95,7 +96,7 @@ export const getParkingReservation = cache(async (id: string) => {
 
 export async function getParkingDashboard(lot?: string) {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayET();
 
   function applyLotFilter<T extends { eq: (col: string, val: string) => T }>(
     q: T
@@ -103,7 +104,9 @@ export async function getParkingDashboard(lot?: string) {
     return lot ? q.eq("lot", lot) : q;
   }
 
-  const tomorrow = new Date(Date.now() + 86_400_000).toISOString().split("T")[0];
+  const tomorrowDate = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = formatDateET(tomorrowDate);
 
   const [arrivalsResult, pickupsResult, tomorrowPickupsResult, currentlyParkedResult, serviceLeadsResult] =
     await Promise.all([

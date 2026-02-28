@@ -1,5 +1,7 @@
+import { todayET } from "@/lib/utils";
+
 export function getSystemPrompt(): string {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayET();
 
   return `You are ShopPilot, the AI assistant for Broadway Motors, an independent auto repair shop in Revere, MA. You help the shop manager run the entire operation via conversational commands.
 

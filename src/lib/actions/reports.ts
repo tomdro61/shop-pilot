@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { subDays, differenceInDays, parseISO } from "date-fns";
+import { todayET, formatDateET } from "@/lib/utils";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -368,7 +369,7 @@ export async function getStaleJobsCount() {
 
 export async function getDailySummary() {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayET();
 
   // Jobs received or worked on today
   const { data: todayJobs } = await supabase

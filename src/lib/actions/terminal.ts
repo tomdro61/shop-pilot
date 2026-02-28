@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { todayET } from "@/lib/utils";
 
 const WALK_IN_CUSTOMER_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -15,8 +16,8 @@ export async function createQuickPayJob(amountCents: number, note?: string, cate
       customer_id: WALK_IN_CUSTOMER_ID,
       status: "complete",
       category: category || "Quick Pay",
-      date_received: new Date().toISOString().split("T")[0],
-      date_finished: new Date().toISOString().split("T")[0],
+      date_received: todayET(),
+      date_finished: todayET(),
       notes: note || null,
       payment_status: "unpaid",
     })

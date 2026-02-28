@@ -3,6 +3,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
+import { todayET } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
 import type { JobStatus, PaymentMethod, PaymentStatus } from "@/types";
@@ -157,7 +158,7 @@ export async function updateJobStatus(id: string, status: JobStatus) {
 
   // Auto-set date_finished when completing, clear it when moving back
   if (status === "complete") {
-    updateData.date_finished = new Date().toISOString().split("T")[0];
+    updateData.date_finished = todayET();
   } else {
     updateData.date_finished = null;
   }

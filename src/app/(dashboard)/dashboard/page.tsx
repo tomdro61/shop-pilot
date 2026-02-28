@@ -11,6 +11,7 @@ import {
 import { startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/constants";
 import { formatVehicle, formatCurrency } from "@/lib/utils/format";
+import { nowET, formatDateET } from "@/lib/utils";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -19,18 +20,19 @@ export const metadata = {
 
 const getDashboardData = unstable_cache(async () => {
   const supabase = createAdminClient();
-  const now = new Date();
-  const today = now.toISOString().split("T")[0];
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString().split("T")[0];
-  const weekEnd = endOfWeek(now, { weekStartsOn: 1 }).toISOString().split("T")[0];
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+  const now = nowET();
+  const today = formatDateET(now);
+  const weekStart = formatDateET(startOfWeek(now, { weekStartsOn: 1 }));
+  const weekEnd = formatDateET(endOfWeek(now, { weekStartsOn: 1 }));
+  const monthStart = formatDateET(new Date(now.getFullYear(), now.getMonth(), 1));
+  const monthEnd = formatDateET(new Date(now.getFullYear(), now.getMonth() + 1, 0));
 
   const lastWeekDate = subWeeks(now, 1);
-  const lastWeekStart = startOfWeek(lastWeekDate, { weekStartsOn: 1 }).toISOString().split("T")[0];
-  const lastWeekEnd = endOfWeek(lastWeekDate, { weekStartsOn: 1 }).toISOString().split("T")[0];
+  const lastWeekStart = formatDateET(startOfWeek(lastWeekDate, { weekStartsOn: 1 }));
+  const lastWeekEnd = formatDateET(endOfWeek(lastWeekDate, { weekStartsOn: 1 }));
 
-  const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const twoDaysAgoDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+  const twoDaysAgo = formatDateET(twoDaysAgoDate);
 
   function sumRevenue(jobs: { job_line_items: unknown }[] | null) {
     return (
