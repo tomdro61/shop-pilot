@@ -20,6 +20,8 @@ export default async function ParkingPage({
     status?: string;
     view?: string;
     date?: string;
+    dropoff?: string;
+    pickup?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -55,16 +57,14 @@ export default async function ParkingPage({
   }
 
   // "all" tab — full list with filters
-  const view = params.view || "all";
   const result = await getParkingReservations({
     search: params.search,
     status: params.status as ParkingStatus | undefined,
     lot,
     dateFrom: params.from,
     dateTo: params.to,
-    dropOffDate: view === "arrivals" ? params.date : undefined,
-    pickUpDate: view === "pickups" ? params.date : undefined,
-    dateAny: view === "all" ? params.date : undefined,
+    dropOffDate: params.dropoff || undefined,
+    pickUpDate: params.pickup || undefined,
     page,
   });
 

@@ -67,8 +67,8 @@ export function ParkingAllView({
     return () => clearTimeout(timeout);
   }, [searchInput, searchParams, updateParams]);
 
-  const currentView = searchParams.get("view") || "all";
-  const currentDate = searchParams.get("date") || "";
+  const currentDropoff = searchParams.get("dropoff") || "";
+  const currentPickup = searchParams.get("pickup") || "";
 
   return (
     <div className="space-y-4">
@@ -83,27 +83,24 @@ export function ParkingAllView({
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
-        <Select
-          value={currentView}
-          onValueChange={(value) =>
-            updateParams({ view: value === "all" ? "" : value, date: currentDate, page: "" })
-          }
-        >
-          <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="arrivals">Arrivals</SelectItem>
-            <SelectItem value="pickups">Pickups</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input
-          type="date"
-          className="w-full sm:w-[160px] h-9 text-xs"
-          value={currentDate}
-          onChange={(e) => updateParams({ date: e.target.value, page: "" })}
-        />
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-stone-500 dark:text-stone-400 shrink-0">Drop-off</label>
+          <Input
+            type="date"
+            className="w-full sm:w-[150px] h-9 text-xs"
+            value={currentDropoff}
+            onChange={(e) => updateParams({ dropoff: e.target.value, page: "" })}
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-stone-500 dark:text-stone-400 shrink-0">Pick-up</label>
+          <Input
+            type="date"
+            className="w-full sm:w-[150px] h-9 text-xs"
+            value={currentPickup}
+            onChange={(e) => updateParams({ pickup: e.target.value, page: "" })}
+          />
+        </div>
         <Select
           value={currentStatus || "all"}
           onValueChange={(value) =>
