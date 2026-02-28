@@ -206,8 +206,8 @@ export async function POST(request: Request) {
     const { error } = await supabase.from("parking_reservations").insert({
       first_name: firstName,
       last_name: lastName,
-      email: email || null,
-      phone: phone || null,
+      email: email || "",
+      phone: phone || "",
       drop_off_date: dropOffDate,
       drop_off_time: dropOffTime,
       pick_up_date: pickUpDate,
