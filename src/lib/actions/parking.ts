@@ -248,3 +248,16 @@ export async function updateReservation(
   revalidatePath(`/parking/${id}`);
   return { success: true };
 }
+
+export async function deleteReservation(id: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("parking_reservations")
+    .delete()
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/parking");
+  return { success: true };
+}

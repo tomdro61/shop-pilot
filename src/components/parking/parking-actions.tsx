@@ -9,8 +9,9 @@ import {
   checkOutReservation,
   markNoShow,
   cancelReservation,
+  deleteReservation,
 } from "@/lib/actions/parking";
-import { LogIn, LogOut, Ban, XCircle } from "lucide-react";
+import { LogIn, LogOut, Ban, XCircle, Trash2 } from "lucide-react";
 import type { ParkingStatus } from "@/types";
 
 export function CheckInButton({
@@ -152,6 +153,63 @@ export function CancelButton({ id }: { id: string }) {
   );
 }
 
+export function DeleteReservationButton({ id }: { id: string }) {
+  const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const router = useRouter();
+
+  async function handleDelete() {
+    setLoading(true);
+    const result = await deleteReservation(id);
+    setLoading(false);
+
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success("Reservation deleted");
+    router.push("/parking");
+  }
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-red-600 dark:text-red-400">Delete this reservation?</span>
+        <Button
+          size="sm"
+          variant="destructive"
+          className="gap-1.5"
+          onClick={handleDelete}
+          disabled={loading}
+        >
+          {loading ? "..." : "Yes, Delete"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setConfirming(false)}
+          disabled={loading}
+        >
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="gap-1.5 text-red-600 dark:text-red-400"
+      onClick={() => setConfirming(true)}
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+      Delete
+    </Button>
+  );
+}
+
 export function ParkingActionButtons({
   id,
   status,
@@ -165,6 +223,7 @@ export function ParkingActionButtons({
         <CheckInButton id={id} />
         <NoShowButton id={id} />
         <CancelButton id={id} />
+        <DeleteReservationButton id={id} />
       </div>
     );
   }
@@ -173,9 +232,14 @@ export function ParkingActionButtons({
     return (
       <div className="flex flex-wrap gap-2">
         <CheckOutButton id={id} />
+        <DeleteReservationButton id={id} />
       </div>
     );
   }
 
-  return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      <DeleteReservationButton id={id} />
+    </div>
+  );
 }
