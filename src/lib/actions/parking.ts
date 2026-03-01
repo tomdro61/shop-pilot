@@ -63,7 +63,7 @@ export async function getParkingReservations(filters?: {
   if (filters?.search) {
     const s = filters.search;
     query = query.or(
-      `first_name.ilike.%${s}%,last_name.ilike.%${s}%,license_plate.ilike.%${s}%,confirmation_number.ilike.%${s}%,phone.ilike.%${s}%`
+      `first_name.ilike.%${s}%,last_name.ilike.%${s}%,license_plate.ilike.%${s}%,confirmation_number.ilike.%${s}%,phone.ilike.%${s}%,make.ilike.%${s}%,model.ilike.%${s}%`
     );
   }
 
