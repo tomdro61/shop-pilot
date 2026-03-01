@@ -8,6 +8,7 @@ import {
   startOfYear,
   endOfYear,
 } from "date-fns";
+import { todayET } from "@/lib/utils";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -26,7 +27,8 @@ export function resolveDateRange(
   from?: string,
   to?: string
 ): { from: string; to: string; label: string; isAllTime: boolean } {
-  const now = new Date();
+  // Use ET date to match job date_finished values (set via todayET())
+  const now = new Date(todayET() + "T12:00:00");
   const weekOpts = { weekStartsOn: 1 as const };
 
   switch (range) {
