@@ -104,9 +104,10 @@ export async function getParkingDashboard(lot?: string) {
     return lot ? q.eq("lot", lot) : q;
   }
 
-  const tomorrowDate = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+  // Compute tomorrow from today's ET date string to avoid double timezone conversion
+  const tomorrowDate = new Date(today + "T12:00:00");
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrow = formatDateET(tomorrowDate);
+  const tomorrow = tomorrowDate.toISOString().split("T")[0];
 
   const [arrivalsResult, pickupsResult, tomorrowPickupsResult, currentlyParkedResult, serviceLeadsResult] =
     await Promise.all([
