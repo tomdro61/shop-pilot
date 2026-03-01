@@ -12,6 +12,7 @@ import { LineItemsList } from "@/components/dashboard/line-items-list";
 import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
+import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
 import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
@@ -78,7 +79,7 @@ export default async function JobDetailPage({
                 {formatDate(job.date_received)}
               </span>
               {job.date_finished && (
-                <span>Finished {formatDate(job.date_finished)}</span>
+                <DateFinishedEditor jobId={id} dateFinished={job.date_finished} />
               )}
               {tech && (
                 <span className="inline-flex items-center gap-1">

@@ -176,6 +176,22 @@ export async function updateJobStatus(id: string, status: JobStatus) {
   return { success: true };
 }
 
+export async function updateJobDateFinished(id: string, dateFinished: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ date_finished: dateFinished })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function deleteJob(id: string) {
   const supabase = await createClient();
 
