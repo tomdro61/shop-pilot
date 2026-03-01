@@ -3,7 +3,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { todayET, formatDateET } from "@/lib/utils";
+import { todayET } from "@/lib/utils";
 import type { ParkingStatus } from "@/types";
 
 // ── Fetch reservations with filters ─────────────────────────────
