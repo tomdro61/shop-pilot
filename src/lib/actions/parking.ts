@@ -182,6 +182,24 @@ export async function checkInReservation(id: string) {
   return { success: true };
 }
 
+// ── Undo check in (back to reserved) ────────────────────────────
+
+export async function undoCheckIn(id: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("parking_reservations")
+    .update({
+      status: "reserved" as const,
+      checked_in_at: null,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/parking");
+  return { success: true };
+}
+
 // ── Check out ───────────────────────────────────────────────────
 
 export async function checkOutReservation(id: string) {
@@ -192,6 +210,24 @@ export async function checkOutReservation(id: string) {
     .update({
       status: "checked_out" as const,
       checked_out_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/parking");
+  return { success: true };
+}
+
+// ── Undo check out (back to checked in) ─────────────────────────
+
+export async function undoCheckOut(id: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("parking_reservations")
+    .update({
+      status: "checked_in" as const,
+      checked_out_at: null,
     })
     .eq("id", id);
 

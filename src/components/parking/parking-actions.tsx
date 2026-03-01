@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import {
   checkInReservation,
   checkOutReservation,
+  undoCheckIn,
+  undoCheckOut,
   markNoShow,
   cancelReservation,
   deleteReservation,
 } from "@/lib/actions/parking";
-import { LogIn, LogOut, Ban, XCircle, Trash2 } from "lucide-react";
+import { LogIn, LogOut, Undo2, Ban, XCircle, Trash2 } from "lucide-react";
 import type { ParkingStatus } from "@/types";
 
 export function CheckInButton({
@@ -210,6 +212,70 @@ export function DeleteReservationButton({ id }: { id: string }) {
   );
 }
 
+export function UndoCheckInButton({ id }: { id: string }) {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handleUndo() {
+    setLoading(true);
+    const result = await undoCheckIn(id);
+    setLoading(false);
+
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success("Check-in undone");
+    router.refresh();
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="gap-1.5"
+      onClick={handleUndo}
+      disabled={loading}
+    >
+      <Undo2 className="h-3.5 w-3.5" />
+      {loading ? "..." : "Undo Check In"}
+    </Button>
+  );
+}
+
+export function UndoCheckOutButton({ id }: { id: string }) {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handleUndo() {
+    setLoading(true);
+    const result = await undoCheckOut(id);
+    setLoading(false);
+
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success("Check-out undone");
+    router.refresh();
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="gap-1.5"
+      onClick={handleUndo}
+      disabled={loading}
+    >
+      <Undo2 className="h-3.5 w-3.5" />
+      {loading ? "..." : "Undo Check Out"}
+    </Button>
+  );
+}
+
 export function ParkingActionButtons({
   id,
   status,
@@ -232,6 +298,16 @@ export function ParkingActionButtons({
     return (
       <div className="flex flex-wrap gap-2">
         <CheckOutButton id={id} />
+        <UndoCheckInButton id={id} />
+        <DeleteReservationButton id={id} />
+      </div>
+    );
+  }
+
+  if (status === "checked_out") {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <UndoCheckOutButton id={id} />
         <DeleteReservationButton id={id} />
       </div>
     );
