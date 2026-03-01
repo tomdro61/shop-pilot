@@ -128,13 +128,13 @@ export async function getParkingDashboard(lot?: string) {
           .in("status", ["checked_in", "checked_out"])
       ).order("pick_up_time", { ascending: true }),
 
-      // Tomorrow's pickups (checked in, picking up tomorrow)
+      // Tomorrow's pickups (checked in or checked out, picking up tomorrow)
       applyLotFilter(
         supabase
           .from("parking_reservations")
           .select("*")
           .eq("pick_up_date", tomorrow)
-          .eq("status", "checked_in")
+          .in("status", ["checked_in", "checked_out"])
       ).order("pick_up_time", { ascending: true }),
 
       // Currently parked (all checked-in vehicles)

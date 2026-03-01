@@ -133,7 +133,11 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
-                variant="pickup-tomorrow"
+                variant={r.status === "checked_out" ? "checked-out" : "pickup-tomorrow"}
+                showActions={r.status === "checked_out"
+                  ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
+                  : <CheckOutButton id={r.id} size="sm" />
+                }
               />
             ))}
           </div>
