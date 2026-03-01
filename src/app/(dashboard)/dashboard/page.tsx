@@ -8,10 +8,10 @@ import {
   Car, Calendar, DollarSign, AlertTriangle, Plus, ArrowRight,
   Clock, UserX, TrendingUp, TrendingDown, ClipboardCheck, Receipt,
 } from "lucide-react";
-import { startOfWeek, endOfWeek, subWeeks } from "date-fns";
+import { startOfWeek, endOfWeek, subWeeks, subDays } from "date-fns";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/constants";
 import { formatVehicle, formatCurrency } from "@/lib/utils/format";
-import { nowET, formatDateET } from "@/lib/utils";
+import { todayET } from "@/lib/utils";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -20,19 +20,26 @@ export const metadata = {
 
 const getDashboardData = unstable_cache(async () => {
   const supabase = createAdminClient();
-  const now = nowET();
-  const today = formatDateET(now);
-  const weekStart = formatDateET(startOfWeek(now, { weekStartsOn: 1 }));
-  const weekEnd = formatDateET(endOfWeek(now, { weekStartsOn: 1 }));
-  const monthStart = formatDateET(new Date(now.getFullYear(), now.getMonth(), 1));
-  const monthEnd = formatDateET(new Date(now.getFullYear(), now.getMonth() + 1, 0));
 
-  const lastWeekDate = subWeeks(now, 1);
-  const lastWeekStart = formatDateET(startOfWeek(lastWeekDate, { weekStartsOn: 1 }));
-  const lastWeekEnd = formatDateET(endOfWeek(lastWeekDate, { weekStartsOn: 1 }));
+  // All dates derived from todayET() string to avoid double timezone conversion.
+  // nowET() + formatDateET() applies ET conversion twice, shifting dates near midnight.
+  const today = todayET();
+  const todayDate = new Date(today + "T12:00:00"); // noon avoids DST edge cases
 
-  const twoDaysAgoDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
-  const twoDaysAgo = formatDateET(twoDaysAgoDate);
+  function toDateStr(d: Date): string {
+    return d.toISOString().split("T")[0];
+  }
+
+  const weekStart = toDateStr(startOfWeek(todayDate, { weekStartsOn: 1 }));
+  const weekEnd = toDateStr(endOfWeek(todayDate, { weekStartsOn: 1 }));
+  const monthStart = today.slice(0, 8) + "01"; // YYYY-MM-01
+  const monthEnd = toDateStr(new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0));
+
+  const lastWeekDate = subWeeks(todayDate, 1);
+  const lastWeekStart = toDateStr(startOfWeek(lastWeekDate, { weekStartsOn: 1 }));
+  const lastWeekEnd = toDateStr(endOfWeek(lastWeekDate, { weekStartsOn: 1 }));
+
+  const twoDaysAgo = toDateStr(subDays(todayDate, 2));
 
   function sumRevenue(jobs: { job_line_items: unknown }[] | null) {
     return (

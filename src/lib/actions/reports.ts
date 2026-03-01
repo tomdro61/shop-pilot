@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { subDays, differenceInDays, parseISO } from "date-fns";
-import { todayET, formatDateET } from "@/lib/utils";
+import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 
