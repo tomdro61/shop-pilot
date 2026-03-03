@@ -1707,3 +1707,32 @@
 - [ ] Run migration against Supabase (`npx supabase db push`)
 - [ ] Run backfill script to link existing parking reservations (`npx tsx scripts/backfill-parking-customers.ts --dry-run`)
 - [ ] Deploy to Vercel
+
+---
+
+## Session 24 — 2026-03-03 — Editable Parking Trip Dates
+
+### What Was Completed
+
+Parking reservation trip dates (drop-off date/time, pick-up date/time) were previously read-only on the detail page. Staff can now edit them inline when customers change travel plans.
+
+1. **Validator** — Added 4 optional fields (`drop_off_date`, `drop_off_time`, `pick_up_date`, `pick_up_time`) with regex validation to `parkingUpdateSchema`
+2. **Server action** — Widened `updateReservation` data type to accept the 4 new date/time fields
+3. **ParkingDatesForm component** — New client component following `ParkingNotesForm` pattern: native `<input type="date">` and `<input type="time">` inputs, change detection, conditional Save button, normalizes time to `HH:MM:00` on save
+4. **Detail page** — Replaced static Trip Dates card content with `<ParkingDatesForm>` component
+5. **AI tool** — Added 4 date/time properties to `update_parking_reservation` tool schema, updated description
+6. **AI handler** — Widened updates type and added conditional assignments for all 4 fields
+
+### New/Modified Files
+- `src/components/parking/parking-dates-form.tsx` (new)
+- `src/app/(dashboard)/parking/[id]/page.tsx` (modified)
+- `src/lib/actions/parking.ts` (modified)
+- `src/lib/validators/parking.ts` (modified)
+- `src/lib/ai/tools.ts` (modified)
+- `src/lib/ai/handlers.ts` (modified)
+
+### Build Status
+- `next build` passes cleanly
+
+### What's NOT Done Yet
+- Nothing — feature complete, pushed to master, auto-deploying via Vercel
