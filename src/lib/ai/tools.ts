@@ -700,12 +700,16 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "update_parking_reservation",
     description:
-      "Update a parking reservation's staff notes.",
+      "Update a parking reservation's staff notes or trip dates.",
     input_schema: {
       type: "object" as const,
       properties: {
         id: { type: "string", description: "Reservation UUID (required)" },
         staff_notes: { type: "string", description: "Staff notes to save" },
+        drop_off_date: { type: "string", description: "New drop-off date (YYYY-MM-DD)" },
+        drop_off_time: { type: "string", description: "New drop-off time (HH:MM)" },
+        pick_up_date: { type: "string", description: "New pick-up date (YYYY-MM-DD)" },
+        pick_up_time: { type: "string", description: "New pick-up time (HH:MM)" },
       },
       required: ["id"],
     },

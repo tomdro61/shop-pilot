@@ -271,7 +271,14 @@ export async function cancelReservation(id: string) {
 
 export async function updateReservation(
   id: string,
-  data: { staff_notes?: string | null; services_interested?: string[] }
+  data: {
+    staff_notes?: string | null;
+    services_interested?: string[];
+    drop_off_date?: string;
+    drop_off_time?: string;
+    pick_up_date?: string;
+    pick_up_time?: string;
+  }
 ) {
   const supabase = await createClient();
 

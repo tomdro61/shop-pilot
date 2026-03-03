@@ -493,9 +493,19 @@ export async function executeToolCall(
         return JSON.stringify(result);
       }
       case "update_parking_reservation": {
-        const updates: { staff_notes?: string | null } = {};
+        const updates: {
+          staff_notes?: string | null;
+          drop_off_date?: string;
+          drop_off_time?: string;
+          pick_up_date?: string;
+          pick_up_time?: string;
+        } = {};
         if (toolInput.staff_notes !== undefined)
           updates.staff_notes = str(toolInput.staff_notes) || null;
+        if (toolInput.drop_off_date !== undefined) updates.drop_off_date = str(toolInput.drop_off_date);
+        if (toolInput.drop_off_time !== undefined) updates.drop_off_time = str(toolInput.drop_off_time);
+        if (toolInput.pick_up_date !== undefined) updates.pick_up_date = str(toolInput.pick_up_date);
+        if (toolInput.pick_up_time !== undefined) updates.pick_up_time = str(toolInput.pick_up_time);
         const result = await updateParkingReservation(
           str(toolInput.id),
           updates

@@ -11,6 +11,7 @@ import {
 } from "@/lib/constants";
 import { ParkingActionButtons } from "@/components/parking/parking-actions";
 import { ParkingNotesForm } from "@/components/parking/parking-notes-form";
+import { ParkingDatesForm } from "@/components/parking/parking-dates-form";
 import { ParkingServicesForm } from "@/components/parking/parking-services-form";
 import {
   ArrowLeft,
@@ -164,27 +165,14 @@ export default async function ParkingDetailPage({
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Trip Dates</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
-              <Calendar className="h-4 w-4 shrink-0 text-stone-400" />
-              <div>
-                <span className="font-medium text-stone-700 dark:text-stone-300">
-                  Drop-off:
-                </span>{" "}
-                {formatDate(reservation.drop_off_date)}{" "}
-                at {formatTime(reservation.drop_off_time)}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
-              <Calendar className="h-4 w-4 shrink-0 text-stone-400" />
-              <div>
-                <span className="font-medium text-stone-700 dark:text-stone-300">
-                  Pick-up:
-                </span>{" "}
-                {formatDate(reservation.pick_up_date)}{" "}
-                at {formatTime(reservation.pick_up_time)}
-              </div>
-            </div>
+          <CardContent>
+            <ParkingDatesForm
+              id={reservation.id}
+              dropOffDate={reservation.drop_off_date}
+              dropOffTime={reservation.drop_off_time}
+              pickUpDate={reservation.pick_up_date}
+              pickUpTime={reservation.pick_up_time}
+            />
           </CardContent>
         </Card>
 

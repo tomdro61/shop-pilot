@@ -33,6 +33,10 @@ export type ParkingSubmitData = z.infer<typeof parkingSubmitSchema>;
 export const parkingUpdateSchema = z.object({
   status: z.enum(["reserved", "checked_in", "checked_out", "no_show", "cancelled"]).optional(),
   staff_notes: z.string().max(5000).nullable().optional(),
+  drop_off_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  drop_off_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
+  pick_up_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  pick_up_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
 });
 
 export type ParkingUpdateData = z.infer<typeof parkingUpdateSchema>;
