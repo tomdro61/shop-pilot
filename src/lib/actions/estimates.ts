@@ -167,6 +167,7 @@ export async function sendEstimate(id: string) {
   }
 
   revalidatePath(`/estimates/${id}`);
+  revalidatePath(`/jobs/${estimate.job_id}`);
   return { data: { approvalUrl } };
 }
 
@@ -257,6 +258,9 @@ export async function approveEstimate(token: string) {
       })
       .eq("id", estimate.id);
 
+    revalidatePath(`/estimates/${estimate.id}`);
+    revalidatePath(`/jobs/${job.id}`);
+    revalidatePath("/dashboard");
     return { data: { success: true } };
   } catch (err) {
     const message =
@@ -270,7 +274,7 @@ export async function declineEstimate(token: string) {
 
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
-    .select("id, status")
+    .select("id, status, job_id")
     .eq("approval_token", token)
     .single();
 
@@ -287,6 +291,8 @@ export async function declineEstimate(token: string) {
 
   if (error) return { error: error.message };
 
+  revalidatePath(`/estimates/${estimate.id}`);
+  revalidatePath(`/jobs/${estimate.job_id}`);
   return { data: { success: true } };
 }
 

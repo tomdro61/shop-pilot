@@ -180,6 +180,7 @@ export async function checkInReservation(id: string) {
 
   if (error) return { error: error.message };
   revalidatePath("/parking");
+  revalidatePath(`/parking/${id}`);
   return { success: true };
 }
 
@@ -198,6 +199,7 @@ export async function undoCheckIn(id: string) {
 
   if (error) return { error: error.message };
   revalidatePath("/parking");
+  revalidatePath(`/parking/${id}`);
   return { success: true };
 }
 
@@ -216,6 +218,7 @@ export async function checkOutReservation(id: string) {
 
   if (error) return { error: error.message };
   revalidatePath("/parking");
+  revalidatePath(`/parking/${id}`);
   return { success: true };
 }
 
@@ -234,6 +237,7 @@ export async function undoCheckOut(id: string) {
 
   if (error) return { error: error.message };
   revalidatePath("/parking");
+  revalidatePath(`/parking/${id}`);
   return { success: true };
 }
 
@@ -249,6 +253,7 @@ export async function markNoShow(id: string) {
 
   if (error) return { error: error.message };
   revalidatePath("/parking");
+  revalidatePath(`/parking/${id}`);
   return { success: true };
 }
 
@@ -264,6 +269,7 @@ export async function cancelReservation(id: string) {
 
   if (error) return { error: error.message };
   revalidatePath("/parking");
+  revalidatePath(`/parking/${id}`);
   return { success: true };
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,9 +39,13 @@ export function ParkingAllView({
 
   const currentStatus = searchParams.get("status") || "";
 
+  const [isPending, startTransition] = useTransition();
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsRef.current.toString());
       for (const [key, value] of Object.entries(updates)) {
         if (value) {
           params.set(key, value);
@@ -51,21 +55,23 @@ export function ParkingAllView({
       }
       // Keep tab=all
       params.set("tab", "all");
-      router.push(`/parking?${params.toString()}`);
+      startTransition(() => {
+        router.push(`/parking?${params.toString()}`);
+      });
     },
-    [router, searchParams]
+    [router]
   );
 
   // Debounced search — reset to page 1
   useEffect(() => {
     const timeout = setTimeout(() => {
-      const current = searchParams.get("search") || "";
+      const current = searchParamsRef.current.get("search") || "";
       if (searchInput !== current) {
         updateParams({ search: searchInput, page: "" });
       }
     }, 300);
     return () => clearTimeout(timeout);
-  }, [searchInput, searchParams, updateParams]);
+  }, [searchInput, updateParams]);
 
   const currentDropoff = searchParams.get("dropoff") || "";
   const currentPickup = searchParams.get("pickup") || "";
@@ -132,6 +138,7 @@ export function ParkingAllView({
       </div>
 
       {/* List */}
+      <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
       {reservations.length === 0 ? (
         <div className="rounded-xl border border-dashed border-stone-300 dark:border-stone-700 p-8 text-center">
           <p className="text-sm text-stone-500 dark:text-stone-400">
@@ -155,6 +162,8 @@ export function ParkingAllView({
           ))}
         </div>
       )}
+
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (

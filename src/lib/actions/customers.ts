@@ -75,6 +75,7 @@ export async function createCustomer(formData: CustomerFormData) {
   if (error) return { error: error.message };
 
   revalidatePath("/customers");
+  revalidatePath("/dashboard");
   return { data };
 }
 
@@ -96,6 +97,7 @@ export async function updateCustomer(id: string, formData: CustomerFormData) {
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}`);
+  revalidatePath("/dashboard");
   return { data };
 }
 
@@ -118,5 +120,6 @@ export async function deleteCustomer(id: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/customers");
+  revalidatePath("/dashboard");
   return { success: true };
 }

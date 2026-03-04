@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
@@ -9,10 +9,12 @@ export function CustomerSearch() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") || "");
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
 
   const updateSearch = useCallback(
     (value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsRef.current.toString());
       if (value) {
         params.set("search", value);
       } else {
@@ -21,7 +23,7 @@ export function CustomerSearch() {
       params.delete("page");
       router.push(`/customers?${params.toString()}`);
     },
-    [router, searchParams]
+    [router]
   );
 
   useEffect(() => {

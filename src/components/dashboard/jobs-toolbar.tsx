@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,10 +30,12 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   const status = searchParams.get("status") || "all";
   const paymentStatus = searchParams.get("payment_status") || "all";
   const range = searchParams.get("range") || "all";
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsRef.current.toString());
       for (const [key, value] of Object.entries(updates)) {
         if (value && value !== "all") {
           params.set(key, value);
@@ -43,7 +45,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
       }
       router.push(`/jobs?${params.toString()}`);
     },
-    [router, searchParams]
+    [router]
   );
 
   useEffect(() => {

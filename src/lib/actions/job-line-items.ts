@@ -21,6 +21,7 @@ export async function createLineItem(formData: LineItemFormData) {
   if (error) return { error: error.message };
 
   revalidatePath(`/jobs/${parsed.data.job_id}`);
+  revalidatePath("/jobs");
   return { data };
 }
 
@@ -41,6 +42,7 @@ export async function updateLineItem(id: string, formData: LineItemFormData) {
   if (error) return { error: error.message };
 
   revalidatePath(`/jobs/${parsed.data.job_id}`);
+  revalidatePath("/jobs");
   return { data };
 }
 
@@ -55,5 +57,6 @@ export async function deleteLineItem(id: string, jobId: string) {
   if (error) return { error: error.message };
 
   revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/jobs");
   return { success: true };
 }
