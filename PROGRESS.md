@@ -1736,3 +1736,50 @@ Parking reservation trip dates (drop-off date/time, pick-up date/time) were prev
 
 ### What's NOT Done Yet
 - Nothing — feature complete, pushed to master, auto-deploying via Vercel
+
+---
+
+## Session 25 — 2026-03-03 — Search Debounce Fix & Revalidation Audit
+
+### What Was Completed
+
+Fixed sluggish search behavior across all search pages and audited/fixed revalidation gaps in every server action mutation.
+
+#### Search Debounce Fix (3 files)
+- **Root cause:** `searchParams` in `useEffect` dependency arrays caused the debounce to re-trigger on every URL change, creating a race condition where old results would stick or multiple queries would fire in a loop
+- **Fix:** Replaced `searchParams` in deps with `useRef` pattern across all 3 search components. `updateParams` callback no longer depends on `searchParams` (reads from ref instead)
+- **Parking search:** Added `useTransition` with opacity fade (50%) on results while new query loads
+- Affected: `parking-all-view.tsx`, `customer-search.tsx`, `jobs-toolbar.tsx`
+
+#### Revalidation Gaps Fixed (6 files)
+- **Parking:** `checkIn`, `undoCheckIn`, `checkOut`, `undoCheckOut`, `markNoShow`, `cancelReservation` — all now revalidate `/parking/[id]` (were only revalidating `/parking` list)
+- **Estimates:** `approveEstimate` and `declineEstimate` had zero `revalidatePath` calls — now revalidate `/estimates/[id]` and `/jobs/[id]`. `sendEstimate` now also revalidates `/jobs/[id]`. `approveEstimate` revalidates `/dashboard`.
+- **Customers:** `createCustomer`, `updateCustomer`, `deleteCustomer` now revalidate `/dashboard`
+- **Line items:** `createLineItem`, `updateLineItem`, `deleteLineItem` now revalidate `/jobs` list
+
+#### Database Indexes (migration applied)
+- Added `idx_parking_first_name` on `parking_reservations(first_name)` — was missing while all other searched fields had indexes
+- Added `idx_parking_phone` on `parking_reservations(phone)` — also searched but not indexed
+- Migration: `20260303000000_parking_first_name_index.sql` — **already applied to Supabase**
+
+#### Caching Investigation (attempted, backed out)
+- Attempted `unstable_cache` on parking dashboard and reports page
+- **Incompatible:** All Supabase queries use `createClient()` which calls `cookies()` — cannot run inside `unstable_cache`. Would require refactoring to admin client.
+- Backed out entirely — no caching added, no impact
+
+### New/Modified Files
+- `src/components/parking/parking-all-view.tsx` (modified — ref pattern, useTransition, opacity fade)
+- `src/components/forms/customer-search.tsx` (modified — ref pattern)
+- `src/components/dashboard/jobs-toolbar.tsx` (modified — ref pattern)
+- `src/lib/actions/parking.ts` (modified — revalidatePath for all status mutations)
+- `src/lib/actions/estimates.ts` (modified — revalidatePath for approve/decline/send)
+- `src/lib/actions/customers.ts` (modified — revalidatePath /dashboard)
+- `src/lib/actions/job-line-items.ts` (modified — revalidatePath /jobs)
+- `src/lib/actions/jobs.ts` (modified — no net changes after cache revert)
+- `supabase/migrations/20260303000000_parking_first_name_index.sql` (new)
+
+### Build Status
+- `next build` passes cleanly
+
+### What's NOT Done Yet
+- General page navigation speed is limited by Supabase query latency per request. Improving this would require refactoring data-fetching to use `createAdminClient()` for cacheable queries (a larger architectural change).
