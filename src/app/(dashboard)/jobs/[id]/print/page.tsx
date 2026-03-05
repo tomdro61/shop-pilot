@@ -92,9 +92,9 @@ export default async function PrintRepairOrderPage({
       <div className="mb-6 border-b-2 border-stone-900 pb-4 text-center">
         <h1 className="text-2xl font-bold tracking-tight">Broadway Motors</h1>
         <p className="mt-1 text-sm text-stone-600">
-          265 Broadway, Revere, MA 02151
+          88 Broadway, Revere, MA 02151
         </p>
-        <p className="text-sm text-stone-600">(781) 284-4000</p>
+        <p className="text-sm text-stone-600">(617) 996-8371</p>
       </div>
 
       {/* RO Number + Dates */}

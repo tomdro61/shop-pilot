@@ -55,9 +55,6 @@ export async function onReservationCreated({
     return;
   }
 
-  // TODO: Re-enable once Wix automations are disabled (avoiding duplicate texts)
-  return;
-
   // Format dates for human-readable display
   const formatDate = (d: string) => {
     try {
