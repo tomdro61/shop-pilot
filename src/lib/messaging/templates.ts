@@ -81,7 +81,7 @@ export function reservationConfirmationSMS({
   pickUpDate: string;
   pickUpTime: string;
 }) {
-  return `Hi ${firstName}, your parking reservation is confirmed! Drop off: ${dropOffDate} at ${dropOffTime}, Pick up: ${pickUpDate} at ${pickUpTime}. See you soon — Broadway Motors Airport Parking.\n\nParking instructions: https://www.broadwaymotorsrevere.com/afterparkandrepair`;
+  return `Hi ${firstName}, your parking reservation is confirmed!\n\nDrop off: ${dropOffDate} at ${dropOffTime}\nPick up: ${pickUpDate} at ${pickUpTime}\n\nSee you soon — Broadway Motors.\n\nParking instructions: https://www.broadwaymotorsrevere.com/afterparkandrepair`;
 }
 
 export function pickupReadySMS({
