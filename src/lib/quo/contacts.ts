@@ -84,8 +84,8 @@ export async function createOrUpdateQuoContact({
         defaultFields: {
           firstName,
           lastName,
-          phoneNumbers: [{ value: phone }],
-          emails: email ? [{ value: email }] : [],
+          phoneNumbers: [{ name: "mobile", value: phone }],
+          emails: email ? [{ name: "personal", value: email }] : [],
         },
       }),
     });
