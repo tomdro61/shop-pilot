@@ -155,7 +155,7 @@ export function ParkingAllView({
                 r.status === "reserved" ? (
                   <CheckInButton id={r.id} size="sm" />
                 ) : r.status === "checked_in" ? (
-                  <CheckOutButton id={r.id} size="sm" />
+                  <CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />
                 ) : undefined
               }
             />

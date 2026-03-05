@@ -7,6 +7,7 @@ export function isQuoConfigured(): boolean {
 interface SendSMSParams {
   to: string;
   body: string;
+  from?: string;
 }
 
 interface SendSMSResult {
@@ -15,17 +16,18 @@ interface SendSMSResult {
   messageId?: string;
 }
 
-export async function sendSMS({ to, body }: SendSMSParams): Promise<SendSMSResult> {
+export async function sendSMS({ to, body, from: fromOverride }: SendSMSParams): Promise<SendSMSResult> {
   console.log("[Quo Debug] QUO_API_KEY set:", !!process.env.QUO_API_KEY);
   console.log("[Quo Debug] QUO_PHONE_NUMBER set:", !!process.env.QUO_PHONE_NUMBER);
 
   if (!isQuoConfigured()) {
     console.log("[Quo Test Mode] SMS to:", to);
+    console.log("[Quo Test Mode] From:", fromOverride || process.env.QUO_PHONE_NUMBER);
     console.log("[Quo Test Mode] Body:", body);
     return { success: true, testMode: true };
   }
 
-  const from = process.env.QUO_PHONE_NUMBER;
+  const from = fromOverride || process.env.QUO_PHONE_NUMBER;
   if (!from) {
     throw new Error("QUO_PHONE_NUMBER is not set");
   }

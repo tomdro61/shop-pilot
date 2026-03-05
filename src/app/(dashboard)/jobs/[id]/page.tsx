@@ -12,6 +12,7 @@ import { LineItemsList } from "@/components/dashboard/line-items-list";
 import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
+import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
 import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +109,9 @@ export default async function JobDetailPage({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
+            {job.status === "complete" && customer?.phone && (
+              <SendReadyTextButton jobId={id} />
+            )}
             <Link href={`/jobs/${id}/print`}>
               <Button variant="outline" size="sm">
                 <Printer className="mr-1.5 h-3.5 w-3.5" />

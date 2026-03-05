@@ -53,7 +53,7 @@ export async function createInvoiceFromJob(jobId: string) {
   const { data: job, error: jobError } = await supabase
     .from("jobs")
     .select(
-      "*, customers(id, first_name, last_name, email, phone, stripe_customer_id), job_line_items(*)"
+      "*, customers(id, first_name, last_name, email, phone, stripe_customer_id), vehicles(year, make, model), job_line_items(*)"
     )
     .eq("id", jobId)
     .single();
@@ -150,14 +150,24 @@ export async function createInvoiceFromJob(jobId: string) {
 
     // Fire-and-forget SMS with payment link
     if (customer.phone && hostedInvoiceUrl) {
-      import("@/lib/actions/messages")
-        .then(({ sendCustomerSMS }) =>
-          sendCustomerSMS({
-            customerId: customer.id,
-            body: `Hi ${customer.first_name}, your invoice from Broadway Motors is ready. Pay here: ${hostedInvoiceUrl}`,
-            jobId,
-          })
-        )
+      import("@/lib/messaging/templates")
+        .then(({ invoiceSentSMS }) => {
+          const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+          return import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
+            sendCustomerSMS({
+              customerId: customer.id,
+              body: invoiceSentSMS({
+                firstName: customer.first_name,
+                year: vehicle?.year,
+                make: vehicle?.make,
+                model: vehicle?.model,
+                link: hostedInvoiceUrl,
+              }),
+              jobId,
+              line: "shop",
+            })
+          );
+        })
         .catch((err) => console.error("Failed to send invoice SMS:", err));
     }
 

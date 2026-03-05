@@ -227,6 +227,17 @@ export const PARKING_SERVICE_LABELS: Record<string, string> = {
   wipers: "Wipers",
 };
 
+export const PARKING_SPECIALS = [
+  { label: "Interior Detail all cars", price: "$225", note: "Limited Time Offer!!" },
+  { label: "Free Diagnostics", price: "Free" },
+  { label: "Tire Rotation", price: "$40" },
+  { label: "Full Synthetic Oil Change", price: "10% off", note: "for any Vehicle" },
+  { label: "New Windshield Wipers", price: "$35", note: "pair" },
+  { label: "Check/Top Off All Fluids + Tire Pressure", price: "$10" },
+  { label: "Vehicle Repairs, Brakes, etc.", price: "20% off" },
+  { label: "Exterior Wash", price: "$45" },
+] as const;
+
 export const PARKING_LOTS = [
   "Broadway Motors",
   "Airport Parking Boston 1",
