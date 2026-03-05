@@ -50,6 +50,9 @@ export async function onReservationCreated({
   }
 
   // 2. Send confirmation SMS on parking line
+  // TODO: Re-enable once Wix automations are disabled (avoiding duplicate texts)
+  return;
+
   if (!e164Phone) {
     console.log("[onReservationCreated] No valid phone — skipping SMS");
     return;
