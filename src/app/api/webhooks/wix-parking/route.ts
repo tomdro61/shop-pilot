@@ -245,6 +245,7 @@ export async function POST(request: Request) {
           pickUpDate,
           pickUpTime,
           customerId,
+          lot,
         });
       } catch (err) {
         console.error("Wix parking webhook: post-reservation error:", err);

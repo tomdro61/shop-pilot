@@ -1,7 +1,7 @@
 import { createOrUpdateQuoContact } from "@/lib/quo/contacts";
 import { toE164 } from "@/lib/quo/format";
 import { sendSMS } from "@/lib/quo/client";
-import { getPhoneNumber } from "@/lib/quo/routing";
+import { getPhoneNumber, getParkingLine } from "@/lib/quo/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { reservationConfirmationSMS } from "@/lib/messaging/templates";
 
@@ -23,6 +23,7 @@ export async function onReservationCreated({
   pickUpDate,
   pickUpTime,
   customerId,
+  lot,
 }: {
   phone: string;
   firstName: string;
@@ -33,6 +34,7 @@ export async function onReservationCreated({
   pickUpDate: string;
   pickUpTime: string;
   customerId: string | null;
+  lot?: string;
 }) {
   // 1. Create/update Quo contact (graceful failure — don't block SMS if this fails)
   const e164Phone = toE164(phone);
@@ -86,7 +88,8 @@ export async function onReservationCreated({
   });
 
   try {
-    const from = getPhoneNumber("parking");
+    const line = getParkingLine(lot || "Broadway Motors");
+    const from = getPhoneNumber(line);
     await sendSMS({ to: e164Phone!, body, from });
 
     // 3. Log to messages table if we have a customer ID
@@ -97,7 +100,7 @@ export async function onReservationCreated({
         channel: "sms" as const,
         direction: "out" as const,
         body,
-        phone_line: "parking",
+        phone_line: line,
       });
     }
   } catch (err) {

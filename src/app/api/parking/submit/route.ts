@@ -137,6 +137,7 @@ export async function POST(request: Request) {
         pickUpDate: parsed.data.pick_up_date,
         pickUpTime: parsed.data.pick_up_time,
         customerId,
+        lot: parsed.data.lot,
       });
     } catch (err) {
       console.error("Parking submit: post-reservation error:", err);

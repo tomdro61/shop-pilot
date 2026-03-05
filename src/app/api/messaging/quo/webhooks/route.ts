@@ -40,8 +40,10 @@ export async function POST(request: Request) {
     if (to) {
       const shopNumber = process.env.QUO_SHOP_PHONE_NUMBER;
       const parkingNumber = process.env.QUO_PHONE_NUMBER;
+      const apbNumber = process.env.QUO_APB_PHONE_NUMBER;
       if (shopNumber && to === shopNumber) phoneLine = "shop";
       else if (parkingNumber && to === parkingNumber) phoneLine = "parking";
+      else if (apbNumber && to === apbNumber) phoneLine = "apb";
     }
 
     if (from && body) {
