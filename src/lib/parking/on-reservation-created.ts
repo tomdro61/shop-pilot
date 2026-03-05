@@ -57,6 +57,11 @@ export async function onReservationCreated({
     return;
   }
 
+  // Only send confirmation SMS for Broadway Motors — other lots have their own Wix automations
+  if (lot && lot !== "Broadway Motors") {
+    return;
+  }
+
   // Format dates for human-readable display
   const formatDate = (d: string) => {
     try {
