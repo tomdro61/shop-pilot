@@ -50,13 +50,13 @@ export async function onReservationCreated({
   }
 
   // 2. Send confirmation SMS on parking line
-  // TODO: Re-enable once Wix automations are disabled (avoiding duplicate texts)
-  return;
-
   if (!e164Phone) {
     console.log("[onReservationCreated] No valid phone — skipping SMS");
     return;
   }
+
+  // TODO: Re-enable once Wix automations are disabled (avoiding duplicate texts)
+  return;
 
   // Format dates for human-readable display
   const formatDate = (d: string) => {
@@ -90,13 +90,13 @@ export async function onReservationCreated({
 
   try {
     const from = getPhoneNumber("parking");
-    await sendSMS({ to: e164Phone, body, from });
+    await sendSMS({ to: e164Phone!, body, from });
 
     // 3. Log to messages table if we have a customer ID
     if (customerId) {
       const supabase = createAdminClient();
       await supabase.from("messages").insert({
-        customer_id: customerId,
+        customer_id: customerId!,
         channel: "sms" as const,
         direction: "out" as const,
         body,
