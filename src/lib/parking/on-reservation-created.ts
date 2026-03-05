@@ -19,7 +19,9 @@ export async function onReservationCreated({
   lastName,
   email,
   dropOffDate,
+  dropOffTime,
   pickUpDate,
+  pickUpTime,
   customerId,
 }: {
   phone: string;
@@ -27,7 +29,9 @@ export async function onReservationCreated({
   lastName: string;
   email?: string;
   dropOffDate: string;
+  dropOffTime: string;
   pickUpDate: string;
+  pickUpTime: string;
   customerId: string | null;
 }) {
   // 1. Create/update Quo contact (graceful failure — don't block SMS if this fails)
@@ -64,10 +68,21 @@ export async function onReservationCreated({
     }
   };
 
+  // Format "HH:MM" 24h → "H:MM AM/PM"
+  const formatTime = (t: string) => {
+    const [h, m] = t.split(":");
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const display = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${display}:${m} ${ampm}`;
+  };
+
   const body = reservationConfirmationSMS({
     firstName,
     dropOffDate: formatDate(dropOffDate),
+    dropOffTime: formatTime(dropOffTime),
     pickUpDate: formatDate(pickUpDate),
+    pickUpTime: formatTime(pickUpTime),
   });
 
   try {

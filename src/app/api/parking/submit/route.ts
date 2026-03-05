@@ -133,7 +133,9 @@ export async function POST(request: Request) {
         lastName: parsed.data.last_name,
         email: parsed.data.email || undefined,
         dropOffDate: parsed.data.drop_off_date,
+        dropOffTime: parsed.data.drop_off_time,
         pickUpDate: parsed.data.pick_up_date,
+        pickUpTime: parsed.data.pick_up_time,
         customerId,
       });
     } catch (err) {

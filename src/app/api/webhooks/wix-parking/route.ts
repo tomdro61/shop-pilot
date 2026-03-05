@@ -241,7 +241,9 @@ export async function POST(request: Request) {
           lastName,
           email: email || undefined,
           dropOffDate,
+          dropOffTime,
           pickUpDate,
+          pickUpTime,
           customerId,
         });
       } catch (err) {
