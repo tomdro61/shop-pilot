@@ -112,7 +112,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
                 variant={r.status === "checked_out" ? "checked-out" : "pickup"}
                 showActions={r.status === "checked_out"
                   ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
-                  : <CheckOutButton id={r.id} size="sm" />
+                  : <CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />
                 }
               />
             ))}
@@ -136,7 +136,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
                 variant={r.status === "checked_out" ? "checked-out" : "pickup-tomorrow"}
                 showActions={r.status === "checked_out"
                   ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
-                  : <CheckOutButton id={r.id} size="sm" />
+                  : <CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />
                 }
               />
             ))}
@@ -186,7 +186,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
                 key={r.id}
                 reservation={r}
                 variant="parked"
-                showActions={<CheckOutButton id={r.id} size="sm" />}
+                showActions={<CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />}
               />
             ))}
           </div>

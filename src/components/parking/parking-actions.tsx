@@ -6,13 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   checkInReservation,
-  checkOutReservation,
   undoCheckIn,
   undoCheckOut,
   markNoShow,
   cancelReservation,
   deleteReservation,
 } from "@/lib/actions/parking";
+import { CheckoutModal } from "@/components/parking/checkout-modal";
 import { LogIn, LogOut, Undo2, Ban, XCircle, Trash2 } from "lucide-react";
 import type { ParkingStatus } from "@/types";
 
@@ -56,38 +56,35 @@ export function CheckInButton({
 export function CheckOutButton({
   id,
   size = "default",
+  customerName,
+  customerPhone,
 }: {
   id: string;
   size?: "default" | "sm";
+  customerName: string;
+  customerPhone: string;
 }) {
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-
-  async function handleCheckOut() {
-    setLoading(true);
-    const result = await checkOutReservation(id);
-    setLoading(false);
-
-    if ("error" in result) {
-      toast.error(result.error);
-      return;
-    }
-
-    toast.success("Checked out");
-    router.refresh();
-  }
+  const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <Button
-      size={size}
-      variant="outline"
-      className="gap-1.5"
-      onClick={handleCheckOut}
-      disabled={loading}
-    >
-      <LogOut className="h-3.5 w-3.5" />
-      {loading ? "..." : "Check Out"}
-    </Button>
+    <>
+      <Button
+        size={size}
+        variant="outline"
+        className="gap-1.5"
+        onClick={() => setModalOpen(true)}
+      >
+        <LogOut className="h-3.5 w-3.5" />
+        Check Out
+      </Button>
+      <CheckoutModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        reservationId={id}
+        customerName={customerName}
+        customerPhone={customerPhone}
+      />
+    </>
   );
 }
 
@@ -279,9 +276,13 @@ export function UndoCheckOutButton({ id }: { id: string }) {
 export function ParkingActionButtons({
   id,
   status,
+  customerName = "",
+  customerPhone = "",
 }: {
   id: string;
   status: ParkingStatus;
+  customerName?: string;
+  customerPhone?: string;
 }) {
   if (status === "reserved") {
     return (
@@ -297,7 +298,7 @@ export function ParkingActionButtons({
   if (status === "checked_in") {
     return (
       <div className="flex flex-wrap gap-2">
-        <CheckOutButton id={id} />
+        <CheckOutButton id={id} customerName={customerName} customerPhone={customerPhone} />
         <UndoCheckInButton id={id} />
         <DeleteReservationButton id={id} />
       </div>

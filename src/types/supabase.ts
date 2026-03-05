@@ -424,6 +424,7 @@ export type Database = {
           direction: Database["public"]["Enums"]["message_direction"];
           body: string;
           status: string | null;
+          phone_line: string | null;
           sent_at: string;
           created_at: string;
         };
@@ -435,6 +436,7 @@ export type Database = {
           direction: Database["public"]["Enums"]["message_direction"];
           body: string;
           status?: string | null;
+          phone_line?: string | null;
           sent_at?: string;
           created_at?: string;
         };
@@ -446,6 +448,7 @@ export type Database = {
           direction?: Database["public"]["Enums"]["message_direction"];
           body?: string;
           status?: string | null;
+          phone_line?: string | null;
           sent_at?: string;
           created_at?: string;
         };
@@ -517,6 +520,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      lock_boxes: {
+        Row: {
+          id: string;
+          box_number: number;
+          code: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          box_number: number;
+          code: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          box_number?: number;
+          code?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       parking_reservations: {
         Row: {
           id: string;
@@ -539,6 +563,7 @@ export type Database = {
           checked_in_at: string | null;
           checked_out_at: string | null;
           spot_number: string | null;
+          lock_box_number: number | null;
           staff_notes: string | null;
           customer_id: string | null;
           color: string | null;
@@ -566,6 +591,7 @@ export type Database = {
           checked_in_at?: string | null;
           checked_out_at?: string | null;
           spot_number?: string | null;
+          lock_box_number?: number | null;
           staff_notes?: string | null;
           customer_id?: string | null;
           color?: string | null;
@@ -593,6 +619,7 @@ export type Database = {
           checked_in_at?: string | null;
           checked_out_at?: string | null;
           spot_number?: string | null;
+          lock_box_number?: number | null;
           staff_notes?: string | null;
           customer_id?: string | null;
           color?: string | null;

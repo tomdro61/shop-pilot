@@ -117,7 +117,7 @@ export async function sendEstimate(id: string) {
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select(
-      "id, status, job_id, jobs(id, customer_id, customers(id, first_name, phone, email))"
+      "id, status, job_id, jobs(id, customer_id, vehicle_id, customers(id, first_name, phone, email), vehicles(year, make, model))"
     )
     .eq("id", id)
     .single();
@@ -145,17 +145,28 @@ export async function sendEstimate(id: string) {
     id: string;
     customer_id: string;
     customers: { id: string; first_name: string; phone: string | null; email: string | null } | null;
+    vehicles?: { year: number | null; make: string | null; model: string | null } | null;
   } | null;
   const customer = job?.customers;
   if (customer?.phone) {
-    import("@/lib/actions/messages")
-      .then(({ sendCustomerSMS }) =>
-        sendCustomerSMS({
-          customerId: customer.id,
-          body: `Hi ${customer.first_name}, your estimate from Broadway Motors is ready. View and approve here: ${approvalUrl}`,
-          jobId: job!.id,
-        })
-      )
+    import("@/lib/messaging/templates")
+      .then(({ estimateSentSMS }) => {
+        const vehicle = (job as { vehicles?: { year: number | null; make: string | null; model: string | null } | null })?.vehicles;
+        return import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
+          sendCustomerSMS({
+            customerId: customer.id,
+            body: estimateSentSMS({
+              firstName: customer.first_name,
+              year: vehicle?.year,
+              make: vehicle?.make,
+              model: vehicle?.model,
+              link: approvalUrl,
+            }),
+            jobId: job!.id,
+            line: "shop",
+          })
+        );
+      })
       .catch((err) => console.error("Failed to send estimate SMS:", err));
   }
 

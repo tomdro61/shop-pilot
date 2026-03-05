@@ -10,6 +10,7 @@ import {
   PARKING_SERVICE_LABELS,
 } from "@/lib/constants";
 import { ParkingActionButtons } from "@/components/parking/parking-actions";
+import { SendSpecialsButton } from "@/components/parking/send-specials-button";
 import { ParkingNotesForm } from "@/components/parking/parking-notes-form";
 import { ParkingDatesForm } from "@/components/parking/parking-dates-form";
 import { ParkingServicesForm } from "@/components/parking/parking-services-form";
@@ -105,10 +106,17 @@ export default async function ParkingDetailPage({
             </p>
           </div>
 
-          <ParkingActionButtons
-            id={reservation.id}
-            status={reservation.status}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <ParkingActionButtons
+              id={reservation.id}
+              status={reservation.status}
+              customerName={`${reservation.first_name} ${reservation.last_name}`}
+              customerPhone={reservation.phone}
+            />
+            {reservation.status === "checked_in" && reservation.phone && (
+              <SendSpecialsButton reservationId={reservation.id} />
+            )}
+          </div>
         </div>
       </div>
 

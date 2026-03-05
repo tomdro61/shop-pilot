@@ -81,6 +81,43 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       sendPaymentReceiptEmail({ jobId: invoice.job_id })
     )
     .catch((err) => console.error("Failed to send receipt email:", err));
+
+  // Fire-and-forget payment confirmation SMS
+  const { data: jobData } = await supabase
+    .from("jobs")
+    .select("customer_id, customers(id, first_name, phone), vehicles(year, make, model)")
+    .eq("id", invoice.job_id)
+    .single();
+
+  if (jobData) {
+    const customer = jobData.customers as { id: string; first_name: string; phone: string | null } | null;
+    const vehicle = jobData.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+    if (customer?.phone) {
+      const amount = stripeInvoice.amount_paid
+        ? `$${(stripeInvoice.amount_paid / 100).toFixed(2)}`
+        : null;
+      if (amount) {
+        import("@/lib/messaging/templates")
+          .then(({ paymentReceivedSMS }) =>
+            import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
+              sendCustomerSMS({
+                customerId: customer.id,
+                body: paymentReceivedSMS({
+                  firstName: customer.first_name,
+                  amount,
+                  year: vehicle?.year,
+                  make: vehicle?.make,
+                  model: vehicle?.model,
+                }),
+                jobId: invoice.job_id,
+                line: "shop",
+              })
+            )
+          )
+          .catch((err) => console.error("Failed to send payment SMS:", err));
+      }
+    }
+  }
 }
 
 async function handleTerminalPayment(pi: Stripe.PaymentIntent) {

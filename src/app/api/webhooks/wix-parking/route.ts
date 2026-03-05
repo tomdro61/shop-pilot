@@ -230,6 +230,24 @@ export async function POST(request: Request) {
     }
 
     console.log(`Wix parking webhook: reservation created for ${firstName} ${lastName} (${confirmationNumber})`);
+
+    // Fire-and-forget: Quo contact creation + confirmation SMS
+    if (phone) {
+      import("@/lib/parking/on-reservation-created")
+        .then(({ onReservationCreated }) =>
+          onReservationCreated({
+            phone,
+            firstName,
+            lastName,
+            email: email || undefined,
+            dropOffDate,
+            pickUpDate,
+            customerId,
+          })
+        )
+        .catch((err) => console.error("Wix parking webhook: post-reservation error:", err));
+    }
+
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error("Wix parking webhook: unexpected error:", err);
