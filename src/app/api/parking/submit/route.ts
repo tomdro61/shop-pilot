@@ -123,21 +123,22 @@ export async function POST(request: Request) {
     );
   }
 
-  // Fire-and-forget: Quo contact creation + confirmation SMS
+  // Await so Vercel doesn't kill the function before this completes
   if (parsed.data.phone) {
-    import("@/lib/parking/on-reservation-created")
-      .then(({ onReservationCreated }) =>
-        onReservationCreated({
-          phone: parsed.data.phone,
-          firstName: parsed.data.first_name,
-          lastName: parsed.data.last_name,
-          email: parsed.data.email || undefined,
-          dropOffDate: parsed.data.drop_off_date,
-          pickUpDate: parsed.data.pick_up_date,
-          customerId,
-        })
-      )
-      .catch((err) => console.error("Parking submit: post-reservation error:", err));
+    try {
+      const { onReservationCreated } = await import("@/lib/parking/on-reservation-created");
+      await onReservationCreated({
+        phone: parsed.data.phone,
+        firstName: parsed.data.first_name,
+        lastName: parsed.data.last_name,
+        email: parsed.data.email || undefined,
+        dropOffDate: parsed.data.drop_off_date,
+        pickUpDate: parsed.data.pick_up_date,
+        customerId,
+      });
+    } catch (err) {
+      console.error("Parking submit: post-reservation error:", err);
+    }
   }
 
   return NextResponse.json({ success: true }, { headers });

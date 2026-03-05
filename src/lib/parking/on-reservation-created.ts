@@ -30,15 +30,19 @@ export async function onReservationCreated({
   pickUpDate: string;
   customerId: string | null;
 }) {
-  // 1. Create/update Quo contact (graceful failure)
+  // 1. Create/update Quo contact (graceful failure — don't block SMS if this fails)
   const e164Phone = toE164(phone);
   if (e164Phone) {
-    createOrUpdateQuoContact({
-      phone: e164Phone,
-      firstName,
-      lastName,
-      email,
-    }).catch((err) => console.error("[onReservationCreated] Quo contact error:", err));
+    try {
+      await createOrUpdateQuoContact({
+        phone: e164Phone,
+        firstName,
+        lastName,
+        email,
+      });
+    } catch (err) {
+      console.error("[onReservationCreated] Quo contact error:", err);
+    }
   }
 
   // 2. Send confirmation SMS on parking line
