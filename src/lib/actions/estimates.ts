@@ -182,6 +182,54 @@ export async function sendEstimate(id: string) {
   return { data: { approvalUrl } };
 }
 
+export async function resendEstimate(id: string) {
+  const supabase = await createClient();
+
+  const { data: estimate, error: fetchError } = await supabase
+    .from("estimates")
+    .select(
+      "id, status, approval_token, job_id, jobs(id, customer_id, vehicle_id, customers(id, first_name, phone), vehicles(year, make, model))"
+    )
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !estimate) return { error: "Estimate not found" };
+  if (estimate.status !== "sent") return { error: "Only sent estimates can be resent" };
+  if (!estimate.approval_token) return { error: "No approval token found" };
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const approvalUrl = `${appUrl}/estimates/approve/${estimate.approval_token}`;
+
+  const job = estimate.jobs as {
+    id: string;
+    customer_id: string;
+    customers: { id: string; first_name: string; phone: string | null } | null;
+    vehicles?: { year: number | null; make: string | null; model: string | null } | null;
+  } | null;
+  const customer = job?.customers;
+
+  if (!customer?.phone) return { error: "Customer has no phone number" };
+
+  const { estimateSentSMS } = await import("@/lib/messaging/templates");
+  const { sendCustomerSMS } = await import("@/lib/actions/messages");
+  const vehicle = (job as { vehicles?: { year: number | null; make: string | null; model: string | null } | null })?.vehicles;
+
+  await sendCustomerSMS({
+    customerId: customer.id,
+    body: estimateSentSMS({
+      firstName: customer.first_name,
+      year: vehicle?.year,
+      make: vehicle?.make,
+      model: vehicle?.model,
+      link: approvalUrl,
+    }),
+    jobId: job!.id,
+    line: "shop",
+  });
+
+  return { data: { success: true } };
+}
+
 export async function approveEstimate(token: string) {
   const supabase = createAdminClient();
 
@@ -222,10 +270,24 @@ export async function approveEstimate(token: string) {
 
   if (lineItems.length === 0) return { error: "Estimate has no line items" };
 
-  // Get or create Stripe customer
+  // Get or create Stripe customer (handles stale IDs)
+  const stripe = (await import("@/lib/stripe")).getStripe();
   let stripeCustomerId = job.customers.stripe_customer_id;
+
+  if (stripeCustomerId) {
+    // Verify the Stripe customer still exists
+    try {
+      const existing = await stripe.customers.retrieve(stripeCustomerId);
+      if ((existing as { deleted?: boolean }).deleted) {
+        stripeCustomerId = null;
+      }
+    } catch {
+      // Customer doesn't exist in Stripe — clear stale ID
+      stripeCustomerId = null;
+    }
+  }
+
   if (!stripeCustomerId) {
-    const stripe = (await import("@/lib/stripe")).getStripe();
     const stripeCustomer = await stripe.customers.create({
       name: `${job.customers.first_name} ${job.customers.last_name}`,
       email: job.customers.email || undefined,

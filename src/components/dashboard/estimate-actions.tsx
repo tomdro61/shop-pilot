@@ -15,9 +15,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { sendEstimate, deleteEstimate } from "@/lib/actions/estimates";
+import { sendEstimate, resendEstimate, deleteEstimate } from "@/lib/actions/estimates";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
-import { Send, Copy, Check } from "lucide-react";
+import { Send, RotateCw, Copy, Check } from "lucide-react";
 import type { EstimateStatus } from "@/types";
 
 interface EstimateActionsProps {
@@ -80,6 +80,19 @@ export function EstimateActions({
     return result;
   }
 
+  async function handleResend() {
+    setLoading(true);
+    const result = await resendEstimate(estimateId);
+    setLoading(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success("Estimate resent via SMS");
+  }
+
   const canDelete = status === "draft" || status === "sent";
 
   if (status === "draft") {
@@ -121,13 +134,17 @@ export function EstimateActions({
   if (status === "sent") {
     return (
       <div className="flex gap-2">
+        <Button onClick={handleResend} disabled={loading}>
+          <RotateCw className="mr-2 h-4 w-4" />
+          {loading ? "Sending..." : "Resend"}
+        </Button>
         <Button variant="outline" onClick={handleCopyLink}>
           {copied ? (
             <Check className="mr-2 h-4 w-4" />
           ) : (
             <Copy className="mr-2 h-4 w-4" />
           )}
-          {copied ? "Copied!" : "Copy Approval Link"}
+          {copied ? "Copied!" : "Copy Link"}
         </Button>
         <DeleteConfirmDialog
           title="Delete Estimate"

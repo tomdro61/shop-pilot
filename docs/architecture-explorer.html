@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopPilot Architecture Explorer</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232735;
+    --border: #2e3347;
+    --text: #e2e8f0;
+    --text-muted: #8892a8;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --orange: #f97316;
+    --cyan: #06b6d4;
+    --pink: #ec4899;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; height: 56px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; z-index: 100; gap: 8px;
+  }
+  .nav-logo { font-weight: 700; font-size: 18px; color: var(--accent); margin-right: 32px; white-space: nowrap; }
+  .nav-logo span { color: var(--text-muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  .nav-tabs { display: flex; gap: 4px; overflow-x: auto; }
+  .nav-tab {
+    padding: 8px 16px; border-radius: var(--radius); cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    border: none; background: none; transition: all 0.15s; white-space: nowrap;
+  }
+  .nav-tab:hover { color: var(--text); background: var(--surface2); }
+  .nav-tab.active { color: #fff; background: var(--accent); }
+
+  /* ---- MAIN ---- */
+  .main { padding-top: 72px; padding-bottom: 40px; max-width: 1400px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ---- BADGE ---- */
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+  }
+  .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-yellow { background: rgba(234,179,8,0.15); color: var(--yellow); }
+  .badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .badge-purple { background: rgba(168,85,247,0.15); color: var(--purple); }
+  .badge-orange { background: rgba(249,115,22,0.15); color: var(--orange); }
+  .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-cyan { background: rgba(6,182,212,0.15); color: var(--cyan); }
+  .badge-pink { background: rgba(236,72,153,0.15); color: var(--pink); }
+  .badge-gray { background: rgba(136,146,168,0.15); color: var(--text-muted); }
+
+  /* ---- ICON DOT ---- */
+  .icon-dot {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+
+  /* ---- SYSTEM MAP ---- */
+  .system-map-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .service-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden;
+  }
+  .service-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .service-card.expanded { grid-column: 1 / -1; }
+  .service-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+  .service-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
+  .service-detail { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .service-card.expanded .service-detail { display: block; }
+  .detail-section { margin-bottom: 14px; }
+  .detail-section h4 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .detail-list { list-style: none; }
+  .detail-list li { font-size: 13px; padding: 3px 0; color: var(--text); font-family: 'SF Mono', 'Consolas', monospace; }
+
+  .connections-banner {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; margin-bottom: 24px;
+  }
+  .connections-banner h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-muted); }
+  .conn-line { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+  .conn-arrow { color: var(--accent); font-weight: bold; }
+
+  /* ---- FAILURE IMPACT ---- */
+  .impact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .impact-column { display: flex; flex-direction: column; gap: 12px; }
+  .impact-col-header {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    padding: 10px 16px; border-radius: var(--radius); text-align: center;
+  }
+  .impact-col-header.col-critical { background: rgba(239,68,68,0.1); color: var(--red); }
+  .impact-col-header.col-high { background: rgba(234,179,8,0.1); color: var(--yellow); }
+  .impact-col-header.col-low { background: rgba(34,197,94,0.1); color: var(--green); }
+  .impact-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; border-left: 4px solid;
+  }
+  .impact-card.sev-critical { border-left-color: var(--red); }
+  .impact-card.sev-high { border-left-color: var(--yellow); }
+  .impact-card.sev-low { border-left-color: var(--green); }
+  .impact-card-name { font-weight: 700; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .impact-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+  /* ---- DATA FLOWS ---- */
+  .flow-selector { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .flow-btn {
+    padding: 10px 20px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-muted); cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: all 0.15s;
+  }
+  .flow-btn:hover { border-color: var(--accent); color: var(--text); }
+  .flow-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .flow-timeline { position: relative; padding-left: 40px; }
+  .flow-step {
+    position: relative; padding: 16px 20px; margin-bottom: 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    opacity: 0; transform: translateX(-20px); transition: all 0.4s ease;
+  }
+  .flow-step.visible { opacity: 1; transform: translateX(0); }
+  .flow-step::before {
+    content: attr(data-step); position: absolute; left: -40px; top: 18px;
+    width: 28px; height: 28px; border-radius: 50%; background: var(--accent);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .flow-step::after {
+    content: ''; position: absolute; left: -26px; top: 46px;
+    width: 2px; height: calc(100% + 4px); background: var(--border);
+  }
+  .flow-step:last-child::after { display: none; }
+  .flow-step-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .flow-step-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .flow-step-tech { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .flow-controls { display: flex; gap: 8px; margin-bottom: 16px; }
+  .flow-control-btn {
+    padding: 6px 14px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); cursor: pointer; font-size: 12px; transition: all 0.15s;
+  }
+  .flow-control-btn:hover { border-color: var(--accent); }
+
+  /* ---- DATABASE SCHEMA ---- */
+  .schema-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+  .table-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; cursor: pointer; transition: all 0.15s;
+  }
+  .table-card:hover { border-color: var(--accent); }
+  .table-card-header {
+    padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-card-name { font-weight: 600; font-size: 14px; font-family: 'SF Mono', 'Consolas', monospace; }
+  .table-card-count { font-size: 11px; color: var(--text-muted); }
+  .table-card-body { display: none; padding: 0; }
+  .table-card.expanded .table-card-body { display: block; }
+  .table-card .expand-hint { font-size: 11px; color: var(--text-muted); }
+  .table-card.expanded .expand-hint { display: none; }
+  .col-row {
+    display: grid; grid-template-columns: 1fr 1fr auto; padding: 6px 16px;
+    font-size: 12px; border-bottom: 1px solid rgba(46,51,71,0.5); gap: 8px;
+  }
+  .col-row:last-child { border-bottom: none; }
+  .col-row.header { color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; padding-top: 10px; }
+  .col-name { font-family: 'SF Mono', 'Consolas', monospace; font-weight: 500; }
+  .col-type { color: var(--cyan); font-family: 'SF Mono', 'Consolas', monospace; }
+  .col-badge { font-size: 10px; }
+  .fk-section { padding: 12px 16px; border-top: 1px solid var(--border); background: rgba(99,102,241,0.05); }
+  .fk-section h5 { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .fk-line { font-size: 12px; color: var(--accent-hover); padding: 2px 0; font-family: 'SF Mono', 'Consolas', monospace; }
+
+  /* ---- BUSINESS RULES ---- */
+  .rules-search {
+    width: 100%; padding: 12px 16px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); font-size: 14px; margin-bottom: 16px; outline: none;
+  }
+  .rules-search:focus { border-color: var(--accent); }
+  .rules-search::placeholder { color: var(--text-muted); }
+  .rules-filters { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .rule-filter-btn {
+    padding: 6px 14px; border-radius: 16px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-muted); cursor: pointer;
+    font-size: 12px; transition: all 0.15s;
+  }
+  .rule-filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .rule-filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .rule-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; margin-bottom: 12px; transition: all 0.15s;
+  }
+  .rule-card.hidden { display: none; }
+  .rule-category { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .rule-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .rule-body { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .rule-body code {
+    background: var(--surface2); padding: 1px 6px; border-radius: 4px;
+    font-family: 'SF Mono', 'Consolas', monospace; font-size: 12px; color: var(--cyan);
+  }
+  .rule-severity { margin-top: 8px; }
+
+  /* ---- PAGE & API MAP ---- */
+  .route-group { margin-bottom: 24px; }
+  .route-group-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .route-table { width: 100%; border-collapse: collapse; }
+  .route-table th {
+    text-align: left; padding: 8px 12px; font-size: 11px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
+  }
+  .route-table td {
+    padding: 10px 12px; font-size: 13px; border-bottom: 1px solid rgba(46,51,71,0.5); vertical-align: top;
+  }
+  .route-path { font-family: 'SF Mono', 'Consolas', monospace; font-weight: 500; color: var(--accent-hover); white-space: nowrap; }
+  .route-method {
+    font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 4px; display: inline-block;
+  }
+  .method-GET { background: rgba(34,197,94,0.15); color: var(--green); }
+  .method-POST { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .method-SSE { background: rgba(168,85,247,0.15); color: var(--purple); }
+
+  /* ---- INFRASTRUCTURE TAB ---- */
+  .infra-section { margin-bottom: 40px; }
+  .infra-section-title {
+    font-size: 18px; font-weight: 700; margin-bottom: 6px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--accent); display: inline-block;
+  }
+  .infra-section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+  /* Tech Stack */
+  .stack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .stack-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+  }
+  .stack-card h3 {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent); margin-bottom: 14px;
+  }
+  .stack-item {
+    display: flex; justify-content: space-between; padding: 7px 0;
+    border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .stack-item:last-child { border-bottom: none; }
+  .stack-item .tech { font-weight: 600; }
+  .stack-item .purpose { color: var(--text-muted); }
+
+  /* Environments */
+  .env-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .env-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; text-align: center; border-top: 4px solid;
+  }
+  .env-card.env-dev { border-top-color: var(--text-muted); }
+  .env-card.env-prod { border-top-color: var(--green); }
+  .env-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .env-card .env-url { font-family: 'SF Mono','Consolas',monospace; font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+  .env-detail { font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+  .env-detail:last-child { border-bottom: none; }
+  .env-detail code { color: var(--cyan); font-size: 12px; }
+
+  /* Security */
+  .security-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .security-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; border-left: 4px solid;
+  }
+  .security-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .security-card p { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0; }
+  .security-card code { font-size: 11px; background: var(--surface2); padding: 1px 5px; border-radius: 3px; color: var(--cyan); }
+  .security-status {
+    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
+  }
+  .security-status.active { background: rgba(34,197,94,0.15); color: var(--green); }
+
+  /* Design Decisions */
+  .decisions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .decision-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+  }
+  .decision-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--accent-hover); }
+  .decision-card p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+  /* ---- SECTION HEADER ---- */
+  .section-header { margin-bottom: 24px; }
+  .section-header h2 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .section-header p { font-size: 14px; color: var(--text-muted); }
+
+  /* ---- Stats row ---- */
+  .stats-row { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; flex: 1; min-width: 120px; text-align: center;
+  }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ---- PARKING TAB ---- */
+  .parking-table {
+    width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .parking-table th {
+    text-align: left; padding: 10px 14px; font-size: 11px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .parking-table td {
+    padding: 10px 14px; font-size: 13px; border-bottom: 1px solid rgba(46,51,71,0.5); vertical-align: top;
+  }
+  .parking-table tr:last-child td { border-bottom: none; }
+  .parking-table code { font-size: 12px; color: var(--cyan); background: var(--surface2); padding: 1px 6px; border-radius: 4px; }
+  .parking-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .parking-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; border-left: 4px solid;
+  }
+  .parking-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .parking-card p, .parking-card li { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .parking-card ul { list-style: disc; padding-left: 18px; margin-top: 6px; }
+  .parking-card code { font-size: 12px; color: var(--cyan); background: var(--surface2); padding: 1px 6px; border-radius: 4px; }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 768px) {
+    .nav { padding: 0 12px; }
+    .nav-logo span { display: none; }
+    .nav-tab { padding: 6px 10px; font-size: 12px; }
+    .main { padding-left: 12px; padding-right: 12px; }
+    .system-map-grid, .schema-grid, .impact-grid { grid-template-columns: 1fr; }
+    .env-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">ShopPilot<span>Architecture Explorer</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-view="system-map">System Map</button>
+    <button class="nav-tab" data-view="data-flows">Data Flows</button>
+    <button class="nav-tab" data-view="database">Database</button>
+    <button class="nav-tab" data-view="rules">Business Rules</button>
+    <button class="nav-tab" data-view="routes">Routes</button>
+    <button class="nav-tab" data-view="infrastructure">Infrastructure</button>
+    <button class="nav-tab" data-view="parking">Parking</button>
+  </div>
+</nav>
+
+<div class="main">
+
+<!-- ============ VIEW 1: SYSTEM MAP ============ -->
+<div class="view active" id="system-map">
+  <div class="section-header">
+    <h2>System Map</h2>
+    <p>Click any service to expand details, env vars, and key files.</p>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value">8</div><div class="stat-label">Services</div></div>
+    <div class="stat-card"><div class="stat-value">16</div><div class="stat-label">DB Tables</div></div>
+    <div class="stat-card"><div class="stat-value">22</div><div class="stat-label">Pages</div></div>
+    <div class="stat-card"><div class="stat-value">8</div><div class="stat-label">API Routes</div></div>
+    <div class="stat-card"><div class="stat-value">46</div><div class="stat-label">AI Tools</div></div>
+  </div>
+
+  <div class="system-map-grid" id="services-grid"></div>
+
+  <div class="connections-banner">
+    <h3>Service Connections</h3>
+    <div id="connections-list"></div>
+  </div>
+
+  <!-- Failure Impact -->
+  <div style="margin-top:32px;">
+    <div class="section-header">
+      <h2>What Breaks if a Service Goes Down</h2>
+      <p>Impact assessment for each external dependency.</p>
+    </div>
+    <div class="impact-grid" id="impact-grid"></div>
+  </div>
+</div>
+
+<!-- ============ VIEW 2: DATA FLOWS ============ -->
+<div class="view" id="data-flows">
+  <div class="section-header">
+    <h2>Data Flows</h2>
+    <p>Step-by-step traces of key workflows. Click a flow to animate.</p>
+  </div>
+  <div class="flow-selector" id="flow-selector"></div>
+  <div class="flow-controls">
+    <button class="flow-control-btn" id="flow-play">Play All</button>
+    <button class="flow-control-btn" id="flow-reset">Reset</button>
+  </div>
+  <div class="flow-timeline" id="flow-timeline"></div>
+</div>
+
+<!-- ============ VIEW 3: DATABASE SCHEMA ============ -->
+<div class="view" id="database">
+  <div class="section-header">
+    <h2>Database Schema</h2>
+    <p>16 PostgreSQL tables in Supabase. Click any table to expand columns and relationships.</p>
+  </div>
+  <div class="schema-grid" id="schema-grid"></div>
+</div>
+
+<!-- ============ VIEW 4: BUSINESS RULES ============ -->
+<div class="view" id="rules">
+  <div class="section-header">
+    <h2>Business Rules</h2>
+    <p>Critical invariants, patterns, and constraints. Search or filter by category.</p>
+  </div>
+  <input type="text" class="rules-search" id="rules-search" placeholder="Search rules (e.g. timezone, tax, caching, fleet...)">
+  <div class="rules-filters" id="rules-filters"></div>
+  <div id="rules-list"></div>
+</div>
+
+<!-- ============ VIEW 5: ROUTES ============ -->
+<div class="view" id="routes">
+  <div class="section-header">
+    <h2>Page &amp; API Map</h2>
+    <p>All 22 pages and 8 API routes organized by functional group.</p>
+  </div>
+  <div id="routes-list"></div>
+</div>
+
+<!-- ============ VIEW 6: INFRASTRUCTURE ============ -->
+<div class="view" id="infrastructure">
+  <div class="section-header">
+    <h2>Infrastructure</h2>
+    <p>Tech stack, environments, security layers, and key design decisions.</p>
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Tech Stack</h3>
+    <div class="infra-section-desc">The full technology stack powering ShopPilot, from frontend to infrastructure.</div>
+    <div class="stack-grid" id="stack-grid"></div>
+  </div>
+
+  <!-- Environments -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Environments</h3>
+    <div class="infra-section-desc">Development and production configurations.</div>
+    <div class="env-grid" id="env-grid"></div>
+    <div style="text-align:center;padding:16px 0;color:var(--text-muted);font-size:13px;font-weight:600;">
+      <span style="background:var(--surface);padding:6px 20px;border-radius:16px;border:1px solid var(--border);">
+        git push master &rarr; auto-deploys to production via Vercel
+      </span>
+    </div>
+  </div>
+
+  <!-- Security Layers -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Security Layers</h3>
+    <div class="infra-section-desc">Every security measure currently active in production, organized by what they protect.</div>
+    <div id="security-sections"></div>
+  </div>
+
+  <!-- Key Design Decisions -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Key Design Decisions</h3>
+    <div class="infra-section-desc">Architectural choices and why they were made.</div>
+    <div class="decisions-grid" id="decisions-grid"></div>
+  </div>
+</div>
+
+<!-- ============ VIEW 7: PARKING ============ -->
+<div class="view" id="parking">
+  <div class="section-header">
+    <h2>Parking Infrastructure</h2>
+    <p>Complete parking system spanning two projects: broadway-motors-web (forms) and shop-pilot (backend).</p>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value">5</div><div class="stat-label">Form Pages</div></div>
+    <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">Lots</div></div>
+    <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">Phone Lines</div></div>
+    <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">Parking Types</div></div>
+    <div class="stat-card"><div class="stat-value">5</div><div class="stat-label">SMS Templates</div></div>
+  </div>
+
+  <!-- Form URLs -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Public Parking Forms</h3>
+    <div class="infra-section-desc">5 form pages on BroadwayMotorsMA.com, each configured for a specific lot and parking type.</div>
+    <div id="parking-forms-table"></div>
+  </div>
+
+  <!-- Submission Pipeline -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Submission Pipeline</h3>
+    <div class="infra-section-desc">What happens when a customer submits a parking form, step by step.</div>
+    <div class="flow-timeline" id="parking-pipeline"></div>
+  </div>
+
+  <!-- Phone Routing -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Phone Line Routing</h3>
+    <div class="infra-section-desc">Triple-line SMS routing — each lot sends from the correct phone number.</div>
+    <div id="parking-phone-routing"></div>
+  </div>
+
+  <!-- Lot-Specific SMS -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Confirmation SMS per Lot</h3>
+    <div class="infra-section-desc">Each lot gets a different confirmation SMS with lot-specific instructions.</div>
+    <div id="parking-sms-templates"></div>
+  </div>
+
+  <!-- Confirmation Pages -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Confirmation Pages</h3>
+    <div class="infra-section-desc">After form submit, customers see lot-specific instructions on the thank-you page.</div>
+    <div id="parking-confirmation-pages"></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Dashboard Features</h3>
+    <div class="infra-section-desc">Staff-facing parking management at /parking.</div>
+    <div id="parking-dashboard"></div>
+  </div>
+
+  <!-- Key Files -->
+  <div class="infra-section">
+    <h3 class="infra-section-title">Key Files</h3>
+    <div class="infra-section-desc">Files across both projects that power the parking system.</div>
+    <div id="parking-key-files"></div>
+  </div>
+</div>
+
+</div><!-- /.main -->
+
+<script>
+// ==========================================
+// DATA
+// ==========================================
+
+const SERVICES = [
+  {
+    id: 'nextjs', name: 'Next.js App',
+    desc: 'App Router, React Server Components, Server Actions. The core web application.',
+    badge: 'Core', badgeClass: 'badge-gray', icon: '&#9881;', iconBg: 'rgba(136,146,168,0.2)',
+    envVars: ['NEXT_PUBLIC_APP_URL'],
+    keyFiles: ['src/app/', 'src/lib/', 'src/components/', 'next.config.ts', 'middleware.ts'],
+    details: 'Next.js 14+ App Router with React Server Components. Uses server actions for mutations, unstable_cache for data caching (30s TTL on dashboard). Middleware handles Supabase auth session refresh. Deployed to Vercel with auto-deploy from master branch.'
+  },
+  {
+    id: 'supabase', name: 'Supabase',
+    desc: 'PostgreSQL database, Auth (email/password), Row Level Security. Pro plan.',
+    badge: 'Live', badgeClass: 'badge-green', icon: '&#9478;', iconBg: 'rgba(62,207,142,0.15)',
+    envVars: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'],
+    keyFiles: ['src/lib/supabase/admin.ts', 'src/lib/supabase/server.ts', 'src/lib/supabase/client.ts', 'src/lib/supabase/middleware.ts', 'supabase/migrations/'],
+    details: '15 tables, RLS policies gated by user role (get_user_role() RPC). Three client patterns: createClient() for server components (passes cookies), createAdminClient() for server-only ops (service role, bypasses RLS \u2014 required inside unstable_cache), createBrowserClient() for client components.'
+  },
+  {
+    id: 'stripe', name: 'Stripe',
+    desc: 'Invoicing, Payment Links, Terminal (WisePOS E reader), Webhooks.',
+    badge: 'Live', badgeClass: 'badge-purple', icon: '&#36;', iconBg: 'rgba(99,91,255,0.15)',
+    envVars: ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_TERMINAL_READER_ID'],
+    keyFiles: ['src/lib/stripe/index.ts', 'src/lib/stripe/terminal.ts', 'src/app/api/stripe/webhooks/route.ts', 'src/app/api/terminal/'],
+    details: 'Creates Stripe invoices from completed jobs (auto-calculates tax, fees). Terminal integration with WisePOS E for in-person card payments (Quick Pay + job payment). Webhooks handle invoice.paid and payment_intent.succeeded events to update job payment status and send receipt emails.'
+  },
+  {
+    id: 'claude', name: 'Claude AI',
+    desc: 'Haiku 4.5 model, 46 tools via function calling, streaming SSE chat.',
+    badge: 'Live', badgeClass: 'badge-orange', icon: '&#9733;', iconBg: 'rgba(217,119,6,0.15)',
+    envVars: ['ANTHROPIC_API_KEY'],
+    keyFiles: ['src/app/api/ai/chat/route.ts', 'src/lib/ai/tools.ts', 'src/lib/ai/system-prompt.ts', 'src/lib/ai/tool-handlers.ts'],
+    details: '46 tools across 12 categories: Customers (5), Vehicles (5), Jobs (7), Line Items (3), Estimates (7), Invoices (2), Team (2), Reports (3), Payments (1), Messaging (3), Shop Settings (2), Parking (6). Max 10 tool-use iterations per request. Financial actions require confirmation. Fleet accounts never get Stripe invoices.'
+  },
+  {
+    id: 'quo', name: 'Quo / OpenPhone',
+    desc: 'Triple-line SMS: shop (617), parking (978-684), APB (978-644). Webhook for inbound messages.',
+    badge: 'Wired', badgeClass: 'badge-blue', icon: '&#9993;', iconBg: 'rgba(59,130,246,0.15)',
+    envVars: ['QUO_API_KEY', 'QUO_PHONE_NUMBER', 'QUO_APB_PHONE_NUMBER', 'QUO_SHOP_PHONE_NUMBER', 'QUO_WEBHOOK_SECRET'],
+    keyFiles: ['src/lib/quo/client.ts', 'src/lib/quo/routing.ts', 'src/lib/quo/contacts.ts', 'src/app/api/messaging/quo/webhooks/route.ts'],
+    details: 'Triple-line SMS routing via Quo API. Shop line (617-996-8371) for job-related messages. Parking line (978-684-9254) for Broadway Motors lot. APB line (978-644-9391) for Airport Parking Boston lots and valet. Lot-specific confirmation SMS sent on form submission. Quo contacts auto-created for parking customers with "Parking" tag. Inbound webhook verifies x-openphone-signature. Blocked on A2P 10DLC registration.'
+  },
+  {
+    id: 'resend', name: 'Resend',
+    desc: 'Transactional email: estimate approvals, payment receipts, branded templates.',
+    badge: 'Wired', badgeClass: 'badge-yellow', icon: '&#9993;', iconBg: 'rgba(234,179,8,0.15)',
+    envVars: ['RESEND_API_KEY', 'RESEND_FROM_EMAIL'],
+    keyFiles: ['src/lib/resend/client.ts', 'src/lib/resend/templates/'],
+    details: 'Sends branded HTML emails for estimate approvals and payment receipts. Falls back to console logging if RESEND_API_KEY is unset (test mode). Needs domain verification for production use with broadwaymotorsrevere.com.'
+  },
+  {
+    id: 'wix', name: 'Wix Webhook Bridge',
+    desc: 'DEACTIVATED — Wix parking forms now redirect to BroadwayMotorsMA.com. Code can be retired.',
+    badge: 'Deactivated', badgeClass: 'badge-gray', icon: '&#8644;', iconBg: 'rgba(136,146,168,0.15)',
+    envVars: ['WIX_PARKING_WEBHOOK_SECRET'],
+    keyFiles: ['src/app/api/webhooks/wix-parking/route.ts'],
+    details: 'Wix parking automation is deactivated. Old Wix form URLs have URL redirects pointing to BroadwayMotorsMA.com. Code at src/app/api/webhooks/wix-parking/route.ts still exists but can be deleted. WIX_PARKING_WEBHOOK_SECRET env var can also be removed.'
+  },
+  {
+    id: 'vercel', name: 'Vercel',
+    desc: 'Hosting platform. Auto-deploy from master branch. Edge middleware.',
+    badge: 'Live', badgeClass: 'badge-green', icon: '&#9650;', iconBg: 'rgba(136,146,168,0.15)',
+    envVars: [],
+    keyFiles: ['vercel.json', 'next.config.ts'],
+    details: 'Deployed at https://shop-pilot-rosy.vercel.app. Auto-deploys from master branch on GitHub push. Runs in UTC timezone (critical: use todayET() for date calculations). Edge middleware refreshes Supabase auth session on every request.'
+  }
+];
+
+const CONNECTIONS = [
+  { from: 'Next.js', to: 'Supabase', label: 'DB queries, Auth, RLS' },
+  { from: 'Next.js', to: 'Stripe', label: 'Invoice creation, Terminal payments' },
+  { from: 'Next.js', to: 'Claude AI', label: 'Chat streaming, 46 tool calls' },
+  { from: 'Next.js', to: 'Quo', label: 'Send SMS, receive webhook' },
+  { from: 'Next.js', to: 'Resend', label: 'Send transactional email' },
+  { from: 'Stripe', to: 'Next.js', label: 'Webhooks: invoice.paid, payment_intent.succeeded' },
+  { from: 'Quo', to: 'Next.js', label: 'Webhook: inbound SMS' },
+  { from: 'Wix', to: 'Next.js', label: 'Webhook: DEACTIVATED — redirects to BroadwayMotorsMA.com' },
+  { from: 'BroadwayMotorsMA.com', to: 'Next.js', label: 'POST /api/parking/submit — 5 parking forms' },
+  { from: 'Claude AI', to: 'Supabase', label: 'Tool calls read/write DB via server actions' },
+  { from: 'Claude AI', to: 'Stripe', label: 'create_invoice_from_job, record_payment' },
+  { from: 'Claude AI', to: 'Quo', label: 'send_sms tool' },
+  { from: 'Claude AI', to: 'Resend', label: 'send_email tool' },
+  { from: 'Next.js', to: 'Vercel', label: 'Auto-deploy from master' },
+];
+
+const FAILURE_IMPACT = {
+  critical: [
+    { name: 'Supabase', icon: '&#9478;', desc: 'Total outage. No auth, no data, no pages load. Every feature depends on the database. The entire app is down.' },
+    { name: 'Vercel', icon: '&#9650;', desc: 'Site is completely offline. No pages, no API routes, no webhooks received. Nothing works.' },
+  ],
+  high: [
+    { name: 'Stripe', icon: '&#36;', desc: 'Cannot create invoices, process Terminal payments, or receive payment webhooks. Jobs, customers, and all other features still work. Quick Pay is broken.' },
+    { name: 'Claude AI', icon: '&#9733;', desc: 'AI chat assistant stops responding. All manual UI workflows (dashboard, job management, customer CRUD) are completely unaffected. The chat page shows an error.' },
+    { name: 'Resend', icon: '&#9993;', desc: 'Confirmation emails and receipts don\'t send. Estimates can still be created but approval links won\'t be emailed. Booking still completes. On-screen confirmation still works.' },
+    { name: 'Wix Bridge', icon: '&#8644;', desc: 'DEACTIVATED — Wix forms redirect to BroadwayMotorsMA.com. No impact if Wix is down. All parking forms now go through /api/parking/submit on shop-pilot directly.' },
+  ],
+  low: [
+    { name: 'Quo / OpenPhone', icon: '&#9993;', desc: 'Cannot send or receive SMS. All other features unaffected. Currently blocked on A2P registration anyway, so no live impact yet.' },
+    { name: 'GitHub', icon: '&#128025;', desc: 'Cannot push code or trigger deploys. Live site continues running normally. No user impact.' },
+  ]
+};
+
+const FLOWS = {
+  'job-to-payment': {
+    name: 'Job \u2192 Estimate \u2192 Invoice \u2192 Payment',
+    steps: [
+      { title: 'Create Job', desc: 'Customer arrives or calls. Manager creates job with customer, vehicle, title, and assigns a tech. RO number auto-assigned via PostgreSQL sequence.', tags: [['Supabase','badge-green'],['jobs table','badge-cyan']] },
+      { title: 'Add Line Items', desc: 'Tech or manager adds labor and part line items to the job. Each line item has type, description, quantity, unit cost, optional part number, and category.', tags: [['job_line_items','badge-cyan'],['calculateTotals()','badge-purple']] },
+      { title: 'Create & Send Estimate', desc: 'AI or manager creates estimate from job line items (snapshot). Generates approval_token. Sends email with approval link to customer.', tags: [['estimates','badge-cyan'],['Resend','badge-yellow'],['approval_token','badge-orange']] },
+      { title: 'Customer Approves Estimate', desc: 'Customer clicks approval link (/estimates/approve/[token]). Public page shows itemized breakdown. Customer clicks Approve button. Estimate status \u2192 approved.', tags: [['Public route','badge-blue'],['No auth','badge-gray']] },
+      { title: 'Create Stripe Invoice', desc: 'Job marked complete. AI or manager creates Stripe invoice. Calculates tax (6.25% on parts only), shop supplies fee, hazmat fee. Sends hosted invoice link to customer email.', tags: [['Stripe','badge-purple'],['calculateTotals()','badge-purple'],['invoices table','badge-cyan']] },
+      { title: 'Payment Received', desc: 'Customer pays via Stripe hosted link, Terminal (WisePOS E), cash, check, or ACH. Stripe webhook fires invoice.paid \u2192 marks invoice + job as paid, sends receipt email via Resend.', tags: [['Webhook','badge-blue'],['payment_status','badge-green'],['Resend','badge-yellow']] },
+    ]
+  },
+  'parking': {
+    name: 'Parking Form \u2192 Reservation \u2192 Check-in \u2192 Check-out',
+    steps: [
+      { title: 'Customer Submits Form', desc: 'Customer visits one of 5 forms on BroadwayMotorsMA.com. Form collects name, email, phone, dates/times, vehicle info, services interested, liability waiver. Valet forms also collect flight numbers.', tags: [['broadway-motors-web','badge-blue'],['ParkingForm component','badge-cyan']] },
+      { title: 'API Receives Submission', desc: 'POST to shop-pilot /api/parking/submit. CORS check (whitelisted origins), rate limit (5/60s/IP), Zod validation, honeypot check, dedup (phone + date + lot within 5 min).', tags: [['CORS','badge-red'],['Rate limit','badge-yellow'],['Honeypot','badge-orange']] },
+      { title: 'Customer & Reservation Created', desc: 'findOrCreateParkingCustomer() dedup by email, then phone. Insert into parking_reservations with customer_id FK. Status: reserved.', tags: [['parking_reservations','badge-cyan'],['customers','badge-green']] },
+      { title: 'Quo Contact + Confirmation SMS', desc: 'Create/update Quo contact with "Parking" tag. Send lot-specific confirmation SMS from correct phone line (parking or APB). Log to messages table.', tags: [['Quo','badge-blue'],['Triple-line','badge-purple'],['messages','badge-cyan']] },
+      { title: 'Customer Sees Instructions', desc: 'Redirected to thank-you page with lot-specific instructions: drop-off location, parking spots, shuttle info, pickup process, modifications policy.', tags: [['Confirmation page','badge-green'],['Lot-specific','badge-orange']] },
+      { title: 'Staff Checks In Vehicle', desc: 'Staff finds reservation on parking dashboard (Today \u2192 Arrivals). Clicks Check In. Sets checked_in_at, optionally assigns spot_number. Status: checked_in.', tags: [['checked_in','badge-green'],['spot_number','badge-gray']] },
+      { title: 'Service Upsell (Optional)', desc: 'Service Leads tab shows checked-in cars with service interest. "Send Specials" button sends upsell SMS. Staff may create a job for the vehicle.', tags: [['services_interested','badge-purple'],['Cross-sell','badge-yellow']] },
+      { title: 'Checkout via Lockbox or In-Person', desc: 'Lockbox checkout: select box \u2192 SMS with box number + code. In-person: no SMS. Sets checked_out_at. Status: checked_out. Undo available.', tags: [['lock_boxes','badge-cyan'],['checked_out','badge-blue']] },
+    ]
+  },
+  'ai-chat': {
+    name: 'AI Chat \u2192 Tool Call \u2192 Database',
+    steps: [
+      { title: 'User Sends Message', desc: 'Manager types in /chat. Message sent to POST /api/ai/chat via SSE streaming. Auth required (Supabase session verified).', tags: [['SSE','badge-purple'],['Auth required','badge-red']] },
+      { title: 'Claude Processes with System Prompt', desc: 'System prompt includes: shop context (labor rate $130/hr, techs: Paul/Christian/John/Luis), fleet rules (never invoice Hertz/Sixt/DriveWhip), 46 tool definitions. Model: claude-haiku-4-5-20251001.', tags: [['Haiku 4.5','badge-orange'],['46 tools','badge-cyan']] },
+      { title: 'Tool Call Execution', desc: 'Claude returns tool_use blocks. Server executes each tool via handler functions. Tools call Supabase (createAdminClient), Stripe, Quo, or Resend as needed. Financial/destructive actions require user confirmation.', tags: [['tool-handlers.ts','badge-cyan'],['Confirmation gate','badge-red']] },
+      { title: 'Iterative Tool Loop', desc: 'Tool results sent back to Claude. May trigger additional tool calls (up to 10 iterations). E.g., "Create a job for John" \u2192 search_customers \u2192 get_vehicles_for_customer \u2192 create_job \u2192 create_line_item.', tags: [['Max 10 iterations','badge-yellow'],['Chained calls','badge-blue']] },
+      { title: 'Stream Response to User', desc: 'Final text response streamed to chat UI via SSE. Includes formatted results (RO numbers, totals, confirmation messages). Chat renders Markdown with syntax highlighting.', tags: [['SSE stream','badge-purple'],['Markdown','badge-gray']] },
+    ]
+  }
+};
+
+const TABLES = [
+  { name: 'customers', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'first_name', type: 'text', required: true }, { name: 'last_name', type: 'text', required: true },
+    { name: 'phone', type: 'text', nullable: true }, { name: 'email', type: 'text', nullable: true }, { name: 'address', type: 'text', nullable: true },
+    { name: 'notes', type: 'text', nullable: true }, { name: 'stripe_customer_id', type: 'text', nullable: true },
+    { name: 'customer_type', type: 'enum', enumVals: 'retail|fleet|parking' }, { name: 'fleet_account', type: 'text', nullable: true },
+    { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [] },
+  { name: 'vehicles', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'customer_id', type: 'uuid', fk: 'customers.id' },
+    { name: 'year', type: 'int', nullable: true }, { name: 'make', type: 'text', nullable: true }, { name: 'model', type: 'text', nullable: true },
+    { name: 'vin', type: 'text', nullable: true }, { name: 'license_plate', type: 'text', nullable: true }, { name: 'mileage', type: 'int', nullable: true },
+    { name: 'color', type: 'text', nullable: true }, { name: 'notes', type: 'text', nullable: true },
+    { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [{ col: 'customer_id', ref: 'customers.id' }] },
+  { name: 'jobs', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'customer_id', type: 'uuid', fk: 'customers.id' }, { name: 'vehicle_id', type: 'uuid', nullable: true, fk: 'vehicles.id' },
+    { name: 'status', type: 'enum', enumVals: 'not_started|waiting_for_parts|in_progress|complete' }, { name: 'title', type: 'text', nullable: true },
+    { name: 'category', type: 'text', nullable: true }, { name: 'assigned_tech', type: 'uuid', nullable: true, fk: 'users.id' },
+    { name: 'date_received', type: 'date' }, { name: 'date_finished', type: 'date', nullable: true }, { name: 'notes', type: 'text', nullable: true },
+    { name: 'payment_method', type: 'enum', enumVals: 'stripe|cash|check|ach|terminal', nullable: true },
+    { name: 'payment_status', type: 'enum', enumVals: 'unpaid|invoiced|paid|waived' },
+    { name: 'mileage_in', type: 'int', nullable: true }, { name: 'stripe_payment_intent_id', type: 'text', nullable: true },
+    { name: 'ro_number', type: 'int', nullable: true }, { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [{ col: 'customer_id', ref: 'customers.id' }, { col: 'vehicle_id', ref: 'vehicles.id' }, { col: 'assigned_tech', ref: 'users.id' }] },
+  { name: 'job_line_items', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'job_id', type: 'uuid', fk: 'jobs.id' }, { name: 'type', type: 'enum', enumVals: 'labor|part' },
+    { name: 'description', type: 'text', required: true }, { name: 'quantity', type: 'numeric' }, { name: 'unit_cost', type: 'numeric' },
+    { name: 'total', type: 'numeric' }, { name: 'cost', type: 'numeric', nullable: true }, { name: 'part_number', type: 'text', nullable: true },
+    { name: 'category', type: 'text', nullable: true }, { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [{ col: 'job_id', ref: 'jobs.id' }] },
+  { name: 'job_presets', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'name', type: 'text' }, { name: 'category', type: 'text', nullable: true },
+    { name: 'line_items', type: 'jsonb' }, { name: 'sort_order', type: 'int' }, { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [] },
+  { name: 'estimates', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'job_id', type: 'uuid', fk: 'jobs.id' },
+    { name: 'status', type: 'enum', enumVals: 'draft|sent|approved|declined' },
+    { name: 'sent_at', type: 'timestamptz', nullable: true }, { name: 'approved_at', type: 'timestamptz', nullable: true }, { name: 'declined_at', type: 'timestamptz', nullable: true },
+    { name: 'tax_rate', type: 'numeric' }, { name: 'approval_token', type: 'text', nullable: true }, { name: 'notes', type: 'text', nullable: true },
+    { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [{ col: 'job_id', ref: 'jobs.id' }] },
+  { name: 'estimate_line_items', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'estimate_id', type: 'uuid', fk: 'estimates.id' }, { name: 'type', type: 'enum', enumVals: 'labor|part' },
+    { name: 'description', type: 'text' }, { name: 'quantity', type: 'numeric' }, { name: 'unit_cost', type: 'numeric' }, { name: 'total', type: 'numeric' },
+    { name: 'part_number', type: 'text', nullable: true }, { name: 'category', type: 'text', nullable: true },
+    { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [{ col: 'estimate_id', ref: 'estimates.id' }] },
+  { name: 'invoices', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'job_id', type: 'uuid', fk: 'jobs.id' }, { name: 'stripe_invoice_id', type: 'text', nullable: true },
+    { name: 'status', type: 'enum', enumVals: 'draft|sent|paid' }, { name: 'amount', type: 'numeric', nullable: true },
+    { name: 'paid_at', type: 'timestamptz', nullable: true }, { name: 'payment_method', type: 'text', nullable: true },
+    { name: 'stripe_hosted_invoice_url', type: 'text', nullable: true }, { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [{ col: 'job_id', ref: 'jobs.id' }] },
+  { name: 'messages', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'customer_id', type: 'uuid', fk: 'customers.id' }, { name: 'job_id', type: 'uuid', nullable: true, fk: 'jobs.id' },
+    { name: 'channel', type: 'enum', enumVals: 'sms|email' }, { name: 'direction', type: 'enum', enumVals: 'in|out' },
+    { name: 'body', type: 'text' }, { name: 'status', type: 'text', nullable: true }, { name: 'phone_line', type: 'text', nullable: true },
+    { name: 'sent_at', type: 'timestamptz' }, { name: 'created_at', type: 'timestamptz' },
+  ], fks: [{ col: 'customer_id', ref: 'customers.id' }, { col: 'job_id', ref: 'jobs.id' }] },
+  { name: 'users', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'auth_id', type: 'text', nullable: true }, { name: 'name', type: 'text' },
+    { name: 'email', type: 'text' }, { name: 'role', type: 'enum', enumVals: 'manager|tech' },
+    { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [] },
+  { name: 'shop_settings', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'tax_rate', type: 'numeric' },
+    { name: 'shop_supplies_enabled', type: 'boolean' }, { name: 'shop_supplies_method', type: 'enum', enumVals: 'percent_of_labor|percent_of_parts|percent_of_total|flat' },
+    { name: 'shop_supplies_rate', type: 'numeric' }, { name: 'shop_supplies_cap', type: 'numeric', nullable: true },
+    { name: 'hazmat_enabled', type: 'boolean' }, { name: 'hazmat_amount', type: 'numeric' }, { name: 'hazmat_label', type: 'text' },
+    { name: 'job_categories', type: 'text[]' }, { name: 'shop_supplies_categories', type: 'text[]', nullable: true }, { name: 'hazmat_categories', type: 'text[]', nullable: true },
+    { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [] },
+  { name: 'parking_reservations', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'first_name', type: 'text' }, { name: 'last_name', type: 'text' },
+    { name: 'email', type: 'text' }, { name: 'phone', type: 'text' },
+    { name: 'drop_off_date', type: 'date' }, { name: 'drop_off_time', type: 'time' }, { name: 'pick_up_date', type: 'date' }, { name: 'pick_up_time', type: 'time' },
+    { name: 'make', type: 'text' }, { name: 'model', type: 'text' }, { name: 'license_plate', type: 'text' }, { name: 'color', type: 'text', nullable: true },
+    { name: 'lot', type: 'text' }, { name: 'confirmation_number', type: 'text' }, { name: 'parking_type', type: 'text', nullable: true },
+    { name: 'departing_flight', type: 'text', nullable: true }, { name: 'arriving_flight', type: 'text', nullable: true },
+    { name: 'services_interested', type: 'text[]' }, { name: 'liability_acknowledged', type: 'boolean' },
+    { name: 'status', type: 'enum', enumVals: 'reserved|checked_in|checked_out|no_show|cancelled' },
+    { name: 'checked_in_at', type: 'timestamptz', nullable: true }, { name: 'checked_out_at', type: 'timestamptz', nullable: true },
+    { name: 'spot_number', type: 'text', nullable: true }, { name: 'lock_box_number', type: 'int', nullable: true },
+    { name: 'staff_notes', type: 'text', nullable: true },
+    { name: 'customer_id', type: 'uuid', nullable: true, fk: 'customers.id' },
+    { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [{ col: 'customer_id', ref: 'customers.id' }] },
+  { name: 'lock_boxes', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'box_number', type: 'int', required: true },
+    { name: 'code', type: 'text', required: true }, { name: 'created_at', type: 'timestamptz' },
+  ], fks: [] },
+  { name: 'daily_inspection_counts', columns: [
+    { name: 'id', type: 'uuid', pk: true }, { name: 'date', type: 'date' },
+    { name: 'state_count', type: 'int' }, { name: 'tnc_count', type: 'int' },
+    { name: 'created_at', type: 'timestamptz' }, { name: 'updated_at', type: 'timestamptz' },
+  ], fks: [] },
+];
+
+const BUSINESS_RULES = [
+  { category: 'Timezone', categoryColor: 'var(--red)', severity: 'critical', title: 'Always use todayET() for server-side "today"', body: 'Vercel runs in UTC. All server-side date calculations must use <code>todayET()</code> from <code>@/lib/utils</code> which returns <code>YYYY-MM-DD</code> in <code>America/New_York</code>. Never use <code>new Date()</code> directly for "today" logic.' },
+  { category: 'Timezone', categoryColor: 'var(--red)', severity: 'critical', title: 'Date arithmetic: parse with T12:00:00 to avoid midnight shift', body: 'When calculating dates relative to today: <code>parse todayET() + "T12:00:00"</code> then extract with <code>.toISOString().split("T")[0]</code>. Using midnight (T00:00:00) causes off-by-one errors at UTC boundary.' },
+  { category: 'Timezone', categoryColor: 'var(--red)', severity: 'important', title: 'nowET() for boundaries, formatDateET() for formatting', body: '<code>nowET()</code> returns a <code>Date</code> object in ET (for boundary calculations). <code>formatDateET(date)</code> formats any Date to <code>YYYY-MM-DD</code> in ET. Use <code>formatDate(str)</code> from format utils for display (appends T00:00:00).' },
+  { category: 'Caching', categoryColor: 'var(--yellow)', severity: 'critical', title: 'Never call cookies() inside unstable_cache', body: 'Next.js <code>unstable_cache</code> captures values at cache time. Calling <code>cookies()</code> inside would cache stale session data. Always use <code>createAdminClient()</code> (service role) inside cached functions instead of <code>createClient()</code> (which reads cookies).' },
+  { category: 'Caching', categoryColor: 'var(--yellow)', severity: 'important', title: 'Dashboard data cached for 30 seconds', body: 'The dashboard uses <code>unstable_cache</code> with 30s TTL. Revenue figures, alerts, and recent jobs are not real-time. Detail pages fetch fresh data.' },
+  { category: 'Supabase Clients', categoryColor: 'var(--green)', severity: 'critical', title: 'Three Supabase client patterns', body: '<code>createClient()</code> \u2014 Server components/actions, passes cookies for RLS.<br><code>createAdminClient()</code> \u2014 Server-only, service role key, bypasses RLS. Required inside <code>unstable_cache</code> and webhooks.<br><code>createBrowserClient()</code> \u2014 Client components, uses anon key. Never use service role key on client.' },
+  { category: 'Financial', categoryColor: 'var(--purple)', severity: 'critical', title: 'calculateTotals() is the canonical totals function', body: '<code>calculateTotals(lineItems, settings)</code> in <code>src/lib/utils/totals.ts</code> is the single source of truth. Returns: laborTotal, partsTotal, shopSupplies, hazmat, taxableAmount, taxAmount, grandTotal.' },
+  { category: 'Financial', categoryColor: 'var(--purple)', severity: 'critical', title: 'Tax on parts + shop supplies only (MA law)', body: 'Massachusetts taxes parts at 6.25%. Labor is tax-exempt. Shop supplies are also taxable (treated like parts). Environmental/hazmat fee is NOT taxable. <code>taxableAmount = partsTotal + shopSupplies</code>.' },
+  { category: 'Financial', categoryColor: 'var(--purple)', severity: 'important', title: 'Shop supplies fee: 4 methods with optional cap', body: 'Methods: <code>percent_of_labor</code>, <code>percent_of_parts</code>, <code>percent_of_total</code>, <code>flat</code>. Cap: max dollar amount (null = no cap). Can be scoped to specific categories via <code>shop_supplies_categories</code>.' },
+  { category: 'Job Lifecycle', categoryColor: 'var(--blue)', severity: 'important', title: 'Job status flow', body: '<code>not_started</code> \u2192 <code>waiting_for_parts</code> \u2192 <code>in_progress</code> \u2192 <code>complete</code>. Any transition allowed. When status \u2192 <code>complete</code>: <code>date_finished</code> auto-set. When changed away: cleared.' },
+  { category: 'Job Lifecycle', categoryColor: 'var(--blue)', severity: 'important', title: 'Payment status flow', body: '<code>unpaid</code> \u2192 <code>invoiced</code> \u2192 <code>paid</code>. Also: <code>waived</code> (warranty/goodwill). Methods: <code>stripe</code>, <code>cash</code>, <code>check</code>, <code>ach</code>, <code>terminal</code>.' },
+  { category: 'Job Lifecycle', categoryColor: 'var(--blue)', severity: 'important', title: 'RO numbers are auto-assigned and sequential', body: 'PostgreSQL sequence <code>ro_number_seq</code> auto-assigns. Displayed as <code>RO-0001</code> (4-digit zero-padded via <code>formatRONumber()</code>). Cannot be manually set.' },
+  { category: 'Parking', categoryColor: 'var(--orange)', severity: 'important', title: 'Parking status flow with undo', body: '<code>reserved</code> \u2192 <code>checked_in</code> \u2192 <code>checked_out</code>. Also: <code>no_show</code>, <code>cancelled</code>. Undo available for accidental changes. Tomorrow view includes recently <code>checked_out</code> for continuity.' },
+  { category: 'Parking', categoryColor: 'var(--orange)', severity: 'important', title: 'Customer dedup: findOrCreateParkingCustomer()', body: 'Deduplicates by email first, then phone. Creates customer with <code>customer_type: "parking"</code> if not found. Links via <code>customer_id</code> FK (ON DELETE SET NULL).' },
+  { category: 'Parking', categoryColor: 'var(--orange)', severity: 'important', title: 'Four lots, three parking types, five forms', body: 'Lots: Broadway Motors, Airport Parking Boston 1, Airport Parking Boston 2, Boston Logan Valet. Types: <code>self_park</code> (default), <code>shuttle</code>, <code>valet</code>. Five forms on BroadwayMotorsMA.com: self-park, shuttle, APB1, APB2, valet. Shuttle shows sky-blue badge on dashboard.' },
+  { category: 'Parking', categoryColor: 'var(--orange)', severity: 'important', title: 'Triple-line phone routing for parking SMS', body: 'Broadway Motors lot uses parking line (978-684-9254). APB lots and valet use APB line (978-644-9391). Shop line (617-996-8371) for job-related messages. Routing logic in <code>src/lib/quo/routing.ts</code>.' },
+  { category: 'Parking', categoryColor: 'var(--orange)', severity: 'important', title: 'Dedup: phone + date + lot within 5 minutes', body: 'Before inserting a reservation, checks for same phone + drop_off_date + lot within last 5 minutes. Prevents double submissions. Lot is included so booking two different lots on the same day works.' },
+  { category: 'AI Safety', categoryColor: 'var(--red)', severity: 'critical', title: 'Financial actions require confirmation', body: 'The AI must confirm before: creating/sending estimates, creating invoices, sending SMS/email, deleting anything, marking jobs complete, recording payments, updating shop settings. No confirmation for reads or creating customers/vehicles/jobs/line items.' },
+  { category: 'AI Safety', categoryColor: 'var(--red)', severity: 'critical', title: 'Never create Stripe invoices for fleet customers', body: 'Fleet accounts (Hertz, Sixt, DriveWhip) are billed net-30 outside Stripe. The AI system prompt explicitly forbids this.' },
+  { category: 'AI Safety', categoryColor: 'var(--red)', severity: 'important', title: 'Max 10 tool iterations per chat request', body: 'The AI chat endpoint loops tool calls up to 10 iterations. Complex requests chain multiple calls. If 10 exceeded, response is cut off.' },
+  { category: 'Search', categoryColor: 'var(--cyan)', severity: 'important', title: 'Parking search uses .or() ilike pattern', body: 'Supabase <code>.or()</code> with <code>ilike</code> across first_name, last_name, license_plate, phone, confirmation_number. Single query with OR conditions.' },
+  { category: 'Search', categoryColor: 'var(--cyan)', severity: 'important', title: 'Job search: customer/vehicle queries first', body: 'Jobs searched by first finding matching customers (by name) and vehicles (by make/model/plate), collecting their IDs, then querying jobs. Not a single joined query.' },
+  { category: 'Inspections', categoryColor: 'var(--text-muted)', severity: 'important', title: 'Inspections tracked in daily_inspection_counts, not job line items', body: 'State ($35) and TNC ($15) inspections are daily counters in <code>daily_inspection_counts</code> (upsert by date). NOT individual job line items. Numpad-style counter UI at /inspections.' },
+];
+
+const TECH_STACK = {
+  frontend: [
+    { tech: 'Next.js 14+', purpose: 'App framework (App Router)' },
+    { tech: 'React 19', purpose: 'UI components' },
+    { tech: 'Tailwind CSS', purpose: 'Styling' },
+    { tech: 'shadcn/ui', purpose: 'Component library' },
+    { tech: 'TypeScript', purpose: 'Type safety (strict mode)' },
+  ],
+  backend: [
+    { tech: 'Next.js API Routes', purpose: '8 endpoints' },
+    { tech: 'Server Actions', purpose: 'Mutations (CRUD)' },
+    { tech: 'Supabase', purpose: 'PostgreSQL + Auth + RLS' },
+    { tech: 'Stripe SDK', purpose: 'Payments + Terminal' },
+    { tech: '@anthropic-ai/sdk', purpose: 'AI chat (Haiku 4.5)' },
+    { tech: 'Resend', purpose: 'Transactional email' },
+    { tech: 'Quo API (fetch)', purpose: 'SMS send/receive' },
+    { tech: 'Zod', purpose: 'Input validation' },
+  ],
+  infrastructure: [
+    { tech: 'Vercel', purpose: 'Hosting + CDN + SSL' },
+    { tech: 'GitHub', purpose: 'Source code (private repo)' },
+    { tech: 'Supabase Pro', purpose: 'Managed PostgreSQL' },
+    { tech: 'Stripe', purpose: 'Payment processing' },
+    { tech: 'BroadwayMotorsMA.com', purpose: 'Public parking forms (5)' },
+  ]
+};
+
+const SECURITY_LAYERS = [
+  { group: 'Authentication & Access Control', color: 'var(--green)', items: [
+    { name: 'Supabase Auth', status: 'Active', desc: 'Email/password authentication. Session managed via HTTP-only cookies. Middleware refreshes session on every request.' },
+    { name: 'Row Level Security (RLS)', status: 'Active', desc: 'Every table has RLS policies gated by <code>get_user_role()</code> RPC. Users can only access data their role permits. Managers see everything, techs see assigned jobs.' },
+    { name: 'Service Role Isolation', status: 'Active', desc: '<code>SUPABASE_SERVICE_ROLE_KEY</code> is server-only and never exposed to the client. Used exclusively in <code>createAdminClient()</code> for webhooks and cached functions.' },
+    { name: 'Role-Based Access', status: 'Active', desc: 'Two roles: manager (full access) and tech (view assigned jobs, no financials). Role checked via <code>is_manager()</code> RPC function at the database level.' },
+  ]},
+  { group: 'Webhook & API Security', color: 'var(--blue)', items: [
+    { name: 'Stripe Webhook Verification', status: 'Active', desc: 'All Stripe webhooks verified via <code>stripe-signature</code> header and <code>STRIPE_WEBHOOK_SECRET</code>. Prevents spoofed payment events.' },
+    { name: 'Quo Webhook Verification', status: 'Active', desc: 'Inbound SMS webhooks verified via <code>x-openphone-signature</code> header. Prevents fake inbound message injection.' },
+    { name: 'Wix Shared Secret Auth', status: 'Active', desc: 'Wix webhook authenticated via <code>webhook_secret</code> body parameter (Wix can\'t send custom HTTP headers). Rejects requests with wrong secret.' },
+    { name: 'CORS on Parking API', status: 'Active', desc: 'Public parking form endpoint only accepts requests from whitelisted origins: broadwaymotorsma.com, broadwaymotorsrevere.com, broadway-motors-web.vercel.app, and localhost (dev).' },
+    { name: 'Rate Limiting', status: 'Active', desc: 'Public parking form submit endpoint rate-limited to 5 requests per 60 seconds per IP address. Prevents spam submissions.' },
+    { name: 'Honeypot Spam Protection', status: 'Active', desc: 'Parking form includes a hidden honeypot field. Bots that fill it are silently rejected. No CAPTCHA needed.' },
+  ]},
+  { group: 'Data Protection', color: 'var(--purple)', items: [
+    { name: 'Forced HTTPS', status: 'Active', desc: 'All traffic encrypted via Vercel\'s automatic SSL. HTTP requests are redirected to HTTPS.' },
+    { name: 'Estimate Token-Based Access', status: 'Active', desc: 'Customer estimate approval pages use a unique <code>approval_token</code> in the URL. No login required, but the token must be known. Prevents unauthorized estimate viewing.' },
+    { name: 'Wholesale Cost Hidden from Customers', status: 'Active', desc: 'Part cost (wholesale price) is stored for margin tracking but never exposed on estimates, invoices, or print ROs. Customers only see retail unit_cost.' },
+    { name: 'AI Confirmation Gate', status: 'Active', desc: 'All financial and destructive AI actions require explicit user confirmation before execution. Prevents accidental invoice creation, message sending, or data deletion.' },
+  ]},
+];
+
+const DESIGN_DECISIONS = [
+  { title: 'Why todayET() Everywhere', desc: 'Vercel runs in UTC. A job created at 11 PM Eastern would show tomorrow\'s date without timezone correction. todayET() returns YYYY-MM-DD in America/New_York, ensuring all date logic matches the shop\'s physical timezone.' },
+  { title: 'Why createAdminClient() Inside Cache', desc: 'Next.js unstable_cache captures closure values at cache time. If you call cookies() inside, you get stale session data. createAdminClient() uses the service role key (no cookies needed) so cached queries always work correctly.' },
+  { title: 'Why Line Item Categories (Not Job Categories)', desc: 'Multi-service jobs (e.g., oil change + brakes) need per-line-item categorization. The job-level category column is deprecated. Line item categories drive service categorization, reporting breakdowns, and fee scoping.' },
+  { title: 'Why findOrCreateParkingCustomer()', desc: 'Parking customers submit forms without logging in. To avoid duplicates, we dedup by email first (exact match), then phone. Creates a customer with type "parking" if no match. Links the reservation via FK for cross-referencing job history.' },
+  { title: 'Why Confirmation Gate on AI', desc: 'The AI can create invoices, send messages, and delete records. A single misheard voice command could send an incorrect invoice to a customer. The confirmation pattern forces the manager to review and approve before any financial or external action.' },
+  { title: 'Why Fleet Accounts Skip Stripe', desc: 'Fleet customers (Hertz, Sixt, DriveWhip) are billed net-30 via manual invoicing outside the system. Stripe invoicing would create duplicate billing. The AI system prompt and business rules both enforce this constraint.' },
+  { title: 'Why Server-Driven Terminal', desc: 'The WisePOS E reader is server-driven (not client-driven). The server creates the PaymentIntent, pushes to the reader, and polls status. This means the payment flow works from any device \u2014 including the AI chat on a phone.' },
+  { title: 'Why Single shop_settings Row', desc: 'A single-row configuration table is simpler than environment variables for settings that change (tax rate, fee methods). The manager can update settings via the UI or AI without redeploying. All totals calculations read from this row.' },
+];
+
+const PAGE_ROUTES = [
+  { group: 'Auth', icon: '&#128274;', routes: [{ path: '/login', desc: 'Email/password login form using Supabase Auth' }] },
+  { group: 'Dashboard', icon: '&#128200;', routes: [
+    { path: '/dashboard', desc: 'Main ops dashboard: revenue KPIs, alerts (unpaid/unassigned/stale), shop floor stats, recent jobs. Cached 30s.' },
+    { path: '/jobs', desc: 'Job list with 3 views (list, board/Kanban, calendar). Filters: search, status, category, payment, date range.' },
+    { path: '/jobs/new', desc: 'Create new job form. Accepts ?customerId= to pre-fill customer.' },
+    { path: '/jobs/[id]', desc: 'Job detail: RO number, customer/vehicle, status, line items, estimates, invoices, sticky payment footer.' },
+    { path: '/jobs/[id]/edit', desc: 'Edit job: customer, vehicle, title, tech, dates, payment info.' },
+    { path: '/jobs/[id]/print', desc: 'Print-optimized Repair Order: shop header, customer/vehicle, itemized totals.' },
+  ]},
+  { group: 'Customers', icon: '&#128101;', routes: [
+    { path: '/customers', desc: 'Customer list with search, type filter (retail/fleet/parking), pagination (50/page).' },
+    { path: '/customers/new', desc: 'Create customer form.' },
+    { path: '/customers/[id]', desc: 'Customer detail: contact info, vehicles, job history (last 20), parking history (last 20).' },
+    { path: '/customers/[id]/edit', desc: 'Edit customer form.' },
+  ]},
+  { group: 'Estimates', icon: '&#128196;', routes: [
+    { path: '/estimates/[id]', desc: 'Internal estimate view: line items, totals, status.' },
+    { path: '/estimates/approve/[token]', desc: 'Public customer-facing estimate approval page. No auth required. Token-based access.', public: true },
+  ]},
+  { group: 'Parking', icon: '&#127359;', routes: [
+    { path: '/parking', desc: 'Airport parking dashboard: Today (arrivals/pickups/parked), Services (leads), All (paginated). Lot filter.' },
+    { path: '/parking/[id]', desc: 'Reservation detail: contact, vehicle, trip dates, check-in/out actions, services, staff notes.' },
+  ]},
+  { group: 'Operations', icon: '&#9881;', routes: [
+    { path: '/inspections', desc: 'Daily inspection counter: state ($35) and TNC ($15). Numpad UI, date-selectable.' },
+    { path: '/quick-pay', desc: 'Counter payment. Numpad + presets. Auto-creates job. Drives Terminal or manual payment.' },
+    { path: '/reports', desc: 'Revenue reports: KPIs, charts (by category, by tech), service profitability, fleet A/R aging.' },
+    { path: '/chat', desc: 'AI assistant chat. Streaming SSE, 46 tools, Markdown rendering.' },
+  ]},
+  { group: 'Settings', icon: '&#9881;', routes: [
+    { path: '/presets', desc: 'Job presets management: reusable service templates with pre-filled line items.' },
+    { path: '/team', desc: 'Team member management: managers and technicians with role badges.' },
+    { path: '/settings', desc: 'Settings hub: navigation cards to Rates, Categories, Team, Presets.' },
+    { path: '/settings/rates', desc: 'Tax rate, shop supplies fee (4 methods + cap), environmental/hazmat fee.' },
+    { path: '/settings/categories', desc: 'Add/rename/reorder/delete job service categories.' },
+  ]},
+];
+
+const API_ROUTES = [
+  { group: 'AI', icon: '&#9733;', routes: [
+    { path: '/api/ai/chat', method: 'POST', methodClass: 'method-SSE', desc: 'Claude AI chat with SSE streaming. Auth required. 46 tools, max 10 iterations.' },
+  ]},
+  { group: 'Stripe', icon: '&#36;', routes: [
+    { path: '/api/stripe/webhooks', method: 'POST', methodClass: 'method-POST', desc: 'Stripe webhook. Handles invoice.paid and payment_intent.succeeded. Verifies stripe-signature.' },
+  ]},
+  { group: 'Terminal', icon: '&#128179;', routes: [
+    { path: '/api/terminal/pay', method: 'POST', methodClass: 'method-POST', desc: 'Initiate Terminal payment. { jobId, amountCents }. Pushes to WisePOS E reader.' },
+    { path: '/api/terminal/status', method: 'GET', methodClass: 'method-GET', desc: 'Poll Terminal PaymentIntent status. ?pi=<paymentIntentId>.' },
+    { path: '/api/terminal/cancel', method: 'POST', methodClass: 'method-POST', desc: 'Cancel active Terminal reader action and optionally cancel PaymentIntent.' },
+  ]},
+  { group: 'Messaging', icon: '&#9993;', routes: [
+    { path: '/api/messaging/quo/webhooks', method: 'POST', methodClass: 'method-POST', desc: 'Quo/OpenPhone inbound SMS webhook. Verifies x-openphone-signature.' },
+  ]},
+  { group: 'Parking', icon: '&#127359;', routes: [
+    { path: '/api/parking/submit', method: 'POST', methodClass: 'method-POST', desc: 'Public parking form. CORS-gated, rate-limited (5/60s/IP), honeypot protection.' },
+    { path: '/api/webhooks/wix-parking', method: 'POST', methodClass: 'method-POST', desc: 'Wix parking bridge. Shared secret auth. Maps form names to lots.' },
+  ]},
+];
+
+// ==========================================
+// RENDER FUNCTIONS
+// ==========================================
+
+function renderSystemMap() {
+  const grid = document.getElementById('services-grid');
+  grid.innerHTML = SERVICES.map(s => `
+    <div class="service-card" onclick="toggleService(this)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <div class="icon-dot" style="background:${s.iconBg}">${s.icon}</div>
+        <div><div class="service-name">${s.name}</div><span class="badge ${s.badgeClass}">${s.badge}</span></div>
+      </div>
+      <div class="service-desc">${s.desc}</div>
+      <div class="service-detail">
+        <div class="detail-section"><h4>Details</h4><p style="font-size:13px;color:var(--text-muted);line-height:1.6;">${s.details}</p></div>
+        ${s.envVars.length ? `<div class="detail-section"><h4>Environment Variables</h4><ul class="detail-list">${s.envVars.map(v => `<li style="color:var(--yellow)">${v}</li>`).join('')}</ul></div>` : ''}
+        <div class="detail-section"><h4>Key Files</h4><ul class="detail-list">${s.keyFiles.map(f => `<li style="color:var(--cyan)">${f}</li>`).join('')}</ul></div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:var(--text-muted);margin-top:4px;" class="expand-hint">Click to expand</div>
+    </div>
+  `).join('');
+
+  document.getElementById('connections-list').innerHTML = CONNECTIONS.map(c => `
+    <div class="conn-line">
+      <span style="color:var(--accent-hover);min-width:100px">${c.from}</span>
+      <span class="conn-arrow">\u2192</span>
+      <span style="color:var(--accent-hover);min-width:100px">${c.to}</span>
+      <span style="color:var(--text-muted);margin-left:8px">${c.label}</span>
+    </div>
+  `).join('');
+}
+
+function toggleService(el) {
+  const was = el.classList.contains('expanded');
+  document.querySelectorAll('.service-card.expanded').forEach(c => c.classList.remove('expanded'));
+  if (!was) el.classList.add('expanded');
+}
+
+function renderFailureImpact() {
+  const grid = document.getElementById('impact-grid');
+  function col(severity, label, headerClass, items) {
+    return `<div class="impact-column">
+      <div class="impact-col-header ${headerClass}">${label}</div>
+      ${items.map(i => `
+        <div class="impact-card sev-${severity}">
+          <div class="impact-card-name"><span>${i.icon}</span> ${i.name}</div>
+          <div class="impact-card-desc">${i.desc}</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
+  grid.innerHTML =
+    col('critical', 'Critical \u2014 App Down', 'col-critical', FAILURE_IMPACT.critical) +
+    col('high', 'High \u2014 Feature Degraded', 'col-high', FAILURE_IMPACT.high) +
+    col('low', 'Low \u2014 Minimal Impact', 'col-low', FAILURE_IMPACT.low);
+}
+
+// DATA FLOWS
+let currentFlow = null;
+function renderFlowSelector() {
+  const sel = document.getElementById('flow-selector');
+  sel.innerHTML = Object.entries(FLOWS).map(([k, f]) => `<button class="flow-btn" data-flow="${k}">${f.name}</button>`).join('');
+  sel.querySelectorAll('.flow-btn').forEach(b => b.addEventListener('click', () => selectFlow(b.dataset.flow)));
+  selectFlow(Object.keys(FLOWS)[0]);
+}
+function selectFlow(key) {
+  currentFlow = key;
+  document.querySelectorAll('.flow-btn').forEach(b => b.classList.toggle('active', b.dataset.flow === key));
+  const tl = document.getElementById('flow-timeline');
+  tl.innerHTML = FLOWS[key].steps.map((s, i) => `
+    <div class="flow-step" data-step="${i+1}">
+      <div class="flow-step-title">${s.title}</div>
+      <div class="flow-step-desc">${s.desc}</div>
+      <div class="flow-step-tech">${s.tags.map(([t,c]) => `<span class="badge ${c}">${t}</span>`).join('')}</div>
+    </div>
+  `).join('');
+  tl.querySelectorAll('.flow-step').forEach((el, i) => setTimeout(() => el.classList.add('visible'), i * 200));
+}
+document.getElementById('flow-play').addEventListener('click', () => {
+  const steps = document.querySelectorAll('.flow-step');
+  steps.forEach(s => s.classList.remove('visible'));
+  steps.forEach((el, i) => setTimeout(() => el.classList.add('visible'), i * 400));
+});
+document.getElementById('flow-reset').addEventListener('click', () => {
+  document.querySelectorAll('.flow-step').forEach(s => s.classList.remove('visible'));
+});
+
+// DATABASE
+function renderSchema() {
+  document.getElementById('schema-grid').innerHTML = TABLES.map(t => {
+    const cols = t.columns.map(c => {
+      let badges = '';
+      if (c.pk) badges += '<span class="badge badge-purple col-badge">PK</span> ';
+      if (c.fk) badges += '<span class="badge badge-blue col-badge">FK</span> ';
+      if (c.nullable) badges += '<span class="badge badge-gray col-badge">null</span> ';
+      if (c.required) badges += '<span class="badge badge-red col-badge">req</span> ';
+      let tp = c.type; if (c.enumVals) tp = c.enumVals.split('|').join(' | ');
+      return `<div class="col-row"><span class="col-name">${c.name}</span><span class="col-type">${tp}</span><span>${badges}</span></div>`;
+    }).join('');
+    const fks = t.fks.length ? `<div class="fk-section"><h5>Foreign Keys</h5>${t.fks.map(f => `<div class="fk-line">${f.col} \u2192 ${f.ref}</div>`).join('')}</div>` : '';
+    return `<div class="table-card" onclick="this.classList.toggle('expanded')">
+      <div class="table-card-header"><span class="table-card-name">${t.name}</span><span><span class="table-card-count">${t.columns.length} cols</span>${t.fks.length ? `<span class="badge badge-blue" style="margin-left:6px">${t.fks.length} FK</span>` : ''}<span class="expand-hint" style="margin-left:8px">+</span></span></div>
+      <div class="table-card-body"><div class="col-row header"><span>Column</span><span>Type</span><span>Flags</span></div>${cols}${fks}</div>
+    </div>`;
+  }).join('');
+}
+
+// BUSINESS RULES
+let activeRuleFilter = 'all';
+function renderRules() {
+  const cats = [...new Set(BUSINESS_RULES.map(r => r.category))];
+  const filt = document.getElementById('rules-filters');
+  filt.innerHTML = `<button class="rule-filter-btn active" data-cat="all">All</button>` + cats.map(c => `<button class="rule-filter-btn" data-cat="${c}">${c}</button>`).join('');
+  filt.querySelectorAll('.rule-filter-btn').forEach(b => b.addEventListener('click', () => {
+    activeRuleFilter = b.dataset.cat;
+    filt.querySelectorAll('.rule-filter-btn').forEach(x => x.classList.toggle('active', x === b));
+    filterRules();
+  }));
+  document.getElementById('rules-list').innerHTML = BUSINESS_RULES.map((r, i) => `
+    <div class="rule-card" data-category="${r.category}" data-index="${i}">
+      <div class="rule-category" style="color:${r.categoryColor}">${r.category}</div>
+      <div class="rule-title">${r.title}</div>
+      <div class="rule-body">${r.body}</div>
+      <div class="rule-severity">${r.severity === 'critical' ? '<span class="badge badge-red">Critical</span>' : '<span class="badge badge-yellow">Important</span>'}</div>
+    </div>
+  `).join('');
+}
+function filterRules() {
+  const search = document.getElementById('rules-search').value.toLowerCase();
+  document.querySelectorAll('.rule-card').forEach(card => {
+    const r = BUSINESS_RULES[parseInt(card.dataset.index)];
+    const mc = activeRuleFilter === 'all' || r.category === activeRuleFilter;
+    const ms = !search || r.title.toLowerCase().includes(search) || r.body.toLowerCase().includes(search) || r.category.toLowerCase().includes(search);
+    card.classList.toggle('hidden', !(mc && ms));
+  });
+}
+document.getElementById('rules-search').addEventListener('input', filterRules);
+
+// ROUTES
+function renderRoutes() {
+  let html = '<h3 style="font-size:20px;font-weight:700;margin-bottom:20px;">Page Routes (22)</h3>';
+  html += PAGE_ROUTES.map(g => `<div class="route-group"><div class="route-group-title"><span>${g.icon}</span> ${g.group}</div>
+    <table class="route-table"><thead><tr><th>Path</th><th>Description</th><th>Access</th></tr></thead><tbody>
+    ${g.routes.map(r => `<tr><td class="route-path">${r.path}</td><td>${r.desc}</td><td>${r.public ? '<span class="badge badge-green">Public</span>' : '<span class="badge badge-gray">Auth</span>'}</td></tr>`).join('')}
+    </tbody></table></div>`).join('');
+  html += '<h3 style="font-size:20px;font-weight:700;margin:32px 0 20px;">API Routes (8)</h3>';
+  html += API_ROUTES.map(g => `<div class="route-group"><div class="route-group-title"><span>${g.icon}</span> ${g.group}</div>
+    <table class="route-table"><thead><tr><th>Path</th><th>Method</th><th>Description</th></tr></thead><tbody>
+    ${g.routes.map(r => `<tr><td class="route-path">${r.path}</td><td><span class="route-method ${r.methodClass}">${r.method}</span></td><td>${r.desc}</td></tr>`).join('')}
+    </tbody></table></div>`).join('');
+  document.getElementById('routes-list').innerHTML = html;
+}
+
+// INFRASTRUCTURE
+function renderInfrastructure() {
+  // Tech Stack
+  const sg = document.getElementById('stack-grid');
+  sg.innerHTML = Object.entries(TECH_STACK).map(([cat, items]) => `
+    <div class="stack-card"><h3>${cat}</h3>${items.map(i => `<div class="stack-item"><span class="tech">${i.tech}</span><span class="purpose">${i.purpose}</span></div>`).join('')}</div>
+  `).join('');
+
+  // Environments
+  document.getElementById('env-grid').innerHTML = `
+    <div class="env-card env-dev">
+      <h3>Development</h3><div class="env-url">localhost:3000</div>
+      <div class="env-detail">Local machine</div>
+      <div class="env-detail">Test Stripe keys (no real charges)</div>
+      <div class="env-detail">Supabase Pro (shared with prod)</div>
+      <div class="env-detail">Resend in test mode (console logging)</div>
+      <div class="env-detail">Quo API key optional (falls back to logging)</div>
+      <div class="env-detail"><code>.env.local</code> for all secrets</div>
+    </div>
+    <div class="env-card env-prod">
+      <h3>Production</h3><div class="env-url">shop-pilot-rosy.vercel.app</div>
+      <div class="env-detail"><code>master</code> branch auto-deploys</div>
+      <div class="env-detail">Live Stripe keys (real payments)</div>
+      <div class="env-detail">Supabase Pro ($25/mo)</div>
+      <div class="env-detail">Resend needs domain verification</div>
+      <div class="env-detail">Quo blocked on A2P + number port</div>
+      <div class="env-detail">Env vars in Vercel dashboard</div>
+    </div>
+  `;
+
+  // Security Layers
+  const ss = document.getElementById('security-sections');
+  ss.innerHTML = SECURITY_LAYERS.map(group => `
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${group.color};margin-bottom:10px;margin-top:20px;">${group.group}</div>
+    <div class="security-grid">
+      ${group.items.map(item => `
+        <div class="security-card" style="border-left-color:${group.color}">
+          <h4>${item.name}<span class="security-status active">${item.status}</span></h4>
+          <p>${item.desc}</p>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+
+  // Design Decisions
+  document.getElementById('decisions-grid').innerHTML = DESIGN_DECISIONS.map(d => `
+    <div class="decision-card"><h3>${d.title}</h3><p>${d.desc}</p></div>
+  `).join('');
+}
+
+// PARKING TAB
+const PARKING_FORMS = [
+  { url: '/confirm-self-park', lot: 'Broadway Motors', type: 'self_park', line: 'parking (978-684-9254)', special: '—' },
+  { url: '/confirm-self-park/shuttle', lot: 'Broadway Motors', type: 'shuttle', line: 'parking (978-684-9254)', special: '—' },
+  { url: '/confirm-self-park/apb1', lot: 'Airport Parking Boston 1', type: 'self_park', line: 'apb (978-644-9391)', special: '—' },
+  { url: '/confirm-self-park/apb2', lot: 'Airport Parking Boston 2', type: 'self_park', line: 'apb (978-644-9391)', special: '—' },
+  { url: '/confirm-self-park/valet', lot: 'Boston Logan Valet', type: 'valet', line: 'apb (978-644-9391)', special: 'Flight fields, no confirmation#, no services' },
+];
+
+const PARKING_SMS_TEMPLATES = [
+  { lot: 'Broadway Motors (self_park)', from: '978-684-9254', content: 'Confirmed + dates + instructions link (?lot=broadway-motors)', color: 'var(--green)' },
+  { lot: 'Broadway Motors (shuttle)', from: '978-684-9254', content: 'Same + "shuttle will be ready when you arrive" + link (?lot=shuttle)', color: 'var(--cyan)' },
+  { lot: 'Airport Parking Boston 1', from: '978-644-9391', content: 'Confirmed + dates + instructions link (?lot=apb1)', color: 'var(--blue)' },
+  { lot: 'Airport Parking Boston 2', from: '978-644-9391', content: 'Confirmed + dates + instructions link (?lot=apb2)', color: 'var(--purple)' },
+  { lot: 'Boston Logan Valet', from: '978-644-9391', content: '"Valet service confirmed, valet will reach out shortly"', color: 'var(--orange)' },
+];
+
+const PARKING_CONFIRMATIONS = [
+  { lot: 'broadway-motors', name: 'Broadway Motors Self-Park', sections: 'Drop-off (88 Broadway Revere), lockbox key drop, Patriot Taxi shuttle ($16), parking spots, front desk hours, after-hours lockbox, modifications, service upsells', color: 'var(--green)' },
+  { lot: 'shuttle', name: 'Broadway Motors Shuttle', sections: 'Same drop-off + lockbox, complimentary shuttle at scheduled time, return via cab/rideshare, same pickup/modifications, service upsells', color: 'var(--cyan)' },
+  { lot: 'apb1', name: 'Airport Parking Boston 1', sections: '961 Broadway Saugus (Palumbo Properties), numbered spots, Uber/Lyft $30-40, car stays in place, extensions at airportparkingboston.com', color: 'var(--blue)' },
+  { lot: 'apb2', name: 'Airport Parking Boston 2', sections: '2050 Revere Beach Pkwy Everett (Extra Space Storage), highlighted spots, Uber/Lyft $25-35, car stays in place', color: 'var(--purple)' },
+  { lot: 'valet', name: 'Boston Logan Valet', sections: 'Simple confirmation, valet will reach out, contact number', color: 'var(--orange)' },
+];
+
+const PARKING_KEY_FILES_DATA = {
+  'broadway-motors-web': [
+    { file: 'src/components/parking-form.tsx', desc: 'Shared form component with props: lotName, lotSlug, parkingType, showFlightFields, hideConfirmationNumber, hideServices' },
+    { file: 'src/app/confirm-self-park/page.tsx', desc: 'Broadway Motors self-park form' },
+    { file: 'src/app/confirm-self-park/shuttle/page.tsx', desc: 'Broadway Motors shuttle form' },
+    { file: 'src/app/confirm-self-park/apb1/page.tsx', desc: 'Airport Parking Boston 1 form' },
+    { file: 'src/app/confirm-self-park/apb2/page.tsx', desc: 'Airport Parking Boston 2 form' },
+    { file: 'src/app/confirm-self-park/valet/page.tsx', desc: 'Boston Logan Valet form' },
+    { file: 'src/app/confirm-self-park/thank-you/page.tsx', desc: 'Lot-specific confirmation/instructions (uses ?lot= query param)' },
+  ],
+  'shop-pilot': [
+    { file: 'src/app/api/parking/submit/route.ts', desc: 'Public submit endpoint — CORS, rate limit, honeypot, dedup, insert' },
+    { file: 'src/lib/validators/parking.ts', desc: 'Zod schema for parking form validation' },
+    { file: 'src/lib/parking-customer.ts', desc: 'findOrCreateParkingCustomer() — dedup by email then phone' },
+    { file: 'src/lib/parking/on-reservation-created.ts', desc: 'Post-submit handler — Quo contact + confirmation SMS' },
+    { file: 'src/lib/messaging/templates.ts', desc: 'reservationConfirmationSMS() — lot-aware SMS templates' },
+    { file: 'src/lib/quo/routing.ts', desc: 'PhoneLine routing — getParkingLine(lot) determines phone line' },
+    { file: 'src/lib/quo/contacts.ts', desc: 'createOrUpdateQuoContact() — auto-creates Quo contacts' },
+    { file: 'src/app/(dashboard)/parking/page.tsx', desc: 'Parking dashboard — Today, Service Leads, All tabs' },
+    { file: 'src/app/(dashboard)/parking/[id]/page.tsx', desc: 'Reservation detail page' },
+    { file: 'src/components/parking/', desc: 'Dashboard components — cards, actions, checkout modal, notes, dates' },
+    { file: 'src/lib/actions/lock-boxes.ts', desc: 'Lockbox checkout server actions' },
+  ]
+};
+
+function renderParking() {
+  // Forms table
+  document.getElementById('parking-forms-table').innerHTML = `
+    <table class="parking-table">
+      <thead><tr><th>URL</th><th>Lot Name</th><th>Type</th><th>Phone Line</th><th>Special</th></tr></thead>
+      <tbody>${PARKING_FORMS.map(f => `
+        <tr>
+          <td><code>${f.url}</code></td>
+          <td>${f.lot}</td>
+          <td><span class="badge ${f.type === 'self_park' ? 'badge-green' : f.type === 'shuttle' ? 'badge-cyan' : 'badge-orange'}">${f.type}</span></td>
+          <td style="font-size:12px;color:var(--text-muted)">${f.line}</td>
+          <td style="font-size:12px;color:var(--text-muted)">${f.special}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+      All forms on <span style="color:var(--accent-hover)">BroadwayMotorsMA.com</span> &rarr; POST to <code style="font-size:11px;background:var(--surface2);padding:1px 6px;border-radius:4px;color:var(--cyan)">shop-pilot-rosy.vercel.app/api/parking/submit</code>
+    </div>
+  `;
+
+  // Submission pipeline
+  const pipelineSteps = [
+    { title: 'CORS Check', desc: 'Only allows broadwaymotorsma.com, broadwaymotorsrevere.com, broadway-motors-web.vercel.app, localhost' },
+    { title: 'Rate Limit', desc: '5 requests per IP per 60 seconds (in-memory)' },
+    { title: 'Parse & Validate', desc: 'Zod schema validates all required fields: name, email, phone, dates/times, make, model, license_plate, lot' },
+    { title: 'Honeypot Check', desc: 'If hidden "website" field is filled, return success but skip insert (bot detected)' },
+    { title: 'Dedup Check', desc: 'Query parking_reservations for same phone + drop_off_date + lot within last 5 minutes. Skip if found.' },
+    { title: 'Find or Create Customer', desc: 'findOrCreateParkingCustomer() — dedup by email first, then phone. Creates with customer_type: "parking".' },
+    { title: 'Insert Reservation', desc: 'Insert into parking_reservations with customer_id FK, status: reserved.' },
+    { title: 'Post-Submit Handler (awaited)', desc: 'Create/update Quo contact with "Parking" tag. Send lot-specific confirmation SMS from correct phone line. Log to messages table.' },
+  ];
+  document.getElementById('parking-pipeline').innerHTML = pipelineSteps.map((s, i) => `
+    <div class="flow-step visible" data-step="${i+1}">
+      <div class="flow-step-title">${s.title}</div>
+      <div class="flow-step-desc">${s.desc}</div>
+    </div>
+  `).join('');
+
+  // Phone routing
+  document.getElementById('parking-phone-routing').innerHTML = `
+    <table class="parking-table">
+      <thead><tr><th>Line</th><th>Phone Number</th><th>Env Var</th><th>Used For</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-blue">shop</span></td><td style="font-family:monospace">617-996-8371</td><td><code>QUO_SHOP_PHONE_NUMBER</code></td><td style="color:var(--text-muted)">Job-related SMS (estimates, invoices, vehicle ready)</td></tr>
+        <tr><td><span class="badge badge-green">parking</span></td><td style="font-family:monospace">978-684-9254</td><td><code>QUO_PHONE_NUMBER</code></td><td style="color:var(--text-muted)">Broadway Motors lot (self-park + shuttle)</td></tr>
+        <tr><td><span class="badge badge-purple">apb</span></td><td style="font-family:monospace">978-644-9391</td><td><code>QUO_APB_PHONE_NUMBER</code></td><td style="color:var(--text-muted)">Airport Parking Boston 1 & 2, Boston Logan Valet</td></tr>
+      </tbody>
+    </table>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+      Routing logic: <code style="font-size:11px;background:var(--surface2);padding:1px 6px;border-radius:4px;color:var(--cyan)">getParkingLine(lot)</code> in <code style="font-size:11px;background:var(--surface2);padding:1px 6px;border-radius:4px;color:var(--cyan)">src/lib/quo/routing.ts</code> &mdash; Broadway Motors &rarr; parking, everything else &rarr; apb
+    </div>
+  `;
+
+  // SMS templates
+  document.getElementById('parking-sms-templates').innerHTML = `<div class="parking-card-grid">${PARKING_SMS_TEMPLATES.map(t => `
+    <div class="parking-card" style="border-left-color:${t.color}">
+      <h4>${t.lot}</h4>
+      <p style="margin-bottom:6px">${t.content}</p>
+      <p style="font-size:11px;color:var(--text-muted)">From: <span style="font-family:monospace;color:var(--accent-hover)">${t.from}</span></p>
+    </div>
+  `).join('')}</div>`;
+
+  // Confirmation pages
+  document.getElementById('parking-confirmation-pages').innerHTML = `<div class="parking-card-grid">${PARKING_CONFIRMATIONS.map(c => `
+    <div class="parking-card" style="border-left-color:${c.color}">
+      <h4>${c.name} <code style="font-size:11px">?lot=${c.lot}</code></h4>
+      <p>${c.sections}</p>
+    </div>
+  `).join('')}</div>`;
+
+  // Dashboard
+  document.getElementById('parking-dashboard').innerHTML = `
+    <div class="parking-card-grid">
+      <div class="parking-card" style="border-left-color:var(--green)">
+        <h4>Today Tab</h4>
+        <ul>
+          <li>Arrivals — reserved cars due to drop off today</li>
+          <li>Pickups — checked-in cars due to pick up today</li>
+          <li>Currently Parked — all checked-in cars</li>
+        </ul>
+      </div>
+      <div class="parking-card" style="border-left-color:var(--yellow)">
+        <h4>Service Leads Tab</h4>
+        <ul>
+          <li>Checked-in reservations with services_interested</li>
+          <li>"Send Specials" button — sends upsell SMS</li>
+          <li>Cross-sell opportunity for auto repair</li>
+        </ul>
+      </div>
+      <div class="parking-card" style="border-left-color:var(--blue)">
+        <h4>All Reservations Tab</h4>
+        <ul>
+          <li>Search by name, phone, plate, confirmation#</li>
+          <li>Filter by lot</li>
+          <li>Paginated list of all reservations</li>
+        </ul>
+      </div>
+      <div class="parking-card" style="border-left-color:var(--purple)">
+        <h4>Checkout Flow</h4>
+        <ul>
+          <li>Lockbox modal — select box, sends SMS with code</li>
+          <li>In-person checkout — no SMS needed</li>
+          <li>8 physical lockboxes tracked in lock_boxes table</li>
+        </ul>
+      </div>
+      <div class="parking-card" style="border-left-color:var(--cyan)">
+        <h4>Visual Indicators</h4>
+        <ul>
+          <li>Sky-blue "Shuttle" badge on shuttle reservations</li>
+          <li>Status badges: reserved, checked_in, checked_out, no_show, cancelled</li>
+          <li>Editable dates, services, and staff notes on detail page</li>
+        </ul>
+      </div>
+      <div class="parking-card" style="border-left-color:var(--orange)">
+        <h4>Wix Legacy</h4>
+        <ul>
+          <li>Wix automation "ShopPilot Parking Webhook" is DEACTIVATED</li>
+          <li>Wix URL redirects point old forms to BroadwayMotorsMA.com</li>
+          <li>Webhook bridge code can be deleted</li>
+        </ul>
+      </div>
+    </div>
+  `;
+
+  // Key files
+  document.getElementById('parking-key-files').innerHTML = Object.entries(PARKING_KEY_FILES_DATA).map(([project, files]) => `
+    <div style="margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;">${project}</div>
+      <table class="parking-table">
+        <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+        <tbody>${files.map(f => `
+          <tr><td><code>${f.file}</code></td><td style="color:var(--text-muted)">${f.desc}</td></tr>
+        `).join('')}</tbody>
+      </table>
+    </div>
+  `).join('');
+}
+
+// ==========================================
+// NAV & INIT
+// ==========================================
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.view).classList.add('active');
+  });
+});
+
+renderSystemMap();
+renderFailureImpact();
+renderFlowSelector();
+renderSchema();
+renderRules();
+renderRoutes();
+renderInfrastructure();
+renderParking();
+</script>
+</body>
+</html>
