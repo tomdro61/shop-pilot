@@ -1783,3 +1783,184 @@ Fixed sluggish search behavior across all search pages and audited/fixed revalid
 
 ### What's NOT Done Yet
 - General page navigation speed is limited by Supabase query latency per request. Improving this would require refactoring data-fetching to use `createAdminClient()` for cacheable queries (a larger architectural change).
+
+---
+
+## Session 26 — 2026-03-04 — Dual-Line Messaging System, Lockbox Checkout, Parking Specials
+
+### What Was Completed
+
+**Full messaging system overhaul across 6 phases — dual-line SMS routing, standardized templates, Quo contact creation, lockbox checkout flow, parking specials upsell, and inbound message routing.**
+
+#### Phase 1: Dual-Line Messaging Foundation
+- **Phone line routing:** `PhoneLine` type (`"shop" | "parking"`) with `getPhoneNumber()` helper in `src/lib/quo/routing.ts`
+- **Quo client updated:** `sendSMS()` now accepts optional `from` param to override the default number
+- **`sendCustomerSMS()` updated:** Accepts `line` param (defaults to `"shop"`), passes correct `from` number, logs `phone_line` to messages table
+- **`logInboundSMS()` updated:** Accepts `phoneLine` param for inbound message tracking
+- **Migration:** `messages.phone_line` column (text, nullable for backward compat)
+- **7 SMS templates:** `src/lib/messaging/templates.ts` — pure functions for estimate sent, invoice sent, vehicle ready, payment received, reservation confirmation, pickup ready, parking specials
+
+#### Phase 2: Shop Line Messages (617)
+- **Estimate sent SMS:** Replaced hardcoded body with `estimateSentSMS()` template including vehicle year/make/model. Expanded select query to include vehicle info.
+- **Invoice sent SMS:** Replaced hardcoded body with `invoiceSentSMS()` template including vehicle info. Added `vehicles` join to job query.
+- **Vehicle ready SMS:** New `sendVehicleReadySMS()` server action + `SendReadyTextButton` component on job detail page (visible when job status is "complete" and customer has phone)
+- **Payment received SMS:** Added to Stripe `invoice.paid` webhook handler — looks up customer + vehicle, sends `paymentReceivedSMS()` on shop line
+
+#### Phase 3: Parking Messaging + Quo Contacts
+- **Quo contact creation:** `createOrUpdateQuoContact()` in `src/lib/quo/contacts.ts` — searches by `externalId` (phone number), creates with `defaultFields` structure. Source: "ShopPilot".
+- **Shared handler:** `onReservationCreated()` in `src/lib/parking/on-reservation-created.ts` — creates Quo contact + sends confirmation SMS. Called from both Wix webhook and direct form submit routes.
+- **Confirmation SMS currently disabled** — early return to avoid duplicates while Wix automations still active. Remove the `return` after TODO comment to re-enable.
+
+#### Phase 4: Lock Box Management + Checkout Flow
+- **Migration:** `lock_boxes` table (8 boxes seeded with real codes), `parking_reservations.lock_box_number` column
+- **Server actions:** `getLockBoxes()`, `checkOutWithLockbox()` (sets status + sends pickup SMS with box # and code), `checkOutInPerson()` (sets status, no SMS)
+- **Checkout modal:** `src/components/parking/checkout-modal.tsx` — Dialog with two paths: lockbox selection (dropdown + code preview + SMS confirmation) or in-person toggle (no SMS). Replaces old simple CheckOutButton.
+- **Updated all CheckOutButton usages** in parking-actions, parking-all-view, parking-today-view to pass `customerName` and `customerPhone` props
+
+#### Phase 5: Parking Specials Upsell
+- **`PARKING_SPECIALS`** array added to constants (8 specials with labels, prices, optional notes)
+- **`sendParkingSpecialsSMS()`** server action — sends specials list via parking line
+- **`SendSpecialsButton`** component on parking detail page (visible for checked-in reservations with phone)
+
+#### Phase 6: Inbound Message Routing
+- **Quo inbound webhook updated** — reads `to` field from payload, matches against `QUO_SHOP_PHONE_NUMBER` / `QUO_PHONE_NUMBER` to determine `phoneLine`, passes to `logInboundSMS()`
+
+### Bug Fixes During Testing
+- **Vercel serverless early termination:** Fire-and-forget promises were getting killed before completing. Changed `onReservationCreated()` to be `await`ed in both webhook routes.
+- **Quo API field structure:** Contact creation required `defaultFields` wrapper and `name` field on `phoneNumbers`/`emails` entries. Fixed after 400 error in production logs.
+- **Quo API no phone search:** Quo doesn't support `?phoneNumbers=` filtering — switched to `externalId` based dedup using phone number.
+
+### New Files (10)
+- `supabase/migrations/20260304000000_messages_phone_line.sql`
+- `supabase/migrations/20260304100000_lock_boxes.sql`
+- `src/lib/quo/routing.ts`
+- `src/lib/quo/contacts.ts`
+- `src/lib/messaging/templates.ts`
+- `src/lib/parking/on-reservation-created.ts`
+- `src/lib/actions/lock-boxes.ts`
+- `src/components/dashboard/send-ready-text-button.tsx`
+- `src/components/parking/checkout-modal.tsx`
+- `src/components/parking/send-specials-button.tsx`
+
+### Modified Files (15)
+- `src/lib/quo/client.ts` — `from` param
+- `src/lib/actions/messages.ts` — `line` param, `sendVehicleReadySMS()`, `sendParkingSpecialsSMS()`
+- `src/lib/actions/estimates.ts` — vehicle query + template
+- `src/lib/actions/invoices.ts` — vehicle query + template
+- `src/lib/constants.ts` — `PARKING_SPECIALS`
+- `src/types/supabase.ts` — `phone_line`, `lock_boxes`, `lock_box_number`
+- `src/app/api/stripe/webhooks/route.ts` — payment received SMS
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — SendReadyTextButton
+- `src/app/api/webhooks/wix-parking/route.ts` — `onReservationCreated()` call
+- `src/app/api/parking/submit/route.ts` — `onReservationCreated()` call
+- `src/app/api/messaging/quo/webhooks/route.ts` — inbound phone_line routing
+- `src/components/parking/parking-actions.tsx` — CheckOutButton opens modal
+- `src/components/parking/parking-all-view.tsx` — CheckOutButton props
+- `src/components/parking/parking-today-view.tsx` — CheckOutButton props
+- `src/app/(dashboard)/parking/[id]/page.tsx` — props + SendSpecialsButton
+
+### Migrations (applied to Supabase)
+- `20260304000000_messages_phone_line.sql` — `ALTER TABLE messages ADD COLUMN phone_line text`
+- `20260304100000_lock_boxes.sql` — `CREATE TABLE lock_boxes`, seed 8 boxes, `ALTER TABLE parking_reservations ADD COLUMN lock_box_number int`
+
+### Env Vars
+- `QUO_SHOP_PHONE_NUMBER=+16179968371` — added to `.env.local` (not yet on Vercel — shop line not ported to Quo yet)
+- `QUO_PHONE_NUMBER=+19786849254` — existing, unchanged
+
+### Build Status
+- `next build` and `tsc --noEmit` pass cleanly
+
+### What's NOT Done Yet
+- [x] ~~Re-enable parking confirmation SMS~~ DONE (Session 27)
+- [x] ~~Disable Wix parking confirmation automations~~ DONE (Session 27)
+- [ ] Add `QUO_SHOP_PHONE_NUMBER` to Vercel env vars once shop line is ported to Quo
+- [ ] Set up Wix URL redirects from old form pages to BroadwayMotorsMA.com form URLs
+
+---
+
+## Session 27 — 2026-03-06 — New Parking Forms, Lot-Specific Confirmations, SMS Enablement
+
+### What Was Completed
+
+**Migrated parking forms from Wix to BroadwayMotorsMA.com — 5 forms with lot-specific confirmation pages and SMS, triple-line phone routing, Wix automation deactivated.**
+
+#### New Parking Forms (broadway-motors-web)
+- **Shuttle form** at `/confirm-self-park/shuttle` — `parkingType="shuttle"`, uses Broadway Motors lot
+- **Valet form** at `/confirm-self-park/valet` — flight number fields (departing + arriving), no confirmation number field, `parkingType="valet"`
+- **ParkingForm component updated** — new props: `parkingType`, `showFlightFields`, `hideConfirmationNumber`, `hideServices`
+- **Services section hidden** on APB1, APB2, and valet forms (only shown on Broadway Motors self-park and shuttle)
+
+#### Lot-Specific Confirmation Pages (broadway-motors-web)
+- **Single thank-you page** with `?lot=` query param renders different content per lot
+- **Broadway Motors self-park** — 88 Broadway address, lockbox drop-off, Patriot Taxi shuttle ($16), parking spots, front desk hours, after-hours lockbox code, modifications policy, service upsells
+- **Broadway Motors shuttle** — same as self-park + "complimentary shuttle ready when you arrive", return via cab/rideshare
+- **APB1** — 961 Broadway Saugus, numbered spots, Uber/Lyft ($30-$40), car stays in place, extensions at airportparkingboston.com
+- **APB2** — 2050 Revere Beach Pkwy Everett, highlighted spots, Uber/Lyft ($25-$35), car stays in place
+- **Valet** — simple confirmation, valet will reach out, contact number
+- **Phone numbers corrected:** parking line (978-684-9254) for Broadway Motors pages, APB line (978-644-9391) for APB1/APB2/valet pages
+
+#### Database Changes (shop-pilot)
+- **Migration** `20260305000000_parking_type_and_flights.sql` — adds `parking_type` (text, default 'self_park'), `departing_flight` (text, nullable), `arriving_flight` (text, nullable) to `parking_reservations`
+- **Validator updated** — `confirmation_number` now optional (empty default), added `parking_type`, `departing_flight`, `arriving_flight` as optional fields
+- **Submit route updated** — passes new fields through to insert
+
+#### Lot-Specific Confirmation SMS (shop-pilot)
+- **`reservationConfirmationSMS()` template** now accepts `lot` and `parkingType` params, returns different messages:
+  - Broadway Motors self-park: confirmed + dates + instructions link
+  - Broadway Motors shuttle: same + "shuttle will be ready when you arrive"
+  - APB1/APB2: confirmed + dates + instructions link to lot-specific thank-you page
+  - Valet: "your valet service is confirmed, your valet will be reaching out shortly"
+- **Confirmation SMS enabled for ALL lots** — removed Broadway Motors-only restriction in `on-reservation-created.ts`
+- **`parkingType` passed through** from both submit route and Wix webhook to `onReservationCreated()`
+
+#### Triple-Line Phone Routing (shop-pilot)
+- **`PhoneLine` type** expanded: `"shop" | "parking" | "apb"`
+- **`QUO_APB_PHONE_NUMBER`** env var (+19786449391) — APB1, APB2, and Valet use this line
+- **`getParkingLine()`** routes Broadway Motors → `parking` line, everything else → `apb` line
+
+#### Dashboard Updates (shop-pilot)
+- **Shuttle badge** — sky-blue "Shuttle" badge on parking reservation cards (full + compact) and detail page, only for `parking_type === 'shuttle'`
+- **Wix webhook** — tags Boston Logan Valet submissions with `parking_type: 'valet'`
+
+#### Dedup Fix
+- **Dedup check** now includes `lot` in addition to phone + drop-off date (both submit route and Wix webhook). Same person can book different lots on the same day.
+
+#### Wix Migration
+- **Wix "ShopPilot Parking Webhook" automation deactivated** — no more Wix → ShopPilot data flow
+- **Wix URL redirects** still need to be set up in Wix admin to send users from old form URLs to BroadwayMotorsMA.com forms
+
+### New Files (3)
+- `broadway-motors-web/src/app/confirm-self-park/shuttle/page.tsx`
+- `broadway-motors-web/src/app/confirm-self-park/valet/page.tsx`
+- `shop-pilot/supabase/migrations/20260305000000_parking_type_and_flights.sql`
+
+### Modified Files
+**broadway-motors-web (4):**
+- `src/components/parking-form.tsx` — new props
+- `src/app/confirm-self-park/thank-you/page.tsx` — lot-specific content
+- `src/app/confirm-self-park/apb1/page.tsx` — hideServices
+- `src/app/confirm-self-park/apb2/page.tsx` — hideServices
+
+**shop-pilot (7):**
+- `src/lib/validators/parking.ts` — optional fields
+- `src/app/api/parking/submit/route.ts` — new fields + dedup fix
+- `src/app/api/webhooks/wix-parking/route.ts` — parking_type + dedup fix
+- `src/types/supabase.ts` — new columns
+- `src/lib/messaging/templates.ts` — lot-specific SMS
+- `src/lib/parking/on-reservation-created.ts` — parkingType param, all-lot SMS enabled
+- `src/components/parking/parking-reservation-card.tsx` — shuttle badge
+- `src/app/(dashboard)/parking/[id]/page.tsx` — shuttle badge
+
+### Migrations (applied to Supabase)
+- `20260305000000_parking_type_and_flights.sql`
+
+### Env Vars
+- `QUO_APB_PHONE_NUMBER=+19786449391` — in .env.local + Vercel
+
+### Build Status
+- Both `shop-pilot` and `broadway-motors-web` pass `tsc --noEmit` and `npm run build` cleanly
+
+### What's NOT Done Yet
+- [ ] Set up Wix URL redirects from old form pages to BroadwayMotorsMA.com
+- [ ] Add `QUO_SHOP_PHONE_NUMBER` to Vercel env vars once shop line is ported to Quo
+- [ ] Retire Wix webhook bridge code once redirects confirmed working

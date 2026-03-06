@@ -19,7 +19,7 @@ ShopPilot is a custom shop management system for Broadway Motors, an independent
 | Backend/DB | Supabase (PostgreSQL) | Auth, database, real-time subscriptions, file storage, Row Level Security |
 | AI Assistant | Claude API (Anthropic) | Function calling / tool use for all CRUD and external operations |
 | Payments | Stripe | Invoicing, webhooks, Terminal (WisePOS E) for in-person card payments, Quick Pay for walk-ins |
-| SMS | Quo (formerly OpenPhone) API | Integrated — send/receive/webhook wired. Blocked on A2P registration + number port. |
+| SMS | Quo (formerly OpenPhone) API | Integrated — dual-line routing (shop + parking), send/receive/webhook, Quo contact creation, 7 templates. Blocked on A2P registration. |
 | Email | Resend | Integrated — branded HTML templates for estimates + receipts, AI send_email tool, test mode fallback. Needs domain verification for live sending. |
 | Hosting | Vercel (free tier) | Auto-deploy from Git, edge functions, free SSL |
 | Parts (future) | Parts Tech API (TBD) | Needs API access investigation |
@@ -37,10 +37,11 @@ Core tables in Supabase PostgreSQL:
 - **estimates** — id, job_id, status (draft/sent/approved/declined), sent_at, approved_at, declined_at, approval_token, tax_rate, created_at
 - **estimate_line_items** — id, estimate_id, type, description, quantity, unit_cost, total, part_number, category
 - **invoices** — id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status (draft/sent/paid), amount, paid_at
-- **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at
+- **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at, phone_line (text, nullable — 'shop' or 'parking')
+- **lock_boxes** — id, box_number (int, unique), code (text), created_at. 8 physical lockboxes for parking key handoff.
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
 - **shop_settings** — single-row config: tax_rate, shop_supplies_enabled, shop_supplies_method (percent_of_labor/parts/total/flat), shop_supplies_rate, shop_supplies_cap, shop_supplies_categories (jsonb, nullable — scopes fee to specific job categories), hazmat_enabled, hazmat_amount, hazmat_label, hazmat_categories (jsonb, nullable — scopes fee to specific job categories)
-- **parking_reservations** — id, first_name, last_name, email, phone, drop_off_date, drop_off_time, pick_up_date, pick_up_time, make, model, license_plate, lot (text), confirmation_number, services_interested (text[]), liability_acknowledged, status (parking_status enum), checked_in_at, checked_out_at, spot_number, staff_notes, customer_id (FK to customers, nullable, ON DELETE SET NULL), created_at, updated_at. Linked to customers via `findOrCreateParkingCustomer()` on form submit.
+- **parking_reservations** — id, first_name, last_name, email, phone, drop_off_date, drop_off_time, pick_up_date, pick_up_time, make, model, license_plate, lot (text), confirmation_number, services_interested (text[]), liability_acknowledged, status (parking_status enum), checked_in_at, checked_out_at, spot_number, lock_box_number (int, nullable), staff_notes, customer_id (FK to customers, nullable, ON DELETE SET NULL), color (text, nullable), parking_type (text, nullable, default 'self_park' — values: self_park/shuttle/valet), departing_flight (text, nullable), arriving_flight (text, nullable), created_at, updated_at. Linked to customers via `findOrCreateParkingCustomer()` on form submit.
 
 **Job statuses:** Not Started → Waiting for Parts → In Progress → Complete
 **Payment tracked separately:** payment_status (unpaid → invoiced → paid / waived), payment_method (stripe/cash/check/ach/terminal)
@@ -256,13 +257,16 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 21:** Estimate delete, category grouping on estimates, Add Service overflow fix
 **Session 22:** Airport Parking Management — 3-lot system with dashboard, public API, AI tools
 **Session 23:** Link parking reservations to customers — auto find-or-create, parking type, customer detail parking history
+**Session 24:** Wix parking webhook bridge — Wix form submissions → ShopPilot reservations + customers
+**Session 26:** Messaging system overhaul — dual-line SMS routing (shop 617 + parking 978), 7 message templates, Quo contact creation for parking customers, lockbox checkout flow with SMS, parking specials upsell, inbound message routing
+**Session 27:** New parking forms (shuttle + valet) on BroadwayMotorsMA.com, lot-specific confirmation pages with instructions, lot-specific confirmation SMS, triple-line phone routing (shop/parking/APB), Wix automation deactivated
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
 - **Service categorization:** Line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
 - Stripe invoicing + estimate builder with public approval page fully working (live mode). Estimates can be deleted and recreated to pick up updated job line items. Estimate line items carry categories and are grouped by service category on both internal and customer-facing views.
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
-- Quo SMS: fully wired (send/receive/webhook), auto-texts estimate approval links + invoice payment links; blocked on A2P registration
+- Quo SMS: fully wired (send/receive/webhook), triple-line routing — shop (617-996-8371, `QUO_SHOP_PHONE_NUMBER`), parking (978-684-9254, `QUO_PHONE_NUMBER`), APB (978-644-9391, `QUO_APB_PHONE_NUMBER`). Auto-texts estimate/invoice links on shop line. Lot-specific confirmation SMS enabled for all 5 lots. Quo contact auto-creation for parking customers with "Parking" tag. 7 SMS templates in `src/lib/messaging/templates.ts` (reservation confirmation is lot-aware). Phone line tracked on all messages (`phone_line` column). Blocked on A2P registration.
 - Resend Email: full transactional email — branded HTML templates (estimate, receipt, generic), auto-send on estimate send + invoice paid, AI `send_email` tool, test mode with console logging, delivery status tracking in `messages` table
 - AI Assistant: conversational chat at `/chat` with 43 tools covering all CRUD + SMS + email + settings + parking operations, streaming SSE, floating chat bubble on all pages
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
@@ -274,14 +278,16 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Printable Repair Order: `/jobs/[id]/print` — print-optimized document with shop header, customer/vehicle info, itemized line items, tax, totals
 - **Shop Settings:** Configurable tax rate, shop supplies fee (4 calculation methods + cap), environmental/hazmat fee. Both fees can be scoped to specific job categories (null = all categories, backward compatible). Settings page at `/settings/rates`. All totals computed via shared `calculateTotals()` utility. Fees default to disabled. Tax rule: parts + shop supplies are taxable; labor and hazmat are not.
 - **Part Cost Tracking:** Optional `cost` (wholesale price) field on part line items. Reports compute actual gross profit when cost is available, fall back to 40% margin estimate when not. Cost data coverage % shown on reports. Cost is never exposed to customers (invoices, estimates, print RO all use retail price only).
-- **Airport Parking:** Dashboard at `/parking` managing 3 lots (Broadway Motors, Airport Parking Boston 1, Airport Parking Boston 2). Three views: Today (arrivals/pickups/parked), Service Leads (parking customers interested in repairs), All Reservations. Public API at `/api/parking/submit` accepts form POSTs with CORS, rate limiting, and honeypot spam protection. 6 AI tools for parking operations. Parking reservations auto-link to `customers` table via `findOrCreateParkingCustomer()` (dedup by email, then phone). Customer detail page shows "Parking History" section. Backfill script at `scripts/backfill-parking-customers.ts`.
+- **Airport Parking:** Dashboard at `/parking` managing 4 lots (Broadway Motors, Airport Parking Boston 1, Airport Parking Boston 2, Boston Logan Valet) with 3 parking types (self_park, shuttle, valet). Three views: Today (arrivals/pickups/parked), Service Leads (parking customers interested in repairs), All Reservations. Shuttle reservations show sky-blue "Shuttle" badge on cards and detail page. Public API at `/api/parking/submit` accepts form POSTs with CORS, rate limiting (per-IP), honeypot spam protection, and dedup (phone + date + lot within 5 min). Wix webhook bridge at `/api/webhooks/wix-parking` (deactivated — Wix redirects to BroadwayMotorsMA.com forms). 5 public forms on BroadwayMotorsMA.com: self-park, shuttle, APB1, APB2, valet. Lot-specific confirmation pages with parking instructions. 6 AI tools for parking operations. Parking reservations auto-link to `customers` table via `findOrCreateParkingCustomer()` (dedup by email, then phone). Customer detail page shows "Parking History" section. Checkout flow with lockbox selection modal (8 physical lockboxes) — sends pickup SMS with box number + code, or in-person checkout without SMS. "Send Specials" button for upselling services to checked-in customers.
 - Deployed to Vercel at `https://shop-pilot-rosy.vercel.app`
 - GitHub repo: `https://github.com/tomdro61/shop-pilot` (private)
 
 **Remaining work:**
 - Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
 - A2P registration on Quo (blocked on number port + paid plan)
-- Message templates (estimate ready, car ready, payment reminder)
+- Add `QUO_SHOP_PHONE_NUMBER` to Vercel env vars once shop line is ported to Quo
+- Set up Wix URL redirects from old form pages to BroadwayMotorsMA.com form URLs
+- Retire Wix webhook bridge once redirects are confirmed working
 
 **Production readiness (before going live):**
 - ~~Upgrade Supabase to Pro ($25/mo)~~ DONE
