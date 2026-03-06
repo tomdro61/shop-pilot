@@ -191,7 +191,25 @@ export async function POST(request: Request) {
     const confirmationNumber = confirmationRaw || genConfirmation();
     const services = parseServices(servicesRaw);
 
-    // 7. Find or create customer
+    // 7. Dedup — skip if same phone + drop-off date already submitted recently
+    if (phone && dropOffDate) {
+      const supabaseCheck = createAdminClient();
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data: existing } = await supabaseCheck
+        .from("parking_reservations")
+        .select("id")
+        .eq("phone", phone)
+        .eq("drop_off_date", dropOffDate)
+        .gte("created_at", fiveMinAgo)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        console.log(`Wix parking webhook: duplicate submission for ${phone} on ${dropOffDate} — skipping`);
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+    }
+
+    // 8. Find or create customer
     const customerId = (email || phone)
       ? await findOrCreateParkingCustomer({
           first_name: firstName,
@@ -201,7 +219,7 @@ export async function POST(request: Request) {
         })
       : null;
 
-    // 8. Insert parking reservation
+    // 9. Insert parking reservation
     const supabase = createAdminClient();
     const { error } = await supabase.from("parking_reservations").insert({
       first_name: firstName,

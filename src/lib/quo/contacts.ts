@@ -91,6 +91,11 @@ export async function createOrUpdateQuoContact({
     });
 
     if (!createRes.ok) {
+      // 409 = race condition, contact was just created by a concurrent request
+      if (createRes.status === 409) {
+        console.log(`[Quo Contacts] Contact already exists for ${phone} (409 conflict) — skipping`);
+        return { success: true };
+      }
       const text = await createRes.text();
       console.error("[Quo Contacts] Create failed:", createRes.status, text);
       return { success: false };

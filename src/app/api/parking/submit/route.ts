@@ -96,6 +96,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true }, { headers });
   }
 
+  // Dedup — skip if same phone + drop-off date already submitted recently
+  if (parsed.data.phone && parsed.data.drop_off_date) {
+    const supabaseCheck = createAdminClient();
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: existing } = await supabaseCheck
+      .from("parking_reservations")
+      .select("id")
+      .eq("phone", parsed.data.phone)
+      .eq("drop_off_date", parsed.data.drop_off_date)
+      .gte("created_at", fiveMinAgo)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      return NextResponse.json({ success: true }, { headers });
+    }
+  }
+
   // Find or create a customer record for this parking reservation
   const customerId = await findOrCreateParkingCustomer({
     first_name: parsed.data.first_name,
