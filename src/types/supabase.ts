@@ -567,6 +567,9 @@ export type Database = {
           staff_notes: string | null;
           customer_id: string | null;
           color: string | null;
+          parking_type: string | null;
+          departing_flight: string | null;
+          arriving_flight: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -595,6 +598,9 @@ export type Database = {
           staff_notes?: string | null;
           customer_id?: string | null;
           color?: string | null;
+          parking_type?: string | null;
+          departing_flight?: string | null;
+          arriving_flight?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -623,6 +629,9 @@ export type Database = {
           staff_notes?: string | null;
           customer_id?: string | null;
           color?: string | null;
+          parking_type?: string | null;
+          departing_flight?: string | null;
+          arriving_flight?: string | null;
           created_at?: string;
           updated_at?: string;
         };

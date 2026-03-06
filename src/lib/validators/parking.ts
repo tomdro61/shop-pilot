@@ -15,7 +15,7 @@ export const parkingSubmitSchema = z.object({
   license_plate: z.string().min(1, "License plate is required").max(15),
   color: z.string().max(30).optional().default(""),
   lot: z.string().min(1, "Lot is required"),
-  confirmation_number: z.string().min(1, "Confirmation number is required").max(100),
+  confirmation_number: z.string().max(100).optional().default(""),
   services_interested: z
     .array(z.string().max(50))
     .optional()
@@ -23,6 +23,9 @@ export const parkingSubmitSchema = z.object({
   liability_acknowledged: z.boolean().refine((val) => val === true, {
     message: "Liability must be acknowledged",
   }),
+  parking_type: z.string().max(20).optional().default("self_park"),
+  departing_flight: z.string().max(20).optional().default(""),
+  arriving_flight: z.string().max(20).optional().default(""),
   // Honeypot — bots fill this in, humans don't see it
   website: z.string().optional().default(""),
 });
