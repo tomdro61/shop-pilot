@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true }, { headers });
   }
 
-  // Dedup — skip if same phone + drop-off date already submitted recently
+  // Dedup — skip if same phone + drop-off date + lot already submitted recently
   if (parsed.data.phone && parsed.data.drop_off_date) {
     const supabaseCheck = createAdminClient();
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -105,6 +105,7 @@ export async function POST(request: Request) {
       .select("id")
       .eq("phone", parsed.data.phone)
       .eq("drop_off_date", parsed.data.drop_off_date)
+      .eq("lot", parsed.data.lot)
       .gte("created_at", fiveMinAgo)
       .limit(1);
 

@@ -191,7 +191,7 @@ export async function POST(request: Request) {
     const confirmationNumber = confirmationRaw || genConfirmation();
     const services = parseServices(servicesRaw);
 
-    // 7. Dedup — skip if same phone + drop-off date already submitted recently
+    // 7. Dedup — skip if same phone + drop-off date + lot already submitted recently
     if (phone && dropOffDate) {
       const supabaseCheck = createAdminClient();
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -200,6 +200,7 @@ export async function POST(request: Request) {
         .select("id")
         .eq("phone", phone)
         .eq("drop_off_date", dropOffDate)
+        .eq("lot", lot)
         .gte("created_at", fiveMinAgo)
         .limit(1);
 
