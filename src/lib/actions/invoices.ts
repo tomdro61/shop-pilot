@@ -237,6 +237,41 @@ export async function createInvoiceFromJob(
   }
 }
 
+export async function getInvoices(status?: string, search?: string) {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("invoices")
+    .select(
+      "id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, created_at, jobs(id, title, customers(id, first_name, last_name), vehicles(year, make, model))"
+    )
+    .order("created_at", { ascending: false });
+
+  if (status && status !== "all") {
+    query = query.eq("status", status as "draft" | "sent" | "paid");
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw new Error(error.message);
+
+  let invoices = data ?? [];
+
+  // Client-side search filter (customer name) since we can't filter on joined table easily
+  if (search) {
+    const term = search.toLowerCase();
+    invoices = invoices.filter((inv) => {
+      const job = inv.jobs as { customers: { first_name: string; last_name: string } | null } | null;
+      const customer = job?.customers;
+      if (!customer) return false;
+      const fullName = `${customer.first_name} ${customer.last_name}`.toLowerCase();
+      return fullName.includes(term);
+    });
+  }
+
+  return invoices;
+}
+
 export async function getInvoiceForJob(jobId: string) {
   const supabase = await createClient();
 

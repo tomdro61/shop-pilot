@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mainNav = [
@@ -10,6 +10,7 @@ const mainNav = [
   { href: "/jobs", label: "Jobs", icon: Wrench },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/quick-pay", label: "Quick Pay", icon: CircleDollarSign },
+  { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/inspections", label: "Inspections", icon: ClipboardCheck },
   { href: "/parking", label: "Parking", icon: PlaneLanding },
 ];
