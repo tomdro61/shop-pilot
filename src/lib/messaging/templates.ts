@@ -74,14 +74,39 @@ export function reservationConfirmationSMS({
   dropOffTime,
   pickUpDate,
   pickUpTime,
+  lot,
+  parkingType,
 }: {
   firstName: string;
   dropOffDate: string;
   dropOffTime: string;
   pickUpDate: string;
   pickUpTime: string;
+  lot?: string;
+  parkingType?: string;
 }) {
-  return `Hi ${firstName}, your parking reservation is confirmed!\n\nDrop off: ${dropOffDate} at ${dropOffTime}\nPick up: ${pickUpDate} at ${pickUpTime}\n\nSee you soon — Broadway Motors.\n\nParking instructions: https://www.broadwaymotorsrevere.com/afterparkandrepair`;
+  // Valet — short confirmation, valet will reach out
+  if (lot === "Boston Logan Valet" || parkingType === "valet") {
+    return `Hi ${firstName}, your valet service is confirmed! Your valet will be reaching out to you shortly.`;
+  }
+
+  // APB1
+  if (lot === "Airport Parking Boston 1") {
+    return `Hi ${firstName}, your parking reservation is confirmed!\n\nDrop off: ${dropOffDate} at ${dropOffTime}\nPick up: ${pickUpDate} at ${pickUpTime}\n\nParking instructions: https://broadwaymotorsma.com/confirm-self-park/thank-you?lot=apb1`;
+  }
+
+  // APB2
+  if (lot === "Airport Parking Boston 2") {
+    return `Hi ${firstName}, your parking reservation is confirmed!\n\nDrop off: ${dropOffDate} at ${dropOffTime}\nPick up: ${pickUpDate} at ${pickUpTime}\n\nParking instructions: https://broadwaymotorsma.com/confirm-self-park/thank-you?lot=apb2`;
+  }
+
+  // Broadway Motors shuttle
+  if (parkingType === "shuttle") {
+    return `Hi ${firstName}, your parking reservation is confirmed!\n\nDrop off: ${dropOffDate} at ${dropOffTime}\nPick up: ${pickUpDate} at ${pickUpTime}\n\nYour shuttle will be ready to take you to the airport when you arrive.\n\nSee you soon — Broadway Motors.\n\nParking instructions: https://broadwaymotorsma.com/confirm-self-park/thank-you?lot=shuttle`;
+  }
+
+  // Broadway Motors self-park (default)
+  return `Hi ${firstName}, your parking reservation is confirmed!\n\nDrop off: ${dropOffDate} at ${dropOffTime}\nPick up: ${pickUpDate} at ${pickUpTime}\n\nSee you soon — Broadway Motors.\n\nParking instructions: https://broadwaymotorsma.com/confirm-self-park/thank-you?lot=broadway-motors`;
 }
 
 export function pickupReadySMS({

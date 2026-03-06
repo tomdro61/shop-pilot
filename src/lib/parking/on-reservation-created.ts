@@ -24,6 +24,7 @@ export async function onReservationCreated({
   pickUpTime,
   customerId,
   lot,
+  parkingType,
 }: {
   phone: string;
   firstName: string;
@@ -35,6 +36,7 @@ export async function onReservationCreated({
   pickUpTime: string;
   customerId: string | null;
   lot?: string;
+  parkingType?: string;
 }) {
   // 1. Create/update Quo contact (graceful failure — don't block SMS if this fails)
   const e164Phone = toE164(phone);
@@ -85,6 +87,8 @@ export async function onReservationCreated({
     dropOffTime: formatTime(dropOffTime),
     pickUpDate: formatDate(pickUpDate),
     pickUpTime: formatTime(pickUpTime),
+    lot,
+    parkingType,
   });
 
   try {
