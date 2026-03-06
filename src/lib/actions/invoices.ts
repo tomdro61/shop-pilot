@@ -46,7 +46,13 @@ export async function getOrCreateStripeCustomer(customerId: string) {
   return { data: stripeCustomer.id };
 }
 
-export async function createInvoiceFromJob(jobId: string) {
+export async function createInvoiceFromJob(
+  jobId: string,
+  options?: { sendText?: boolean; sendEmail?: boolean }
+) {
+  const sendText = options?.sendText ?? false;
+  const sendEmail = options?.sendEmail ?? false;
+
   const supabase = await createClient();
 
   // Get job with relations
@@ -90,10 +96,6 @@ export async function createInvoiceFromJob(jobId: string) {
     return { error: "Job has no customer" };
   }
 
-  if (!customer.email) {
-    return { error: "Customer must have an email address for invoicing" };
-  }
-
   const lineItems = (job.job_line_items || []) as {
     type: "labor" | "part";
     description: string;
@@ -114,10 +116,36 @@ export async function createInvoiceFromJob(jobId: string) {
   });
   const derivedCategory = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
-  // Get or create Stripe customer
-  const stripeResult = await getOrCreateStripeCustomer(customer.id);
-  if (stripeResult.error || !stripeResult.data) {
-    return { error: stripeResult.error || "Failed to get Stripe customer" };
+  // Get or create Stripe customer (with stale ID verification)
+  const stripe = getStripe();
+  let stripeCustomerId = customer.stripe_customer_id;
+
+  if (stripeCustomerId) {
+    // Verify the Stripe customer still exists
+    try {
+      const existing = await stripe.customers.retrieve(stripeCustomerId);
+      if ((existing as { deleted?: boolean }).deleted) {
+        stripeCustomerId = null;
+      }
+    } catch {
+      // Customer doesn't exist in Stripe — clear stale ID
+      stripeCustomerId = null;
+    }
+  }
+
+  if (!stripeCustomerId) {
+    const stripeCustomer = await stripe.customers.create({
+      name: `${customer.first_name} ${customer.last_name}`,
+      email: customer.email || undefined,
+      phone: customer.phone || undefined,
+      metadata: { supabase_customer_id: customer.id },
+    });
+    stripeCustomerId = stripeCustomer.id;
+
+    await supabase
+      .from("customers")
+      .update({ stripe_customer_id: stripeCustomerId })
+      .eq("id", customer.id);
   }
 
   // Create Stripe invoice with current shop settings
@@ -125,11 +153,13 @@ export async function createInvoiceFromJob(jobId: string) {
   try {
     const { stripeInvoiceId, hostedInvoiceUrl, amountDue } =
       await createStripeInvoice({
-        stripeCustomerId: stripeResult.data,
+        stripeCustomerId,
         lineItems,
         jobCategory: derivedCategory !== "Uncategorized" ? derivedCategory : null,
         settings: shopSettings,
       });
+
+    const invoiceStatus = (sendText || sendEmail) ? "sent" : "draft";
 
     // Insert invoice record
     const { data: invoice, error: insertError } = await supabase
@@ -138,7 +168,7 @@ export async function createInvoiceFromJob(jobId: string) {
         job_id: jobId,
         stripe_invoice_id: stripeInvoiceId,
         stripe_hosted_invoice_url: hostedInvoiceUrl,
-        status: "sent",
+        status: invoiceStatus,
         amount: amountDue / 100, // Convert cents to dollars
       })
       .select()
@@ -148,12 +178,13 @@ export async function createInvoiceFromJob(jobId: string) {
       return { error: "Invoice created in Stripe but failed to save locally" };
     }
 
-    // Fire-and-forget SMS with payment link
-    if (customer.phone && hostedInvoiceUrl) {
+    const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+
+    // Send SMS with payment link if requested
+    if (sendText && customer.phone && hostedInvoiceUrl) {
       import("@/lib/messaging/templates")
-        .then(({ invoiceSentSMS }) => {
-          const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-          return import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
+        .then(({ invoiceSentSMS }) =>
+          import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
             sendCustomerSMS({
               customerId: customer.id,
               body: invoiceSentSMS({
@@ -166,9 +197,36 @@ export async function createInvoiceFromJob(jobId: string) {
               jobId,
               line: "shop",
             })
+          )
+        )
+        .catch((err) => console.error("Failed to send invoice SMS:", err));
+    }
+
+    // Send email with payment link if requested
+    if (sendEmail && customer.email && hostedInvoiceUrl) {
+      const vehicleDesc = vehicle
+        ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")
+        : "Vehicle";
+
+      import("@/lib/resend/templates")
+        .then(({ invoiceReadyEmail }) => {
+          const { subject, html } = invoiceReadyEmail({
+            customerName: customer.first_name,
+            vehicleDesc,
+            jobTitle: job.title,
+            paymentUrl: hostedInvoiceUrl,
+            amount: amountDue / 100,
+          });
+          return import("@/lib/actions/email").then(({ sendCustomerEmail }) =>
+            sendCustomerEmail({
+              customerId: customer.id,
+              subject,
+              html,
+              jobId,
+            })
           );
         })
-        .catch((err) => console.error("Failed to send invoice SMS:", err));
+        .catch((err) => console.error("Failed to send invoice email:", err));
     }
 
     revalidatePath(`/jobs/${jobId}`);

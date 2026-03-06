@@ -6,16 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { createInvoiceFromJob } from "@/lib/actions/invoices";
 import { INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
@@ -27,6 +27,7 @@ interface InvoiceSectionProps {
   jobStatus: JobStatus;
   invoice: Invoice | null;
   customerEmail: string | null;
+  customerPhone: string | null;
   isFleet?: boolean;
 }
 
@@ -35,13 +36,17 @@ export function InvoiceSection({
   jobStatus,
   invoice,
   customerEmail,
+  customerPhone,
   isFleet = false,
 }: InvoiceSectionProps) {
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [sendText, setSendText] = useState(!!customerPhone);
+  const [sendEmail, setSendEmail] = useState(!!customerEmail);
 
   async function handleCreateInvoice() {
     setLoading(true);
-    const result = await createInvoiceFromJob(jobId);
+    const result = await createInvoiceFromJob(jobId, { sendText, sendEmail });
     setLoading(false);
 
     if (result.error) {
@@ -49,7 +54,13 @@ export function InvoiceSection({
       return;
     }
 
-    toast.success("Invoice created and sent to customer");
+    setOpen(false);
+    const channels = [sendText && "text", sendEmail && "email"].filter(Boolean);
+    if (channels.length > 0) {
+      toast.success(`Invoice created and sent via ${channels.join(" & ")}`);
+    } else {
+      toast.success("Invoice created (not sent to customer)");
+    }
   }
 
   // Don't show if job isn't complete and no invoice exists
@@ -88,33 +99,68 @@ export function InvoiceSection({
             <p className="text-sm text-muted-foreground">
               Job is complete. Ready to invoice.
             </p>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
                 <Button size="sm" disabled={loading}>
                   <FileText className="mr-2 h-4 w-4" />
                   Create Invoice
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Create & Send Invoice</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will create a Stripe invoice and send it to{" "}
-                    <strong>{customerEmail || "the customer"}</strong>. They will
-                    receive an email with a link to pay.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create & Send Invoice</DialogTitle>
+                  <DialogDescription>
+                    This will create a Stripe invoice with a payment link.
+                    Choose how to deliver it to the customer.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="send-text"
+                      checked={sendText}
+                      onCheckedChange={(checked) => setSendText(checked === true)}
+                      disabled={!customerPhone}
+                    />
+                    <div className="grid gap-0.5 leading-none">
+                      <Label htmlFor="send-text" className={!customerPhone ? "text-muted-foreground" : ""}>
+                        Send via Text
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {customerPhone || "No phone number on file"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="send-email"
+                      checked={sendEmail}
+                      onCheckedChange={(checked) => setSendEmail(checked === true)}
+                      disabled={!customerEmail}
+                    />
+                    <div className="grid gap-0.5 leading-none">
+                      <Label htmlFor="send-email" className={!customerEmail ? "text-muted-foreground" : ""}>
+                        Send via Email
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {customerEmail || "No email address on file"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
                     onClick={handleCreateInvoice}
                     disabled={loading}
                   >
                     {loading ? "Creating..." : "Create & Send"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             </>
             )}
           </div>

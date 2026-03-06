@@ -285,9 +285,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Remaining work:**
 - Register WisePOS E reader + set `STRIPE_TERMINAL_READER_ID` env var
 - A2P registration on Quo (blocked on number port + paid plan)
-- Add `QUO_SHOP_PHONE_NUMBER` to Vercel env vars once shop line is ported to Quo
-- Set up Wix URL redirects from old form pages to BroadwayMotorsMA.com form URLs
-- Retire Wix webhook bridge once redirects are confirmed working
+- Retire Wix webhook bridge code (redirects confirmed, automation deactivated)
 
 **Production readiness (before going live):**
 - ~~Upgrade Supabase to Pro ($25/mo)~~ DONE

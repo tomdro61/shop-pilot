@@ -202,6 +202,7 @@ export default async function JobDetailPage({
           jobStatus={job.status as JobStatus}
           invoice={invoice}
           customerEmail={customer?.email || null}
+          customerPhone={customer?.phone || null}
           isFleet={customer?.customer_type === "fleet"}
         />
       </div>

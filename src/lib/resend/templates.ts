@@ -241,6 +241,61 @@ export function paymentReceiptEmail({
   };
 }
 
+export function invoiceReadyEmail({
+  customerName,
+  vehicleDesc,
+  jobTitle,
+  paymentUrl,
+  amount,
+}: {
+  customerName: string;
+  vehicleDesc: string;
+  jobTitle: string | null;
+  paymentUrl: string;
+  amount: number;
+}): { subject: string; html: string } {
+  const content = `
+    <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
+      Hi ${customerName},
+    </p>
+    <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
+      Your invoice from Broadway Motors is ready.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafaf9;border-radius:6px;padding:16px;margin:0 0 20px;">
+      <tr>
+        <td>
+          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Vehicle</p>
+          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${vehicleDesc}</p>
+          ${
+            jobTitle
+              ? `<p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Service</p>
+          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${jobTitle}</p>`
+              : ""
+          }
+          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Amount Due</p>
+          <p style="margin:0;color:#1c1917;font-size:20px;font-weight:700;">${formatMoneyDollars(amount)}</p>
+        </td>
+      </tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+      <tr>
+        <td align="center">
+          <a href="${paymentUrl}" style="display:inline-block;background-color:#2563eb;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:6px;">
+            Pay Invoice
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:20px 0 0;color:#a8a29e;font-size:13px;text-align:center;">
+      Click the button above to view and pay your invoice securely.
+    </p>`;
+
+  return {
+    subject: "Your invoice from Broadway Motors",
+    html: baseLayout(content),
+  };
+}
+
 export function genericEmail({
   customerName,
   body,
