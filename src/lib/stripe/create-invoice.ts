@@ -36,7 +36,7 @@ export async function createStripeInvoice({
     collection_method: "send_invoice",
     days_until_due: 30,
     description: jobCategory ? `Auto Repair - ${jobCategory}` : "Auto Repair Services",
-    auto_advance: true,
+    auto_advance: false,
   });
 
   // Add line items
@@ -84,9 +84,8 @@ export async function createStripeInvoice({
     });
   }
 
-  // Finalize and send
+  // Finalize (creates hosted payment URL) but don't send — staff sends manually
   const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
-  await stripe.invoices.sendInvoice(invoice.id);
 
   return {
     stripeInvoiceId: finalizedInvoice.id,

@@ -313,12 +313,12 @@ export async function approveEstimate(token: string) {
         settings: shopSettings,
       });
 
-    // Insert invoice record
+    // Insert invoice record (draft — staff sends manually when ready)
     await supabase.from("invoices").insert({
       job_id: job.id,
       stripe_invoice_id: stripeInvoiceId,
       stripe_hosted_invoice_url: hostedInvoiceUrl,
-      status: "sent",
+      status: "draft",
       amount: amountDue / 100,
     });
 
