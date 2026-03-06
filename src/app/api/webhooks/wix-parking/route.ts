@@ -220,6 +220,7 @@ export async function POST(request: Request) {
       : null;
 
     // 9. Insert parking reservation
+    const parkingType = lot === "Boston Logan Valet" ? "valet" : "self_park";
     const supabase = createAdminClient();
     const { error } = await supabase.from("parking_reservations").insert({
       first_name: firstName,
@@ -240,6 +241,7 @@ export async function POST(request: Request) {
       liability_acknowledged: true,
       status: "reserved" as const,
       customer_id: customerId,
+      parking_type: parkingType,
     });
 
     if (error) {
