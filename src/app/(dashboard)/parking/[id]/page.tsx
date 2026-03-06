@@ -100,6 +100,14 @@ export default async function ParkingDetailPage({
               >
                 {PARKING_STATUS_LABELS[reservation.status]}
               </Badge>
+              {reservation.parking_type === "shuttle" && (
+                <Badge
+                  variant="secondary"
+                  className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 border-0"
+                >
+                  Shuttle
+                </Badge>
+              )}
             </div>
             <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
               {reservation.lot} · #{reservation.confirmation_number}
