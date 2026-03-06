@@ -47,6 +47,14 @@ export function ParkingReservationCard({
             >
               {PARKING_STATUS_LABELS[reservation.status]}
             </Badge>
+            {reservation.parking_type === "shuttle" && (
+              <Badge
+                variant="secondary"
+                className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 border-0 text-[11px]"
+              >
+                Shuttle
+              </Badge>
+            )}
           </div>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
@@ -134,9 +142,19 @@ export function ParkingReservationCardCompact({
           : "border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900"
     }`}>
       <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
-          {reservation.first_name} {reservation.last_name}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
+            {reservation.first_name} {reservation.last_name}
+          </p>
+          {reservation.parking_type === "shuttle" && (
+            <Badge
+              variant="secondary"
+              className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 border-0 text-[10px] shrink-0"
+            >
+              Shuttle
+            </Badge>
+          )}
+        </div>
         <div className="mt-1 text-xs text-stone-500 dark:text-stone-400">
           <div className="flex items-center gap-2">
             <span className="font-medium text-stone-700 dark:text-stone-300">
