@@ -9,9 +9,10 @@ import {
   Clock, UserX, TrendingUp, TrendingDown, ClipboardCheck, Receipt,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, subWeeks, subDays } from "date-fns";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS } from "@/lib/constants";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrency } from "@/lib/utils/format";
 import { todayET } from "@/lib/utils";
+import { sumJobRevenue } from "@/lib/utils/revenue";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -41,36 +42,28 @@ const getDashboardData = unstable_cache(async () => {
 
   const twoDaysAgo = toDateStr(subDays(todayDate, 2));
 
-  function sumRevenue(jobs: { job_line_items: unknown }[] | null) {
-    return (
-      jobs?.reduce((sum, job) => {
-        const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-          (s, li) => s + (li.total || 0), 0
-        );
-        return sum + (jobTotal || 0);
-      }, 0) || 0
-    );
-  }
+  // Inspection data range — covers both current month and last week
+  const inspectionRangeStart = lastWeekStart < monthStart ? lastWeekStart : monthStart;
 
-  // 4 queries instead of 11:
+  // 5 queries:
   // 1. Active jobs (shop floor counts + stale jobs + tech activity today)
   // 2. Completed jobs this month (covers today/week/month revenue + unpaid)
   // 3. Completed jobs last week (week-over-week comparison)
   // 4. Recent jobs (for the list)
-  const [activeJobsResult, monthCompletedResult, lastWeekCompletedResult, recentJobsResult] = await Promise.all([
+  const [activeJobsResult, monthCompletedResult, lastWeekCompletedResult, recentJobsResult, inspectionRangeResult] = await Promise.all([
     supabase
       .from("jobs")
       .select("id, status, assigned_tech, date_received, date_finished, users!jobs_assigned_tech_fkey(name)")
       .in("status", ["not_started", "in_progress", "waiting_for_parts"]),
     supabase
       .from("jobs")
-      .select("id, date_finished, payment_status, job_line_items(total)")
+      .select("id, date_finished, payment_status, job_line_items(total, category)")
       .eq("status", "complete")
       .gte("date_finished", monthStart)
       .lte("date_finished", monthEnd),
     supabase
       .from("jobs")
-      .select("id, job_line_items(total)")
+      .select("id, job_line_items(total, category)")
       .eq("status", "complete")
       .gte("date_finished", lastWeekStart)
       .lte("date_finished", lastWeekEnd),
@@ -79,6 +72,11 @@ const getDashboardData = unstable_cache(async () => {
       .select("id, status, title, date_received, payment_status, job_line_items(total), customers(first_name, last_name), vehicles(year, make, model)")
       .order("date_received", { ascending: false })
       .limit(8),
+    supabase
+      .from("daily_inspection_counts")
+      .select("date, state_count, tnc_count")
+      .gte("date", inspectionRangeStart)
+      .lte("date", monthEnd),
   ]);
 
   const activeJobs = activeJobsResult.data || [];
@@ -125,20 +123,27 @@ const getDashboardData = unstable_cache(async () => {
     .neq("payment_status", "paid")
     .neq("payment_status", "waived");
 
-  const todayRevenue = sumRevenue(todayCompleted);
-  const weeklyRevenue = sumRevenue(weekCompleted);
-  const monthlyRevenue = sumRevenue(monthCompleted);
-  const lastWeekRevenue = sumRevenue(lastWeekCompletedResult.data);
-
   const weekJobCount = weekCompleted.length;
 
-  // Inspections today — from dedicated daily_inspection_counts table (use admin client directly, not server action, since we're inside unstable_cache)
-  const { data: inspectionData } = await supabase
-    .from("daily_inspection_counts")
-    .select("state_count, tnc_count")
-    .eq("date", today)
-    .maybeSingle();
-  const inspectionsToday = (inspectionData?.state_count ?? 0) + (inspectionData?.tnc_count ?? 0);
+  // Inspection revenue — from daily_inspection_counts, filtered by date range
+  const inspectionRows = inspectionRangeResult.data || [];
+  function sumInspectionRev(rows: typeof inspectionRows) {
+    return rows.reduce(
+      (sum, r) => sum + (r.state_count || 0) * INSPECTION_RATE_STATE + (r.tnc_count || 0) * INSPECTION_RATE_TNC, 0
+    );
+  }
+  const inspToday = inspectionRows.filter(r => r.date === today);
+  const inspWeek = inspectionRows.filter(r => r.date >= weekStart && r.date <= weekEnd);
+  const inspMonth = inspectionRows.filter(r => r.date >= monthStart && r.date <= monthEnd);
+  const inspLastWeek = inspectionRows.filter(r => r.date >= lastWeekStart && r.date <= lastWeekEnd);
+
+  const weekJobRevenue = sumJobRevenue(weekCompleted);
+  const todayRevenue = sumJobRevenue(todayCompleted) + sumInspectionRev(inspToday);
+  const weeklyRevenue = weekJobRevenue + sumInspectionRev(inspWeek);
+  const monthlyRevenue = sumJobRevenue(monthCompleted) + sumInspectionRev(inspMonth);
+  const lastWeekRevenue = sumJobRevenue(lastWeekCompletedResult.data) + sumInspectionRev(inspLastWeek);
+
+  const inspectionsToday = inspToday.reduce((sum, r) => sum + (r.state_count || 0) + (r.tnc_count || 0), 0);
 
   return {
     stats: {
@@ -149,7 +154,7 @@ const getDashboardData = unstable_cache(async () => {
       weeklyRevenue,
       lastWeekRevenue,
       monthlyRevenue,
-      avgTicketWeek: weekJobCount > 0 ? weeklyRevenue / weekJobCount : 0,
+      avgTicketWeek: weekJobCount > 0 ? weekJobRevenue / weekJobCount : 0,
       unpaidJobs: totalUnpaidCount || 0,
     },
     techActivity,

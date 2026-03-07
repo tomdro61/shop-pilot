@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { subDays, differenceInDays, parseISO } from "date-fns";
 import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
-import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
+import { INSPECTION_CATEGORY, calcInspectionRevenue } from "@/lib/utils/revenue";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -41,7 +41,7 @@ export async function getReportData(params: {
   const priorPromise = priorStart && priorEnd
     ? supabase
         .from("jobs")
-        .select("id, job_line_items(total)")
+        .select("id, job_line_items(total, category)")
         .eq("status", "complete")
         .gte("date_finished", priorStart)
         .lte("date_finished", priorEnd)
@@ -70,7 +70,9 @@ export async function getReportData(params: {
   }
 
   function sumLineItemTotals(job: { job_line_items: unknown }): number {
-    return getLineItems(job).reduce((s, li) => s + (li.total || 0), 0);
+    return getLineItems(job)
+      .filter((li) => li.category !== INSPECTION_CATEGORY)
+      .reduce((s, li) => s + (li.total || 0), 0);
   }
 
   // Job count + revenue
@@ -81,10 +83,11 @@ export async function getReportData(params: {
   const jobsPrior = priorJobs.length > 0 ? priorJobs.length : null;
   const revenuePrior = priorJobs.length > 0
     ? priorJobs.reduce((sum, job) => {
-        const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-          (s, li) => s + (li.total || 0), 0
-        );
-        return sum + (jobTotal || 0);
+        const items = (job.job_line_items as { total: number; category: string | null }[]) || [];
+        const jobTotal = items
+          .filter((li) => li.category !== INSPECTION_CATEGORY)
+          .reduce((s, li) => s + (li.total || 0), 0);
+        return sum + jobTotal;
       }, 0)
     : null;
 
@@ -110,7 +113,7 @@ export async function getReportData(params: {
   currentJobs.forEach((job) => {
     const user = job.users as { name: string } | null;
     const techName = user?.name || "Unassigned";
-    const lineItems = getLineItems(job);
+    const lineItems = getLineItems(job).filter((li) => li.category !== INSPECTION_CATEGORY);
     const jobTotal = lineItems.reduce((s, li) => s + (li.total || 0), 0);
 
     // Derive job category from highest-revenue line-item category
@@ -225,10 +228,51 @@ export async function getReportData(params: {
 
   // Inspections from dedicated table
   const inspectionTotals = await getInspectionCountsRange(start, end);
-  const inspectionCount = inspectionTotals.state_count + inspectionTotals.tnc_count;
-  const inspectionRevenue =
-    inspectionTotals.state_count * INSPECTION_RATE_STATE +
-    inspectionTotals.tnc_count * INSPECTION_RATE_TNC;
+  const inspCalc = calcInspectionRevenue(inspectionTotals);
+  const inspectionCount = inspCalc.totalCount;
+  const inspectionRevenue = inspCalc.totalRevenue;
+  const inspectionCost = inspCalc.totalCost;
+  const inspectionProfit = inspCalc.totalProfit;
+
+  // Inject inspection types into category breakdown and profitability
+  if (inspCalc.stateCount > 0) {
+    categoryBreakdown.push({
+      category: "State Inspection",
+      revenue: inspCalc.stateRevenue,
+      jobCount: inspCalc.stateCount,
+    });
+    profitability.push({
+      category: "State Inspection",
+      revenue: inspCalc.stateRevenue,
+      partsCost: inspCalc.totalCost,
+      partsRevenue: 0,
+      laborRevenue: inspCalc.stateRevenue,
+      grossProfit: inspCalc.stateRevenue - inspCalc.totalCost,
+      margin: inspCalc.stateRevenue > 0
+        ? ((inspCalc.stateRevenue - inspCalc.totalCost) / inspCalc.stateRevenue) * 100
+        : 0,
+      hasEstimatedCosts: false,
+    });
+  }
+  if (inspCalc.tncCount > 0) {
+    categoryBreakdown.push({
+      category: "TNC Inspection",
+      revenue: inspCalc.tncRevenue,
+      jobCount: inspCalc.tncCount,
+    });
+    profitability.push({
+      category: "TNC Inspection",
+      revenue: inspCalc.tncRevenue,
+      partsCost: 0,
+      partsRevenue: 0,
+      laborRevenue: inspCalc.tncRevenue,
+      grossProfit: inspCalc.tncRevenue,
+      margin: 100,
+      hasEstimatedCosts: false,
+    });
+  }
+  categoryBreakdown.sort((a, b) => b.revenue - a.revenue);
+  profitability.sort((a, b) => b.revenue - a.revenue);
 
   // Estimate close rate
   const estimatesSent = estimates.length;
@@ -254,6 +298,8 @@ export async function getReportData(params: {
     breakdown: { laborRevenue, partsRevenue, totalRevenue, grossProfit, costDataCoverage },
     inspectionCount,
     inspectionRevenue,
+    inspectionCost,
+    inspectionProfit,
   };
 }
 

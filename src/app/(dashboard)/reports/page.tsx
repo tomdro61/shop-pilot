@@ -27,7 +27,7 @@ export default async function ReportsPage({
     getFleetARSummary(),
   ]);
 
-  const { profitability, breakdown, inspectionCount, inspectionRevenue, estimateCloseRate } = data;
+  const { profitability, breakdown, inspectionCount, inspectionRevenue, inspectionProfit, estimateCloseRate } = data;
 
   const categoryChartData = data.categoryBreakdown.map((d) => ({
     label: d.category,
@@ -61,7 +61,7 @@ export default async function ReportsPage({
         <KpiCard title="Parts Revenue" value={formatCurrency(breakdown.partsRevenue)} subtitle={`${partsPct}% of total`} accentColor="amber" />
         <KpiCard
           title="Gross Profit"
-          value={formatCurrency(breakdown.grossProfit + inspectionRevenue)}
+          value={formatCurrency(breakdown.grossProfit + inspectionProfit)}
           subtitle={breakdown.costDataCoverage < 100 ? `${breakdown.costDataCoverage}% actual cost data` : "Based on actual costs"}
           accentColor="purple"
         />
