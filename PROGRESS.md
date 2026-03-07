@@ -1964,3 +1964,61 @@ Fixed sluggish search behavior across all search pages and audited/fixed revalid
 - [ ] Set up Wix URL redirects from old form pages to BroadwayMotorsMA.com
 - [ ] Add `QUO_SHOP_PHONE_NUMBER` to Vercel env vars once shop line is ported to Quo
 - [ ] Retire Wix webhook bridge code once redirects confirmed working
+
+---
+
+## Session 28 — 2026-03-06 — Unified Revenue Reporting & Inspection Revenue Fix
+
+### Problem
+Dashboard and Reports showed different revenue for the same week ($9,198 vs $11,233). Root causes:
+1. **Two separate inline revenue calculations** — dashboard used `sumRevenue()`, reports used `sumLineItemTotals()`, with no shared code
+2. **Reports included inspection revenue** from `daily_inspection_counts` table; **dashboard did not**
+3. **Inspection line items on jobs were double-counted** — once in job revenue (via line items with category "Inspection") and again from the inspections page
+
+### What Was Completed
+
+#### Shared Revenue Utility (`src/lib/utils/revenue.ts` — new file)
+- `INSPECTION_CATEGORY` constant (`"Inspection"`) — single source of truth for the category name
+- `sumJobRevenue(jobs)` — sums `job_line_items.total`, **excluding** items where `category === "Inspection"`
+- `calcInspectionRevenue(counts)` — computes revenue, cost, and profit from `daily_inspection_counts` totals using rates from constants
+
+#### Inspection Cost Tracking
+- Added `INSPECTION_COST_STATE = 11.50` to `src/lib/constants.ts` (fee paid to the state per inspection)
+- State Inspection: $35 revenue, $11.50 cost → $23.50 profit (67.1% margin)
+- TNC Inspection: $15 revenue, $0 cost → $15 profit (100% margin)
+
+#### Dashboard Revenue Fix (`src/app/(dashboard)/dashboard/page.tsx`)
+- Replaced inline `sumRevenue()` with shared `sumJobRevenue()` (filters out inspection-category items)
+- Added `daily_inspection_counts` range query to the parallel Promise.all (covers current month + last week)
+- Today, This Week, This Month, and Last Week revenue cards now **include** inspection revenue from inspections page
+- Avg Ticket uses job-only revenue (not inflated by inspection revenue)
+- `inspectionsToday` count derived from the same range query (no separate query needed)
+
+#### Reports Revenue Fix (`src/lib/actions/reports.ts`)
+- All line item aggregations now **filter out** `category === "Inspection"` items:
+  - `sumLineItemTotals()` — used for `revenueCurrent`
+  - `currentJobs.forEach` loop — used for category breakdown, tech breakdown, profitability
+  - Prior period revenue calculation — updated query to include `category` field
+- **"State Inspection"** and **"TNC Inspection"** injected as rows in:
+  - `categoryBreakdown` — appears in Revenue by Category chart alongside Oil Change, Brake Service, etc.
+  - `profitability` — appears in Service Profitability table with accurate cost/margin data
+- Returns `inspectionCost` and `inspectionProfit` alongside existing `inspectionRevenue`
+
+#### Reports Page Update (`src/app/(dashboard)/reports/page.tsx`)
+- Gross Profit KPI now uses `inspectionProfit` (revenue minus $11.50 cost) instead of raw `inspectionRevenue`
+- Destructures new `inspectionProfit` from report data
+
+### Key Design Decision
+Inspection line items on jobs still exist for **customer visibility** (estimates, invoices, print ROs). They are only excluded from **revenue reporting**. The inspections page (`/inspections`) is the sole source of truth for inspection revenue in all reports and dashboard metrics.
+
+### New Files (1)
+- `src/lib/utils/revenue.ts` — shared revenue calculation utility
+
+### Modified Files (4)
+- `src/lib/constants.ts` — added `INSPECTION_COST_STATE`
+- `src/app/(dashboard)/dashboard/page.tsx` — unified revenue with inspection revenue included
+- `src/lib/actions/reports.ts` — filter inspection items, inject inspection categories
+- `src/app/(dashboard)/reports/page.tsx` — use `inspectionProfit` for gross profit
+
+### Build Status
+- `npm run build` passes cleanly

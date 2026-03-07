@@ -260,6 +260,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 24:** Wix parking webhook bridge — Wix form submissions → ShopPilot reservations + customers
 **Session 26:** Messaging system overhaul — dual-line SMS routing (shop 617 + parking 978), 7 message templates, Quo contact creation for parking customers, lockbox checkout flow with SMS, parking specials upsell, inbound message routing
 **Session 27:** New parking forms (shuttle + valet) on BroadwayMotorsMA.com, lot-specific confirmation pages with instructions, lot-specific confirmation SMS, triple-line phone routing (shop/parking/APB), Wix automation deactivated
+**Session 28:** Unified revenue reporting — dashboard and reports now use shared revenue calculation, inspection-category line items excluded from job revenue, inspection revenue from inspections page included in both, State/TNC Inspection shown in category and profitability reports
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stone/blue color palette with layered depth (stone-100/950 page bg, white/stone-900 card surfaces). All status badges use borderless pills with `-100/-900` tinted backgrounds. Line items redesigned with flat rows and color accent bars (blue=labor, amber=parts). KPI cards have colored left border accents. CSS variables mapped to oklch stone palette.
@@ -271,7 +272,8 @@ Read `PROGRESS.md` first to pick up where we left off.
 - AI Assistant: conversational chat at `/chat` with 43 tools covering all CRUD + SMS + email + settings + parking operations, streaming SSE, floating chat bubble on all pages
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
 - Job Presets: reusable templates with pre-filled line items, `/presets` management page
-- Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs)
+- Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs). Revenue cards include inspection revenue from `daily_inspection_counts`; job line items with `category = "Inspection"` are excluded from revenue to prevent double-counting.
+- **Revenue Reporting:** Shared utility at `src/lib/utils/revenue.ts` — `sumJobRevenue()` excludes inspection-category items, `calcInspectionRevenue()` computes inspection revenue/cost/profit. Both dashboard and reports use these. State Inspection cost: $11.50/unit (`INSPECTION_COST_STATE`). Reports show "State Inspection" and "TNC Inspection" as rows in Revenue by Category and Service Profitability.
 - Customer list: server-side pagination (50 per page) with URL params, handles 3,000+ imported contacts
 - Wix import: one-time script (`scripts/import-wix-customers.ts`) with filtering, dedup, dry-run mode
 - RO Numbers: auto-assigned sequential repair order numbers (RO-0001 format) on all jobs via PostgreSQL sequence
