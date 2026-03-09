@@ -109,6 +109,7 @@ export async function getReportData(params: {
   // Jobs by tech
   const techCounts: Record<string, number> = {};
   const techRevenue: Record<string, number> = {};
+  const techPartsCost: Record<string, number> = {};
 
   currentJobs.forEach((job) => {
     const user = job.users as { name: string } | null;
@@ -130,6 +131,7 @@ export async function getReportData(params: {
     // Tech counts + revenue
     techCounts[techName] = (techCounts[techName] || 0) + 1;
     techRevenue[techName] = (techRevenue[techName] || 0) + jobTotal;
+    if (!techPartsCost[techName]) techPartsCost[techName] = 0;
 
     // Revenue + profitability use line-item-level category for accurate multi-service splits
     lineItems.forEach((li) => {
@@ -150,12 +152,14 @@ export async function getReportData(params: {
           const actualCost = li.cost * li.quantity;
           catProfitability[liCat].actualPartsCost += actualCost;
           totalActualPartsCost += actualCost;
+          techPartsCost[techName] += actualCost;
           partsWithCostCount++;
         } else {
           // Estimate: assume 60% of retail price is cost (40% margin)
           const estimatedCost = (li.total || 0) * 0.6;
           catProfitability[liCat].estimatedPartsCost += estimatedCost;
           totalEstimatedPartsCost += estimatedCost;
+          techPartsCost[techName] += estimatedCost;
         }
       } else if (li.type === "labor") {
         laborRevenue += li.total || 0;
@@ -226,6 +230,16 @@ export async function getReportData(params: {
     }))
     .sort((a, b) => b.revenue - a.revenue);
 
+  // Tech profit breakdown (revenue - parts cost)
+  const techProfitBreakdown = Object.entries(techRevenue)
+    .map(([name, revenue]) => ({
+      name,
+      revenue,
+      grossProfit: revenue - (techPartsCost[name] || 0),
+      jobCount: techCounts[name] || 0,
+    }))
+    .sort((a, b) => b.grossProfit - a.grossProfit);
+
   // Inspections from dedicated table
   const inspectionTotals = await getInspectionCountsRange(start, end);
   const inspCalc = calcInspectionRevenue(inspectionTotals);
@@ -290,6 +304,7 @@ export async function getReportData(params: {
     revenueByTech,
     categoryBreakdown,
     techBreakdown,
+    techProfitBreakdown,
     estimateCloseRate: { rate: estimateCloseRate, approved: estimatesApproved, sent: estimatesSent },
     avgTicket,
     isAllTime,

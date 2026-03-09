@@ -41,6 +41,12 @@ export default async function ReportsPage({
     jobCount: d.jobCount,
   }));
 
+  const techProfitChartData = data.techProfitBreakdown.map((d) => ({
+    label: d.name,
+    revenue: d.grossProfit,
+    jobCount: d.jobCount,
+  }));
+
   const totalRevenue = breakdown.totalRevenue + inspectionRevenue;
   const laborPct = totalRevenue > 0 ? Math.round((breakdown.laborRevenue / totalRevenue) * 100) : 0;
   const partsPct = totalRevenue > 0 ? Math.round((breakdown.partsRevenue / totalRevenue) * 100) : 0;
@@ -104,6 +110,10 @@ export default async function ReportsPage({
         <HorizontalBarChart
           title={`Revenue by Technician (${resolved.label})`}
           data={techChartData}
+        />
+        <HorizontalBarChart
+          title={`Gross Profit by Technician (${resolved.label})`}
+          data={techProfitChartData}
         />
       </div>
 
