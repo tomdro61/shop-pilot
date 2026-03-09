@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { todayET } from "@/lib/utils";
 
 export const jobSchema = z.object({
   customer_id: z.string().uuid("Please select a customer"),
@@ -31,7 +32,9 @@ export function prepareJobData(data: JobFormData) {
     category: data.category || null,
     assigned_tech: data.assigned_tech || null,
     date_received: data.date_received,
-    date_finished: data.date_finished || null,
+    date_finished: data.status === "complete"
+      ? (data.date_finished || todayET())
+      : null,
     notes: data.notes || null,
     payment_method: data.payment_method || null,
     payment_status: data.payment_status || "unpaid",
