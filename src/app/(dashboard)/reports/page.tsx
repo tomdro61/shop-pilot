@@ -62,12 +62,20 @@ export default async function ReportsPage({
 
       {/* Row 1 — Money */}
       <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <KpiCard title={`Revenue (${resolved.label})`} value={formatCurrency(totalRevenue)} accentColor="blue" />
+        <KpiCard
+          title={`Revenue (${resolved.label})`}
+          value={formatCurrency(totalRevenue)}
+          currentValue={data.isAllTime ? undefined : totalRevenue}
+          previousValue={data.isAllTime ? undefined : (data.revenuePrior ?? undefined)}
+          accentColor="blue"
+        />
         <KpiCard title="Labor Revenue" value={formatCurrency(breakdown.laborRevenue)} subtitle={`${laborPct}% of total`} accentColor="emerald" />
         <KpiCard title="Parts Revenue" value={formatCurrency(breakdown.partsRevenue)} subtitle={`${partsPct}% of total`} accentColor="amber" />
         <KpiCard
           title="Gross Profit"
-          value={formatCurrency(breakdown.grossProfit + inspectionProfit)}
+          value={formatCurrency(data.totalGrossProfit)}
+          currentValue={data.isAllTime ? undefined : data.totalGrossProfit}
+          previousValue={data.isAllTime ? undefined : (data.grossProfitPrior ?? undefined)}
           subtitle={breakdown.costDataCoverage < 100 ? `${breakdown.costDataCoverage}% actual cost data` : "Based on actual costs"}
           accentColor="purple"
         />
@@ -85,18 +93,24 @@ export default async function ReportsPage({
         <KpiCard
           title="Avg Ticket"
           value={formatCurrency(data.avgTicket)}
+          currentValue={data.isAllTime ? undefined : data.avgTicket}
+          previousValue={data.isAllTime ? undefined : (data.avgTicketPrior ?? undefined)}
           accentColor="emerald"
         />
         <KpiCard
           title="Inspections"
           value={inspectionCount.toString()}
           subtitle={inspectionRevenue > 0 ? `${formatCurrency(inspectionRevenue)} (${inspectionPct}%)` : undefined}
+          currentValue={data.isAllTime ? undefined : inspectionCount}
+          previousValue={data.isAllTime ? undefined : (data.inspectionCountPrior ?? undefined)}
           accentColor="amber"
         />
         <KpiCard
           title="Estimate Close Rate"
           value={`${estimateCloseRate.rate.toFixed(0)}%`}
           subtitle={estimateCloseRate.sent > 0 ? `${estimateCloseRate.approved} of ${estimateCloseRate.sent} sent` : "No estimates sent"}
+          currentValue={data.isAllTime ? undefined : estimateCloseRate.rate}
+          previousValue={data.isAllTime ? undefined : (data.priorEstimateCloseRate?.rate ?? undefined)}
           accentColor="purple"
         />
       </div>

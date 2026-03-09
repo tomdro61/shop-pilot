@@ -37,11 +37,11 @@ export async function getReportData(params: {
     .gte("date_finished", start)
     .lte("date_finished", end);
 
-  // ONE query for prior period (just count + revenue)
+  // ONE query for prior period (count + revenue + gross profit)
   const priorPromise = priorStart && priorEnd
     ? supabase
         .from("jobs")
-        .select("id, job_line_items(total, category)")
+        .select("id, job_line_items(type, total, cost, quantity, category)")
         .eq("status", "complete")
         .gte("date_finished", priorStart)
         .lte("date_finished", priorEnd)
@@ -55,11 +55,24 @@ export async function getReportData(params: {
     .gte("sent_at", start)
     .lte("sent_at", end);
 
-  const [currentResult, priorResult, estimatesResult] = await Promise.all([currentPromise, priorPromise, estimatesPromise]);
+  // Prior period estimates
+  const priorEstimatesPromise = priorStart && priorEnd
+    ? supabase
+        .from("estimates")
+        .select("id, status, sent_at")
+        .in("status", ["sent", "approved"])
+        .gte("sent_at", priorStart)
+        .lte("sent_at", priorEnd)
+    : Promise.resolve({ data: null });
+
+  const [currentResult, priorResult, estimatesResult, priorEstimatesResult] = await Promise.all([
+    currentPromise, priorPromise, estimatesPromise, priorEstimatesPromise,
+  ]);
 
   const currentJobs = currentResult.data || [];
   const priorJobs = priorResult.data || [];
   const estimates = estimatesResult.data || [];
+  const priorEstimates = priorEstimatesResult.data || [];
 
   // --- Aggregate everything from the single current-period result ---
 
@@ -81,15 +94,23 @@ export async function getReportData(params: {
 
   // Prior period
   const jobsPrior = priorJobs.length > 0 ? priorJobs.length : null;
-  const revenuePrior = priorJobs.length > 0
-    ? priorJobs.reduce((sum, job) => {
-        const items = (job.job_line_items as { total: number; category: string | null }[]) || [];
-        const jobTotal = items
-          .filter((li) => li.category !== INSPECTION_CATEGORY)
-          .reduce((s, li) => s + (li.total || 0), 0);
-        return sum + jobTotal;
-      }, 0)
-    : null;
+  let revenuePrior: number | null = null;
+  let grossProfitPrior: number | null = null;
+  if (priorJobs.length > 0) {
+    let priorRev = 0;
+    let priorPartsCost = 0;
+    priorJobs.forEach((job) => {
+      const items = (job.job_line_items as { type: string; total: number; cost: number | null; quantity: number; category: string | null }[]) || [];
+      items.filter((li) => li.category !== INSPECTION_CATEGORY).forEach((li) => {
+        priorRev += li.total || 0;
+        if (li.type === "part") {
+          priorPartsCost += li.cost != null ? li.cost * li.quantity : (li.total || 0) * 0.6;
+        }
+      });
+    });
+    revenuePrior = priorRev;
+    grossProfitPrior = priorRev - priorPartsCost;
+  }
 
   // Jobs by category
   const catCounts: Record<string, number> = {};
@@ -288,10 +309,37 @@ export async function getReportData(params: {
   categoryBreakdown.sort((a, b) => b.revenue - a.revenue);
   profitability.sort((a, b) => b.revenue - a.revenue);
 
+  // Prior period inspections
+  let inspectionCountPrior: number | null = null;
+  let inspectionProfitPrior: number | null = null;
+  if (priorStart && priorEnd) {
+    const priorInspTotals = await getInspectionCountsRange(priorStart, priorEnd);
+    const priorInspCalc = calcInspectionRevenue(priorInspTotals);
+    inspectionCountPrior = priorInspCalc.totalCount;
+    inspectionProfitPrior = priorInspCalc.totalProfit;
+    // Add prior inspection profit to gross profit prior
+    if (grossProfitPrior !== null) {
+      grossProfitPrior += priorInspCalc.totalProfit;
+    }
+    // Add prior inspection revenue to revenue prior
+    if (revenuePrior !== null) {
+      revenuePrior += priorInspCalc.totalRevenue;
+    }
+  }
+
   // Estimate close rate
   const estimatesSent = estimates.length;
   const estimatesApproved = estimates.filter((e) => e.status === "approved").length;
   const estimateCloseRate = estimatesSent > 0 ? (estimatesApproved / estimatesSent) * 100 : 0;
+
+  // Prior estimate close rate
+  const priorEstimatesSent = priorEstimates.length;
+  const priorEstimatesApproved = priorEstimates.filter((e) => e.status === "approved").length;
+  const priorEstimateCloseRate = priorEstimatesSent > 0 ? (priorEstimatesApproved / priorEstimatesSent) * 100 : 0;
+
+  // Computed comparison values
+  const totalGrossProfit = grossProfit + inspectionProfit;
+  const avgTicketPrior = jobsPrior && revenuePrior !== null ? revenuePrior / jobsPrior : null;
 
   return {
     jobsCurrent,
@@ -306,12 +354,17 @@ export async function getReportData(params: {
     techBreakdown,
     techProfitBreakdown,
     estimateCloseRate: { rate: estimateCloseRate, approved: estimatesApproved, sent: estimatesSent },
+    priorEstimateCloseRate: priorEstimatesSent > 0 ? { rate: priorEstimateCloseRate } : null,
     avgTicket,
+    avgTicketPrior,
     isAllTime,
     // Folded-in data (previously separate queries)
     profitability,
     breakdown: { laborRevenue, partsRevenue, totalRevenue, grossProfit, costDataCoverage },
+    totalGrossProfit,
+    grossProfitPrior,
     inspectionCount,
+    inspectionCountPrior,
     inspectionRevenue,
     inspectionCost,
     inspectionProfit,
