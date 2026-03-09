@@ -31,25 +31,29 @@ export function resolveDateRange(
   const now = new Date(todayET() + "T12:00:00");
   const weekOpts = { weekStartsOn: 1 as const };
 
+  // Cap "to" at today so prior-period comparisons are apples-to-apples
+  // (e.g. "This Month" March 1-9 compares against Feb 20-28, not full calendar month vs 30-day span)
+  const today = toDateStr(now);
+
   switch (range) {
     case "this_week":
       return {
         from: toDateStr(startOfWeek(now, weekOpts)),
-        to: toDateStr(endOfWeek(now, weekOpts)),
+        to: today,
         label: "This Week",
         isAllTime: false,
       };
     case "this_quarter":
       return {
         from: toDateStr(startOfQuarter(now)),
-        to: toDateStr(endOfQuarter(now)),
+        to: today,
         label: "This Quarter",
         isAllTime: false,
       };
     case "this_year":
       return {
         from: toDateStr(startOfYear(now)),
-        to: toDateStr(endOfYear(now)),
+        to: today,
         label: "This Year",
         isAllTime: false,
       };
@@ -72,7 +76,7 @@ export function resolveDateRange(
   // Default: this month
   return {
     from: toDateStr(startOfMonth(now)),
-    to: toDateStr(endOfMonth(now)),
+    to: today,
     label: "This Month",
     isAllTime: false,
   };
