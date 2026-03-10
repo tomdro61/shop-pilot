@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { HorizontalBarChart } from "@/components/dashboard/horizontal-bar-chart";
 import { ReportsToolbar } from "@/components/dashboard/reports-toolbar";
-import { formatCurrency } from "@/lib/utils/format";
+import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 
 export const metadata = {
   title: "Reports | ShopPilot",
@@ -64,16 +64,16 @@ export default async function ReportsPage({
       <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard
           title={`Revenue (${resolved.label})`}
-          value={formatCurrency(totalRevenue)}
+          value={formatCurrencyWhole(totalRevenue)}
           currentValue={data.isAllTime ? undefined : totalRevenue}
           previousValue={data.isAllTime ? undefined : (data.revenuePrior ?? undefined)}
           accentColor="blue"
         />
-        <KpiCard title="Labor Revenue" value={formatCurrency(breakdown.laborRevenue)} subtitle={`${laborPct}% of total`} accentColor="emerald" />
-        <KpiCard title="Parts Revenue" value={formatCurrency(breakdown.partsRevenue)} subtitle={`${partsPct}% of total`} accentColor="amber" />
+        <KpiCard title="Labor Revenue" value={formatCurrencyWhole(breakdown.laborRevenue)} subtitle={`${laborPct}% of total`} accentColor="emerald" />
+        <KpiCard title="Parts Revenue" value={formatCurrencyWhole(breakdown.partsRevenue)} subtitle={`${partsPct}% of total`} accentColor="amber" />
         <KpiCard
           title="Gross Profit"
-          value={formatCurrency(data.totalGrossProfit)}
+          value={formatCurrencyWhole(data.totalGrossProfit)}
           currentValue={data.isAllTime ? undefined : data.totalGrossProfit}
           previousValue={data.isAllTime ? undefined : (data.grossProfitPrior ?? undefined)}
           subtitle={breakdown.costDataCoverage < 100 ? `${breakdown.costDataCoverage}% actual cost data` : "Based on actual costs"}
@@ -92,7 +92,7 @@ export default async function ReportsPage({
         />
         <KpiCard
           title="Avg Ticket"
-          value={formatCurrency(data.avgTicket)}
+          value={formatCurrencyWhole(data.avgTicket)}
           currentValue={data.isAllTime ? undefined : data.avgTicket}
           previousValue={data.isAllTime ? undefined : (data.avgTicketPrior ?? undefined)}
           accentColor="emerald"
@@ -100,7 +100,7 @@ export default async function ReportsPage({
         <KpiCard
           title="Inspections"
           value={inspectionCount.toString()}
-          subtitle={inspectionRevenue > 0 ? `${formatCurrency(inspectionRevenue)} (${inspectionPct}%)` : undefined}
+          subtitle={inspectionRevenue > 0 ? `${formatCurrencyWhole(inspectionRevenue)} (${inspectionPct}%)` : undefined}
           currentValue={data.isAllTime ? undefined : inspectionCount}
           previousValue={data.isAllTime ? undefined : (data.inspectionCountPrior ?? undefined)}
           accentColor="amber"

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { startOfWeek, endOfWeek, subWeeks, subDays } from "date-fns";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
-import { formatVehicle, formatCurrency } from "@/lib/utils/format";
+import { formatVehicle, formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { todayET } from "@/lib/utils";
 import { sumJobRevenue } from "@/lib/utils/revenue";
 import type { JobStatus, PaymentStatus } from "@/types";
@@ -211,11 +211,11 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Today</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrency(stats.todayRevenue)}</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.todayRevenue)}</p>
           </div>
           <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Week</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrency(stats.weeklyRevenue)}</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.weeklyRevenue)}</p>
             <div className="mt-1 flex items-center gap-1">
               {weekChange >= 0 ? (
                 <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
@@ -230,11 +230,11 @@ export default async function DashboardPage() {
           </div>
           <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Month</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrency(stats.monthlyRevenue)}</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.monthlyRevenue)}</p>
           </div>
           <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Avg Ticket (Week)</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrency(stats.avgTicketWeek)}</p>
+            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.avgTicketWeek)}</p>
           </div>
         </div>
       </section>

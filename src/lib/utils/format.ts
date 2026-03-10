@@ -25,6 +25,16 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+// Format currency without cents — for dashboard/report KPI cards
+export function formatCurrencyWhole(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 // Format vehicle display string
 export function formatVehicle(vehicle: {
   year: number | null;
