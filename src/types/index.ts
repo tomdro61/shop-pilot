@@ -56,6 +56,11 @@ export type ShopSettings = Database["public"]["Tables"]["shop_settings"]["Row"];
 export type ParkingReservation = Database["public"]["Tables"]["parking_reservations"]["Row"];
 export type ParkingReservationInsert = Database["public"]["Tables"]["parking_reservations"]["Insert"];
 export type ParkingReservationUpdate = Database["public"]["Tables"]["parking_reservations"]["Update"];
+
+export type QuoteRequest = Database["public"]["Tables"]["quote_requests"]["Row"];
+export type QuoteRequestInsert = Database["public"]["Tables"]["quote_requests"]["Insert"];
+export type QuoteRequestUpdate = Database["public"]["Tables"]["quote_requests"]["Update"];
+export type QuoteRequestStatus = "new" | "contacted" | "converted" | "closed";
 export type ShopSettingsUpdate = Database["public"]["Tables"]["shop_settings"]["Update"];
 export type ShopSuppliesMethod = "percent_of_labor" | "percent_of_parts" | "percent_of_total" | "flat";
 

@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/actions/auth";
+import { getNewQuoteRequestCount } from "@/lib/actions/quote-requests";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
@@ -9,11 +10,17 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
+  const [user, newQuoteCount] = await Promise.all([
+    getCurrentUser(),
+    getNewQuoteRequestCount(),
+  ]);
+
+  const badgeCounts: Record<string, number> = {};
+  if (newQuoteCount > 0) badgeCounts["/quote-requests"] = newQuoteCount;
 
   return (
     <div className="flex h-svh">
-      <Sidebar />
+      <Sidebar badgeCounts={badgeCounts} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header user={user} />
         <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-stone-100 dark:bg-stone-950">

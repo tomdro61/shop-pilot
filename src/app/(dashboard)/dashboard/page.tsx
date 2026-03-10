@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Car, Calendar, DollarSign, AlertTriangle, Plus, ArrowRight,
-  Clock, UserX, TrendingUp, TrendingDown, ClipboardCheck, Receipt,
+  Clock, UserX, TrendingUp, TrendingDown, ClipboardCheck, Receipt, FileQuestion,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, subWeeks, subDays } from "date-fns";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
@@ -50,7 +50,7 @@ const getDashboardData = unstable_cache(async () => {
   // 2. Completed jobs this month (covers today/week/month revenue + unpaid)
   // 3. Completed jobs last week (week-over-week comparison)
   // 4. Recent jobs (for the list)
-  const [activeJobsResult, monthCompletedResult, lastWeekCompletedResult, recentJobsResult, inspectionRangeResult] = await Promise.all([
+  const [activeJobsResult, monthCompletedResult, lastWeekCompletedResult, recentJobsResult, inspectionRangeResult, newQuoteCountResult] = await Promise.all([
     supabase
       .from("jobs")
       .select("id, status, assigned_tech, date_received, date_finished, users!jobs_assigned_tech_fkey(name)")
@@ -77,6 +77,10 @@ const getDashboardData = unstable_cache(async () => {
       .select("date, state_count, tnc_count")
       .gte("date", inspectionRangeStart)
       .lte("date", monthEnd),
+    supabase
+      .from("quote_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "new"),
   ]);
 
   const activeJobs = activeJobsResult.data || [];
@@ -145,6 +149,8 @@ const getDashboardData = unstable_cache(async () => {
 
   const inspectionsToday = inspToday.reduce((sum, r) => sum + (r.state_count || 0) + (r.tnc_count || 0), 0);
 
+  const newQuoteRequests = newQuoteCountResult.count || 0;
+
   return {
     stats: {
       carsInShop,
@@ -161,6 +167,7 @@ const getDashboardData = unstable_cache(async () => {
     recentJobs: recentJobsResult.data || [],
     staleJobs,
     inspectionsToday,
+    newQuoteRequests,
   };
 }, ["dashboard-stats"], { revalidate: 30 });
 
@@ -170,10 +177,10 @@ function pctChange(current: number, previous: number): number {
 }
 
 export default async function DashboardPage() {
-  const { stats, techActivity, recentJobs, staleJobs, inspectionsToday } = await getDashboardData();
+  const { stats, techActivity, recentJobs, staleJobs, inspectionsToday, newQuoteRequests } = await getDashboardData();
 
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
-  const alertCount = stats.unpaidJobs + stats.unassignedJobs + staleJobs;
+  const alertCount = stats.unpaidJobs + stats.unassignedJobs + staleJobs + newQuoteRequests;
 
   return (
     <div className="p-4 lg:p-6 space-y-7">
@@ -274,6 +281,17 @@ export default async function DashboardPage() {
                       {staleJobs} {staleJobs === 1 ? "job needs" : "jobs need"} review
                     </span>
                     <span className="ml-auto hidden text-xs text-amber-600 dark:text-amber-400 sm:inline">Open &gt; 2 days</span>
+                  </div>
+                </Link>
+              )}
+              {newQuoteRequests > 0 && (
+                <Link href="/quote-requests?status=new" className="block">
+                  <div className="flex items-center gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-2 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900">
+                    <FileQuestion className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                      {newQuoteRequests} new quote {newQuoteRequests === 1 ? "request" : "requests"}
+                    </span>
+                    <span className="ml-auto hidden text-xs text-blue-600 dark:text-blue-400 sm:inline">From website form</span>
                   </div>
                 </Link>
               )}

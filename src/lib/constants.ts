@@ -1,4 +1,4 @@
-import type { JobStatus, EstimateStatus, InvoiceStatus, PaymentStatus, PaymentMethod, CustomerType, ParkingStatus } from "@/types";
+import type { JobStatus, EstimateStatus, InvoiceStatus, PaymentStatus, PaymentMethod, CustomerType, ParkingStatus, QuoteRequestStatus } from "@/types";
 
 export const JOB_STATUS_ORDER: JobStatus[] = [
   "not_started",
@@ -245,3 +245,41 @@ export const PARKING_LOTS = [
   "Airport Parking Boston 2",
   "Boston Logan Valet",
 ];
+
+// ── Quote Requests ──────────────────────────────────────────────
+
+export const QUOTE_REQUEST_STATUS_ORDER: QuoteRequestStatus[] = [
+  "new",
+  "contacted",
+  "converted",
+  "closed",
+];
+
+export const QUOTE_REQUEST_STATUS_LABELS: Record<QuoteRequestStatus, string> = {
+  new: "New",
+  contacted: "Contacted",
+  converted: "Converted",
+  closed: "Closed",
+};
+
+export const QUOTE_REQUEST_STATUS_COLORS: Record<
+  QuoteRequestStatus,
+  { bg: string; text: string }
+> = {
+  new: {
+    bg: "bg-blue-100 dark:bg-blue-900",
+    text: "text-blue-700 dark:text-blue-300",
+  },
+  contacted: {
+    bg: "bg-amber-100 dark:bg-amber-900",
+    text: "text-amber-700 dark:text-amber-300",
+  },
+  converted: {
+    bg: "bg-green-100 dark:bg-green-900",
+    text: "text-green-700 dark:text-green-300",
+  },
+  closed: {
+    bg: "bg-stone-100 dark:bg-stone-800",
+    text: "text-stone-500 dark:text-stone-400",
+  },
+};

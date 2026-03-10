@@ -121,6 +121,32 @@ export function pickupReadySMS({
   return `Hi ${firstName}, your vehicle is ready for pickup! Your keys are in lock box #${boxNumber}, code: ${boxCode}. Thank you for parking with Broadway Motors!`;
 }
 
+export function quoteRequestAckSMS({ firstName }: { firstName: string }) {
+  return `Thanks for requesting a quote from Broadway Motors! We'll be in touch shortly.`;
+}
+
+export function quoteRequestInternalSMS({
+  firstName,
+  lastName,
+  vehicleYear,
+  vehicleMake,
+  vehicleModel,
+  services,
+}: {
+  firstName: string;
+  lastName: string;
+  vehicleYear?: number | null;
+  vehicleMake?: string | null;
+  vehicleModel?: string | null;
+  services: string[];
+}) {
+  let msg = `New quote request from ${firstName} ${lastName}`;
+  const vehicle = [vehicleYear, vehicleMake, vehicleModel].filter(Boolean).join(" ");
+  if (vehicle) msg += ` — ${vehicle}`;
+  if (services.length > 0) msg += ` — ${services.join(", ")}`;
+  return msg;
+}
+
 export function parkingSpecialsSMS({
   firstName,
   specials,

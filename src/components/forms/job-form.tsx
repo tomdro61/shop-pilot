@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { jobSchema, type JobFormData } from "@/lib/validators/job";
 import { createJob, updateJob } from "@/lib/actions/jobs";
 import { applyPresetToJob } from "@/lib/actions/presets";
+import { updateQuoteRequestStatus } from "@/lib/actions/quote-requests";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,8 @@ interface JobFormProps {
     vehicles?: Pick<Vehicle, "id" | "year" | "make" | "model"> | null;
   };
   defaultCustomerId?: string;
+  defaultTitle?: string;
+  fromQuoteId?: string;
   presets?: JobPreset[];
 }
 
@@ -73,7 +76,7 @@ function SectionHeader({ title, description }: { title: string; description?: st
   );
 }
 
-export function JobForm({ job, defaultCustomerId, presets }: JobFormProps) {
+export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, presets }: JobFormProps) {
   const router = useRouter();
   const isEditing = !!job;
 
@@ -90,7 +93,7 @@ export function JobForm({ job, defaultCustomerId, presets }: JobFormProps) {
       customer_id: job?.customer_id || defaultCustomerId || "",
       vehicle_id: job?.vehicle_id || undefined,
       status: job?.status || "not_started",
-      title: job?.title || "",
+      title: job?.title || defaultTitle || "",
       assigned_tech: job?.assigned_tech || undefined,
       date_received: job?.date_received || new Date().toISOString().split("T")[0],
       date_finished: job?.date_finished || undefined,
@@ -184,6 +187,11 @@ export function JobForm({ job, defaultCustomerId, presets }: JobFormProps) {
       if ("error" in presetResult && presetResult.error) {
         toast.error(`Job created but failed to apply preset: ${presetResult.error}`);
       }
+    }
+
+    // Mark quote request as converted
+    if (!isEditing && fromQuoteId) {
+      await updateQuoteRequestStatus(fromQuoteId, "converted");
     }
 
     toast.success(isEditing ? "Job updated" : "Job created");

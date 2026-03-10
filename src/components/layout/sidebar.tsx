@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding, Receipt } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding, Receipt, FileQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mainNav = [
@@ -13,6 +13,7 @@ const mainNav = [
   { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/inspections", label: "Inspections", icon: ClipboardCheck },
   { href: "/parking", label: "Parking", icon: PlaneLanding },
+  { href: "/quote-requests", label: "Quotes", icon: FileQuestion },
 ];
 
 const secondaryNav = [
@@ -21,7 +22,7 @@ const secondaryNav = [
   { href: "/chat", label: "AI Assistant", icon: MessageCircle },
 ];
 
-export function Sidebar() {
+export function Sidebar({ badgeCounts }: { badgeCounts?: Record<string, number> }) {
   const pathname = usePathname();
 
   return (
@@ -39,7 +40,7 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col px-3 pt-4">
         <div className="space-y-0.5">
           {mainNav.map((item) => (
-            <NavItem key={item.href} item={item} pathname={pathname} />
+            <NavItem key={item.href} item={item} pathname={pathname} badge={badgeCounts?.[item.href]} />
           ))}
         </div>
 
@@ -58,9 +59,11 @@ export function Sidebar() {
 function NavItem({
   item,
   pathname,
+  badge,
 }: {
   item: { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
   pathname: string;
+  badge?: number;
 }) {
   const settingsRoutes = ["/settings", "/team", "/presets"];
   const isActive =
@@ -83,6 +86,11 @@ function NavItem({
       )}
       <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-blue-600 dark:text-blue-500" : "text-stone-400 dark:text-stone-500")} />
       {item.label}
+      {badge != null && badge > 0 && (
+        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[10px] font-semibold text-white">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }
