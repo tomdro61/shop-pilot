@@ -714,4 +714,28 @@ export const tools: Anthropic.Tool[] = [
       required: ["id"],
     },
   },
+  {
+    name: "create_parking_invoice",
+    description:
+      "Create a Stripe invoice for a parking reservation. Used for stay extensions, damage fees, additional services, etc. The reservation must have a linked customer. Confirm with the user before calling this.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        reservation_id: { type: "string", description: "Parking reservation UUID (required)" },
+        line_items: {
+          type: "array",
+          description: "Array of line items, each with description and amount in dollars (required)",
+          items: {
+            type: "object",
+            properties: {
+              description: { type: "string", description: "Line item description" },
+              amount: { type: "number", description: "Amount in dollars" },
+            },
+            required: ["description", "amount"],
+          },
+        },
+      },
+      required: ["reservation_id", "line_items"],
+    },
+  },
 ];

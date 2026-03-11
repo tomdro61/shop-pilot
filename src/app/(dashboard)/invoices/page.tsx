@@ -62,28 +62,54 @@ export default async function InvoicesPage({
                     customers: { id: string; first_name: string; last_name: string } | null;
                     vehicles: { year: number | null; make: string | null; model: string | null } | null;
                   } | null;
+                  const parking = invoice.parking_reservations as {
+                    id: string;
+                    first_name: string;
+                    last_name: string;
+                    lot: string;
+                  } | null;
                   const customer = job?.customers;
                   const vehicle = job?.vehicles;
                   const invoiceStatus = invoice.status as InvoiceStatus;
 
+                  // Customer name: from job or parking reservation
+                  const customerName = customer
+                    ? `${customer.first_name} ${customer.last_name}`
+                    : parking
+                      ? `${parking.first_name} ${parking.last_name}`
+                      : null;
+                  const customerLink = customer ? `/customers/${customer.id}` : null;
+
                   return (
                     <tr key={invoice.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors">
                       <td className="px-4 py-3">
-                        {customer ? (
-                          <Link href={`/customers/${customer.id}`} className="font-medium text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400">
-                            {customer.first_name} {customer.last_name}
-                          </Link>
+                        {customerName ? (
+                          customerLink ? (
+                            <Link href={customerLink} className="font-medium text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400">
+                              {customerName}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-stone-900 dark:text-stone-50">{customerName}</span>
+                          )
                         ) : (
                           <span className="text-stone-400">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-stone-600 dark:text-stone-400">
-                        {vehicle ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") : "—"}
+                        {vehicle
+                          ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")
+                          : parking
+                            ? parking.lot
+                            : "—"}
                       </td>
                       <td className="px-4 py-3">
                         {job ? (
                           <Link href={`/jobs/${job.id}`} className="text-stone-700 dark:text-stone-300 hover:text-blue-600 dark:hover:text-blue-400">
                             {job.title}
+                          </Link>
+                        ) : parking ? (
+                          <Link href={`/parking/${parking.id}`} className="text-stone-700 dark:text-stone-300 hover:text-blue-600 dark:hover:text-blue-400">
+                            Parking
                           </Link>
                         ) : (
                           <span className="text-stone-400">—</span>
@@ -129,18 +155,35 @@ export default async function InvoicesPage({
                 customers: { id: string; first_name: string; last_name: string } | null;
                 vehicles: { year: number | null; make: string | null; model: string | null } | null;
               } | null;
+              const parking = invoice.parking_reservations as {
+                id: string;
+                first_name: string;
+                last_name: string;
+                lot: string;
+              } | null;
               const customer = job?.customers;
               const invoiceStatus = invoice.status as InvoiceStatus;
+
+              const displayName = customer
+                ? `${customer.first_name} ${customer.last_name}`
+                : parking
+                  ? `${parking.first_name} ${parking.last_name}`
+                  : "Unknown";
+              const href = job
+                ? `/jobs/${job.id}`
+                : parking
+                  ? `/parking/${parking.id}`
+                  : "#";
 
               return (
                 <Link
                   key={invoice.id}
-                  href={job ? `/jobs/${job.id}` : "#"}
+                  href={href}
                   className="block rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-4 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-stone-900 dark:text-stone-50">
-                      {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                      {displayName}
                     </span>
                     <span className="font-medium tabular-nums text-stone-900 dark:text-stone-50">
                       ${(invoice.amount ?? 0).toFixed(2)}

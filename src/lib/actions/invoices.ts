@@ -2,9 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe";
-import { createStripeInvoice } from "@/lib/stripe/create-invoice";
+import { createStripeInvoice, createParkingStripeInvoice } from "@/lib/stripe/create-invoice";
 import { getShopSettings } from "@/lib/actions/settings";
 import { revalidatePath } from "next/cache";
+import { getParkingLine, getPhoneNumber } from "@/lib/quo/routing";
 
 export async function getOrCreateStripeCustomer(customerId: string) {
   const supabase = await createClient();
@@ -243,7 +244,7 @@ export async function getInvoices(status?: string, search?: string) {
   let query = supabase
     .from("invoices")
     .select(
-      "id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, created_at, jobs(id, title, customers(id, first_name, last_name), vehicles(year, make, model))"
+      "id, job_id, parking_reservation_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, created_at, jobs(id, title, customers(id, first_name, last_name), vehicles(year, make, model)), parking_reservations(id, first_name, last_name, lot)"
     )
     .order("created_at", { ascending: false });
 
@@ -257,15 +258,24 @@ export async function getInvoices(status?: string, search?: string) {
 
   let invoices = data ?? [];
 
-  // Client-side search filter (customer name) since we can't filter on joined table easily
+  // Client-side search filter (customer name from job or parking reservation)
   if (search) {
     const term = search.toLowerCase();
     invoices = invoices.filter((inv) => {
+      // Check job customer name
       const job = inv.jobs as { customers: { first_name: string; last_name: string } | null } | null;
-      const customer = job?.customers;
-      if (!customer) return false;
-      const fullName = `${customer.first_name} ${customer.last_name}`.toLowerCase();
-      return fullName.includes(term);
+      const jobCustomer = job?.customers;
+      if (jobCustomer) {
+        const fullName = `${jobCustomer.first_name} ${jobCustomer.last_name}`.toLowerCase();
+        if (fullName.includes(term)) return true;
+      }
+      // Check parking reservation name
+      const reservation = inv.parking_reservations as { first_name: string; last_name: string } | null;
+      if (reservation) {
+        const fullName = `${reservation.first_name} ${reservation.last_name}`.toLowerCase();
+        if (fullName.includes(term)) return true;
+      }
+      return false;
     });
   }
 
@@ -283,4 +293,132 @@ export async function getInvoiceForJob(jobId: string) {
 
   if (error) return null;
   return data;
+}
+
+export async function getInvoicesForParkingReservation(reservationId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("parking_reservation_id", reservationId)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function createParkingInvoice(
+  reservationId: string,
+  lineItems: { description: string; amount: number }[],
+  options?: { sendText?: boolean; sendEmail?: boolean }
+) {
+  const sendText = options?.sendText ?? false;
+  const sendEmail = options?.sendEmail ?? false;
+
+  const supabase = await createClient();
+
+  // Fetch reservation + linked customer
+  const { data: reservation, error: resError } = await supabase
+    .from("parking_reservations")
+    .select("id, first_name, last_name, lot, customer_id, phone, email")
+    .eq("id", reservationId)
+    .single();
+
+  if (resError || !reservation) {
+    return { error: "Reservation not found" };
+  }
+
+  if (!reservation.customer_id) {
+    return { error: "Reservation has no linked customer" };
+  }
+
+  if (lineItems.length === 0) {
+    return { error: "At least one line item is required" };
+  }
+
+  // Get or create Stripe customer
+  const stripeResult = await getOrCreateStripeCustomer(reservation.customer_id);
+  if (stripeResult.error || !stripeResult.data) {
+    return { error: stripeResult.error || "Failed to get Stripe customer" };
+  }
+  const stripeCustomerId = stripeResult.data;
+
+  try {
+    const { stripeInvoiceId, hostedInvoiceUrl, amountDue } =
+      await createParkingStripeInvoice({
+        stripeCustomerId,
+        lineItems,
+        description: `Parking — ${reservation.lot}`,
+      });
+
+    const invoiceStatus = (sendText || sendEmail) ? "sent" : "draft";
+
+    const { data: invoice, error: insertError } = await supabase
+      .from("invoices")
+      .insert({
+        job_id: null,
+        parking_reservation_id: reservationId,
+        stripe_invoice_id: stripeInvoiceId,
+        stripe_hosted_invoice_url: hostedInvoiceUrl,
+        status: invoiceStatus,
+        amount: amountDue / 100,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      return { error: "Invoice created in Stripe but failed to save locally" };
+    }
+
+    const parkingLine = getParkingLine(reservation.lot);
+
+    // Send SMS (fire-and-forget)
+    if (sendText && reservation.phone && hostedInvoiceUrl) {
+      import("@/lib/messaging/templates")
+        .then(({ invoiceSentSMS }) =>
+          import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
+            sendCustomerSMS({
+              customerId: reservation.customer_id!,
+              body: invoiceSentSMS({
+                firstName: reservation.first_name,
+                link: hostedInvoiceUrl,
+              }),
+              line: parkingLine,
+            })
+          )
+        )
+        .catch((err) => console.error("Failed to send parking invoice SMS:", err));
+    }
+
+    // Send email (fire-and-forget)
+    if (sendEmail && reservation.email && hostedInvoiceUrl) {
+      import("@/lib/resend/templates")
+        .then(({ invoiceReadyEmail }) => {
+          const { subject, html } = invoiceReadyEmail({
+            customerName: reservation.first_name,
+            vehicleDesc: reservation.lot,
+            jobTitle: null,
+            paymentUrl: hostedInvoiceUrl,
+            amount: amountDue / 100,
+            contextLabel: "Location",
+          });
+          return import("@/lib/actions/email").then(({ sendCustomerEmail }) =>
+            sendCustomerEmail({
+              customerId: reservation.customer_id!,
+              subject,
+              html,
+            })
+          );
+        })
+        .catch((err) => console.error("Failed to send parking invoice email:", err));
+    }
+
+    revalidatePath(`/parking/${reservationId}`);
+    revalidatePath("/invoices");
+    return { data: invoice };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to create Stripe invoice";
+    return { error: message };
+  }
 }

@@ -2,6 +2,57 @@ import { getStripe } from "./index";
 import { calculateTotals } from "@/lib/utils/totals";
 import type { ShopSettings } from "@/types";
 
+// ── Parking invoice (no tax/fees, shorter payment window) ───────────
+
+interface ParkingLineItem {
+  description: string;
+  amount: number; // in dollars
+}
+
+interface CreateParkingStripeInvoiceParams {
+  stripeCustomerId: string;
+  lineItems: ParkingLineItem[];
+  description?: string;
+}
+
+export async function createParkingStripeInvoice({
+  stripeCustomerId,
+  lineItems,
+  description,
+}: CreateParkingStripeInvoiceParams): Promise<{
+  stripeInvoiceId: string;
+  hostedInvoiceUrl: string;
+  amountDue: number;
+}> {
+  const stripe = getStripe();
+
+  const invoice = await stripe.invoices.create({
+    customer: stripeCustomerId,
+    collection_method: "send_invoice",
+    days_until_due: 7,
+    description: description || "Parking Services",
+    auto_advance: false,
+  });
+
+  for (const item of lineItems) {
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      invoice: invoice.id,
+      description: item.description,
+      amount: Math.round(item.amount * 100),
+      currency: "usd",
+    });
+  }
+
+  const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+
+  return {
+    stripeInvoiceId: finalizedInvoice.id,
+    hostedInvoiceUrl: finalizedInvoice.hosted_invoice_url || "",
+    amountDue: finalizedInvoice.amount_due,
+  };
+}
+
 interface LineItem {
   type: "labor" | "part";
   description: string;

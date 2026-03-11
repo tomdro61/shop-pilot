@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getParkingReservation } from "@/lib/actions/parking";
+import { getInvoicesForParkingReservation } from "@/lib/actions/invoices";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { SendSpecialsButton } from "@/components/parking/send-specials-button";
 import { ParkingNotesForm } from "@/components/parking/parking-notes-form";
 import { ParkingDatesForm } from "@/components/parking/parking-dates-form";
 import { ParkingServicesForm } from "@/components/parking/parking-services-form";
+import { ParkingInvoiceSection } from "@/components/parking/parking-invoice-section";
 import {
   ArrowLeft,
   Car,
@@ -71,7 +73,10 @@ export default async function ParkingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const reservation = await getParkingReservation(id);
+  const [reservation, invoices] = await Promise.all([
+    getParkingReservation(id),
+    getInvoicesForParkingReservation(id),
+  ]);
 
   if (!reservation) notFound();
 
@@ -240,6 +245,14 @@ export default async function ParkingDetailPage({
             />
           </CardContent>
         </Card>
+
+        {/* Invoices */}
+        <ParkingInvoiceSection
+          reservationId={reservation.id}
+          invoices={invoices}
+          customerPhone={reservation.phone}
+          customerEmail={reservation.email}
+        />
 
         {/* Staff Notes */}
         <Card>

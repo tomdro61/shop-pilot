@@ -39,6 +39,7 @@ import {
 import {
   createInvoiceFromJob,
   getInvoiceForJob,
+  createParkingInvoice,
 } from "@/lib/actions/invoices";
 import { getTeamMembers, getTechnicians } from "@/lib/actions/team";
 import { getReportData, getFleetARSummary, getDailySummary } from "@/lib/actions/reports";
@@ -509,6 +510,17 @@ export async function executeToolCall(
         const result = await updateParkingReservation(
           str(toolInput.id),
           updates
+        );
+        return JSON.stringify(result);
+      }
+      case "create_parking_invoice": {
+        const items = (toolInput.line_items as { description: string; amount: number }[]) || [];
+        const result = await createParkingInvoice(
+          str(toolInput.reservation_id),
+          items.map((item) => ({
+            description: String(item.description || ""),
+            amount: Number(item.amount) || 0,
+          }))
         );
         return JSON.stringify(result);
       }

@@ -371,7 +371,8 @@ export type Database = {
       invoices: {
         Row: {
           id: string;
-          job_id: string;
+          job_id: string | null;
+          parking_reservation_id: string | null;
           stripe_invoice_id: string | null;
           status: Database["public"]["Enums"]["invoice_status"];
           amount: number | null;
@@ -383,7 +384,8 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          job_id: string;
+          job_id?: string | null;
+          parking_reservation_id?: string | null;
           stripe_invoice_id?: string | null;
           status?: Database["public"]["Enums"]["invoice_status"];
           amount?: number | null;
@@ -395,7 +397,8 @@ export type Database = {
         };
         Update: {
           id?: string;
-          job_id?: string;
+          job_id?: string | null;
+          parking_reservation_id?: string | null;
           stripe_invoice_id?: string | null;
           status?: Database["public"]["Enums"]["invoice_status"];
           amount?: number | null;
@@ -411,6 +414,13 @@ export type Database = {
             columns: ["job_id"];
             isOneToOne: false;
             referencedRelation: "jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invoices_parking_reservation_id_fkey";
+            columns: ["parking_reservation_id"];
+            isOneToOne: false;
+            referencedRelation: "parking_reservations";
             referencedColumns: ["id"];
           },
         ];

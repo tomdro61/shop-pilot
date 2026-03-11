@@ -247,12 +247,14 @@ export function invoiceReadyEmail({
   jobTitle,
   paymentUrl,
   amount,
+  contextLabel = "Vehicle",
 }: {
   customerName: string;
   vehicleDesc: string;
   jobTitle: string | null;
   paymentUrl: string;
   amount: number;
+  contextLabel?: string;
 }): { subject: string; html: string } {
   const content = `
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
@@ -264,7 +266,7 @@ export function invoiceReadyEmail({
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafaf9;border-radius:6px;padding:16px;margin:0 0 20px;">
       <tr>
         <td>
-          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Vehicle</p>
+          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">${contextLabel}</p>
           <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${vehicleDesc}</p>
           ${
             jobTitle
@@ -292,6 +294,71 @@ export function invoiceReadyEmail({
 
   return {
     subject: "Your invoice from Broadway Motors",
+    html: baseLayout(content),
+  };
+}
+
+export function parkingPaymentReceiptEmail({
+  customerName,
+  lot,
+  lineItems,
+  total,
+}: {
+  customerName: string;
+  lot: string;
+  lineItems: { description: string; amount: number }[];
+  total: number;
+}): { subject: string; html: string } {
+  const rows = lineItems
+    .map(
+      (li) => `
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #f5f5f4;color:#44403c;font-size:14px;">${li.description}</td>
+      <td style="padding:8px 0;border-bottom:1px solid #f5f5f4;color:#1c1917;font-size:14px;text-align:right;font-weight:500;">${formatMoneyDollars(li.amount)}</td>
+    </tr>`
+    )
+    .join("");
+
+  const content = `
+    <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
+      Hi ${customerName},
+    </p>
+    <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
+      Thank you for your payment. Here's your receipt.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4;border-radius:6px;padding:16px;margin:0 0 20px;">
+      <tr>
+        <td align="center">
+          <p style="margin:0 0 4px;color:#15803d;font-size:13px;font-weight:600;text-transform:uppercase;">Payment Received</p>
+          <p style="margin:0 0 8px;color:#15803d;font-size:28px;font-weight:700;">${formatMoneyDollars(total)}</p>
+          <p style="margin:0;color:#4ade80;font-size:13px;">Card (Stripe) &middot; ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+        </td>
+      </tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafaf9;border-radius:6px;padding:16px;margin:0 0 20px;">
+      <tr>
+        <td>
+          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Location</p>
+          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${lot}</p>
+        </td>
+      </tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+      <tr style="background-color:#fafaf9;">
+        <th style="padding:8px 0;text-align:left;color:#78716c;font-size:12px;font-weight:600;text-transform:uppercase;">Description</th>
+        <th style="padding:8px 0;text-align:right;color:#78716c;font-size:12px;font-weight:600;text-transform:uppercase;">Amount</th>
+      </tr>
+      ${rows}
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+      <tr>
+        <td style="padding:8px 0;border-top:2px solid #1c1917;color:#1c1917;font-size:16px;font-weight:700;">Total</td>
+        <td style="padding:8px 0;border-top:2px solid #1c1917;color:#1c1917;font-size:16px;font-weight:700;text-align:right;">${formatMoneyDollars(total)}</td>
+      </tr>
+    </table>`;
+
+  return {
+    subject: "Payment receipt from Broadway Motors",
     html: baseLayout(content),
   };
 }

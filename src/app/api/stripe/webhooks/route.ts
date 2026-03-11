@@ -3,13 +3,13 @@ import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSMS } from "@/lib/quo/client";
 import { toE164 } from "@/lib/quo/format";
-import { getPhoneNumber } from "@/lib/quo/routing";
+import { getPhoneNumber, getParkingLine } from "@/lib/quo/routing";
 import { sendEmail } from "@/lib/resend/client";
 import {
   paymentReceivedSMS,
   paymentReceivedInternalSMS,
 } from "@/lib/messaging/templates";
-import { paymentReceiptEmail } from "@/lib/resend/templates";
+import { paymentReceiptEmail, parkingPaymentReceiptEmail } from "@/lib/resend/templates";
 import { calculateTotals } from "@/lib/utils/totals";
 import type Stripe from "stripe";
 
@@ -60,7 +60,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   // Find our invoice by Stripe invoice ID
   const { data: invoice, error } = await supabase
     .from("invoices")
-    .select("id, job_id")
+    .select("id, job_id, parking_reservation_id")
     .eq("stripe_invoice_id", stripeInvoice.id)
     .maybeSingle();
 
@@ -75,6 +75,113 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       payment_method: "stripe",
     })
     .eq("id", invoice.id);
+
+  const amount = stripeInvoice.amount_paid
+    ? `$${(stripeInvoice.amount_paid / 100).toFixed(2)}`
+    : null;
+
+  // ── Parking invoice branch ──────────────────────────────────────
+  if (invoice.parking_reservation_id) {
+    const { data: reservation } = await supabase
+      .from("parking_reservations")
+      .select("id, first_name, last_name, lot, customer_id, phone, email")
+      .eq("id", invoice.parking_reservation_id)
+      .single();
+
+    if (!reservation) return;
+
+    // Customer SMS (fire-and-forget)
+    if (reservation.phone && amount && reservation.customer_id) {
+      try {
+        const to = toE164(reservation.phone);
+        if (to) {
+          const parkingLine = getParkingLine(reservation.lot);
+          const parkingPhone = getPhoneNumber(parkingLine);
+          const smsBody = paymentReceivedSMS({
+            firstName: reservation.first_name,
+            amount,
+          });
+          await sendSMS({ to, body: smsBody, from: parkingPhone });
+          await supabase.from("messages").insert({
+            customer_id: reservation.customer_id,
+            channel: "sms" as const,
+            direction: "out" as const,
+            body: smsBody,
+            phone_line: parkingLine,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to send parking payment SMS:", err);
+      }
+    }
+
+    // Parking receipt email (fire-and-forget)
+    if (reservation.email && reservation.customer_id) {
+      try {
+        const stripeLineItems = (stripeInvoice.lines?.data || []).map((line) => ({
+          description: line.description || "Charge",
+          amount: (line.amount || 0) / 100,
+        }));
+
+        const { subject, html } = parkingPaymentReceiptEmail({
+          customerName: reservation.first_name,
+          lot: reservation.lot,
+          lineItems: stripeLineItems,
+          total: (stripeInvoice.amount_paid || 0) / 100,
+        });
+
+        const result = await sendEmail({ to: reservation.email, subject, html });
+
+        await supabase.from("messages").insert({
+          customer_id: reservation.customer_id,
+          channel: "email" as const,
+          direction: "out" as const,
+          body: subject,
+          status: result.success ? "sent" : "failed",
+        });
+      } catch (err) {
+        console.error("Failed to send parking receipt email:", err);
+      }
+    }
+
+    // Internal notification (fire-and-forget)
+    if (amount) {
+      const notifyPhones = process.env.INTERNAL_NOTIFICATION_PHONES;
+      if (notifyPhones) {
+        try {
+          const parkingLine = getParkingLine(reservation.lot);
+          const parkingPhone = getPhoneNumber(parkingLine);
+          const internalBody = paymentReceivedInternalSMS({
+            firstName: reservation.first_name,
+            lastName: reservation.last_name,
+            amount,
+          });
+          const phones = notifyPhones
+            .split(",")
+            .map((p) => p.trim())
+            .filter(Boolean);
+          await Promise.all(
+            phones.map((phone) =>
+              sendSMS({ to: phone, body: internalBody, from: parkingPhone }).catch(
+                (err) =>
+                  console.error(
+                    `[Stripe] Internal parking payment SMS to ${phone} failed:`,
+                    err
+                  )
+              )
+            )
+          );
+        } catch (err) {
+          console.error("Failed to send internal parking payment SMS:", err);
+        }
+      }
+    }
+
+    return;
+  }
+
+  // ── Job invoice branch (existing flow) ──────────────────────────
+  if (!invoice.job_id) return;
 
   // Update job payment tracking (don't change job status — payment is separate from workflow)
   await supabase
@@ -111,10 +218,6 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   } | null;
 
   if (!customer) return;
-
-  const amount = stripeInvoice.amount_paid
-    ? `$${(stripeInvoice.amount_paid / 100).toFixed(2)}`
-    : null;
 
   // Receipt email (fire-and-forget)
   if (customer.email) {

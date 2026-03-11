@@ -151,6 +151,11 @@ export default async function JobDetailPage({
                       {formatPhone(customer.phone)}
                     </p>
                   )}
+                  {customer.email && (
+                    <p className="text-xs text-muted-foreground">
+                      {customer.email}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
