@@ -147,6 +147,27 @@ export function quoteRequestInternalSMS({
   return msg;
 }
 
+export function paymentReceivedInternalSMS({
+  firstName,
+  lastName,
+  amount,
+  year,
+  make,
+  model,
+}: {
+  firstName: string;
+  lastName: string;
+  amount: string;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+}) {
+  const vehicle = [year, make, model].filter(Boolean).join(" ");
+  let msg = `Payment received: ${amount} from ${firstName} ${lastName}`;
+  if (vehicle) msg += ` — ${vehicle}`;
+  return msg;
+}
+
 export function parkingSpecialsSMS({
   firstName,
   specials,

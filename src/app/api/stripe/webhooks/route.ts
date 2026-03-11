@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendSMS } from "@/lib/quo/client";
+import { toE164 } from "@/lib/quo/format";
+import { getPhoneNumber } from "@/lib/quo/routing";
+import { sendEmail } from "@/lib/resend/client";
+import {
+  paymentReceivedSMS,
+  paymentReceivedInternalSMS,
+} from "@/lib/messaging/templates";
+import { paymentReceiptEmail } from "@/lib/resend/templates";
+import { calculateTotals } from "@/lib/utils/totals";
 import type Stripe from "stripe";
 
 export async function POST(request: Request) {
@@ -75,46 +85,142 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
     })
     .eq("id", invoice.job_id);
 
-  // Fire-and-forget receipt email
-  import("@/lib/actions/email")
-    .then(({ sendPaymentReceiptEmail }) =>
-      sendPaymentReceiptEmail({ jobId: invoice.job_id })
-    )
-    .catch((err) => console.error("Failed to send receipt email:", err));
-
-  // Fire-and-forget payment confirmation SMS
+  // Fetch job + customer + vehicle for SMS and email (admin client — no auth cookies in webhooks)
   const { data: jobData } = await supabase
     .from("jobs")
-    .select("customer_id, customers(id, first_name, phone), vehicles(year, make, model)")
+    .select(
+      "id, title, payment_method, customers(id, first_name, last_name, email, phone), vehicles(year, make, model), job_line_items(type, description, quantity, unit_cost)"
+    )
     .eq("id", invoice.job_id)
     .single();
 
-  if (jobData) {
-    const customer = jobData.customers as { id: string; first_name: string; phone: string | null } | null;
-    const vehicle = jobData.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-    if (customer?.phone) {
-      const amount = stripeInvoice.amount_paid
-        ? `$${(stripeInvoice.amount_paid / 100).toFixed(2)}`
-        : null;
-      if (amount) {
-        import("@/lib/messaging/templates")
-          .then(({ paymentReceivedSMS }) =>
-            import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
-              sendCustomerSMS({
-                customerId: customer.id,
-                body: paymentReceivedSMS({
-                  firstName: customer.first_name,
-                  amount,
-                  year: vehicle?.year,
-                  make: vehicle?.make,
-                  model: vehicle?.model,
-                }),
-                jobId: invoice.job_id,
-                line: "shop",
-              })
+  if (!jobData) return;
+
+  const customer = jobData.customers as {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
+
+  const vehicle = jobData.vehicles as {
+    year: number | null;
+    make: string | null;
+    model: string | null;
+  } | null;
+
+  if (!customer) return;
+
+  const amount = stripeInvoice.amount_paid
+    ? `$${(stripeInvoice.amount_paid / 100).toFixed(2)}`
+    : null;
+
+  // Receipt email (fire-and-forget)
+  if (customer.email) {
+    try {
+      const { data: settingsRow } = await supabase
+        .from("shop_settings")
+        .select("*")
+        .limit(1)
+        .single();
+
+      const lineItems = (jobData.job_line_items || []) as {
+        type: "labor" | "part";
+        description: string;
+        quantity: number;
+        unit_cost: number;
+      }[];
+
+      const totals = calculateTotals(lineItems, settingsRow);
+      const vehicleDesc = vehicle
+        ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")
+        : "Vehicle";
+
+      const { subject, html } = paymentReceiptEmail({
+        customerName: customer.first_name,
+        jobTitle: jobData.title,
+        vehicleDesc,
+        amount: totals.grandTotal,
+        paymentMethod: jobData.payment_method || "stripe",
+        lineItems,
+        totals,
+      });
+
+      const result = await sendEmail({ to: customer.email, subject, html });
+
+      await supabase.from("messages").insert({
+        customer_id: customer.id,
+        job_id: invoice.job_id,
+        channel: "email" as const,
+        direction: "out" as const,
+        body: subject,
+        status: result.success ? "sent" : "failed",
+      });
+    } catch (err) {
+      console.error("Failed to send receipt email:", err);
+    }
+  }
+
+  // Customer payment confirmation SMS (fire-and-forget)
+  if (customer.phone && amount) {
+    try {
+      const to = toE164(customer.phone);
+      if (to) {
+        const shopPhone = getPhoneNumber("shop");
+        const smsBody = paymentReceivedSMS({
+          firstName: customer.first_name,
+          amount,
+          year: vehicle?.year,
+          make: vehicle?.make,
+          model: vehicle?.model,
+        });
+        await sendSMS({ to, body: smsBody, from: shopPhone });
+        await supabase.from("messages").insert({
+          customer_id: customer.id,
+          job_id: invoice.job_id,
+          channel: "sms" as const,
+          direction: "out" as const,
+          body: smsBody,
+          phone_line: "shop",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to send payment SMS:", err);
+    }
+  }
+
+  // Internal notification to shop owners (fire-and-forget)
+  if (amount) {
+    const notifyPhones = process.env.INTERNAL_NOTIFICATION_PHONES;
+    if (notifyPhones) {
+      try {
+        const shopPhone = getPhoneNumber("shop");
+        const internalBody = paymentReceivedInternalSMS({
+          firstName: customer.first_name,
+          lastName: customer.last_name,
+          amount,
+          year: vehicle?.year,
+          make: vehicle?.make,
+          model: vehicle?.model,
+        });
+        const phones = notifyPhones
+          .split(",")
+          .map((p) => p.trim())
+          .filter(Boolean);
+        await Promise.all(
+          phones.map((phone) =>
+            sendSMS({ to: phone, body: internalBody, from: shopPhone }).catch(
+              (err) =>
+                console.error(
+                  `[Stripe] Internal payment SMS to ${phone} failed:`,
+                  err
+                )
             )
           )
-          .catch((err) => console.error("Failed to send payment SMS:", err));
+        );
+      } catch (err) {
+        console.error("Failed to send internal payment SMS:", err);
       }
     }
   }

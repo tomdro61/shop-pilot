@@ -170,7 +170,7 @@ export async function POST(request: Request) {
         }
 
         // Internal notification
-        const notifyPhones = process.env.QUOTE_NOTIFICATION_PHONES;
+        const notifyPhones = process.env.INTERNAL_NOTIFICATION_PHONES;
         if (notifyPhones) {
           const internalBody = quoteRequestInternalSMS({
             firstName,
