@@ -118,7 +118,7 @@ export function pickupReadySMS({
   boxNumber: number;
   boxCode: string;
 }) {
-  return `Hi ${firstName}, your vehicle is ready for pickup! Your keys are in lock box #${boxNumber}, code: ${boxCode}. Thank you for parking with Broadway Motors!`;
+  return `Hi ${firstName}, your vehicle is ready for pickup!\n\nYour keys are in lock box #${boxNumber}, code: ${boxCode}.\n\nThank you for parking with Broadway Motors! If you have a moment, a Google review would mean a lot to a small local business like ours. https://g.page/r/Cas10ul9ZXhNEBI/review`;
 }
 
 export function quoteRequestAckSMS({ firstName }: { firstName: string }) {
