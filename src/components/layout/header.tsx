@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import { LogOut, Wrench, Sun, Moon, Monitor, Settings, BarChart3, Receipt } from "lucide-react";
+import { LogOut, Wrench, Sun, Moon, Monitor, Settings, BarChart3, Receipt, ClipboardCheck } from "lucide-react";
 import type { User } from "@/types";
 
 const pageTitles: Record<string, string> = {
@@ -104,6 +104,10 @@ export function Header({ user }: { user: User | null }) {
           <DropdownMenuItem onClick={() => router.push("/invoices")}>
             <Receipt className="mr-2 h-4 w-4" />
             Invoices
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/inspections")}>
+            <ClipboardCheck className="mr-2 h-4 w-4" />
+            Inspections
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
