@@ -29,6 +29,7 @@ interface VehicleFormProps {
   vehicle?: Vehicle;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreated?: (vehicleId: string) => void;
 }
 
 export function VehicleForm({
@@ -36,6 +37,7 @@ export function VehicleForm({
   vehicle,
   open,
   onOpenChange,
+  onCreated,
 }: VehicleFormProps) {
   const isEditing = !!vehicle;
 
@@ -75,6 +77,9 @@ export function VehicleForm({
     }
 
     toast.success(isEditing ? "Vehicle updated" : "Vehicle added");
+    if (!isEditing && "data" in result && result.data && onCreated) {
+      onCreated(result.data.id);
+    }
     onOpenChange(false);
     form.reset();
   }

@@ -11,6 +11,7 @@ import { createJob, updateJob } from "@/lib/actions/jobs";
 import { applyPresetToJob } from "@/lib/actions/presets";
 import { updateQuoteRequestStatus } from "@/lib/actions/quote-requests";
 import { createClient } from "@/lib/supabase/client";
+import { VehicleForm } from "@/components/forms/vehicle-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -86,6 +87,7 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
   const [technicians, setTechnicians] = useState<TechOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [vehicleAddOpen, setVehicleAddOpen] = useState(false);
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -128,22 +130,25 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
     searchCustomers();
   }, [customerSearch]);
 
-  // Load vehicles when customer changes
-  useEffect(() => {
-    async function loadVehicles() {
-      if (!selectedCustomerId) {
-        setVehicles([]);
-        return;
-      }
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("vehicles")
-        .select("id, year, make, model")
-        .eq("customer_id", selectedCustomerId)
-        .order("year", { ascending: false });
-      setVehicles(data || []);
+  // Load vehicles for selected customer
+  async function loadVehicles(customerId?: string) {
+    const cid = customerId || selectedCustomerId;
+    if (!cid) {
+      setVehicles([]);
+      return;
     }
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("vehicles")
+      .select("id, year, make, model")
+      .eq("customer_id", cid)
+      .order("year", { ascending: false });
+    setVehicles(data || []);
+  }
+
+  useEffect(() => {
     loadVehicles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCustomerId]);
 
   // Load technicians
@@ -349,7 +354,19 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
                 name="vehicle_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vehicle</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Vehicle</FormLabel>
+                      {selectedCustomerId && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => setVehicleAddOpen(true)}
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add Vehicle
+                        </button>
+                      )}
+                    </div>
                     <Select
                       value={field.value ?? "none"}
                       onValueChange={(val) => field.onChange(val === "none" ? null : val)}
@@ -632,6 +649,19 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
           </Button>
         </div>
       </form>
+
+      {/* Add Vehicle Sheet */}
+      {selectedCustomerId && (
+        <VehicleForm
+          customerId={selectedCustomerId}
+          open={vehicleAddOpen}
+          onOpenChange={setVehicleAddOpen}
+          onCreated={async (vehicleId) => {
+            await loadVehicles();
+            form.setValue("vehicle_id", vehicleId);
+          }}
+        />
+      )}
     </Form>
   );
 }
