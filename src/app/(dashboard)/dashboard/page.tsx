@@ -43,12 +43,17 @@ const getDashboardData = unstable_cache(async () => {
   const lastWeekStart = toDateStr(startOfWeek(lastWeekDate, { weekStartsOn: 1 }));
   const lastWeekEnd = toDateStr(endOfWeek(lastWeekDate, { weekStartsOn: 1 }));
 
-  const inspectionRangeStart = lastWeekStart < monthStart ? lastWeekStart : monthStart;
+  const lastMonthDate = new Date(todayDate.getFullYear(), todayDate.getMonth() - 1, 1);
+  const lastMonthStart = toDateStr(lastMonthDate);
+  const lastMonthEnd = toDateStr(new Date(todayDate.getFullYear(), todayDate.getMonth(), 0));
+
+  const inspectionRangeStart = [lastWeekStart, lastMonthStart, monthStart].sort()[0];
 
   const [
     activeJobsResult,
     monthCompletedResult,
     lastWeekCompletedResult,
+    lastMonthCompletedResult,
     inspectionRangeResult,
     newQuoteCountResult,
     unpaidJobsResult,
@@ -73,6 +78,13 @@ const getDashboardData = unstable_cache(async () => {
       .eq("status", "complete")
       .gte("date_finished", lastWeekStart)
       .lte("date_finished", lastWeekEnd),
+    // Last month completed — month-over-month
+    supabase
+      .from("jobs")
+      .select("id, job_line_items(total, category)")
+      .eq("status", "complete")
+      .gte("date_finished", lastMonthStart)
+      .lte("date_finished", lastMonthEnd),
     // Inspection counts
     supabase
       .from("daily_inspection_counts")
@@ -136,6 +148,7 @@ const getDashboardData = unstable_cache(async () => {
   const inspWeek = inspectionRows.filter(r => r.date >= weekStart && r.date <= weekEnd);
   const inspMonth = inspectionRows.filter(r => r.date >= monthStart && r.date <= monthEnd);
   const inspLastWeek = inspectionRows.filter(r => r.date >= lastWeekStart && r.date <= lastWeekEnd);
+  const inspLastMonth = inspectionRows.filter(r => r.date >= lastMonthStart && r.date <= lastMonthEnd);
 
   const todayCompleted = monthCompleted.filter(j => j.date_finished === today);
   const weekCompleted = monthCompleted.filter(j =>
@@ -163,6 +176,7 @@ const getDashboardData = unstable_cache(async () => {
       weeklyRevenue: weekJobRevenue + sumInspectionRev(inspWeek),
       lastWeekRevenue: sumJobRevenue(lastWeekCompletedResult.data) + sumInspectionRev(inspLastWeek),
       monthlyRevenue: sumJobRevenue(monthCompleted) + sumInspectionRev(inspMonth),
+      lastMonthRevenue: sumJobRevenue(lastMonthCompletedResult.data) + sumInspectionRev(inspLastMonth),
       avgTicketWeek: weekJobCount > 0 ? weekJobRevenue / weekJobCount : 0,
       unassignedJobs,
       unpaidJobCount: unpaidJobs.length,
@@ -190,6 +204,7 @@ export default async function DashboardPage() {
   } = await getDashboardData();
 
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
+  const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);
   const alertCount = stats.unpaidJobCount + stats.unassignedJobs + newQuoteRequests;
 
   return (
@@ -239,6 +254,17 @@ export default async function DashboardPage() {
           <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Month</p>
             <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.monthlyRevenue)}</p>
+            <div className="mt-1 flex items-center gap-1">
+              {monthChange >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />
+              )}
+              <span className={`text-xs font-medium tabular-nums ${monthChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                {monthChange >= 0 ? "+" : ""}{monthChange.toFixed(0)}%
+              </span>
+              <span className="text-xs text-muted-foreground">vs last month</span>
+            </div>
           </div>
           <div className="rounded-lg border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Avg Ticket (Week)</p>
