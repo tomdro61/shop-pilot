@@ -108,6 +108,18 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
 
   const selectedCustomerId = form.watch("customer_id");
 
+  // Seed customers list with the job's existing customer when editing
+  useEffect(() => {
+    if (job?.customers) {
+      setCustomers([{
+        id: job.customers.id,
+        first_name: job.customers.first_name,
+        last_name: job.customers.last_name,
+        phone: null,
+      }]);
+    }
+  }, [job?.customers]);
+
   // Search customers
   useEffect(() => {
     async function searchCustomers() {
@@ -125,10 +137,19 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
       }
 
       const { data } = await query;
-      setCustomers(data || []);
+      if (data) {
+        setCustomers(prev => {
+          // Keep the existing job customer in the list even if not in search results
+          const jobCustomerId = job?.customer_id;
+          const jobCustomerInResults = !jobCustomerId || data.some(c => c.id === jobCustomerId);
+          if (jobCustomerInResults) return data;
+          const existing = prev.find(c => c.id === jobCustomerId);
+          return existing ? [existing, ...data] : data;
+        });
+      }
     }
     searchCustomers();
-  }, [customerSearch]);
+  }, [customerSearch, job?.customer_id]);
 
   // Load vehicles for selected customer
   async function loadVehicles(customerId?: string) {
