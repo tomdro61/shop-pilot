@@ -8,7 +8,33 @@ import { getPhoneNumber } from "@/lib/quo/routing";
 import { quoteRequestAckSMS, quoteRequestInternalSMS } from "@/lib/messaging/templates";
 import { revalidatePath } from "next/cache";
 
+const ALLOWED_ORIGINS = [
+  "https://www.broadwaymotorsrevere.com",
+  "https://broadwaymotorsrevere.com",
+  "https://www.broadwaymotorsma.com",
+  "https://broadwaymotorsma.com",
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
+
+function corsHeaders(origin: string | null) {
+  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+}
+
+export async function OPTIONS(request: Request) {
+  const origin = request.headers.get("origin");
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+}
+
 export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  const headers = corsHeaders(origin);
+
   try {
     // 1. Parse JSON body
     let body: Record<string, unknown>;
@@ -16,27 +42,19 @@ export async function POST(request: Request) {
       body = await request.json();
     } catch {
       console.error("[Quote Request] Invalid JSON body");
-      return NextResponse.json({ success: true }, { status: 200 });
+      return NextResponse.json({ success: false, error: "Invalid request" }, { status: 400, headers });
     }
 
-    // 2. Verify shared secret
-    const secret =
-      request.headers.get("x-webhook-secret") ||
-      (typeof body.webhook_secret === "string" ? body.webhook_secret : "") ||
-      (typeof (body.data as Record<string, unknown>)?.webhook_secret === "string"
-        ? ((body.data as Record<string, unknown>).webhook_secret as string)
-        : "");
-    const expected = process.env.WIX_QUOTE_WEBHOOK_SECRET;
-
-    if (!expected || secret !== expected) {
-      console.error("[Quote Request] Invalid or missing webhook secret");
-      return NextResponse.json({ success: true }, { status: 200 });
+    // 2. Honeypot spam check
+    if (body.website || body["bot-field"]) {
+      console.log("[Quote Request] Honeypot triggered, ignoring");
+      return NextResponse.json({ success: true }, { status: 200, headers });
     }
 
-    console.log("[Quote Request] Webhook received:", JSON.stringify(body));
+    console.log("[Quote Request] Received:", JSON.stringify(body));
 
-    // 3. Extract fields — flexible lookup for Wix naming variations
-    const data = (typeof body.data === "object" && body.data !== null ? body.data : body) as Record<string, unknown>;
+    // 3. Extract fields
+    const data = body as Record<string, unknown>;
 
     const getString = (keys: string[]): string => {
       for (const key of keys) {
@@ -75,21 +93,13 @@ export async function POST(request: Request) {
     const vehicleYear = vehicleYearRaw ? parseInt(vehicleYearRaw, 10) || null : null;
 
     // 4. Validate required fields
-    if (!firstName || !lastName) {
-      console.error("[Quote Request] Missing name fields", { firstName, lastName });
-      return NextResponse.json({ success: true }, { status: 200 });
-    }
-    if (!email) {
-      console.error("[Quote Request] Missing email");
-      return NextResponse.json({ success: true }, { status: 200 });
-    }
-    if (!phone) {
-      console.error("[Quote Request] Missing phone");
-      return NextResponse.json({ success: true }, { status: 200 });
+    if (!firstName || !phone) {
+      console.error("[Quote Request] Missing required fields", { firstName, phone });
+      return NextResponse.json({ success: false, error: "Name and phone are required" }, { status: 400, headers });
     }
     if (services.length === 0) {
       console.error("[Quote Request] No services selected");
-      return NextResponse.json({ success: true }, { status: 200 });
+      return NextResponse.json({ success: false, error: "Please select a service" }, { status: 400, headers });
     }
 
     // 5. Find or create customer
@@ -140,7 +150,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("[Quote Request] DB insert failed:", error);
-      return NextResponse.json({ success: true }, { status: 200 });
+      return NextResponse.json({ success: false, error: "Failed to save request" }, { status: 500, headers });
     }
 
     console.log(`[Quote Request] Created ${inserted.id} for ${firstName} ${lastName}`);
@@ -194,9 +204,9 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json({ success: true }, { status: 200, headers });
   } catch (err) {
     console.error("[Quote Request] Unexpected error:", err);
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500, headers });
   }
 }
