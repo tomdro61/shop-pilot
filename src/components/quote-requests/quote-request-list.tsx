@@ -260,7 +260,7 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
 
           {qr.quo_contact_id && (
             <a
-              href={`https://app.quo.is/contacts/${qr.quo_contact_id}`}
+              href={`https://my.quo.com/inbox/PNq6UNTzCW/c/${qr.quo_contact_id}`}
               target="_blank"
               rel="noopener noreferrer"
             >
