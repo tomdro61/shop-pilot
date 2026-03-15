@@ -192,15 +192,17 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
           </div>
 
           {/* Contact */}
-          <div className="flex items-center gap-3 text-xs text-stone-500 dark:text-stone-400">
+          <div className="flex flex-col gap-1 text-xs text-stone-500 dark:text-stone-400">
             <span className="flex items-center gap-1">
               <Phone className="h-3 w-3" />
               {qr.phone}
             </span>
-            <span className="flex items-center gap-1">
-              <Mail className="h-3 w-3" />
-              {qr.email}
-            </span>
+            {qr.email && (
+              <span className="flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                {qr.email}
+              </span>
+            )}
           </div>
 
           {/* Vehicle */}
