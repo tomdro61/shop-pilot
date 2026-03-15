@@ -258,7 +258,7 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
 
           {qr.quo_contact_id && (
             <a
-              href={`https://app.openphone.com/contacts/${qr.quo_contact_id}`}
+              href={`https://app.quo.is/contacts/${qr.quo_contact_id}`}
               target="_blank"
               rel="noopener noreferrer"
             >
