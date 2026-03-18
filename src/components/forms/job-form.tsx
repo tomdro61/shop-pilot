@@ -108,6 +108,9 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
 
   const selectedCustomerId = form.watch("customer_id");
 
+  // The customer ID that must stay in the dropdown (editing or pre-selected via query param)
+  const pinnedCustomerId = job?.customer_id || defaultCustomerId;
+
   // Seed customers list with the job's existing customer when editing
   useEffect(() => {
     if (job?.customers) {
@@ -119,6 +122,23 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
       }]);
     }
   }, [job?.customers]);
+
+  // Fetch the pre-selected customer when creating a new job from a customer page
+  useEffect(() => {
+    if (!defaultCustomerId || job?.customers) return;
+    async function fetchDefaultCustomer() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("customers")
+        .select("id, first_name, last_name, phone")
+        .eq("id", defaultCustomerId!)
+        .single();
+      if (data) {
+        setCustomers([data]);
+      }
+    }
+    fetchDefaultCustomer();
+  }, [defaultCustomerId, job?.customers]);
 
   // Search customers
   useEffect(() => {
@@ -139,17 +159,17 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
       const { data } = await query;
       if (data) {
         setCustomers(prev => {
-          // Keep the existing job customer in the list even if not in search results
-          const jobCustomerId = job?.customer_id;
-          const jobCustomerInResults = !jobCustomerId || data.some(c => c.id === jobCustomerId);
-          if (jobCustomerInResults) return data;
-          const existing = prev.find(c => c.id === jobCustomerId);
+          // Keep the pinned customer in the list even if not in search results
+          const pinId = pinnedCustomerId;
+          const pinnedInResults = !pinId || data.some(c => c.id === pinId);
+          if (pinnedInResults) return data;
+          const existing = prev.find(c => c.id === pinId);
           return existing ? [existing, ...data] : data;
         });
       }
     }
     searchCustomers();
-  }, [customerSearch, job?.customer_id]);
+  }, [customerSearch, pinnedCustomerId]);
 
   // Load vehicles for selected customer
   async function loadVehicles(customerId?: string) {
