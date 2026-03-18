@@ -5,6 +5,7 @@ import { subDays, differenceInDays, parseISO } from "date-fns";
 import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
 import { INSPECTION_CATEGORY, calcInspectionRevenue } from "@/lib/utils/revenue";
+import { MA_SALES_TAX_RATE } from "@/lib/constants";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -520,5 +521,113 @@ export async function getDailySummary() {
         customer: j.customers as { first_name: string; last_name: string } | null,
       };
     }),
+  };
+}
+
+// ── Tax Summary Report ──────────────────────────────────────────────
+
+export interface TaxMonthRow {
+  month: string; // "January", "February", etc.
+  monthNum: number; // 1-12
+  totalRevenue: number;
+  taxableAmount: number; // parts totals
+  taxCollected: number; // taxableAmount * tax rate
+  nonTaxableAmount: number; // labor + other non-taxed items
+}
+
+export interface TaxReportData {
+  year: number;
+  taxRate: number;
+  months: TaxMonthRow[];
+  ytd: Omit<TaxMonthRow, "month" | "monthNum">;
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+export async function getTaxReportData(year: number): Promise<TaxReportData> {
+  const supabase = await createClient();
+  const taxRate = MA_SALES_TAX_RATE;
+
+  // Query all paid jobs with line items. We filter by year in JS because
+  // the date logic (paid_at with date_finished fallback) is simpler client-side.
+  // For a single shop this is a few hundred jobs per year at most.
+  const { data: jobs } = await supabase
+    .from("jobs")
+    .select("id, paid_at, date_finished, job_line_items(type, total, category)")
+    .eq("payment_status", "paid");
+
+  // Aggregate by month
+  const monthBuckets: Record<number, { totalRevenue: number; partsTotal: number }> = {};
+  for (let m = 1; m <= 12; m++) {
+    monthBuckets[m] = { totalRevenue: 0, partsTotal: 0 };
+  }
+
+  (jobs || []).forEach((job) => {
+    // Use paid_at when available, fall back to date_finished (backfilled data)
+    const dateStr = job.paid_at || job.date_finished;
+    if (!dateStr) return;
+
+    // Convert to ET date string (YYYY-MM-DD) to get correct month.
+    // paid_at is a UTC timestamptz; date_finished is a date string.
+    const utcDate = new Date(dateStr.includes("T") ? dateStr : dateStr + "T12:00:00Z");
+    const etDateStr = utcDate.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+    const [etYear, etMonth] = etDateStr.split("-").map(Number);
+    if (etYear !== year) return;
+
+    const month = etMonth; // 1-12
+
+    const lineItems = (job.job_line_items as { type: string; total: number; category: string | null }[]) || [];
+
+    lineItems
+      .filter((li) => li.category !== INSPECTION_CATEGORY)
+      .forEach((li) => {
+        const total = li.total || 0;
+        monthBuckets[month].totalRevenue += total;
+        if (li.type === "part") {
+          monthBuckets[month].partsTotal += total;
+        }
+      });
+  });
+
+  // Build month rows
+  const months: TaxMonthRow[] = [];
+  let ytdRevenue = 0;
+  let ytdTaxable = 0;
+  let ytdTax = 0;
+  let ytdNonTaxable = 0;
+
+  for (let m = 1; m <= 12; m++) {
+    const { totalRevenue, partsTotal } = monthBuckets[m];
+    const taxCollected = Math.round(partsTotal * taxRate * 100) / 100;
+    const nonTaxableAmount = totalRevenue - partsTotal;
+
+    months.push({
+      month: MONTH_NAMES[m - 1],
+      monthNum: m,
+      totalRevenue,
+      taxableAmount: partsTotal,
+      taxCollected,
+      nonTaxableAmount,
+    });
+
+    ytdRevenue += totalRevenue;
+    ytdTaxable += partsTotal;
+    ytdTax += taxCollected;
+    ytdNonTaxable += nonTaxableAmount;
+  }
+
+  return {
+    year,
+    taxRate,
+    months,
+    ytd: {
+      totalRevenue: ytdRevenue,
+      taxableAmount: ytdTaxable,
+      taxCollected: Math.round(ytdTax * 100) / 100,
+      nonTaxableAmount: ytdNonTaxable,
+    },
   };
 }

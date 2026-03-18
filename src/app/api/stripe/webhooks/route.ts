@@ -189,6 +189,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
     .update({
       payment_status: "paid",
       payment_method: "stripe",
+      paid_at: new Date().toISOString(),
     })
     .eq("id", invoice.job_id);
 
@@ -339,6 +340,7 @@ async function handleTerminalPayment(pi: Stripe.PaymentIntent) {
       payment_status: "paid",
       payment_method: "terminal",
       stripe_payment_intent_id: pi.id,
+      paid_at: new Date().toISOString(),
     })
     .eq("id", jobId);
 }

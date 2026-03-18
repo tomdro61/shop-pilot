@@ -232,6 +232,7 @@ export async function recordPayment(
     .update({
       payment_method: paymentMethod,
       payment_status: paymentStatus,
+      paid_at: paymentStatus === "paid" ? new Date().toISOString() : null,
     })
     .eq("id", jobId);
 

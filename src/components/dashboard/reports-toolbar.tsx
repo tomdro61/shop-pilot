@@ -22,7 +22,7 @@ const presets = [
   { key: "all_time", label: "All Time" },
 ] as const;
 
-export function ReportsToolbar() {
+export function ReportsToolbar({ basePath = "/reports/revenue" }: { basePath?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeRange = searchParams.get("range") || "this_month";
@@ -40,9 +40,9 @@ export function ReportsToolbar() {
           params.set(key, value);
         }
       }
-      router.push(`/reports?${params.toString()}`);
+      router.push(`${basePath}?${params.toString()}`);
     },
-    [router]
+    [router, basePath]
   );
 
   function handlePreset(key: string) {
