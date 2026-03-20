@@ -84,10 +84,12 @@ export async function getReportData(params: {
   const jobsCurrent = currentJobs.length;
   const revenueCurrent = currentJobs.reduce((sum, job) => sum + sumLineItemTotals(job), 0);
 
-  // Prior period
-  const jobsPrior = priorJobs.length > 0 ? priorJobs.length : null;
-  let revenuePrior: number | null = null;
-  let grossProfitPrior: number | null = null;
+  // Prior period — always initialize to 0 when a prior period exists so trends show.
+  // null means "no comparison available" (all-time mode only).
+  const hasPrior = priorStart !== null;
+  const jobsPrior = hasPrior ? priorJobs.length : null;
+  let revenuePrior: number | null = hasPrior ? 0 : null;
+  let grossProfitPrior: number | null = hasPrior ? 0 : null;
   if (priorJobs.length > 0) {
     let priorRev = 0;
     let priorPartsCost = 0;
@@ -331,7 +333,7 @@ export async function getReportData(params: {
 
   // Computed comparison values
   const totalGrossProfit = grossProfit + inspectionProfit;
-  const avgTicketPrior = jobsPrior && revenuePrior !== null ? revenuePrior / jobsPrior : null;
+  const avgTicketPrior = jobsPrior && jobsPrior > 0 && revenuePrior !== null ? revenuePrior / jobsPrior : hasPrior ? 0 : null;
 
   return {
     jobsCurrent,
@@ -346,7 +348,7 @@ export async function getReportData(params: {
     techBreakdown,
     techProfitBreakdown,
     estimateCloseRate: { rate: estimateCloseRate, approved: estimatesApproved, sent: estimatesSent },
-    priorEstimateCloseRate: priorEstimatesSent > 0 ? { rate: priorEstimateCloseRate } : null,
+    priorEstimateCloseRate: hasPrior ? { rate: priorEstimateCloseRate } : null,
     avgTicket,
     avgTicketPrior,
     isAllTime,
