@@ -259,7 +259,6 @@ export async function approveEstimate(token: string) {
   } | null;
 
   if (!job?.customers) return { error: "Customer not found" };
-  if (!job.customers.email) return { error: "Customer email is required for invoicing" };
 
   const lineItems = (estimate.estimate_line_items || []) as {
     type: "labor" | "part";
@@ -311,6 +310,7 @@ export async function approveEstimate(token: string) {
         lineItems,
         jobCategory: null,
         settings: shopSettings,
+        hasEmail: !!job.customers.email,
       });
 
     // Insert invoice record (draft — staff sends manually when ready)

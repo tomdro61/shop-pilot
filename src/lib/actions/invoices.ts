@@ -158,6 +158,7 @@ export async function createInvoiceFromJob(
         lineItems,
         jobCategory: derivedCategory !== "Uncategorized" ? derivedCategory : null,
         settings: shopSettings,
+        hasEmail: !!customer.email,
       });
 
     const invoiceStatus = (sendText || sendEmail) ? "sent" : "draft";
@@ -350,6 +351,7 @@ export async function createParkingInvoice(
         stripeCustomerId,
         lineItems,
         description: `Parking — ${reservation.lot}`,
+        hasEmail: !!reservation.email,
       });
 
     const invoiceStatus = (sendText || sendEmail) ? "sent" : "draft";

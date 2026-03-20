@@ -13,12 +13,14 @@ interface CreateParkingStripeInvoiceParams {
   stripeCustomerId: string;
   lineItems: ParkingLineItem[];
   description?: string;
+  hasEmail?: boolean;
 }
 
 export async function createParkingStripeInvoice({
   stripeCustomerId,
   lineItems,
   description,
+  hasEmail = true,
 }: CreateParkingStripeInvoiceParams): Promise<{
   stripeInvoiceId: string;
   hostedInvoiceUrl: string;
@@ -28,8 +30,9 @@ export async function createParkingStripeInvoice({
 
   const invoice = await stripe.invoices.create({
     customer: stripeCustomerId,
-    collection_method: "send_invoice",
-    days_until_due: 7,
+    // send_invoice requires email; use charge_automatically for SMS-only customers
+    collection_method: hasEmail ? "send_invoice" : "charge_automatically",
+    ...(hasEmail ? { days_until_due: 7 } : {}),
     description: description || "Parking Services",
     auto_advance: false,
   });
@@ -65,6 +68,7 @@ interface CreateStripeInvoiceParams {
   lineItems: LineItem[];
   jobCategory?: string | null;
   settings?: ShopSettings | null;
+  hasEmail?: boolean;
 }
 
 interface CreateStripeInvoiceResult {
@@ -78,14 +82,16 @@ export async function createStripeInvoice({
   lineItems,
   jobCategory,
   settings,
+  hasEmail = true,
 }: CreateStripeInvoiceParams): Promise<CreateStripeInvoiceResult> {
   const stripe = getStripe();
   const totals = calculateTotals(lineItems, settings);
 
   const invoice = await stripe.invoices.create({
     customer: stripeCustomerId,
-    collection_method: "send_invoice",
-    days_until_due: 30,
+    // send_invoice requires email; use charge_automatically for SMS-only customers
+    collection_method: hasEmail ? "send_invoice" : "charge_automatically",
+    ...(hasEmail ? { days_until_due: 30 } : {}),
     description: jobCategory ? `Auto Repair - ${jobCategory}` : "Auto Repair Services",
     auto_advance: false,
   });
