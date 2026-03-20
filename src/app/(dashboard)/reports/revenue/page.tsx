@@ -25,6 +25,8 @@ export default async function RevenueReportPage({
     getReportData({
       from: resolved.from,
       to: resolved.to,
+      priorFrom: resolved.priorFrom,
+      priorTo: resolved.priorTo,
       isAllTime: resolved.isAllTime,
     }),
     getFleetARSummary(),

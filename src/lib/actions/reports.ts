@@ -14,21 +14,12 @@ function toDateStr(date: Date): string {
 export async function getReportData(params: {
   from: string;
   to: string;
+  priorFrom: string | null;
+  priorTo: string | null;
   isAllTime: boolean;
 }) {
-  const { from: start, to: end, isAllTime } = params;
+  const { from: start, to: end, priorFrom: priorStart, priorTo: priorEnd, isAllTime } = params;
   const supabase = await createClient();
-
-  // Compute prior period of equal length for comparison
-  let priorStart: string | null = null;
-  let priorEnd: string | null = null;
-  if (!isAllTime) {
-    const days = differenceInDays(parseISO(end), parseISO(start));
-    const priorEndDate = subDays(parseISO(start), 1);
-    const priorStartDate = subDays(priorEndDate, days);
-    priorStart = toDateStr(priorStartDate);
-    priorEnd = toDateStr(priorEndDate);
-  }
 
   // ONE query for current period — includes tech and line item data for all aggregations
   const currentPromise = supabase

@@ -43,6 +43,7 @@ import {
 } from "@/lib/actions/invoices";
 import { getTeamMembers, getTechnicians } from "@/lib/actions/team";
 import { getReportData, getFleetARSummary, getDailySummary } from "@/lib/actions/reports";
+import { resolveDateRange } from "@/lib/utils/date-range";
 import { sendCustomerSMS, getCustomerMessages } from "@/lib/actions/messages";
 import { getShopSettings, updateShopSettings } from "@/lib/actions/settings";
 import { todayET } from "@/lib/utils";
@@ -348,9 +349,14 @@ export async function executeToolCall(
       case "get_report_data": {
         const isAllTime = toolInput.is_all_time === true;
         const today = todayET();
+        const from = str(toolInput.from, "2020-01-01");
+        const to = str(toolInput.to, today);
+        const resolved = resolveDateRange("custom", from, to);
         const result = await getReportData({
-          from: str(toolInput.from, "2020-01-01"),
-          to: str(toolInput.to, today),
+          from,
+          to,
+          priorFrom: isAllTime ? null : resolved.priorFrom,
+          priorTo: isAllTime ? null : resolved.priorTo,
           isAllTime,
         });
         return JSON.stringify(result);

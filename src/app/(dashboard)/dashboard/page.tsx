@@ -7,11 +7,11 @@ import {
   Clock, UserX, TrendingUp, TrendingDown, FileQuestion,
   Wrench, User, FileText, Calendar, CheckCircle2, Package,
 } from "lucide-react";
-import { startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { todayET } from "@/lib/utils";
 import { sumJobRevenue } from "@/lib/utils/revenue";
+import { resolveDateRange } from "@/lib/utils/date-range";
 
 export const metadata = {
   title: "Dashboard | ShopPilot",
@@ -28,24 +28,20 @@ const getDashboardData = unstable_cache(async () => {
   const supabase = createAdminClient();
 
   const today = todayET();
-  const todayDate = new Date(today + "T12:00:00");
 
-  function toDateStr(d: Date): string {
-    return d.toISOString().split("T")[0];
-  }
+  // Use the shared date-range utility — same logic as the Reports page
+  const week = resolveDateRange("this_week");
+  const month = resolveDateRange("this_month");
 
-  const weekStart = toDateStr(startOfWeek(todayDate, { weekStartsOn: 1 }));
-  const weekEnd = toDateStr(endOfWeek(todayDate, { weekStartsOn: 1 }));
-  const monthStart = today.slice(0, 8) + "01";
-  const monthEnd = toDateStr(new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0));
+  const weekStart = week.from;
+  const weekEnd = week.to;
+  const lastWeekStart = week.priorFrom!;
+  const lastWeekEnd = week.priorTo!;
 
-  const lastWeekDate = subWeeks(todayDate, 1);
-  const lastWeekStart = toDateStr(startOfWeek(lastWeekDate, { weekStartsOn: 1 }));
-  const lastWeekEnd = toDateStr(endOfWeek(lastWeekDate, { weekStartsOn: 1 }));
-
-  const lastMonthDate = new Date(todayDate.getFullYear(), todayDate.getMonth() - 1, 1);
-  const lastMonthStart = toDateStr(lastMonthDate);
-  const lastMonthEnd = toDateStr(new Date(todayDate.getFullYear(), todayDate.getMonth(), 0));
+  const monthStart = month.from;
+  const monthEnd = month.to;
+  const lastMonthStart = month.priorFrom!;
+  const lastMonthEnd = month.priorTo!;
 
   const inspectionRangeStart = [lastWeekStart, lastMonthStart, monthStart].sort()[0];
 
