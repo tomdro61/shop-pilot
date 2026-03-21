@@ -27,7 +27,15 @@ export default async function NewJobPage({
 
   return (
     <div className="mx-auto max-w-2xl p-4 lg:p-10">
-      <h2 className="mb-6 text-xl font-bold tracking-tight">New Job</h2>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">New Job</h2>
+          <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Configure repair order and assignment details.</p>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 px-3 py-1 rounded-full">
+          Draft Job
+        </span>
+      </div>
       <JobForm
         defaultCustomerId={customerId}
         defaultTitle={quoteTitle}
