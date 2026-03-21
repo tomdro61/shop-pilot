@@ -13,12 +13,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, List, Columns3, Calendar, CalendarDays } from "lucide-react";
+import { Search, Plus, List, Columns3, CalendarDays, Calendar } from "lucide-react";
 
 interface JobsToolbarProps {
   categories: string[];
   jobCount: number;
 }
+
+const pillTrigger = "rounded-full border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-[11px] font-bold uppercase tracking-widest text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-none";
 
 export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   const router = useRouter();
@@ -56,114 +58,112 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   }, [search, updateParams]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative flex-1 min-w-[180px]">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <div className="space-y-4">
+      {/* Search bar — full width */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 dark:text-stone-500" />
         <Input
           placeholder="Search jobs..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
+          className="pl-11 rounded-full"
         />
       </div>
 
-      <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-        <span className="font-semibold text-foreground">All Jobs</span>
-        <span>({jobCount})</span>
+      {/* Filters row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={status}
+          onValueChange={(val) => updateParams({ status: val })}
+        >
+          <SelectTrigger className={`w-[160px] ${pillTrigger}`}>
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="not_started">Not Started</SelectItem>
+            <SelectItem value="waiting_for_parts">Waiting for Parts</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="complete">Complete</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={paymentStatus}
+          onValueChange={(val) => updateParams({ payment_status: val })}
+        >
+          <SelectTrigger className={`w-[160px] ${pillTrigger}`}>
+            <SelectValue placeholder="All Payments" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Payments</SelectItem>
+            <SelectItem value="unpaid">Unpaid</SelectItem>
+            <SelectItem value="invoiced">Invoiced</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="waived">Waived</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={category}
+          onValueChange={(val) => updateParams({ category: val })}
+        >
+          <SelectTrigger className={`w-[160px] ${pillTrigger}`}>
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={range}
+          onValueChange={(val) => updateParams({ range: val })}
+        >
+          <SelectTrigger className={`w-[160px] ${pillTrigger}`}>
+            <Calendar className="h-3.5 w-3.5 mr-1 shrink-0" />
+            <SelectValue placeholder="All Time" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="this_week">This Week</SelectItem>
+            <SelectItem value="this_month">This Month</SelectItem>
+            <SelectItem value="this_quarter">This Quarter</SelectItem>
+            <SelectItem value="this_year">This Year</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Tabs
+          value={view}
+          onValueChange={(val) => updateParams({ view: val })}
+        >
+          <TabsList className="rounded-full">
+            <TabsTrigger value="list" className="rounded-full">
+              <List className="h-4 w-4" />
+            </TabsTrigger>
+            <TabsTrigger value="board" className="rounded-full">
+              <Columns3 className="h-4 w-4" />
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="rounded-full">
+              <CalendarDays className="h-4 w-4" />
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <div className="ml-auto">
+          <Link href="/jobs/new">
+            <Button className="rounded-full gap-2 shadow-lg shadow-blue-600/20">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New Job</span>
+            </Button>
+          </Link>
+        </div>
       </div>
-
-      <Select
-        value={status}
-        onValueChange={(val) => updateParams({ status: val })}
-      >
-        <SelectTrigger className="w-[140px] text-xs">
-          <SelectValue placeholder="All Statuses" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Statuses</SelectItem>
-          <SelectItem value="not_started">Not Started</SelectItem>
-          <SelectItem value="waiting_for_parts">Waiting for Parts</SelectItem>
-          <SelectItem value="in_progress">In Progress</SelectItem>
-          <SelectItem value="complete">Complete</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={paymentStatus}
-        onValueChange={(val) => updateParams({ payment_status: val })}
-      >
-        <SelectTrigger className="w-[140px] text-xs">
-          <SelectValue placeholder="All Payments" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Payments</SelectItem>
-          <SelectItem value="unpaid">Unpaid</SelectItem>
-          <SelectItem value="invoiced">Invoiced</SelectItem>
-          <SelectItem value="paid">Paid</SelectItem>
-          <SelectItem value="waived">Waived</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={category}
-        onValueChange={(val) => updateParams({ category: val })}
-      >
-        <SelectTrigger className="w-[140px] text-xs">
-          <SelectValue placeholder="All Categories" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
-          {categories.map((cat) => (
-            <SelectItem key={cat} value={cat}>
-              {cat}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={range}
-        onValueChange={(val) => updateParams({ range: val })}
-      >
-        <SelectTrigger className="w-[140px] text-xs">
-          <Calendar className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-          <SelectValue placeholder="All Time" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Time</SelectItem>
-          <SelectItem value="this_week">This Week</SelectItem>
-          <SelectItem value="this_month">This Month</SelectItem>
-          <SelectItem value="this_quarter">This Quarter</SelectItem>
-          <SelectItem value="this_year">This Year</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Tabs
-        value={view}
-        onValueChange={(val) => updateParams({ view: val })}
-      >
-        <TabsList>
-          <TabsTrigger value="list">
-            <List className="h-4 w-4" />
-          </TabsTrigger>
-          <TabsTrigger value="board">
-            <Columns3 className="h-4 w-4" />
-          </TabsTrigger>
-          <TabsTrigger value="calendar">
-            <CalendarDays className="h-4 w-4" />
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <Link href="/jobs/new">
-        <Button size="icon" className="sm:hidden h-9 w-9">
-          <Plus className="h-4 w-4" />
-        </Button>
-        <Button className="hidden sm:inline-flex gap-2">
-          <Plus className="h-4 w-4" />
-          New Job
-        </Button>
-      </Link>
     </div>
   );
 }

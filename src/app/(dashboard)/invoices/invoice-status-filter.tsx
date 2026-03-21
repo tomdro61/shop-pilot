@@ -26,7 +26,7 @@ export function InvoiceStatusFilter() {
 
   return (
     <Select value={status} onValueChange={handleChange}>
-      <SelectTrigger className="w-[120px]">
+      <SelectTrigger className="w-[150px] rounded-full border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-[11px] font-bold uppercase tracking-widest text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-none">
         <SelectValue placeholder="All Statuses" />
       </SelectTrigger>
       <SelectContent>
