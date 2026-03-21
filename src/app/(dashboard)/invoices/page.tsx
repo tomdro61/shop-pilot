@@ -20,7 +20,7 @@ export default async function InvoicesPage({
   const invoices = await getInvoices(status, search);
 
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-8">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Suspense>
           <InvoiceSearch />

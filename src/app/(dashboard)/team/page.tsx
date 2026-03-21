@@ -9,7 +9,7 @@ export default async function TeamPage() {
   const members = await getTeamMembers();
 
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-8">
       <TeamList members={members} />
     </div>
   );

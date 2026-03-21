@@ -13,7 +13,7 @@ export default async function RatesSettingsPage() {
 
   if (!settings) {
     return (
-      <div className="mx-auto max-w-2xl p-4 lg:p-6">
+      <div className="mx-auto max-w-2xl p-4 lg:p-8">
         <p className="text-sm text-muted-foreground">
           Unable to load shop settings. Please run the database migration.
         </p>
@@ -22,7 +22,7 @@ export default async function RatesSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-4 lg:p-6">
+    <div className="mx-auto max-w-2xl p-4 lg:p-8">
       <div className="mb-6">
         <Link href="/settings">
           <Button variant="ghost" size="sm" className="mb-2">

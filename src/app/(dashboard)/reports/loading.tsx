@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function ReportsIndexLoading() {
   return (
-    <div className="mx-auto max-w-2xl p-4 lg:p-6">
+    <div className="mx-auto max-w-2xl p-4 lg:p-8">
       <div className="mb-6">
         <Skeleton className="h-7 w-32" />
         <Skeleton className="mt-1 h-4 w-64" />

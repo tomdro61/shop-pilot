@@ -15,7 +15,7 @@ export default async function CategoriesSettingsPage() {
   const categories = settings?.job_categories ?? DEFAULT_JOB_CATEGORIES;
 
   return (
-    <div className="mx-auto max-w-2xl p-4 lg:p-6">
+    <div className="mx-auto max-w-2xl p-4 lg:p-8">
       <div className="mb-6">
         <Link href="/settings">
           <Button variant="ghost" size="sm" className="mb-2">

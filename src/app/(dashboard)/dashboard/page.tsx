@@ -204,7 +204,7 @@ export default async function DashboardPage() {
   const alertCount = stats.unpaidJobCount + stats.unassignedJobs + newQuoteRequests;
 
   return (
-    <div className="p-4 lg:p-6 space-y-7">
+    <div className="p-4 lg:p-8 space-y-8">
 
       {/* ── Action Bar ── */}
       <div className="flex gap-3">
@@ -224,47 +224,48 @@ export default async function DashboardPage() {
 
       {/* ── Revenue ── */}
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           Revenue
         </h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Today</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.todayRevenue)}</p>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+
+          <div className="rounded-xl border bg-card p-5 shadow-card">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">Today</p>
+            <p className="mt-1.5 text-3xl lg:text-4xl font-black tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.todayRevenue)}</p>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Week</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.weeklyRevenue)}</p>
-            <div className="mt-1 flex items-center gap-1">
-              {weekChange >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />
-              )}
-              <span className={`text-xs font-medium tabular-nums ${weekChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+          <div className="rounded-xl border bg-card p-5 shadow-card">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">This Week</p>
+            <p className="mt-1.5 text-3xl lg:text-4xl font-black tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.weeklyRevenue)}</p>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${weekChange >= 0 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"}`}>
+                {weekChange >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
                 {weekChange >= 0 ? "+" : ""}{weekChange.toFixed(0)}%
               </span>
               <span className="text-xs text-muted-foreground">vs last week</span>
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Month</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.monthlyRevenue)}</p>
-            <div className="mt-1 flex items-center gap-1">
-              {monthChange >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />
-              )}
-              <span className={`text-xs font-medium tabular-nums ${monthChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+          <div className="rounded-xl border bg-card p-5 shadow-card">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">This Month</p>
+            <p className="mt-1.5 text-3xl lg:text-4xl font-black tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.monthlyRevenue)}</p>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${monthChange >= 0 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"}`}>
+                {monthChange >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
                 {monthChange >= 0 ? "+" : ""}{monthChange.toFixed(0)}%
               </span>
               <span className="text-xs text-muted-foreground">vs last month</span>
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Avg Ticket (Week)</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.avgTicketWeek)}</p>
+          <div className="rounded-xl border bg-card p-5 shadow-card">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">Avg Ticket (Week)</p>
+            <p className="mt-1.5 text-3xl lg:text-4xl font-black tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.avgTicketWeek)}</p>
           </div>
         </div>
       </section>
@@ -310,10 +311,10 @@ export default async function DashboardPage() {
 
       {/* ── Shop Floor ── */}
       <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
           Shop Floor
         </h2>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <ShopFloorGroup
             label="In Progress"
             icon={<Wrench className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
@@ -339,14 +340,14 @@ export default async function DashboardPage() {
       </section>
 
       {/* ── Tech Workload + Unpaid/Outstanding ── */}
-      <div className="grid grid-cols-1 gap-7 lg:gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8 lg:gap-4 lg:grid-cols-2">
 
         {/* Tech Workload */}
         <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
             Tech Workload
           </h2>
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-xl border bg-card shadow-card">
             {techWorkload.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
@@ -387,10 +388,10 @@ export default async function DashboardPage() {
 
         {/* Unpaid / Outstanding */}
         <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
             Unpaid / Outstanding
           </h2>
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-xl border bg-card shadow-card">
             {unpaidJobs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -442,14 +443,14 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Pending Estimates + Today's Scheduled ── */}
-      <div className="grid grid-cols-1 gap-7 lg:gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8 lg:gap-4 lg:grid-cols-2">
 
         {/* Pending Estimates */}
         <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
             Pending Estimates
           </h2>
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-xl border bg-card shadow-card">
             {pendingEstimates.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <FileText className="h-5 w-5 text-muted-foreground" />
@@ -495,10 +496,10 @@ export default async function DashboardPage() {
 
         {/* Today's Scheduled Work */}
         <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
             Today&apos;s Schedule
           </h2>
-          <div className="rounded-lg border bg-card">
+          <div className="rounded-xl border bg-card shadow-card">
             {todayScheduled.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -563,7 +564,7 @@ function ShopFloorGroup({
   };
 
   return (
-    <div className={`rounded-lg border border-l-[3px] ${borderColors[accentColor]} bg-card p-4`}>
+    <div className={`rounded-xl border border-l-[3px] ${borderColors[accentColor]} bg-card p-5 shadow-card`}>
       <div className="flex items-center gap-2 mb-3">
         {icon}
         <span className="text-sm font-semibold">{label}</span>

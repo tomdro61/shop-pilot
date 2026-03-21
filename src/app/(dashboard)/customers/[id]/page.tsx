@@ -59,7 +59,7 @@ export default async function CustomerDetailPage({
   const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
 
   return (
-    <div className="mx-auto max-w-4xl p-4 lg:p-6">
+    <div className="mx-auto max-w-4xl p-4 lg:p-8">
       <div className="mb-6 animate-in-up">
         <Link href="/customers">
           <Button variant="ghost" size="sm" className="mb-2">

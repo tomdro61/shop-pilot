@@ -35,7 +35,7 @@ const settingsItems = [
 
 export default function SettingsPage() {
   return (
-    <div className="mx-auto max-w-2xl p-4 lg:p-6">
+    <div className="mx-auto max-w-2xl p-4 lg:p-8">
       <div className="mb-6">
         <h2 className="text-xl font-semibold">Settings</h2>
         <p className="text-sm text-muted-foreground">Shop configuration and management</p>

@@ -70,14 +70,14 @@ export function Header({ user }: { user: User | null }) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-      <div className="flex h-14 items-center justify-between px-4 lg:px-6">
+      <div className="flex h-14 items-center justify-between px-4 lg:px-8">
       <div className="flex items-center gap-2.5 lg:hidden">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
           <Wrench className="h-3.5 w-3.5 text-primary-foreground" />
         </div>
         <span className="text-sm font-semibold tracking-tight">Broadway Motors</span>
       </div>
-      <h1 className="text-sm font-semibold tracking-tight lg:text-base text-stone-900 dark:text-stone-50">{title}</h1>
+      <h1 className="text-sm font-semibold tracking-tight lg:text-lg text-stone-900 dark:text-stone-50">{title}</h1>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">

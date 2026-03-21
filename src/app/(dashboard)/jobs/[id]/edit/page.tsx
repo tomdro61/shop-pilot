@@ -16,7 +16,7 @@ export default async function EditJobPage({
   if (!job) notFound();
 
   return (
-    <div className="mx-auto max-w-2xl p-4 lg:p-6">
+    <div className="mx-auto max-w-2xl p-4 lg:p-8">
       <h2 className="mb-6 text-xl font-semibold">Edit Job</h2>
       <JobForm job={job} />
     </div>

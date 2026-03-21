@@ -2022,3 +2022,73 @@ Inspection line items on jobs still exist for **customer visibility** (estimates
 
 ### Build Status
 - `npm run build` passes cleanly
+
+---
+
+## Session 29 — 2026-03-21 — UI Refresh (Visual Layer Only)
+
+### What Was Completed
+
+Visual refresh of the ShopPilot UI to feel more like Linear/Notion/ShopMonkey — dark sidebar, bigger stat numbers, generous spacing, warm color harmony, card shadows. **Zero business logic, data fetching, or API changes.**
+
+#### globals.css
+- Shifted primary hue from 260 → 252 on all `--primary`, `--ring`, `--sidebar-primary`, `--sidebar-ring` in both `:root` and `.dark`
+- Changed `:root` sidebar CSS variables to match `.dark` values so sidebar is **always dark** regardless of theme
+- Added `shadow-card` utility class (stone-tinted box shadow, disabled in dark mode) in `@layer utilities`
+
+#### card.tsx
+- Replaced `shadow-md dark:shadow-none` with `shadow-card` on Card component
+
+#### sidebar.tsx
+- Always dark: `bg-stone-900`, `border-stone-800`, white/stone text — no `dark:` prefixes
+- Active nav item: blue pill (`bg-blue-600 text-white`) replacing `bg-blue-50 text-blue-700` + left-bar indicator
+- Removed the `absolute -left-3` active indicator div entirely
+- Inactive items: `text-stone-400 hover:bg-stone-800 hover:text-stone-100`
+
+#### header.tsx
+- Page title: `lg:text-base` → `lg:text-lg`
+- Desktop padding: `lg:px-6` → `lg:px-8`
+
+#### kpi-card.tsx
+- Value: `text-2xl font-bold` → `text-3xl lg:text-4xl font-black`
+- Label: `text-[11px]` → `text-[10px]` with `tracking-widest`
+- Trend: wrapped in pill badges (`rounded-full bg-emerald-100/red-100/stone-100 px-2 py-0.5`)
+
+#### input.tsx
+- Height: `h-9` → `h-10`
+
+#### dashboard/page.tsx
+- Container: `p-4 lg:p-6 space-y-7` → `p-4 lg:p-8 space-y-8`
+- Stat numbers: `text-3xl font-bold` → `text-3xl lg:text-4xl font-black`
+- Stat cards: `rounded-lg border bg-card p-4` → `rounded-xl border bg-card p-5 shadow-card`
+- Trend indicators: pill badges
+- Shop floor cards: `rounded-lg` → `rounded-xl`, `p-4` → `p-5`, + `shadow-card`
+- List cards: `rounded-xl` + `shadow-card`
+- Grid gaps: `gap-3` → `gap-4`, `gap-7 lg:gap-3` → `gap-8 lg:gap-4`
+- Section heading margin: `mb-3` → `mb-4`
+
+#### dashboard/loading.tsx
+- Mirrored all spacing/sizing/shadow changes from page.tsx
+
+#### All page.tsx + loading.tsx files (~35 files)
+- `p-4 lg:p-6` → `p-4 lg:p-8` globally
+
+#### Documentation
+- Created `STYLE_PATTERNS.md` documenting exact Tailwind classes for all UI patterns
+
+### Modified Files (40+)
+- `src/app/globals.css` — hue shift, sidebar vars, shadow-card utility
+- `src/components/ui/card.tsx` — shadow-card
+- `src/components/layout/sidebar.tsx` — dark sidebar, blue pill active
+- `src/components/layout/header.tsx` — title size, padding
+- `src/components/dashboard/kpi-card.tsx` — big numbers, pill badges
+- `src/components/ui/input.tsx` — h-9 → h-10
+- `src/app/(dashboard)/dashboard/page.tsx` — spacing, sizing, shadows
+- `src/app/(dashboard)/dashboard/loading.tsx` — mirror spacing
+- ~30 page.tsx and loading.tsx files — padding pass
+
+### New Files (1)
+- `STYLE_PATTERNS.md` — Tailwind class reference for all UI patterns
+
+### Build Status
+- `npm run build` passes cleanly

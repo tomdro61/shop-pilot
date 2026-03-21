@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function RevenueReportLoading() {
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-8">
       <div className="mb-6">
         <Skeleton className="mb-2 h-8 w-36" />
         <Skeleton className="mb-1 h-6 w-48" />

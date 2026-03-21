@@ -67,7 +67,7 @@ export default async function EstimateDetailPage({
   const isDraft = status === "draft";
 
   return (
-    <div className="mx-auto max-w-4xl p-4 lg:p-6">
+    <div className="mx-auto max-w-4xl p-4 lg:p-8">
       {/* Header */}
       <div className="mb-4">
         {job && (

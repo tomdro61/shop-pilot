@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function TaxReportLoading() {
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-8">
       <div className="mb-6">
         <Skeleton className="mb-2 h-8 w-36" />
         <div className="flex flex-wrap items-center justify-between gap-4">

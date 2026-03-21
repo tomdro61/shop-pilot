@@ -31,7 +31,7 @@ export default async function TaxReportPage({
   const currentMonth = isCurrentYear ? now.getMonth() : 11; // 0-based
 
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-8">
       <div className="mb-6">
         <Link href="/reports">
           <Button variant="ghost" size="sm" className="mb-2">

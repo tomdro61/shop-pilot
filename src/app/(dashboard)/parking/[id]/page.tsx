@@ -83,7 +83,7 @@ export default async function ParkingDetailPage({
   const statusColors = PARKING_STATUS_COLORS[reservation.status];
 
   return (
-    <div className="p-4 lg:p-6 pb-24 lg:pb-6">
+    <div className="p-4 lg:p-8 pb-24 lg:pb-6">
       {/* Back + Header */}
       <div className="mb-5">
         <Link href="/parking">

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function JobDetailLoading() {
   return (
-    <div className="mx-auto max-w-4xl p-4 lg:p-6">
+    <div className="mx-auto max-w-4xl p-4 lg:p-8">
       <div className="mb-6 flex items-start justify-between">
         <div>
           <Skeleton className="mb-2 h-8 w-36" />

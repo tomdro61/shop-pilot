@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function JobsLoading() {
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-8">
       <div className="space-y-3">
         <Skeleton className="h-10 w-full" />
         <div className="flex gap-2">

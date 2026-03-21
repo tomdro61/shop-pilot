@@ -22,7 +22,7 @@ export default async function CustomersPage({
   const { data: customers, totalCount } = await getCustomers(search, type, page);
 
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-8">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Suspense>
           <CustomerSearch />

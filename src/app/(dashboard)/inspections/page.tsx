@@ -61,7 +61,7 @@ export default function InspectionsPage() {
   const totalCount = stateCount + tncCount;
 
   return (
-    <div className="mx-auto max-w-lg p-4 lg:p-6">
+    <div className="mx-auto max-w-lg p-4 lg:p-8">
       <div className="mb-4">
         <label className="mb-1 block text-sm font-medium">Date</label>
         <Input
