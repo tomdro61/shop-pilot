@@ -26,12 +26,12 @@ export function Sidebar({ badgeCounts }: { badgeCounts?: Record<string, number> 
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex lg:w-56 lg:flex-col lg:border-r lg:border-stone-200 dark:lg:border-stone-800 lg:bg-white dark:lg:bg-stone-900">
-      <div className="flex h-14 items-center border-b px-5">
+    <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:border-r lg:border-stone-200 dark:lg:border-stone-800 lg:bg-white dark:lg:bg-stone-900">
+      <div className="flex h-16 items-center border-b shadow-[0_1px_2px_0_rgb(0_0_0_/0.03)] dark:shadow-none px-6">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <Wrench className="h-5 w-5 text-blue-600 dark:text-blue-500" />
           <div className="flex flex-col">
-            <span className="text-[15px] font-semibold tracking-tight leading-tight text-stone-900 dark:text-stone-50">ShopPilot</span>
+            <span className="text-base font-semibold tracking-tight leading-tight text-stone-900 dark:text-stone-50">ShopPilot</span>
             <span className="text-[10px] text-stone-400 dark:text-stone-500 leading-tight">Serving Revere Since 1946</span>
           </div>
         </Link>
@@ -75,7 +75,7 @@ function NavItem({
     <Link
       href={item.href}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150",
+        "group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
         isActive
           ? "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 font-semibold"
           : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-stone-100"
@@ -84,7 +84,7 @@ function NavItem({
       {isActive && (
         <div className="absolute -left-3 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-blue-600 dark:bg-blue-500" />
       )}
-      <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-blue-600 dark:text-blue-500" : "text-stone-400 dark:text-stone-500")} />
+      <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-blue-600 dark:text-blue-500" : "text-stone-400 dark:text-stone-500")} />
       {item.label}
       {badge != null && badge > 0 && (
         <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[10px] font-semibold text-white">
