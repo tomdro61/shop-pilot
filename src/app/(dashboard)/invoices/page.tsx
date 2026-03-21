@@ -54,7 +54,7 @@ export default async function InvoicesPage({
                   <th className="px-5 py-4"></th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-stone-100/60 dark:divide-stone-800/40">
                 {invoices.map((invoice) => {
                   const job = invoice.jobs as {
                     id: string;
