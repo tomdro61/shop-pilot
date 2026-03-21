@@ -374,7 +374,7 @@ export default async function DashboardPage() {
                               {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
                               {vehicle ? ` \u00b7 ${formatVehicle(vehicle)}` : ""}
                             </span>
-                            <StatusDot status={job.status} />
+                            <StatusBadge status={job.status} />
                           </div>
                         </Link>
                       );
@@ -609,12 +609,13 @@ function ShopFloorColumn({
   );
 }
 
-/* ── Status dot for tech workload ── */
-function StatusDot({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    in_progress: "bg-blue-500",
-    waiting_for_parts: "bg-amber-500",
-    not_started: "bg-stone-400",
+/* ── Status badge for tech workload ── */
+function StatusBadge({ status }: { status: string }) {
+  const config: Record<string, { label: string; classes: string }> = {
+    in_progress: { label: "In Progress", classes: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400" },
+    waiting_for_parts: { label: "Waiting", classes: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400" },
+    not_started: { label: "Queue", classes: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400" },
   };
-  return <span className={`inline-block h-2 w-2 rounded-full ${colors[status] || "bg-stone-400"}`} />;
+  const { label, classes } = config[status] || { label: status, classes: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400" };
+  return <span className={`shrink-0 ml-2 text-[10px] font-black px-2 py-0.5 rounded-full uppercase whitespace-nowrap ${classes}`}>{label}</span>;
 }
