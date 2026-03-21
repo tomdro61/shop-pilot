@@ -224,14 +224,14 @@ export default async function DashboardPage() {
 
       {/* ── Revenue Metrics ── */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card border">
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">Today&apos;s Revenue</p>
           <h3 className="text-3xl lg:text-4xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {formatCurrencyWhole(stats.todayRevenue)}
           </h3>
         </div>
 
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card border">
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Week</p>
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="text-3xl lg:text-4xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
@@ -252,7 +252,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card border">
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Month</p>
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="text-3xl lg:text-4xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
@@ -273,7 +273,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card border">
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">Avg Ticket</p>
           <h3 className="text-3xl lg:text-4xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {formatCurrencyWhole(stats.avgTicketWeek)}
@@ -341,19 +341,17 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
         {/* Tech Workload */}
-        <div className="bg-card rounded-xl border shadow-card">
-          <div className="px-5 lg:px-6 py-4">
-            <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Tech Workload</h3>
-          </div>
+        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Tech Workload</h3>
           {techWorkload.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center border-t border-stone-100 dark:border-stone-800">
+            <div className="flex flex-col items-center justify-center py-8 text-center">
               <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
               <p className="mt-2 text-sm text-muted-foreground">No active jobs assigned</p>
             </div>
           ) : (
-            <div className="divide-y divide-stone-100 dark:divide-stone-800 border-t border-stone-100 dark:border-stone-800">
+            <div className="space-y-5">
               {techWorkload.map(tech => (
-                <div key={tech.name} className="px-5 lg:px-6 py-4">
+                <div key={tech.name}>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-xs font-bold text-blue-700 dark:text-blue-400">
                       {tech.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
@@ -389,18 +387,16 @@ export default async function DashboardPage() {
         </div>
 
         {/* Unpaid / Outstanding */}
-        <div className="bg-card rounded-xl border shadow-card">
-          <div className="px-5 lg:px-6 py-4">
-            <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Unpaid / Outstanding</h3>
-          </div>
+        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Unpaid / Outstanding</h3>
           {unpaidJobs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center border-t border-stone-100 dark:border-stone-800">
+            <div className="flex flex-col items-center justify-center py-8 text-center">
               <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               <p className="mt-2 text-sm text-muted-foreground">All caught up</p>
             </div>
           ) : (
             <>
-              <div className="border-t border-stone-100 dark:border-stone-800 px-5 lg:px-6 py-4">
+              <div className="mb-5">
                 <p className="text-3xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
                   {formatCurrency(totalOutstanding)}
                 </p>
@@ -408,14 +404,14 @@ export default async function DashboardPage() {
                   across {unpaidJobs.length} {unpaidJobs.length === 1 ? "job" : "jobs"}
                 </p>
               </div>
-              <div className="divide-y divide-stone-100 dark:divide-stone-800 border-t border-stone-100 dark:border-stone-800">
+              <div className="space-y-1">
                 {unpaidJobs.map(job => {
                   const customer = job.customers as { first_name: string; last_name: string } | null;
                   const days = daysBetween(job.date_finished, today);
                   const aging = days >= 3;
                   return (
                     <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between px-5 lg:px-6 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                      <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                         <div className="min-w-0">
                           <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                             {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
@@ -446,17 +442,15 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
         {/* Pending Estimates */}
-        <div className="bg-card rounded-xl border shadow-card">
-          <div className="px-5 lg:px-6 py-4">
-            <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Pending Estimates</h3>
-          </div>
+        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Pending Estimates</h3>
           {pendingEstimates.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center border-t border-stone-100 dark:border-stone-800">
+            <div className="flex flex-col items-center justify-center py-8 text-center">
               <FileText className="h-5 w-5 text-muted-foreground" />
               <p className="mt-2 text-sm text-muted-foreground">No pending estimates</p>
             </div>
           ) : (
-            <div className="divide-y divide-stone-100 dark:divide-stone-800 border-t border-stone-100 dark:border-stone-800">
+            <div className="space-y-1">
               {pendingEstimates.map(est => {
                 const job = est.jobs as { id: string; title: string | null; customers: { first_name: string; last_name: string } | null; vehicles: { year: number | null; make: string | null; model: string | null } | null } | null;
                 const customer = job?.customers;
@@ -465,7 +459,7 @@ export default async function DashboardPage() {
                 const days = daysBetween(sentDate, today);
                 return (
                   <Link key={est.id} href={job ? `/jobs/${job.id}` : "#"} className="block">
-                    <div className="flex items-center justify-between px-5 lg:px-6 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                    <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                       <div className="min-w-0">
                         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                           {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
@@ -493,20 +487,20 @@ export default async function DashboardPage() {
         </div>
 
         {/* Today's Schedule */}
-        <div className="bg-card rounded-xl border shadow-card">
-          <div className="px-5 lg:px-6 py-4 flex items-center justify-between">
+        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <div className="flex items-center justify-between mb-5">
             <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Today&apos;s Schedule</h3>
             <Link href="/jobs/new" className="w-7 h-7 flex items-center justify-center bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               <Plus className="h-3.5 w-3.5" />
             </Link>
           </div>
           {todayScheduled.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center border-t border-stone-100 dark:border-stone-800">
+            <div className="flex flex-col items-center justify-center py-8 text-center">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <p className="mt-2 text-sm text-muted-foreground">Nothing scheduled today</p>
             </div>
           ) : (
-            <div className="border-t border-stone-100 dark:border-stone-800 p-4 lg:p-5 space-y-3">
+            <div className="space-y-3">
               {todayScheduled.map(job => {
                 const customer = job.customers as { first_name: string; last_name: string } | null;
                 const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;

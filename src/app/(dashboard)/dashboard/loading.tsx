@@ -12,7 +12,7 @@ export default function DashboardLoading() {
       {/* Revenue Metrics */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-card p-5 lg:p-6 rounded-xl shadow-card border">
+          <div key={i} className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
             <Skeleton className="h-3 w-20 mb-3" />
             <Skeleton className="h-10 w-28" />
           </div>
@@ -48,16 +48,14 @@ export default function DashboardLoading() {
       {/* Tech Workload + Unpaid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="bg-card rounded-xl border shadow-card">
-            <div className="px-5 lg:px-6 py-4">
-              <Skeleton className="h-5 w-36" />
-            </div>
-            <div className="border-t border-stone-100 dark:border-stone-800">
+          <div key={i} className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+            <Skeleton className="h-5 w-36 mb-5" />
+            <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, j) => (
-                <div key={j} className="flex items-center justify-between px-5 lg:px-6 py-3.5 border-b border-stone-100 dark:border-stone-800 last:border-0">
+                <div key={j} className="flex items-center justify-between py-2">
                   <div>
                     <Skeleton className="h-4 w-28" />
-                    <Skeleton className="mt-1 h-3 w-20" />
+                    <Skeleton className="mt-1.5 h-3 w-20" />
                   </div>
                   <Skeleton className="h-4 w-16" />
                 </div>
@@ -70,16 +68,14 @@ export default function DashboardLoading() {
       {/* Pending Estimates + Today's Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="bg-card rounded-xl border shadow-card">
-            <div className="px-5 lg:px-6 py-4">
-              <Skeleton className="h-5 w-36" />
-            </div>
-            <div className="border-t border-stone-100 dark:border-stone-800">
+          <div key={i} className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+            <Skeleton className="h-5 w-36 mb-5" />
+            <div className="space-y-4">
               {Array.from({ length: 2 }).map((_, j) => (
-                <div key={j} className="flex items-center justify-between px-5 lg:px-6 py-3.5 border-b border-stone-100 dark:border-stone-800 last:border-0">
+                <div key={j} className="flex items-center justify-between py-2">
                   <div>
                     <Skeleton className="h-4 w-28" />
-                    <Skeleton className="mt-1 h-3 w-20" />
+                    <Skeleton className="mt-1.5 h-3 w-20" />
                   </div>
                   <Skeleton className="h-4 w-12" />
                 </div>
