@@ -53,7 +53,7 @@ export default async function JobDetailPage({
   const grandTotal = totals.grandTotal;
 
   return (
-    <><div className="mx-auto max-w-4xl p-4 pb-20 lg:p-6 lg:pb-20">
+    <><div className="mx-auto max-w-4xl p-4 pb-20 lg:p-10 lg:pb-20">
       {/* Header */}
       <div className="mb-6 animate-in-up">
         <Link href="/jobs">
@@ -65,7 +65,7 @@ export default async function JobDetailPage({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <h2 className="text-xl font-semibold tracking-tight lg:text-2xl text-stone-900 dark:text-stone-50">
+              <h2 className="text-xl font-bold tracking-tight lg:text-2xl text-stone-900 dark:text-stone-50">
                 {job.title || "Job"}
               </h2>
               {job.ro_number && (
@@ -135,11 +135,11 @@ export default async function JobDetailPage({
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-xs font-semibold text-blue-700 dark:text-blue-400">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-xs font-bold text-blue-700 dark:text-blue-400">
                   {customer.first_name?.[0]}{customer.last_name?.[0]}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Customer</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">Customer</p>
                   <Link
                     href={`/customers/${customer.id}`}
                     className="text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -170,7 +170,7 @@ export default async function JobDetailPage({
                   <Car className="h-4 w-4 text-blue-700 dark:text-blue-400" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Vehicle</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">Vehicle</p>
                   <p className="text-sm font-medium">{formatVehicle(vehicle)}</p>
                   {vehicle.vin && (
                     <p className="font-mono text-xs text-muted-foreground">
@@ -188,7 +188,7 @@ export default async function JobDetailPage({
       {job.notes && (
         <Card className="mb-4 animate-in-up stagger-2">
           <CardContent className="p-4">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Notes</p>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">Notes</p>
             <p className="whitespace-pre-wrap text-sm leading-relaxed">{job.notes}</p>
           </CardContent>
         </Card>

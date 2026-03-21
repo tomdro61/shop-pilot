@@ -16,7 +16,7 @@ export default async function PresetsPage() {
   const categories = settings?.job_categories ?? DEFAULT_JOB_CATEGORIES;
 
   return (
-    <div className="p-4 lg:p-8">
+    <div className="p-4 lg:p-10">
       <PresetList presets={presets} categories={categories} />
     </div>
   );

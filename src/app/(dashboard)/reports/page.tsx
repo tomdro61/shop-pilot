@@ -100,7 +100,7 @@ const customerReports: ReportCard[] = [
 function ReportSection({ title, reports }: { title: string; reports: ReportCard[] }) {
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
+      <h3 className="mb-2 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
         {title}
       </h3>
       <div className="space-y-2">
@@ -119,7 +119,7 @@ function ReportSection({ title, reports }: { title: string; reports: ReportCard[
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold">{report.label}</p>
+                    <p className="text-sm font-bold">{report.label}</p>
                     {report.status === "coming_soon" && (
                       <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
                         Coming Soon
@@ -152,9 +152,9 @@ function ReportSection({ title, reports }: { title: string; reports: ReportCard[
 
 export default function ReportsIndexPage() {
   return (
-    <div className="mx-auto max-w-2xl p-4 lg:p-8">
+    <div className="mx-auto max-w-2xl p-4 lg:p-10">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold">Reports</h2>
+        <h2 className="text-xl font-bold tracking-tight">Reports</h2>
         <p className="text-sm text-muted-foreground">
           Business analytics and performance tracking
         </p>

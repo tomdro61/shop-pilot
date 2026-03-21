@@ -31,7 +31,7 @@ export default async function TaxReportPage({
   const currentMonth = isCurrentYear ? now.getMonth() : 11; // 0-based
 
   return (
-    <div className="p-4 lg:p-8">
+    <div className="p-4 lg:p-10">
       <div className="mb-6">
         <Link href="/reports">
           <Button variant="ghost" size="sm" className="mb-2">
@@ -41,7 +41,7 @@ export default async function TaxReportPage({
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold">Tax Summary</h2>
+            <h2 className="text-xl font-bold tracking-tight">Tax Summary</h2>
             <p className="text-sm text-muted-foreground">
               Monthly taxable sales and MA sales tax collected ({taxPct}%)
             </p>
@@ -80,7 +80,7 @@ export default async function TaxReportPage({
       {/* Monthly Breakdown Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
             Monthly Breakdown — {year}
           </CardTitle>
         </CardHeader>
@@ -88,12 +88,12 @@ export default async function TaxReportPage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-stone-100 dark:border-stone-800 text-left text-stone-500 dark:text-stone-400">
-                  <th className="pb-2 pr-4 font-medium">Month</th>
-                  <th className="pb-2 pr-4 text-right font-medium">Total Revenue</th>
-                  <th className="pb-2 pr-4 text-right font-medium">Taxable Amt</th>
-                  <th className="pb-2 pr-4 text-right font-medium">Tax Collected</th>
-                  <th className="pb-2 text-right font-medium">Non-Taxable</th>
+                <tr className="border-b border-stone-100 dark:border-stone-800 text-left">
+                  <th className="pb-2 pr-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Month</th>
+                  <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Total Revenue</th>
+                  <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Taxable Amt</th>
+                  <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Tax Collected</th>
+                  <th className="pb-2 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Non-Taxable</th>
                 </tr>
               </thead>
               <tbody>
@@ -104,9 +104,9 @@ export default async function TaxReportPage({
                   return (
                     <tr
                       key={row.monthNum}
-                      className={`border-b border-stone-100 dark:border-stone-800 last:border-0 ${
+                      className={
                         isFuture ? "text-stone-300 dark:text-stone-700" : ""
-                      }`}
+                      }
                     >
                       <td className="py-2 pr-4 font-medium">{row.month}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">
@@ -126,7 +126,7 @@ export default async function TaxReportPage({
                 })}
 
                 {/* YTD Totals Row */}
-                <tr className="border-t-2 border-stone-200 dark:border-stone-700 font-semibold">
+                <tr className="border-t border-stone-200 dark:border-stone-700 font-semibold">
                   <td className="py-2 pr-4">YTD Total</td>
                   <td className="py-2 pr-4 text-right tabular-nums">
                     {formatCurrency(data.ytd.totalRevenue)}

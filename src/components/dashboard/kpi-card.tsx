@@ -40,8 +40,8 @@ export function KpiCard({
 
   return (
     <Card className={accentColor ? `border-l-4 ${accentBorderMap[accentColor]}` : undefined}>
-      <CardContent className="p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+      <CardContent className="p-5">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
           {title}
         </p>
         <p className="mt-2 text-3xl lg:text-4xl font-black tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{value}</p>

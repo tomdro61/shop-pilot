@@ -35,7 +35,7 @@ export default async function ParkingPage({
   if (tab === "today") {
     const dashboard = await getParkingDashboard(lot);
     return (
-      <div className="p-4 lg:p-8 space-y-5">
+      <div className="p-4 lg:p-10 space-y-6">
         <Suspense>
           <ParkingTabs />
         </Suspense>
@@ -47,7 +47,7 @@ export default async function ParkingPage({
   if (tab === "services") {
     const dashboard = await getParkingDashboard(lot);
     return (
-      <div className="p-4 lg:p-8 space-y-5">
+      <div className="p-4 lg:p-10 space-y-6">
         <Suspense>
           <ParkingTabs />
         </Suspense>
@@ -69,7 +69,7 @@ export default async function ParkingPage({
   });
 
   return (
-    <div className="p-4 lg:p-8 space-y-5">
+    <div className="p-4 lg:p-10 space-y-6">
       <Suspense>
         <ParkingTabs />
       </Suspense>

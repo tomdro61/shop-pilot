@@ -67,7 +67,7 @@ export default async function EstimateDetailPage({
   const isDraft = status === "draft";
 
   return (
-    <div className="mx-auto max-w-4xl p-4 lg:p-8">
+    <div className="mx-auto max-w-4xl p-4 lg:p-10">
       {/* Header */}
       <div className="mb-4">
         {job && (
@@ -99,7 +99,7 @@ export default async function EstimateDetailPage({
         {customer && (
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
+              <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
                 <User className="h-3.5 w-3.5" />
                 Customer
               </CardTitle>
@@ -123,7 +123,7 @@ export default async function EstimateDetailPage({
         {vehicle && (
           <Card>
             <CardHeader className="pb-1">
-              <CardTitle className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
+              <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
                 <Car className="h-3.5 w-3.5" />
                 Vehicle
               </CardTitle>

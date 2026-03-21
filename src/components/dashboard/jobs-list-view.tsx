@@ -77,7 +77,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
+            className="-ml-3 h-8 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Customer
@@ -113,7 +113,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
+            className="-ml-3 h-8 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Job
@@ -136,7 +136,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
+            className="-ml-3 h-8 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Total
@@ -159,7 +159,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
+            className="-ml-3 h-8 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Date
@@ -197,10 +197,10 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         ) : (
           <Card>
             <CardContent className="p-0">
-              <div className="border-b px-4 py-2.5 text-xs font-semibold text-muted-foreground">
+              <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
                 {jobs.length} jobs
               </div>
-              <div className="divide-y">
+              <div className="space-y-1 p-2">
                 {jobs.map((job) => <JobCard key={job.id} job={job} />)}
               </div>
             </CardContent>
@@ -217,7 +217,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id} className="bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-50 dark:hover:bg-stone-800/50">
                     {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                      <TableHead key={header.id} className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
                         {header.isPlaceholder
                           ? null
                           : flexRender(

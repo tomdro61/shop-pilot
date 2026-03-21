@@ -105,7 +105,7 @@ export function QuoteRequestList({
       {/* List */}
       <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
         {quoteRequests.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-stone-300 dark:border-stone-700 p-8 text-center">
+          <div className="bg-card rounded-xl shadow-card p-8 text-center">
             <p className="text-sm text-stone-500 dark:text-stone-400">
               No quote requests found.
             </p>
@@ -168,7 +168,7 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
   return (
     <div
       className={cn(
-        "rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-4 transition-opacity",
+        "bg-card rounded-xl shadow-card p-4 transition-opacity",
         isUpdating && "opacity-50"
       )}
     >
@@ -176,12 +176,12 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
         <div className="min-w-0 flex-1 space-y-2">
           {/* Name + Status + Date */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm">
+            <span className="font-bold text-sm">
               {qr.first_name} {qr.last_name}
             </span>
             <span
               className={cn(
-                "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                "inline-flex items-center text-[10px] font-black px-2 py-1 rounded-full uppercase",
                 statusColors.bg,
                 statusColors.text
               )}

@@ -33,12 +33,12 @@ export function ParkingReservationCard({
   return (
     <Link
       href={`/parking/${reservation.id}`}
-      className="block rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+      className="block bg-card rounded-xl shadow-card p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-stone-900 dark:text-stone-50">
+            <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
               {reservation.first_name} {reservation.last_name}
             </span>
             <Badge
@@ -130,20 +130,20 @@ export function ParkingReservationCardCompact({
         : formatTime(reservation.drop_off_time);
 
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${
+    <div className={`flex items-center justify-between gap-3 rounded-xl bg-card shadow-card border-l-4 px-4 py-3 ${
       variant === "arrival"
-        ? "border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50"
+        ? "border-l-blue-400 dark:border-l-blue-500"
         : variant === "pickup"
-          ? "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/50"
+          ? "border-l-amber-400 dark:border-l-amber-500"
         : variant === "pickup-tomorrow"
-          ? "border-orange-200 dark:border-orange-900 bg-orange-100 dark:bg-orange-950/50"
+          ? "border-l-orange-400 dark:border-l-orange-500"
         : variant === "checked-out"
-          ? "border-green-300 dark:border-green-800 bg-green-100 dark:bg-green-950/50"
-          : "border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900"
+          ? "border-l-green-400 dark:border-l-green-500"
+          : "border-l-stone-300 dark:border-l-stone-600"
     }`}>
       <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
+          <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
             {reservation.first_name} {reservation.last_name}
           </p>
           {reservation.parking_type === "shuttle" && (

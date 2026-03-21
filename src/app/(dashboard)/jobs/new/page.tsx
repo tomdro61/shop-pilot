@@ -26,8 +26,8 @@ export default async function NewJobPage({
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-4 lg:p-8">
-      <h2 className="mb-6 text-xl font-semibold">New Job</h2>
+    <div className="mx-auto max-w-2xl p-4 lg:p-10">
+      <h2 className="mb-6 text-xl font-bold tracking-tight">New Job</h2>
       <JobForm
         defaultCustomerId={customerId}
         defaultTitle={quoteTitle}

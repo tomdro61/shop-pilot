@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function RevenueReportLoading() {
   return (
-    <div className="p-4 lg:p-8">
+    <div className="p-4 lg:p-10">
       <div className="mb-6">
         <Skeleton className="mb-2 h-8 w-36" />
         <Skeleton className="mb-1 h-6 w-48" />
@@ -13,7 +13,7 @@ export default function RevenueReportLoading() {
       <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
-            <CardContent className="p-4">
+            <CardContent className="p-5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="mt-2 h-8 w-20" />
               <Skeleton className="mt-1 h-3 w-16" />
@@ -24,7 +24,7 @@ export default function RevenueReportLoading() {
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
-            <CardContent className="p-4">
+            <CardContent className="p-5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="mt-2 h-8 w-20" />
               <Skeleton className="mt-1 h-3 w-16" />

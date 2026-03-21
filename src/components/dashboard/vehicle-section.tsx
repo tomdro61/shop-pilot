@@ -33,8 +33,8 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
   return (
     <div className="mb-4">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-          <CardTitle className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
             <Car className="h-3.5 w-3.5" />
             Vehicles ({vehicles.length})
           </CardTitle>
@@ -46,11 +46,11 @@ export function VehicleSection({ customerId, vehicles }: VehicleSectionProps) {
           {vehicles.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">No vehicles yet</p>
           ) : (
-            <div className="-mx-5 divide-y">
+            <div className="space-y-1">
               {vehicles.map((vehicle) => (
-                <div key={vehicle.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                <div key={vehicle.id} className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold">{formatVehicle(vehicle)}</p>
+                    <p className="text-sm font-bold">{formatVehicle(vehicle)}</p>
                     <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
                       {vehicle.vin && <span>VIN: {vehicle.vin}</span>}
                       {vehicle.license_plate && <span>Plate: {vehicle.license_plate}</span>}

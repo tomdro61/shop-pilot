@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { TeamMemberForm } from "@/components/forms/team-member-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteTeamMember } from "@/lib/actions/team";
@@ -32,8 +32,8 @@ export function TeamList({ members }: TeamListProps) {
   return (
     <div>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-          <CardTitle className="text-base font-semibold">Team ({members.length})</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Team ({members.length})</CardTitle>
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Add Member</span>
@@ -46,17 +46,27 @@ export function TeamList({ members }: TeamListProps) {
               No team members yet
             </p>
           ) : (
-            <div className="-mx-5 divide-y">
+            <div className="space-y-1">
               {members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
-                  <div>
-                    <p className="text-sm font-semibold">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                <div key={member.id} className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-xs font-bold text-blue-700 dark:text-blue-400">
+                      {member.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">{member.name}</p>
+                      <p className="text-xs text-muted-foreground">{member.email}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={member.role === "manager" ? "default" : "secondary"}>
+                    <span className={cn(
+                      "text-[10px] font-black px-2 py-1 rounded-full uppercase",
+                      member.role === "manager"
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
+                        : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+                    )}>
                       {member.role === "manager" ? "Manager" : "Technician"}
-                    </Badge>
+                    </span>
                     <Button
                       variant="ghost"
                       size="icon"

@@ -15,7 +15,7 @@ export default async function CategoriesSettingsPage() {
   const categories = settings?.job_categories ?? DEFAULT_JOB_CATEGORIES;
 
   return (
-    <div className="mx-auto max-w-2xl p-4 lg:p-8">
+    <div className="mx-auto max-w-2xl p-4 lg:p-10">
       <div className="mb-6">
         <Link href="/settings">
           <Button variant="ghost" size="sm" className="mb-2">
@@ -23,7 +23,7 @@ export default async function CategoriesSettingsPage() {
             Back to Settings
           </Button>
         </Link>
-        <h2 className="text-xl font-semibold">Job Categories</h2>
+        <h2 className="text-xl font-bold tracking-tight">Job Categories</h2>
         <p className="text-sm text-muted-foreground">
           Add, remove, rename, and reorder the categories used for line items and services
         </p>

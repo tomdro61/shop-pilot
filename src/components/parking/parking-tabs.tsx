@@ -42,13 +42,13 @@ export function ParkingTabs() {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg bg-stone-100 dark:bg-stone-800 p-1">
+      <div className="flex gap-1 rounded-xl bg-stone-100 dark:bg-stone-800 p-1">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => updateParams({ tab: tab.value === "today" ? "" : tab.value })}
             className={cn(
-              "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
               currentTab === tab.value
                 ? "bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-50 shadow-sm"
                 : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300"
