@@ -151,7 +151,7 @@ export function CheckoutModal({
               </Select>
 
               {selectedLockBox && (
-                <div className="rounded-md bg-blue-50 dark:bg-blue-950 px-3 py-2 text-sm">
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-950 px-3 py-2 text-sm">
                   <span className="font-medium text-blue-700 dark:text-blue-400">
                     Code: {selectedLockBox.code}
                   </span>

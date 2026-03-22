@@ -58,7 +58,7 @@ export default async function RevenueReportPage({
   const inspectionPct = totalRevenue > 0 ? Math.round((inspectionRevenue / totalRevenue) * 100) : 0;
 
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-10">
       <div className="mb-6">
         <Link href="/reports">
           <Button variant="ghost" size="sm" className="mb-2">
@@ -66,7 +66,7 @@ export default async function RevenueReportPage({
             Back to Reports
           </Button>
         </Link>
-        <h2 className="text-xl font-semibold">Revenue Overview</h2>
+        <h2 className="text-xl font-bold tracking-tight">Revenue Overview</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           Financial performance and shop analytics
         </p>
@@ -151,24 +151,24 @@ export default async function RevenueReportPage({
         <div className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Service Profitability ({resolved.label})</CardTitle>
+              <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Service Profitability ({resolved.label})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-100 dark:border-stone-800 text-left text-stone-500 dark:text-stone-400">
-                      <th className="pb-2 pr-4 font-medium">Category</th>
-                      <th className="pb-2 pr-4 text-right font-medium">Revenue</th>
-                      <th className="pb-2 pr-4 text-right font-medium">Parts Cost</th>
-                      <th className="pb-2 pr-4 text-right font-medium">Labor Rev</th>
-                      <th className="pb-2 pr-4 text-right font-medium">Gross Profit</th>
-                      <th className="pb-2 text-right font-medium">Margin %</th>
+                    <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
+                      <th className="pb-2 pr-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Category</th>
+                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
+                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Parts Cost</th>
+                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Labor Rev</th>
+                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Gross Profit</th>
+                      <th className="pb-2 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Margin %</th>
                     </tr>
                   </thead>
                   <tbody>
                     {profitability.map((row) => (
-                      <tr key={row.category} className="border-b border-stone-100 dark:border-stone-800 last:border-0">
+                      <tr key={row.category}>
                         <td className="py-2 pr-4 font-medium">{row.category}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.revenue)}</td>
                         <td className="py-2 pr-4 text-right">
@@ -196,23 +196,23 @@ export default async function RevenueReportPage({
         <div className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">Fleet A/R Aging</CardTitle>
+              <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Fleet A/R Aging</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-100 dark:border-stone-800 text-left text-stone-500 dark:text-stone-400">
-                      <th className="pb-2 pr-4 font-medium">Account</th>
-                      <th className="pb-2 pr-4 text-right font-medium">0-30 Days</th>
-                      <th className="pb-2 pr-4 text-right font-medium">31-60 Days</th>
-                      <th className="pb-2 pr-4 text-right font-medium">60+ Days</th>
-                      <th className="pb-2 text-right font-medium">Total</th>
+                    <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
+                      <th className="pb-2 pr-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Account</th>
+                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">0-30 Days</th>
+                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">31-60 Days</th>
+                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">60+ Days</th>
+                      <th className="pb-2 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {fleetAR.map((row) => (
-                      <tr key={row.account} className="border-b border-stone-100 dark:border-stone-800 last:border-0">
+                      <tr key={row.account}>
                         <td className="py-2 pr-4 font-medium">{row.account}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.current)}</td>
                         <td className="py-2 pr-4 text-right">{formatCurrency(row.days31to60)}</td>

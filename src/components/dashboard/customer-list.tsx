@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { formatPhone } from "@/lib/utils/format";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight, Users } from "lucide-react";
 interface CustomerListItem {
@@ -34,7 +33,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
     <Card>
       <CardContent className="p-0">
         {/* Table header — hidden on mobile */}
-        <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] border-b bg-stone-50 dark:bg-stone-800/50 px-5 py-2.5 text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+        <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
           <span>Name</span>
           <span>Email</span>
           <span>Phone</span>
@@ -42,22 +41,22 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
         </div>
 
         {/* Customer count — mobile only */}
-        <div className="md:hidden border-b px-5 py-2.5 text-xs font-semibold text-muted-foreground">
+        <div className="md:hidden px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
 
-        <div className="divide-y">
+        <div className="divide-y divide-stone-200 dark:divide-stone-800">
           {customers.map((customer) => {
             const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
             return (
               <Link key={customer.id} href={`/customers/${customer.id}`} className="block">
                 {/* Desktop: columnar table row */}
-                <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] items-center px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] items-center rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-semibold text-blue-700 dark:text-blue-400">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-bold text-blue-700 dark:text-blue-400">
                       {initials}
                     </div>
-                    <span className="text-sm font-medium truncate">
+                    <span className="text-sm font-bold truncate">
                       {customer.first_name} {customer.last_name}
                     </span>
                   </div>
@@ -69,13 +68,13 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
                   </span>
                   <span className="w-16 flex justify-center">
                     {customer.customer_type === "fleet" ? (
-                      <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400 text-[10px] py-0">
+                      <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400">
                         Fleet
-                      </Badge>
+                      </span>
                     ) : customer.customer_type === "parking" ? (
-                      <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-[10px] py-0">
+                      <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400">
                         Parking
-                      </Badge>
+                      </span>
                     ) : (
                       <span className="text-xs text-muted-foreground/50">Retail</span>
                     )}
@@ -83,24 +82,24 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
                 </div>
 
                 {/* Mobile: compact stacked row */}
-                <div className="flex items-center gap-3 px-4 py-3 md:hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-semibold text-blue-700 dark:text-blue-400">
+                <div className="flex items-center gap-3 rounded-xl px-4 py-3.5 md:hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-bold text-blue-700 dark:text-blue-400">
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">
+                      <p className="text-sm font-bold truncate">
                         {customer.first_name} {customer.last_name}
                       </p>
                       {customer.customer_type === "fleet" && (
-                        <Badge variant="outline" className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-400 text-[10px] py-0 shrink-0">
+                        <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 shrink-0">
                           Fleet
-                        </Badge>
+                        </span>
                       )}
                       {customer.customer_type === "parking" && (
-                        <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 text-[10px] py-0 shrink-0">
+                        <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 shrink-0">
                           Parking
-                        </Badge>
+                        </span>
                       )}
                     </div>
                     <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">

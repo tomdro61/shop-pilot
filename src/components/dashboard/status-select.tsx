@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { updateJobStatus } from "@/lib/actions/jobs";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER } from "@/lib/constants";
 import type { JobStatus } from "@/types";
@@ -17,6 +16,13 @@ interface StatusSelectProps {
   jobId: string;
   currentStatus: JobStatus;
 }
+
+const STATUS_DOT_COLORS: Record<string, string> = {
+  not_started: "bg-red-500",
+  waiting_for_parts: "bg-amber-500",
+  in_progress: "bg-blue-500 animate-pulse",
+  complete: "bg-green-500",
+};
 
 export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
   async function handleChange(newStatus: string) {
@@ -32,13 +38,12 @@ export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
 
   return (
     <Select value={currentStatus} onValueChange={handleChange}>
-      <SelectTrigger className="w-auto">
+      <SelectTrigger className="w-auto border-0 bg-transparent p-0 h-auto shadow-none focus:ring-0">
         <SelectValue>
-          <Badge
-            className={`border-transparent ${colors.bg} ${colors.text}`}
-          >
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${colors.bg} ${colors.text}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLORS[currentStatus] || "bg-stone-400"}`} />
             {JOB_STATUS_LABELS[currentStatus]}
-          </Badge>
+          </span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -46,11 +51,10 @@ export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
           const statusColors = JOB_STATUS_COLORS[status];
           return (
             <SelectItem key={status} value={status}>
-              <Badge
-                className={`border-transparent ${statusColors.bg} ${statusColors.text}`}
-              >
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusColors.bg} ${statusColors.text}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLORS[status] || "bg-stone-400"}`} />
                 {JOB_STATUS_LABELS[status]}
-              </Badge>
+              </span>
             </SelectItem>
           );
         })}

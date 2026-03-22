@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Edit Job: RO-0247 - ShopPilot</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for a cleaner atelier look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2d8d2; border-radius: 10px; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "on-background": "#1f1b17",
+                "outline": "#727687",
+                "on-primary-fixed": "#001849",
+                "on-primary-container": "#f8f7ff",
+                "surface-dim": "#e2d8d2",
+                "primary-fixed": "#dae1ff",
+                "on-surface": "#1f1b17",
+                "secondary": "#515f74",
+                "surface-container-low": "#fcf2eb",
+                "surface-bright": "#fff8f5",
+                "primary-fixed-dim": "#b3c5ff",
+                "on-primary": "#ffffff",
+                "surface-variant": "#eae1da",
+                "tertiary-fixed": "#ffdbd0",
+                "on-secondary-fixed-variant": "#3a485b",
+                "primary": "#0050cb",
+                "secondary-fixed-dim": "#b9c7df",
+                "secondary-fixed": "#d5e3fc",
+                "surface-container-lowest": "#ffffff",
+                "background": "#fff8f5",
+                "inverse-on-surface": "#f9efe8",
+                "primary-container": "#0066ff",
+                "on-secondary": "#ffffff",
+                "on-tertiary-fixed": "#390c00",
+                "on-error-container": "#93000a",
+                "on-error": "#ffffff",
+                "on-surface-variant": "#424656",
+                "tertiary-container": "#cc4204",
+                "surface": "#fff8f5",
+                "inverse-primary": "#b3c5ff",
+                "tertiary": "#a33200",
+                "on-tertiary-container": "#fff6f4",
+                "secondary-container": "#d5e3fc",
+                "on-secondary-container": "#57657a",
+                "inverse-surface": "#342f2b",
+                "on-tertiary": "#ffffff",
+                "surface-tint": "#0054d6",
+                "on-secondary-fixed": "#0d1c2e",
+                "outline-variant": "#c2c6d8",
+                "on-primary-fixed-variant": "#003fa4",
+                "on-tertiary-fixed-variant": "#832600",
+                "tertiary-fixed-dim": "#ffb59d",
+                "surface-container-high": "#f0e6e0",
+                "surface-container": "#f6ece6",
+                "error": "#ba1a1a",
+                "surface-container-highest": "#eae1da",
+                "error-container": "#ffdad6"
+              },
+              fontFamily: {
+                "headline": ["Inter"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-inverse-surface text-stone-400 py-6 flex flex-col z-50 shadow-2xl shadow-stone-900/20">
+<div class="px-6 mb-8">
+<div class="flex items-center space-x-2">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-white uppercase">ShopPilot</h1>
+<p class="text-[10px] uppercase tracking-[0.1em] text-stone-500">The Precision Atelier</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-2">
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-['Inter'] tracking-tight">Dashboard</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 bg-[#0050cb] text-white rounded-lg font-medium mx-2 my-1" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="text-sm font-['Inter'] tracking-tight">Jobs</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-['Inter'] tracking-tight">Customers</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-sm font-['Inter'] tracking-tight">Quick Pay</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-['Inter'] tracking-tight">Invoices</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">fact_check</span>
+<span class="text-sm font-['Inter'] tracking-tight">Inspections</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">local_parking</span>
+<span class="text-sm font-['Inter'] tracking-tight">Parking</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">request_quote</span>
+<span class="text-sm font-['Inter'] tracking-tight">Quotes</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-stone-800 pt-4 space-y-1 px-2">
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-['Inter']">Reports</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white hover:bg-stone-700/50 transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-['Inter']">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="ml-64 min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="h-16 flex justify-between items-center px-8 w-full bg-[#fff8f5] dark:bg-stone-950 font-['Inter'] antialiased text-sm border-b-0">
+<div class="flex items-center space-x-4">
+<div class="flex items-center space-x-2 text-stone-500">
+<span>Jobs</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-on-surface font-semibold">RO-0247</span>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<div class="relative">
+<span class="material-symbols-outlined text-stone-500 cursor-pointer hover:bg-stone-200/50 p-2 rounded-full transition-colors">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-surface"></span>
+</div>
+<span class="material-symbols-outlined text-stone-500 cursor-pointer hover:bg-stone-200/50 p-2 rounded-full transition-colors">help_outline</span>
+<div class="flex items-center space-x-3 pl-4 border-l border-surface-container">
+<img alt="User profile" class="w-8 h-8 rounded-full object-cover" data-alt="Professional male headshot for user profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuASZQHbwkmE58WH25di0ZLaF9Mf-PyafSnlRRK_urlRYVOqfG3rIVJAEsrbQoAhOHA-Qwr0xuHIFgSDyNWy-stvfang6V3qcuihLLJnmICZeE64ZccaZwCSn-EgXlj3u4Yyp0gEGUoSptAAYus4CyweUgPvAZ5ZWEIo3FO0swv_i84a4Cg7qPB5qJpdw2wr7LiWN5VLImWbpH91WLX3f-jmoJy8D76fU-8sSiP-GMUNpCi350kcHYmqvxkZhJwjEm_Wq1DwPnw7Nvdh"/>
+<span class="font-medium text-on-surface">Admin</span>
+</div>
+</div>
+</header>
+<!-- Page Header Section -->
+<section class="px-12 py-10">
+<div class="max-w-5xl mx-auto flex justify-between items-end">
+<div>
+<h2 class="text-4xl font-extrabold tracking-tight text-on-surface mb-2">Edit Job: RO-0247</h2>
+<p class="text-stone-500 text-lg">Modifying Engine Oil Filter Housing service details.</p>
+</div>
+<div class="flex space-x-3">
+<button class="px-6 py-2.5 rounded-full border border-outline-variant text-on-surface hover:bg-surface-container-high transition-all text-sm font-medium">
+                        Cancel
+                    </button>
+<button class="px-8 py-2.5 rounded-full bg-gradient-to-tr from-primary to-primary-container text-white shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-sm font-medium">
+                        Update Job
+                    </button>
+</div>
+</div>
+</section>
+<!-- Form Content (Asymmetric Layout) -->
+<section class="px-12 pb-24">
+<div class="max-w-5xl mx-auto grid grid-cols-12 gap-8">
+<!-- Main Form Column -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Basic Info Card -->
+<div class="bg-surface-container-lowest rounded-xl p-8 transition-all">
+<h3 class="text-xs font-bold uppercase tracking-[0.1em] text-stone-400 mb-8">Service Information</h3>
+<div class="grid grid-cols-2 gap-x-6 gap-y-8">
+<div class="col-span-2">
+<label class="block text-[10px] uppercase tracking-wider text-stone-500 font-bold mb-2">Job Title</label>
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" type="text" value="Engine Oil Filter Housing"/>
+</div>
+<div class="col-span-1">
+<label class="block text-[10px] uppercase tracking-wider text-stone-500 font-bold mb-2">Status</label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface-container-low border-0 rounded-lg px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none">
+<option value="scheduled">Scheduled</option>
+<option selected="" value="in_progress">In Progress</option>
+<option value="completed">Completed</option>
+<option value="on_hold">On Hold</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 pointer-events-none text-stone-400">expand_more</span>
+</div>
+</div>
+<div class="col-span-1">
+<label class="block text-[10px] uppercase tracking-wider text-stone-500 font-bold mb-2">Lead Technician</label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface-container-low border-0 rounded-lg px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none">
+<option value="mike">Mike</option>
+<option selected="" value="paul">Paul</option>
+<option value="sarah">Sarah</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 pointer-events-none text-stone-400">person</span>
+</div>
+</div>
+<div class="col-span-1">
+<label class="block text-[10px] uppercase tracking-wider text-stone-500 font-bold mb-2">Service Date</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" type="text" value="Mar 15, 2026"/>
+<span class="material-symbols-outlined absolute right-3 top-3 pointer-events-none text-stone-400">calendar_today</span>
+</div>
+</div>
+<div class="col-span-1">
+<label class="block text-[10px] uppercase tracking-wider text-stone-500 font-bold mb-2">Mileage In</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none" type="text" value="45,210"/>
+<span class="absolute right-4 top-3.5 text-xs text-stone-400 font-bold">MI</span>
+</div>
+</div>
+<div class="col-span-2">
+<label class="block text-[10px] uppercase tracking-wider text-stone-500 font-bold mb-2">Service Notes</label>
+<textarea class="w-full bg-surface-container-low border-0 rounded-lg px-4 py-3 text-on-surface focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none resize-none" rows="4">Customer reports leak under front of engine.</textarea>
+</div>
+</div>
+</div>
+<!-- Payment Details Card (Glassmorphism look) -->
+<div class="bg-surface-container-high/40 backdrop-blur-md rounded-xl p-8 border border-white/20">
+<h3 class="text-xs font-bold uppercase tracking-[0.1em] text-stone-400 mb-6">Commercial Details</h3>
+<div class="grid grid-cols-2 gap-6">
+<div>
+<label class="block text-[10px] uppercase tracking-wider text-stone-500 font-bold mb-2">Payment Status</label>
+<div class="inline-flex items-center px-4 py-2 bg-error-container text-on-error-container rounded-full text-xs font-bold">
+<span class="material-symbols-outlined text-sm mr-2" style="font-variation-settings: 'FILL' 1;">error</span>
+                                    UNPAID
+                                </div>
+</div>
+<div>
+<label class="block text-[10px] uppercase tracking-wider text-stone-500 font-bold mb-2">Payment Method</label>
+<div class="text-sm text-stone-400 italic">Not Set</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Sidebar (Contextual Info) -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<!-- Customer Context -->
+<div class="bg-surface-container p-6 rounded-xl space-y-4">
+<div class="flex items-center space-x-4">
+<div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-primary border border-surface-dim">
+<span class="material-symbols-outlined text-3xl">account_circle</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface">Anthony Falcucci</h4>
+<p class="text-xs text-stone-500 uppercase tracking-widest">Primary Customer</p>
+</div>
+</div>
+<div class="pt-4 border-t border-surface-dim space-y-2">
+<div class="flex justify-between text-sm">
+<span class="text-stone-500">Member Since</span>
+<span class="font-medium">Jan 2024</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-stone-500">Total Visits</span>
+<span class="font-medium">4</span>
+</div>
+</div>
+</div>
+<!-- Vehicle Context -->
+<div class="bg-surface-container-low p-6 rounded-xl space-y-4">
+<div class="flex items-center space-x-4">
+<div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-primary border border-surface-dim">
+<span class="material-symbols-outlined text-3xl">directions_car</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface">2019 Jeep Wrangler</h4>
+<p class="text-xs text-stone-500 uppercase tracking-widest">Sahara Edition</p>
+</div>
+</div>
+<div class="aspect-video w-full rounded-lg bg-surface-variant overflow-hidden group cursor-pointer relative">
+<img alt="Vehicle thumbnail" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="A rugged 2019 Jeep Wrangler in a desert landscape" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkYy5X9fDSfOU2x6Lxyu6K6ckB9duVpHy0eQ9gBeAyN-DYP_o6u6s9RYdFFys8TFQarV0oBUXzP0wzd8iF6yRg5Qbfu9Fgeit-Bdw906isVUvLf-QQ03KxaIodAzaiDRLUuO9LDxPWCHM9owfYVMnEnlqtJDrJO0ThcKnEOFdTDQrAiKu3oOuz_GnTZSxAP5ZCIyiEG8gcUFfsdtt7QNFIHBNCkatT1VbI2hG3VqmcDzV2jDaUjChuDB6913fl81QB7BpO1OLWhi7e"/>
+<div class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="text-white text-xs font-bold uppercase">View Gallery</span>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-sm">
+<span class="text-stone-500">VIN</span>
+<span class="font-mono text-xs font-bold uppercase">1C4HJXEG6KLXXXXXX</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-stone-500">Color</span>
+<span class="font-medium">Granite Crystal</span>
+</div>
+</div>
+</div>
+<!-- Quick Actions / Meta -->
+<div class="p-6 border-2 border-dashed border-surface-variant rounded-xl text-center space-y-3">
+<p class="text-xs text-stone-400 font-medium">Need to add parts or labor rates?</p>
+<button class="w-full py-2 bg-surface-container-high rounded-lg text-sm font-bold text-primary hover:bg-white transition-colors">
+                            Manage Pricing Model
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Success Feedback Overlay (Hidden by default, shown here for structure) -->
+<div class="hidden fixed bottom-8 right-8 bg-inverse-surface text-white px-6 py-4 rounded-xl shadow-2xl flex items-center space-x-4">
+<span class="material-symbols-outlined text-primary-fixed">check_circle</span>
+<span class="text-sm font-medium">Job RO-0247 updated successfully.</span>
+</div>
+</body></html>

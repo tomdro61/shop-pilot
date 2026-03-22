@@ -20,24 +20,24 @@ export const JOB_STATUS_COLORS: Record<
   { bg: string; text: string }
 > = {
   not_started: {
-    bg: "bg-red-100 dark:bg-red-900",
-    text: "text-red-700 dark:text-red-300",
+    bg: "bg-red-100 dark:bg-red-950",
+    text: "text-red-700 dark:text-red-400",
   },
   waiting_for_parts: {
-    bg: "bg-amber-100 dark:bg-amber-900",
-    text: "text-amber-700 dark:text-amber-300",
+    bg: "bg-amber-100 dark:bg-amber-950",
+    text: "text-amber-700 dark:text-amber-400",
   },
   in_progress: {
-    bg: "bg-blue-100 dark:bg-blue-900",
-    text: "text-blue-700 dark:text-blue-300",
+    bg: "bg-blue-100 dark:bg-blue-950",
+    text: "text-blue-700 dark:text-blue-400",
   },
   complete: {
-    bg: "bg-green-100 dark:bg-green-900",
-    text: "text-green-700 dark:text-green-300",
+    bg: "bg-green-100 dark:bg-green-950",
+    text: "text-green-700 dark:text-green-400",
   },
   paid: { // backwards compat for pre-migration data
-    bg: "bg-green-100 dark:bg-green-900",
-    text: "text-green-700 dark:text-green-300",
+    bg: "bg-green-100 dark:bg-green-950",
+    text: "text-green-700 dark:text-green-400",
   },
 };
 
@@ -54,15 +54,15 @@ export const PAYMENT_STATUS_COLORS: Record<
   { bg: string; text: string }
 > = {
   unpaid: {
-    bg: "bg-red-100 dark:bg-red-900",
-    text: "text-red-700 dark:text-red-300",
+    bg: "bg-red-100 dark:bg-red-950",
+    text: "text-red-700 dark:text-red-400",
   },
   invoiced: {
-    bg: "bg-blue-50 dark:bg-blue-950",
+    bg: "bg-blue-100 dark:bg-blue-950",
     text: "text-blue-700 dark:text-blue-400",
   },
   paid: {
-    bg: "bg-green-50 dark:bg-green-950",
+    bg: "bg-green-100 dark:bg-green-950",
     text: "text-green-700 dark:text-green-400",
   },
   waived: {
@@ -125,15 +125,15 @@ export const ESTIMATE_STATUS_COLORS: Record<
     text: "text-stone-500 dark:text-stone-400",
   },
   sent: {
-    bg: "bg-blue-50 dark:bg-blue-950",
-    text: "text-blue-700 dark:text-blue-400",
+    bg: "bg-green-100 dark:bg-green-950",
+    text: "text-green-700 dark:text-green-400",
   },
   approved: {
-    bg: "bg-green-50 dark:bg-green-950",
+    bg: "bg-green-100 dark:bg-green-950",
     text: "text-green-700 dark:text-green-400",
   },
   declined: {
-    bg: "bg-red-50 dark:bg-red-950",
+    bg: "bg-red-100 dark:bg-red-950",
     text: "text-red-700 dark:text-red-400",
   },
 };
@@ -154,11 +154,11 @@ export const INVOICE_STATUS_COLORS: Record<
     text: "text-stone-500 dark:text-stone-400",
   },
   sent: {
-    bg: "bg-blue-50 dark:bg-blue-950",
+    bg: "bg-blue-100 dark:bg-blue-950",
     text: "text-blue-700 dark:text-blue-400",
   },
   paid: {
-    bg: "bg-green-50 dark:bg-green-950",
+    bg: "bg-green-100 dark:bg-green-950",
     text: "text-green-700 dark:text-green-400",
   },
 };
@@ -191,24 +191,24 @@ export const PARKING_STATUS_COLORS: Record<
   { bg: string; text: string }
 > = {
   reserved: {
-    bg: "bg-blue-100 dark:bg-blue-900",
-    text: "text-blue-700 dark:text-blue-300",
+    bg: "bg-blue-100 dark:bg-blue-950",
+    text: "text-blue-700 dark:text-blue-400",
   },
   checked_in: {
-    bg: "bg-green-100 dark:bg-green-900",
-    text: "text-green-700 dark:text-green-300",
+    bg: "bg-green-100 dark:bg-green-950",
+    text: "text-green-700 dark:text-green-400",
   },
   checked_out: {
     bg: "bg-stone-100 dark:bg-stone-800",
     text: "text-stone-500 dark:text-stone-400",
   },
   no_show: {
-    bg: "bg-red-100 dark:bg-red-900",
-    text: "text-red-700 dark:text-red-300",
+    bg: "bg-red-100 dark:bg-red-950",
+    text: "text-red-700 dark:text-red-400",
   },
   cancelled: {
-    bg: "bg-amber-100 dark:bg-amber-900",
-    text: "text-amber-700 dark:text-amber-300",
+    bg: "bg-amber-100 dark:bg-amber-950",
+    text: "text-amber-700 dark:text-amber-400",
   },
 };
 
@@ -267,16 +267,16 @@ export const QUOTE_REQUEST_STATUS_COLORS: Record<
   { bg: string; text: string }
 > = {
   new: {
-    bg: "bg-blue-100 dark:bg-blue-900",
-    text: "text-blue-700 dark:text-blue-300",
+    bg: "bg-blue-100 dark:bg-blue-950",
+    text: "text-blue-700 dark:text-blue-400",
   },
   contacted: {
-    bg: "bg-amber-100 dark:bg-amber-900",
-    text: "text-amber-700 dark:text-amber-300",
+    bg: "bg-amber-100 dark:bg-amber-950",
+    text: "text-amber-700 dark:text-amber-400",
   },
   converted: {
-    bg: "bg-green-100 dark:bg-green-900",
-    text: "text-green-700 dark:text-green-300",
+    bg: "bg-green-100 dark:bg-green-950",
+    text: "text-green-700 dark:text-green-400",
   },
   closed: {
     bg: "bg-stone-100 dark:bg-stone-800",

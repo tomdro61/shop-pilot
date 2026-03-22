@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, PARKING_SERVICE_LABELS } from "@/lib/constants";
-import { Car, Clock } from "lucide-react";
+import { Car, Clock, KeyRound } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 function formatTime(time: string) {
@@ -33,12 +33,12 @@ export function ParkingReservationCard({
   return (
     <Link
       href={`/parking/${reservation.id}`}
-      className="block rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+      className="block bg-card rounded-xl shadow-card p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-stone-900 dark:text-stone-50">
+            <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
               {reservation.first_name} {reservation.last_name}
             </span>
             <Badge
@@ -50,7 +50,7 @@ export function ParkingReservationCard({
             {reservation.parking_type === "shuttle" && (
               <Badge
                 variant="secondary"
-                className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 border-0 text-[11px]"
+                className="bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border-0 text-[11px]"
               >
                 Shuttle
               </Badge>
@@ -80,7 +80,7 @@ export function ParkingReservationCard({
                 <Badge
                   key={service}
                   variant="secondary"
-                  className="bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300 border-0 text-[10px]"
+                  className="bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 border-0 text-[10px]"
                 >
                   {PARKING_SERVICE_LABELS[service] || service}
                 </Badge>
@@ -110,18 +110,23 @@ export function ParkingReservationCardCompact({
   reservation,
   showActions,
   variant = "arrival",
+  lockBoxCodes = {},
 }: {
   reservation: ParkingReservation;
   showActions?: React.ReactNode;
   variant?: "arrival" | "pickup" | "pickup-tomorrow" | "parked" | "checked-out";
+  lockBoxCodes?: Record<number, string>;
 }) {
+  const variantStyles: Record<string, string> = {
+    arrival: "border-l-blue-400 dark:border-l-blue-500 border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-950/50",
+    pickup: "border-l-amber-400 dark:border-l-amber-500 border-amber-200 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/50",
+    "pickup-tomorrow": "border-l-orange-400 dark:border-l-orange-500 border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-950/50",
+    "checked-out": "border-l-green-400 dark:border-l-green-500 border-green-200 dark:border-green-800 bg-green-100 dark:bg-green-950/50",
+    parked: "border-l-stone-300 dark:border-l-stone-600 border-stone-200 dark:border-stone-700 bg-card",
+  };
+
   const isPickup = variant === "pickup" || variant === "pickup-tomorrow" || variant === "checked-out";
-  const timeLabel =
-    isPickup
-      ? "Pickup"
-      : variant === "parked"
-        ? "Departs"
-        : "Arrival";
+  const timeLabel = isPickup ? "Pickup" : variant === "parked" ? "Departs" : "Arrival";
   const timeValue =
     isPickup
       ? formatTime(reservation.pick_up_time)
@@ -130,26 +135,16 @@ export function ParkingReservationCardCompact({
         : formatTime(reservation.drop_off_time);
 
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${
-      variant === "arrival"
-        ? "border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/50"
-        : variant === "pickup"
-          ? "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/50"
-        : variant === "pickup-tomorrow"
-          ? "border-orange-200 dark:border-orange-900 bg-orange-100 dark:bg-orange-950/50"
-        : variant === "checked-out"
-          ? "border-green-300 dark:border-green-800 bg-green-100 dark:bg-green-950/50"
-          : "border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900"
-    }`}>
+    <div className={`flex items-center justify-between gap-3 rounded-xl border border-l-4 px-4 py-3 ${variantStyles[variant]}`}>
       <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
+          <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
             {reservation.first_name} {reservation.last_name}
           </p>
           {reservation.parking_type === "shuttle" && (
             <Badge
               variant="secondary"
-              className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 border-0 text-[10px] shrink-0"
+              className="bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border-0 text-[10px] shrink-0"
             >
               Shuttle
             </Badge>
@@ -160,30 +155,9 @@ export function ParkingReservationCardCompact({
             <span className="font-medium text-stone-700 dark:text-stone-300">
               {timeLabel} {timeValue}
             </span>
-            {/* Car info inline on desktop */}
-            <span className="hidden md:contents">
-              <span className="text-stone-300 dark:text-stone-600">·</span>
-              <span>{reservation.make} {reservation.model}</span>
-              <span className="text-stone-300 dark:text-stone-600">·</span>
-              <span>{reservation.license_plate}</span>
-              {reservation.color && (
-                <>
-                  <span className="text-stone-300 dark:text-stone-600">·</span>
-                  <span>{reservation.color}</span>
-                </>
-              )}
-            </span>
-            {reservation.services_interested.length > 0 && (
-              <>
-                <span className="text-stone-300 dark:text-stone-600">·</span>
-                <span className="text-violet-600 dark:text-violet-400">
-                  {reservation.services_interested.length} service{reservation.services_interested.length > 1 ? "s" : ""}
-                </span>
-              </>
-            )}
           </div>
-          {/* Car info on its own line on mobile */}
-          <div className="flex items-center gap-2 mt-0.5 md:hidden">
+          <div className="flex items-center gap-2 mt-0.5">
+            <Car className="h-3 w-3" />
             <span>{reservation.make} {reservation.model}</span>
             <span className="text-stone-300 dark:text-stone-600">·</span>
             <span>{reservation.license_plate}</span>
@@ -193,7 +167,31 @@ export function ParkingReservationCardCompact({
                 <span>{reservation.color}</span>
               </>
             )}
+            {reservation.services_interested.length > 0 && (
+              <>
+                <span className="text-stone-300 dark:text-stone-600">·</span>
+                <span className="text-violet-600 dark:text-violet-400">
+                  {reservation.services_interested.length} service{reservation.services_interested.length > 1 ? "s" : ""}
+                </span>
+              </>
+            )}
           </div>
+          {/* Lockbox info for checked-out reservations */}
+          {reservation.status === "checked_out" && (
+            <div className="flex items-center gap-1.5 mt-1 text-xs">
+              <KeyRound className="h-3 w-3 text-stone-400" />
+              {reservation.lock_box_number ? (
+                <span className="font-medium text-stone-700 dark:text-stone-300">
+                  Lockbox #{reservation.lock_box_number}
+                  {lockBoxCodes[reservation.lock_box_number] && (
+                    <span className="text-stone-400 dark:text-stone-500"> · Code: {lockBoxCodes[reservation.lock_box_number]}</span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-stone-400 dark:text-stone-500">In person pickup</span>
+              )}
+            </div>
+          )}
         </div>
       </Link>
       {showActions && <div className="shrink-0">{showActions}</div>}

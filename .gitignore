@@ -40,6 +40,14 @@ yarn-error.log*
 
 # import data (PII)
 scripts/data/
+*.csv
+
+# docs & specs (not part of the app)
+*.docx
+reports-redesign-spec.md
+
+# supabase temp
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo

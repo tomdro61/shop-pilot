@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ParkingLoading() {
   return (
-    <div className="p-4 lg:p-6 space-y-5">
+    <div className="p-4 lg:p-10 space-y-5">
       {/* Tabs skeleton */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Skeleton className="h-10 w-72" />

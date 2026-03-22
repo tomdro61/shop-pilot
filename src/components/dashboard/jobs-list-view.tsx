@@ -46,6 +46,20 @@ interface JobsListViewProps {
   jobs: JobRow[];
 }
 
+function SortableHeader({ column, children }: { column: { toggleSorting: (desc: boolean) => void; getIsSorted: () => false | "asc" | "desc" }; children: React.ReactNode }) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-3 h-8 text-[10px] font-black uppercase tracking-[0.1em] text-stone-400 dark:text-stone-500 hover:text-stone-900 dark:hover:text-stone-100"
+      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+    >
+      {children}
+      <ArrowUpDown className="ml-1 h-3 w-3" />
+    </Button>
+  );
+}
+
 export function JobsListView({ jobs }: JobsListViewProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -56,7 +70,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         header: "RO#",
         size: 80,
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-stone-500 dark:text-stone-400">
+          <span className="text-xs text-stone-400 dark:text-stone-500">
             {formatRONumber(row.original.ro_number)}
           </span>
         ),
@@ -73,76 +87,62 @@ export function JobsListView({ jobs }: JobsListViewProps) {
       },
       {
         id: "customer",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Customer
-            <ArrowUpDown className="ml-1 h-3 w-3" />
-          </Button>
-        ),
+        header: ({ column }) => <SortableHeader column={column}>Customer</SortableHeader>,
         accessorFn: (row) =>
           row.customers
             ? `${row.customers.last_name}, ${row.customers.first_name}`
             : "",
-        cell: ({ row }) =>
-          row.original.customers ? (
+        cell: ({ row }) => {
+          const customer = row.original.customers;
+          if (!customer) return null;
+          const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
+          return (
             <Link
-              href={`/customers/${row.original.customers.id}`}
-              className="hover:underline"
+              href={`/customers/${customer.id}`}
+              className="flex items-center gap-3 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
-              {formatCustomerName(row.original.customers)}
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[10px] font-bold text-blue-700 dark:text-blue-400">
+                {initials}
+              </div>
+              <span className="font-bold text-stone-900 dark:text-stone-50">
+                {formatCustomerName(customer)}
+              </span>
             </Link>
-          ) : null,
+          );
+        },
       },
       {
         id: "vehicle",
         header: "Vehicle",
         accessorFn: (row) =>
           row.vehicles ? formatVehicle(row.vehicles) : "",
-        cell: ({ row }) =>
-          row.original.vehicles ? formatVehicle(row.original.vehicles) : null,
+        cell: ({ row }) => (
+          <span className="text-stone-500 dark:text-stone-400">
+            {row.original.vehicles ? formatVehicle(row.original.vehicles) : null}
+          </span>
+        ),
       },
       {
         id: "job",
         accessorFn: (row) => row.title || "",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Job
-            <ArrowUpDown className="ml-1 h-3 w-3" />
-          </Button>
-        ),
+        header: ({ column }) => <SortableHeader column={column}>Job</SortableHeader>,
         cell: ({ row }) => (
-          <span>{row.original.title}</span>
+          <span className="font-medium text-stone-900 dark:text-stone-50">{row.original.title}</span>
         ),
       },
       {
         id: "tech",
         header: "Tech",
         accessorFn: (row) => row.users?.name ?? "",
-        cell: ({ row }) => row.original.users?.name ?? null,
+        cell: ({ row }) => (
+          <span className="text-stone-500 dark:text-stone-400">
+            {row.original.users?.name ?? null}
+          </span>
+        ),
       },
       {
         id: "total",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Total
-            <ArrowUpDown className="ml-1 h-3 w-3" />
-          </Button>
-        ),
+        header: ({ column }) => <SortableHeader column={column}>Total</SortableHeader>,
         accessorFn: (row) =>
           row.job_line_items?.reduce((sum, li) => sum + (li.total || 0), 0) ?? 0,
         cell: ({ row }) => {
@@ -150,24 +150,21 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             (sum, li) => sum + (li.total || 0),
             0
           ) ?? 0;
-          return total > 0 ? formatCurrency(total) : null;
+          return total > 0 ? (
+            <span className="font-bold text-stone-900 dark:text-stone-50 tabular-nums">
+              {formatCurrency(total)}
+            </span>
+          ) : null;
         },
       },
       {
         accessorKey: "date_received",
-        header: ({ column }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-3 h-8 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Date
-            <ArrowUpDown className="ml-1 h-3 w-3" />
-          </Button>
+        header: ({ column }) => <SortableHeader column={column}>Date</SortableHeader>,
+        cell: ({ row }) => (
+          <span className="text-stone-500 dark:text-stone-400 tabular-nums">
+            {formatDate(row.original.date_received)}
+          </span>
         ),
-        cell: ({ row }) =>
-          formatDate(row.original.date_received),
       },
     ],
     []
@@ -197,10 +194,10 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         ) : (
           <Card>
             <CardContent className="p-0">
-              <div className="border-b px-4 py-2.5 text-xs font-semibold text-muted-foreground">
+              <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
                 {jobs.length} jobs
               </div>
-              <div className="divide-y">
+              <div className="space-y-1 p-2">
                 {jobs.map((job) => <JobCard key={job.id} job={job} />)}
               </div>
             </CardContent>
@@ -215,9 +212,9 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                  <TableRow key={headerGroup.id} className="hover:bg-transparent">
                     {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                      <TableHead key={header.id} className="text-[10px] font-black uppercase tracking-[0.1em] text-stone-400 dark:text-stone-500">
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -234,7 +231,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
-                      className="cursor-pointer"
+                      className="cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/50"
                       onClick={(e) => {
                         // Don't navigate if clicking on status select
                         if ((e.target as HTMLElement).closest("[role='combobox']"))

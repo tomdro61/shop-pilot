@@ -149,7 +149,7 @@ export function EstimateLineItemsList({
               )}
               <div className="flex justify-end">
                 <div className="text-right">
-                  <p className="text-[11px] font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-[0.06em]">Total</p>
+                  <p className="text-[11px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-widest">Total</p>
                   <p className="text-2xl font-bold text-stone-900 dark:text-stone-50 tracking-tight">{formatCurrency(totals.grandTotal)}</p>
                 </div>
               </div>

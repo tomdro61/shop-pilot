@@ -58,7 +58,7 @@ export default async function JobsPage({
   ].sort();
 
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-10">
       <Suspense>
         <JobsToolbar categories={allCategories} jobCount={jobs.length} />
       </Suspense>

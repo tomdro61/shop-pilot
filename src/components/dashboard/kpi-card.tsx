@@ -40,36 +40,37 @@ export function KpiCard({
 
   return (
     <Card className={accentColor ? `border-l-4 ${accentBorderMap[accentColor]}` : undefined}>
-      <CardContent className="p-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
+      <CardContent className="p-5">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
           {title}
         </p>
-        <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{value}</p>
+        <p className="mt-2 text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{value}</p>
         {subtitle && (
           <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
         )}
         {changePercent !== null && (
-          <div
-            className={cn(
-              "mt-1.5 flex items-center gap-1 text-xs font-medium",
-              changePercent > 0
-                ? "text-emerald-600 dark:text-emerald-400"
-                : changePercent < 0
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-muted-foreground"
-            )}
-          >
-            {changePercent > 0 ? (
-              <TrendingUp className="h-3 w-3" />
-            ) : changePercent < 0 ? (
-              <TrendingDown className="h-3 w-3" />
-            ) : (
-              <Minus className="h-3 w-3" />
-            )}
-            <span>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                changePercent > 0
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                  : changePercent < 0
+                    ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
+                    : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+              )}
+            >
+              {changePercent > 0 ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : changePercent < 0 ? (
+                <TrendingDown className="h-3 w-3" />
+              ) : (
+                <Minus className="h-3 w-3" />
+              )}
               {changePercent > 0 ? "+" : ""}
-              {changePercent.toFixed(0)}% vs prior
+              {changePercent.toFixed(0)}%
             </span>
+            <span className="text-xs text-muted-foreground">vs prior</span>
           </div>
         )}
       </CardContent>

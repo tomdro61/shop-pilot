@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ShopPilot | Job Detail View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-background": "#1f1b17",
+              "outline": "#727687",
+              "on-primary-fixed": "#001849",
+              "on-primary-container": "#f8f7ff",
+              "surface-dim": "#e2d8d2",
+              "primary-fixed": "#dae1ff",
+              "on-surface": "#1f1b17",
+              "secondary": "#515f74",
+              "surface-container-low": "#fcf2eb",
+              "surface-bright": "#fff8f5",
+              "primary-fixed-dim": "#b3c5ff",
+              "on-primary": "#ffffff",
+              "surface-variant": "#eae1da",
+              "tertiary-fixed": "#ffdbd0",
+              "on-secondary-fixed-variant": "#3a485b",
+              "primary": "#0050cb",
+              "secondary-fixed-dim": "#b9c7df",
+              "secondary-fixed": "#d5e3fc",
+              "surface-container-lowest": "#ffffff",
+              "background": "#fff8f5",
+              "inverse-on-surface": "#f9efe8",
+              "primary-container": "#0066ff",
+              "on-secondary": "#ffffff",
+              "on-tertiary-fixed": "#390c00",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "on-surface-variant": "#424656",
+              "tertiary-container": "#cc4204",
+              "surface": "#fff8f5",
+              "inverse-primary": "#b3c5ff",
+              "tertiary": "#a33200",
+              "on-tertiary-container": "#fff6f4",
+              "secondary-container": "#d5e3fc",
+              "on-secondary-container": "#57657a",
+              "inverse-surface": "#342f2b",
+              "on-tertiary": "#ffffff",
+              "surface-tint": "#0054d6",
+              "on-secondary-fixed": "#0d1c2e",
+              "outline-variant": "#c2c6d8",
+              "on-primary-fixed-variant": "#003fa4",
+              "on-tertiary-fixed-variant": "#832600",
+              "tertiary-fixed-dim": "#ffb59d",
+              "surface-container-high": "#f0e6e0",
+              "surface-container": "#f6ece6",
+              "error": "#ba1a1a",
+              "surface-container-highest": "#eae1da",
+              "error-container": "#ffdad6"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #fff8f5;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+</head>
+<body class="text-on-surface antialiased overflow-x-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-[#342f2b] flex flex-col py-6 space-y-1 z-50 shadow-2xl dark:shadow-none shadow-stone-900/20">
+<div class="px-6 mb-8">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg" data-icon="build">build</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-white uppercase">ShopPilot</h1>
+<p class="text-[10px] text-stone-400 tracking-widest uppercase">The Precision Atelier</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<!-- Jobs is active based on the page intent -->
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-sm font-['Inter'] tracking-tight">Dashboard</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 bg-[#0050cb] text-white rounded-lg font-medium mx-2 my-1" href="#">
+<span class="material-symbols-outlined" data-icon="build">build</span>
+<span class="text-sm font-['Inter'] tracking-tight">Jobs</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="text-sm font-['Inter'] tracking-tight">Customers</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="text-sm font-['Inter'] tracking-tight">Quick Pay</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="text-sm font-['Inter'] tracking-tight">Invoices</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span class="text-sm font-['Inter'] tracking-tight">Inspections</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="local_parking">local_parking</span>
+<span class="text-sm font-['Inter'] tracking-tight">Parking</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="request_quote">request_quote</span>
+<span class="text-sm font-['Inter'] tracking-tight">Quotes</span>
+</a>
+</nav>
+<div class="px-4 py-4 mt-auto space-y-1 border-t border-stone-700/50">
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="text-sm">Reports</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+<a class="group flex items-center px-4 py-2 space-x-3 text-stone-400 hover:text-white" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="text-sm">AI Assistant</span>
+</a>
+</div>
+</aside>
+<!-- Main Viewport -->
+<main class="ml-64 min-h-screen flex flex-col pb-24">
+<!-- TopNavBar (Shared Component Shell Logic) -->
+<header class="h-16 flex justify-between items-center px-8 w-full bg-[#fff8f5] z-40">
+<div class="flex items-center space-x-4">
+<div class="bg-surface-container rounded-lg px-3 py-1.5 flex items-center space-x-2 text-stone-500 hover:bg-stone-200/50 cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="search">search</span>
+<span class="text-sm font-medium">Search ROs, VINs, or Customers...</span>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<button class="material-symbols-outlined text-stone-500 hover:bg-stone-200/50 p-2 rounded-full transition-colors" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-stone-500 hover:bg-stone-200/50 p-2 rounded-full transition-colors" data-icon="help_outline">help_outline</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high border-2 border-white shadow-sm">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="Close up professional headshot of a shop manager" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClDb8CQZwtTafDfw__3IQURAU2OklOQGSqesfS-24yq42-mclIbaynkxDGZp2HoUEhRJ83ZY4F4WdTsVRZIHH_BUI8B9okOGMcT8y_LXcAORTVVNj0dxYtRhswOCBK5yPIMUOEBSvesVCMt5lqVcQE0voVbFORHw1X0txbQu9ZhnPJt4si9p4jc1CuJJGOxVF8Mtow1VtABR8ZBzGHprwONObiVyqP5Q8fuxP6mzUjxtKYh7_cTU6Uz8w3YsholaUS7ljaCfwrKDr8"/>
+</div>
+</div>
+</header>
+<!-- Page Header & Action Row -->
+<section class="px-10 py-8 bg-surface-container/30">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="space-y-2">
+<div class="flex items-center space-x-3">
+<span class="text-xs font-bold tracking-[0.1em] uppercase text-stone-400">Repair Order Detail</span>
+<span class="px-3 py-0.5 bg-secondary-container text-on-secondary-container rounded-full text-[10px] font-bold uppercase tracking-wider">In Progress</span>
+</div>
+<h2 class="text-4xl font-bold tracking-tight text-on-surface">RO-0247 — Engine Oil Filter Housing</h2>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative inline-block text-left">
+<button class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-high text-on-surface text-sm font-medium hover:bg-stone-200 transition-colors">
+                            Update Status
+                            <span class="material-symbols-outlined ml-2 text-sm" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+<button class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-high text-on-surface text-sm font-medium hover:bg-stone-200 transition-colors">
+<span class="material-symbols-outlined mr-2 text-sm" data-icon="sms">sms</span>
+                        Send Ready Text
+                    </button>
+<button class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-high text-on-surface text-sm font-medium hover:bg-stone-200 transition-colors">
+<span class="material-symbols-outlined mr-2 text-sm" data-icon="print">print</span>
+                        Print RO
+                    </button>
+<button class="p-2 rounded-full bg-surface-container-high text-on-surface hover:bg-stone-200 transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
+</button>
+<button class="p-2 rounded-full bg-error-container text-on-error-container hover:bg-red-100 transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Metadata Strip -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-8 mt-10 pt-8 border-t border-outline-variant/20">
+<div>
+<label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">Date Received</label>
+<p class="text-sm font-semibold">Oct 12, 2023</p>
+</div>
+<div>
+<label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">Date Finished</label>
+<p class="text-sm font-semibold flex items-center group cursor-pointer text-primary">
+                        Not Set
+                        <span class="material-symbols-outlined text-xs ml-1 opacity-0 group-hover:opacity-100 transition-opacity" data-icon="edit">edit</span>
+</p>
+</div>
+<div>
+<label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">Assigned Tech</label>
+<p class="text-sm font-semibold">Paul Harrison</p>
+</div>
+<div>
+<label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">Current Mileage</label>
+<p class="text-sm font-semibold">45,210 mi</p>
+</div>
+<div>
+<label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">Payment Status</label>
+<div class="flex items-center space-x-2">
+<span class="px-2 py-0.5 bg-error-container/20 text-error text-[10px] font-bold uppercase rounded-full">Unpaid</span>
+<span class="text-[10px] text-stone-400 uppercase font-medium">Not Set</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Content Grid Layout -->
+<div class="px-10 py-8 grid grid-cols-12 gap-8 items-start">
+<!-- Main Content (Line Items) -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Category 1: Oil Leak Repair -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm ring-1 ring-outline-variant/10">
+<div class="px-6 py-4 bg-surface-container flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-widest text-on-surface">Oil Leak Repair</h3>
+<span class="text-xs font-medium text-stone-500">Service #1</span>
+</div>
+<table class="w-full text-left text-sm">
+<thead>
+<tr class="text-[10px] uppercase tracking-widest text-stone-400 border-b border-surface-container">
+<th class="px-6 py-4 font-bold">Description</th>
+<th class="px-6 py-4 font-bold text-center">Qty</th>
+<th class="px-6 py-4 font-bold text-right">Unit Cost</th>
+<th class="px-6 py-4 font-bold text-right">Total</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr class="group hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<div class="font-semibold">Engine Oil Filter Housing Assembly Replacement</div>
+<div class="text-[11px] text-stone-500 mt-1">Labor • Tech: Paul Harrison</div>
+</td>
+<td class="px-6 py-4 text-center">3.5 hrs</td>
+<td class="px-6 py-4 text-right">$145.00</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end space-x-3">
+<span class="font-semibold">$507.50</span>
+<div class="flex opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-sm p-1 text-stone-400 hover:text-primary" data-icon="edit">edit</button>
+<button class="material-symbols-outlined text-sm p-1 text-stone-400 hover:text-error" data-icon="delete">delete</button>
+</div>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<div class="font-semibold">Oil Filter Housing Gasket Kit</div>
+<div class="text-[11px] text-stone-500 mt-1">Part #68105583AF</div>
+</td>
+<td class="px-6 py-4 text-center">1</td>
+<td class="px-6 py-4 text-right">$112.45</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end space-x-3">
+<span class="font-semibold">$112.45</span>
+<div class="flex opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-sm p-1 text-stone-400 hover:text-primary" data-icon="edit">edit</button>
+<button class="material-symbols-outlined text-sm p-1 text-stone-400 hover:text-error" data-icon="delete">delete</button>
+</div>
+</div>
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-surface-container/20">
+<td class="px-6 py-3 text-right text-[10px] font-bold uppercase text-stone-500" colspan="3">Service Subtotal</td>
+<td class="px-6 py-3 text-right font-bold text-on-surface">$619.95</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<!-- Category 2: General Maintenance -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm ring-1 ring-outline-variant/10">
+<div class="px-6 py-4 bg-surface-container flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-widest text-on-surface">General Maintenance</h3>
+<span class="text-xs font-medium text-stone-500">Service #2</span>
+</div>
+<table class="w-full text-left text-sm">
+<tbody class="divide-y divide-surface-container">
+<tr class="group hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 w-[40%]">
+<div class="font-semibold">Synthetic Oil Change Service</div>
+<div class="text-[11px] text-stone-500 mt-1">Labor • Tech: Paul Harrison</div>
+</td>
+<td class="px-6 py-4 text-center">0.8 hrs</td>
+<td class="px-6 py-4 text-right">$95.00</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end space-x-3">
+<span class="font-semibold">$76.00</span>
+<div class="flex opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-sm p-1 text-stone-400 hover:text-primary" data-icon="edit">edit</button>
+<button class="material-symbols-outlined text-sm p-1 text-stone-400 hover:text-error" data-icon="delete">delete</button>
+</div>
+</div>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<div class="font-semibold">Full Synthetic 5W-20 Motor Oil</div>
+<div class="text-[11px] text-stone-500 mt-1">Part • Bulk</div>
+</td>
+<td class="px-6 py-4 text-center">5</td>
+<td class="px-6 py-4 text-right">$12.50</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end space-x-3">
+<span class="font-semibold">$62.50</span>
+<div class="flex opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="material-symbols-outlined text-sm p-1 text-stone-400 hover:text-primary" data-icon="edit">edit</button>
+<button class="material-symbols-outlined text-sm p-1 text-stone-400 hover:text-error" data-icon="delete">delete</button>
+</div>
+</div>
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-surface-container/20">
+<td class="px-6 py-3 text-right text-[10px] font-bold uppercase text-stone-500" colspan="3">Service Subtotal</td>
+<td class="px-6 py-3 text-right font-bold text-on-surface">$138.50</td>
+</tr>
+</tfoot>
+</table>
+</div>
+<!-- Add Row Buttons -->
+<div class="flex items-center gap-3">
+<button class="flex items-center px-4 py-2 bg-surface-container text-primary font-semibold text-xs rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-sm mr-2" data-icon="add">add</span>
+                        Labor
+                    </button>
+<button class="flex items-center px-4 py-2 bg-surface-container text-primary font-semibold text-xs rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-sm mr-2" data-icon="add">add</span>
+                        Part
+                    </button>
+<button class="flex items-center px-4 py-2 bg-surface-container text-primary font-semibold text-xs rounded-full hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined text-sm mr-2" data-icon="add">add</span>
+                        Service
+                    </button>
+</div>
+<!-- Financial Summary -->
+<div class="grid grid-cols-12 gap-6 pt-10 mt-10 border-t-2 border-dashed border-outline-variant/30">
+<div class="col-span-12 md:col-span-7 space-y-6">
+<div class="bg-surface-container-low rounded-xl p-6">
+<div class="flex items-center space-x-3 mb-4 text-stone-400">
+<span class="material-symbols-outlined text-sm" data-icon="receipt_long">receipt_long</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Job Documentation</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-white p-4 rounded-lg shadow-sm">
+<div class="flex justify-between items-start mb-2">
+<span class="text-xs font-bold uppercase text-stone-400">Estimate</span>
+<span class="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold rounded-full uppercase">Approved</span>
+</div>
+<div class="text-sm font-semibold mb-3">EST-0922</div>
+<a class="text-xs text-primary font-medium flex items-center hover:underline" href="#">
+                                        View Detail
+                                        <span class="material-symbols-outlined text-xs ml-1" data-icon="open_in_new">open_in_new</span>
+</a>
+</div>
+<div class="bg-white p-4 rounded-lg shadow-sm">
+<div class="flex justify-between items-start mb-2">
+<span class="text-xs font-bold uppercase text-stone-400">Invoice</span>
+<span class="px-2 py-0.5 bg-stone-100 text-stone-500 text-[9px] font-bold rounded-full uppercase">Draft</span>
+</div>
+<div class="text-sm font-semibold mb-3">#INV-Pending</div>
+<button class="text-xs bg-primary text-white px-3 py-1 rounded-full font-medium">Create Invoice</button>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 md:col-span-5 flex flex-col items-end space-y-3">
+<div class="flex justify-between w-full text-sm text-stone-500">
+<span>Labor Total</span>
+<span>$583.50</span>
+</div>
+<div class="flex justify-between w-full text-sm text-stone-500">
+<span>Parts Total</span>
+<span>$174.95</span>
+</div>
+<div class="flex justify-between w-full text-sm text-stone-500">
+<span>Shop Supplies Fee</span>
+<span>$35.00</span>
+</div>
+<div class="flex justify-between w-full text-sm text-stone-500">
+<span>Tax (6.25% on parts)</span>
+<span>$33.55</span>
+</div>
+<div class="pt-4 mt-2 border-t border-outline-variant/30 w-full flex justify-between items-baseline">
+<span class="text-lg font-bold text-on-surface">Grand Total</span>
+<span class="text-2xl font-black text-primary">$827.00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar (Customer & Vehicle) -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<!-- Customer Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm ring-1 ring-outline-variant/10">
+<div class="flex justify-between items-start mb-6">
+<h4 class="text-[10px] font-bold uppercase tracking-widest text-stone-400">Customer</h4>
+<button class="material-symbols-outlined text-stone-400 text-sm hover:text-primary transition-colors" data-icon="launch">launch</button>
+</div>
+<div class="flex items-center space-x-4">
+<div class="w-14 h-14 bg-surface-container-high rounded-full flex items-center justify-center text-on-secondary-container font-black text-xl border-4 border-white shadow-sm">
+                            AF
+                        </div>
+<div>
+<h3 class="text-lg font-bold text-on-surface">Anthony Falcucci</h3>
+<p class="text-sm text-stone-500">(781) 775-3552</p>
+<p class="text-sm text-primary underline truncate max-w-[180px]">anthony@example.com</p>
+</div>
+</div>
+<div class="mt-6 flex gap-2">
+<button class="flex-1 py-2 bg-surface-container text-[11px] font-bold uppercase text-on-surface rounded-lg hover:bg-stone-200 transition-colors">Call</button>
+<button class="flex-1 py-2 bg-surface-container text-[11px] font-bold uppercase text-on-surface rounded-lg hover:bg-stone-200 transition-colors">Text</button>
+</div>
+</div>
+<!-- Vehicle Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm ring-1 ring-outline-variant/10">
+<div class="flex justify-between items-start mb-6">
+<h4 class="text-[10px] font-bold uppercase tracking-widest text-stone-400">Vehicle</h4>
+<button class="material-symbols-outlined text-stone-400 text-sm hover:text-primary transition-colors" data-icon="car_repair">car_repair</button>
+</div>
+<div class="space-y-4">
+<div>
+<p class="text-[10px] font-bold uppercase text-stone-400">Model</p>
+<h3 class="text-lg font-bold text-on-surface leading-tight">2019 Jeep Wrangler</h3>
+<p class="text-sm text-stone-500">Unlimited Sahara • Silver</p>
+</div>
+<div>
+<p class="text-[10px] font-bold uppercase text-stone-400">VIN</p>
+<p class="text-sm font-mono text-stone-600 bg-surface-container-low px-2 py-1 rounded inline-block">1C4HJXDG...2938</p>
+</div>
+</div>
+</div>
+<!-- Notes Section -->
+<div class="bg-surface-container-low rounded-xl p-6 border-l-4 border-primary shadow-sm">
+<h4 class="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-3">Primary Complaint / Notes</h4>
+<p class="text-sm text-on-surface leading-relaxed italic">
+                        "Customer reports visible leak under front of engine area. Noticed spots on garage floor. Vehicle seems to be running normally otherwise."
+                    </p>
+</div>
+<!-- Internal Checklist/Timeline -->
+<div class="p-4 bg-surface-container rounded-xl">
+<h4 class="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-4">Milestones</h4>
+<div class="space-y-4 relative">
+<div class="absolute left-[11px] top-2 bottom-2 w-px bg-outline-variant opacity-30"></div>
+<div class="flex items-center space-x-4 relative z-10">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center ring-4 ring-surface-container">
+<span class="material-symbols-outlined text-white text-[12px]" data-icon="check">check</span>
+</div>
+<span class="text-xs font-semibold">RO Created</span>
+</div>
+<div class="flex items-center space-x-4 relative z-10">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center ring-4 ring-surface-container">
+<span class="material-symbols-outlined text-white text-[12px]" data-icon="check">check</span>
+</div>
+<span class="text-xs font-semibold">Inspected &amp; Estimate Sent</span>
+</div>
+<div class="flex items-center space-x-4 relative z-10">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center ring-4 ring-surface-container">
+<span class="material-symbols-outlined text-white text-[12px]" data-icon="sync">sync</span>
+</div>
+<span class="text-xs font-semibold">In Progress</span>
+</div>
+<div class="flex items-center space-x-4 relative z-10">
+<div class="w-6 h-6 rounded-full bg-stone-200 flex items-center justify-center ring-4 ring-surface-container">
+<div class="w-1.5 h-1.5 rounded-full bg-stone-400"></div>
+</div>
+<span class="text-xs font-medium text-stone-400">Ready for Pickup</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Summary -->
+<footer class="fixed bottom-0 left-64 right-0 h-20 bg-white/95 backdrop-blur-md border-t border-outline-variant/10 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] z-40 px-10 flex items-center justify-between">
+<div class="flex items-center space-x-8">
+<div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-stone-400 block">Total Due</span>
+<span class="text-2xl font-black text-on-surface">$827.00</span>
+</div>
+<div class="h-8 w-px bg-outline-variant/20"></div>
+<div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-stone-400 block">Estimate ID</span>
+<span class="text-sm font-semibold">EST-0922</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-6 py-3 bg-surface-container-high text-on-surface text-sm font-bold uppercase tracking-widest rounded-full hover:bg-stone-200 transition-all active:scale-95">Create Invoice</button>
+<button class="px-6 py-3 bg-primary text-white text-sm font-bold uppercase tracking-widest rounded-full hover:bg-primary-container shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center">
+<span class="material-symbols-outlined mr-2 text-lg" data-icon="contactless">contactless</span>
+                    Terminal Pay
+                </button>
+<button class="px-6 py-3 border-2 border-primary text-primary text-sm font-bold uppercase tracking-widest rounded-full hover:bg-primary/5 transition-all active:scale-95">Mark Paid</button>
+</div>
+</footer>
+</main>
+</body></html>

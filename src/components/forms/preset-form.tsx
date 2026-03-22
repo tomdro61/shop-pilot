@@ -159,7 +159,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
             </div>
 
             {lineItems.map((item, index) => (
-              <div key={index} className="space-y-2 rounded-md border p-3">
+              <div key={index} className="space-y-2 rounded-lg border p-3">
                 <div className="flex items-center gap-2">
                   <Select
                     value={item.type}
@@ -252,7 +252,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
             ))}
           </div>
 
-          <div className="rounded-md bg-stone-100 dark:bg-stone-950 p-3 text-center">
+          <div className="rounded-lg bg-stone-100 dark:bg-stone-950 p-3 text-center">
             <span className="text-sm text-stone-500 dark:text-stone-400">Total: </span>
             <span className="text-lg font-semibold">{formatCurrency(total)}</span>
           </div>

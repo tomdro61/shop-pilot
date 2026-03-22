@@ -59,7 +59,7 @@ export default async function CustomerDetailPage({
   const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
 
   return (
-    <div className="mx-auto max-w-4xl p-4 lg:p-6">
+    <div className="mx-auto max-w-4xl p-4 lg:p-10">
       <div className="mb-6 animate-in-up">
         <Link href="/customers">
           <Button variant="ghost" size="sm" className="mb-2">
@@ -69,12 +69,12 @@ export default async function CustomerDetailPage({
         </Link>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-sm font-semibold text-blue-700 dark:text-blue-400 lg:h-12 lg:w-12 lg:text-base">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-sm font-bold text-blue-700 dark:text-blue-400 lg:h-12 lg:w-12 lg:text-base">
               {initials}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-semibold tracking-tight lg:text-2xl">
+                <h2 className="text-xl font-bold tracking-tight lg:text-2xl">
                   {customer.first_name} {customer.last_name}
                 </h2>
                 {customer.customer_type === "fleet" && (
@@ -125,7 +125,7 @@ export default async function CustomerDetailPage({
       {customer.notes && (
         <Card className="mb-4 animate-in-up stagger-1">
           <CardContent className="p-4">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Notes</p>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Notes</p>
             <p className="text-sm leading-relaxed">{customer.notes}</p>
           </CardContent>
         </Card>
@@ -138,8 +138,8 @@ export default async function CustomerDetailPage({
       {/* Job History */}
       <div className="animate-in-up stagger-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b px-5 py-3">
-            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-5 py-3">
+            <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
               <Wrench className="h-3.5 w-3.5" />
               Jobs ({jobs.length})
             </CardTitle>
@@ -159,14 +159,14 @@ export default async function CustomerDetailPage({
                 <p className="mt-1 text-xs text-muted-foreground/70">Create a job to start tracking work</p>
               </div>
             ) : (
-              <div className="divide-y">
+              <div className="divide-y divide-stone-200 dark:divide-stone-800 px-2">
                 {jobs.map((job) => {
                   const status = job.status as JobStatus;
                   const colors = JOB_STATUS_COLORS[status];
                   const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
                   return (
                     <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                      <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{job.title || "General"}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -192,20 +192,20 @@ export default async function CustomerDetailPage({
       {parkingReservations.length > 0 && (
         <div className="mt-4 animate-in-up stagger-4">
           <Card>
-            <CardHeader className="border-b px-5 py-3">
-              <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+            <CardHeader className="px-5 py-3">
+              <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
                 <Car className="h-3.5 w-3.5" />
                 Parking History ({parkingReservations.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y">
+              <div className="divide-y divide-stone-200 dark:divide-stone-800 px-2">
                 {parkingReservations.map((res) => {
                   const status = res.status as ParkingStatus;
                   const colors = PARKING_STATUS_COLORS[status];
                   return (
                     <Link key={res.id} href={`/parking/${res.id}`} className="block">
-                      <div className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                      <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                         <div className="min-w-0">
                           <p className="text-sm font-medium">
                             {res.make} {res.model} — {res.license_plate}

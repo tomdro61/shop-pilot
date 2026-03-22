@@ -46,8 +46,8 @@ export function PresetList({ presets, categories }: PresetListProps) {
   return (
     <div>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
-          <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
             Job Presets ({presets.length})
           </CardTitle>
           <Button size="sm" onClick={() => setAddOpen(true)}>
@@ -62,17 +62,17 @@ export function PresetList({ presets, categories }: PresetListProps) {
               No presets yet. Create one to speed up job creation.
             </p>
           ) : (
-            <div className="-mx-5 divide-y">
+            <div className="divide-y divide-stone-200 dark:divide-stone-800">
               {presets.map((preset) => {
                 const items = preset.line_items as PresetLineItem[];
                 return (
                   <div
                     key={preset.id}
-                    className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800"
+                    className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold">{preset.name}</p>
+                        <p className="text-sm font-bold">{preset.name}</p>
                         {preset.category && (
                           <Badge variant="secondary" className="text-xs">
                             {preset.category}

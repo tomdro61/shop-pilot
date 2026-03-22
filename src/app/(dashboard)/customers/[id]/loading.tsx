@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CustomerDetailLoading() {
   return (
-    <div className="mx-auto max-w-4xl p-4 lg:p-6">
+    <div className="mx-auto max-w-4xl p-4 lg:p-10">
       <div className="mb-6 flex items-start justify-between">
         <div>
           <Skeleton className="mb-2 h-8 w-48" />

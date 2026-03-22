@@ -4,8 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import {
   Car, DollarSign, Plus, AlertTriangle,
-  Clock, UserX, TrendingUp, TrendingDown, FileQuestion,
-  Wrench, User, FileText, Calendar, CheckCircle2, Package,
+  UserX, TrendingUp, TrendingDown, FileQuestion,
+  User, FileText, Calendar, CheckCircle2,
 } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
@@ -204,7 +204,7 @@ export default async function DashboardPage() {
   const alertCount = stats.unpaidJobCount + stats.unassignedJobs + newQuoteRequests;
 
   return (
-    <div className="p-4 lg:p-6 space-y-7">
+    <div className="p-4 lg:p-10 space-y-8 lg:space-y-10">
 
       {/* ── Action Bar ── */}
       <div className="flex gap-3">
@@ -222,264 +222,208 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* ── Revenue ── */}
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
-          Revenue
-        </h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Today</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.todayRevenue)}</p>
-          </div>
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Week</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.weeklyRevenue)}</p>
-            <div className="mt-1 flex items-center gap-1">
+      {/* ── Revenue Metrics ── */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">Today&apos;s Revenue</p>
+          <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+            {formatCurrencyWhole(stats.todayRevenue)}
+          </h3>
+        </div>
+
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Week</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+              {formatCurrencyWhole(stats.weeklyRevenue)}
+            </h3>
+            <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+              weekChange >= 0
+                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+                : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+            }`}>
               {weekChange >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                <TrendingUp className="h-3.5 w-3.5" />
               ) : (
-                <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />
+                <TrendingDown className="h-3.5 w-3.5" />
               )}
-              <span className={`text-xs font-medium tabular-nums ${weekChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                {weekChange >= 0 ? "+" : ""}{weekChange.toFixed(0)}%
-              </span>
-              <span className="text-xs text-muted-foreground">vs last week</span>
-            </div>
+              {weekChange >= 0 ? "+" : ""}{weekChange.toFixed(0)}%
+            </span>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">This Month</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.monthlyRevenue)}</p>
-            <div className="mt-1 flex items-center gap-1">
+        </div>
+
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Month</p>
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+              {formatCurrencyWhole(stats.monthlyRevenue)}
+            </h3>
+            <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+              monthChange >= 0
+                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+                : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+            }`}>
               {monthChange >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                <TrendingUp className="h-3.5 w-3.5" />
               ) : (
-                <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" />
+                <TrendingDown className="h-3.5 w-3.5" />
               )}
-              <span className={`text-xs font-medium tabular-nums ${monthChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                {monthChange >= 0 ? "+" : ""}{monthChange.toFixed(0)}%
-              </span>
-              <span className="text-xs text-muted-foreground">vs last month</span>
-            </div>
+              {monthChange >= 0 ? "+" : ""}{monthChange.toFixed(0)}%
+            </span>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">Avg Ticket (Week)</p>
-            <p className="mt-1.5 text-3xl font-bold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{formatCurrencyWhole(stats.avgTicketWeek)}</p>
-          </div>
+        </div>
+
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">Avg Ticket</p>
+          <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+            {formatCurrencyWhole(stats.avgTicketWeek)}
+          </h3>
         </div>
       </section>
 
       {/* ── Alerts ── */}
       {alertCount > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {stats.unpaidJobCount > 0 && (
             <Link href="/jobs?payment_status=unpaid&status=complete" className="block">
-              <div className="flex items-center gap-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 px-4 py-2 transition-colors hover:bg-red-100 dark:hover:bg-red-900">
+              <div className="flex items-center gap-3 rounded-xl bg-red-100 dark:bg-red-950 shadow-card border-l-4 border-l-red-500 px-5 py-3.5 transition-colors hover:bg-red-200 dark:hover:bg-red-900">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-                <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
                   {stats.unpaidJobCount} unpaid {stats.unpaidJobCount === 1 ? "job" : "jobs"}
                 </span>
-                <span className="ml-auto hidden text-xs text-red-600 dark:text-red-400 sm:inline">Complete but not paid</span>
+                <span className="ml-auto hidden text-xs text-stone-500 dark:text-stone-400 sm:inline">Complete but not paid</span>
               </div>
             </Link>
           )}
           {stats.unassignedJobs > 0 && (
             <Link href="/jobs?status=not_started" className="block">
-              <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:hover:bg-amber-900">
+              <div className="flex items-center gap-3 rounded-xl bg-amber-100 dark:bg-amber-950 shadow-card border-l-4 border-l-amber-500 px-5 py-3.5 transition-colors hover:bg-amber-200 dark:hover:bg-amber-900">
                 <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
                   {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
                 </span>
-                <span className="ml-auto hidden text-xs text-amber-600 dark:text-amber-400 sm:inline">Not started, no tech</span>
+                <span className="ml-auto hidden text-xs text-stone-500 dark:text-stone-400 sm:inline">Not started, no tech</span>
               </div>
             </Link>
           )}
           {newQuoteRequests > 0 && (
             <Link href="/quote-requests?status=new" className="block">
-              <div className="flex items-center gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-2 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900">
+              <div className="flex items-center gap-3 rounded-xl bg-blue-100 dark:bg-blue-950 shadow-card border-l-4 border-l-blue-500 px-5 py-3.5 transition-colors hover:bg-blue-200 dark:hover:bg-blue-900">
                 <FileQuestion className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
                   {newQuoteRequests} new quote {newQuoteRequests === 1 ? "request" : "requests"}
                 </span>
-                <span className="ml-auto hidden text-xs text-blue-600 dark:text-blue-400 sm:inline">From website form</span>
+                <span className="ml-auto hidden text-xs text-stone-500 dark:text-stone-400 sm:inline">From website form</span>
               </div>
             </Link>
           )}
         </div>
       )}
 
-      {/* ── Shop Floor ── */}
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
-          Shop Floor
-        </h2>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          <ShopFloorGroup
-            label="In Progress"
-            icon={<Wrench className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />}
-            jobs={shopFloor.inProgress}
-            today={today}
-            accentColor="blue"
-          />
-          <ShopFloorGroup
-            label="Waiting for Parts"
-            icon={<Package className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />}
-            jobs={shopFloor.waitingForParts}
-            today={today}
-            accentColor="amber"
-          />
-          <ShopFloorGroup
-            label="Not Started"
-            icon={<Clock className="h-3.5 w-3.5 text-stone-500 dark:text-stone-400" />}
-            jobs={shopFloor.notStarted}
-            today={today}
-            accentColor="stone"
-          />
+      {/* ── Shop Floor Status ── */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg lg:text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
+            Shop Floor Status
+          </h3>
+          <Link href="/jobs" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
+            Manage Workflow &rarr;
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          <ShopFloorColumn status="in_progress" label="In Progress" jobs={shopFloor.inProgress} today={today} />
+          <ShopFloorColumn status="waiting_for_parts" label="Waiting for Parts" jobs={shopFloor.waitingForParts} today={today} />
+          <ShopFloorColumn status="not_started" label="Not Started" jobs={shopFloor.notStarted} today={today} />
         </div>
       </section>
 
       {/* ── Tech Workload + Unpaid/Outstanding ── */}
-      <div className="grid grid-cols-1 gap-7 lg:gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
         {/* Tech Workload */}
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
-            Tech Workload
-          </h2>
-          <div className="rounded-lg border bg-card">
-            {techWorkload.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">No active jobs assigned</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {techWorkload.map(tech => (
-                  <div key={tech.name} className="px-4 py-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm font-semibold">{tech.name}</span>
-                      <span className="text-xs text-muted-foreground">({tech.jobs.length} {tech.jobs.length === 1 ? "job" : "jobs"})</span>
+        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Tech Workload</h3>
+          {techWorkload.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">No active jobs assigned</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {techWorkload.map(tech => (
+                <div key={tech.name}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-xs font-bold text-blue-700 dark:text-blue-400">
+                      {tech.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
                     </div>
-                    <div className="space-y-1 pl-5.5">
-                      {tech.jobs.map(job => {
-                        const customer = job.customers as { first_name: string; last_name: string } | null;
-                        const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-                        return (
-                          <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                            <div className="flex items-center justify-between py-0.5 text-xs hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                              <span className="text-muted-foreground">
-                                {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                                {vehicle ? ` \u00b7 ${formatVehicle(vehicle)}` : ""}
-                              </span>
-                              <StatusDot status={job.status} />
-                            </div>
-                          </Link>
-                        );
-                      })}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-stone-900 dark:text-stone-50">{tech.name}</p>
                     </div>
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 shrink-0">
+                      {tech.jobs.length} {tech.jobs.length === 1 ? "job" : "jobs"}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+                  <div className="space-y-1.5 pl-11">
+                    {tech.jobs.map(job => {
+                      const customer = job.customers as { first_name: string; last_name: string } | null;
+                      const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+                      return (
+                        <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+                          <div className="flex items-center justify-between py-1 text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                            <span className="text-stone-500 dark:text-stone-400 truncate">
+                              {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                              {vehicle ? ` \u00b7 ${formatVehicle(vehicle)}` : ""}
+                            </span>
+                            <StatusBadge status={job.status} />
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Unpaid / Outstanding */}
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
-            Unpaid / Outstanding
-          </h2>
-          <div className="rounded-lg border bg-card">
-            {unpaidJobs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                <p className="mt-2 text-sm text-muted-foreground">All caught up</p>
+        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Unpaid / Outstanding</h3>
+          {unpaidJobs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <p className="mt-2 text-sm text-muted-foreground">All caught up</p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-5">
+                <p className="text-3xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+                  {formatCurrency(totalOutstanding)}
+                </p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  across {unpaidJobs.length} {unpaidJobs.length === 1 ? "job" : "jobs"}
+                </p>
               </div>
-            ) : (
-              <>
-                <div className="border-b px-4 py-3">
-                  <p className="text-2xl font-bold tabular-nums text-stone-900 dark:text-stone-50">
-                    {formatCurrency(totalOutstanding)}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    across {unpaidJobs.length} {unpaidJobs.length === 1 ? "job" : "jobs"}
-                  </p>
-                </div>
-                <div className="divide-y">
-                  {unpaidJobs.map(job => {
-                    const customer = job.customers as { first_name: string; last_name: string } | null;
-                    const days = daysBetween(job.date_finished, today);
-                    const aging = days >= 3;
-                    return (
-                      <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                        <div className="flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{job.title || "Job"}</p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2 pl-3">
-                            <span className="text-sm font-medium tabular-nums">{formatCurrency(job.total)}</span>
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                              aging
-                                ? "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400"
-                                : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400"
-                            }`}>
-                              {days}d
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        </section>
-      </div>
-
-      {/* ── Pending Estimates + Today's Scheduled ── */}
-      <div className="grid grid-cols-1 gap-7 lg:gap-3 lg:grid-cols-2">
-
-        {/* Pending Estimates */}
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
-            Pending Estimates
-          </h2>
-          <div className="rounded-lg border bg-card">
-            {pendingEstimates.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">No pending estimates</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {pendingEstimates.map(est => {
-                  const job = est.jobs as { id: string; title: string | null; customers: { first_name: string; last_name: string } | null; vehicles: { year: number | null; make: string | null; model: string | null } | null } | null;
-                  const customer = job?.customers;
-                  const vehicle = job?.vehicles;
-                  const sentDate = est.sent_at ? est.sent_at.split("T")[0] : null;
-                  const days = daysBetween(sentDate, today);
+              <div className="divide-y divide-stone-200 dark:divide-stone-800">
+                {unpaidJobs.map(job => {
+                  const customer = job.customers as { first_name: string; last_name: string } | null;
+                  const days = daysBetween(job.date_finished, today);
+                  const aging = days >= 3;
                   return (
-                    <Link key={est.id} href={job ? `/jobs/${job.id}` : "#"} className="block">
-                      <div className="flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+                    <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+                      <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">
+                          <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                             {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
                           </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {vehicle ? formatVehicle(vehicle) : job?.title || "Estimate"}
-                          </p>
+                          <p className="text-xs text-stone-500 dark:text-stone-400">{job.title || "Job"}</p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-2 pl-3">
-                          <span className="text-sm font-medium tabular-nums">{formatCurrency(est.total)}</span>
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                            days >= 3
-                              ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
-                              : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400"
+                        <div className="flex shrink-0 items-center gap-2.5 pl-3">
+                          <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">{formatCurrency(job.total)}</span>
+                          <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap ${
+                            aging
+                              ? "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400"
+                              : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
                           }`}>
                             {days}d
                           </span>
@@ -489,61 +433,109 @@ export default async function DashboardPage() {
                   );
                 })}
               </div>
-            )}
-          </div>
-        </section>
+            </>
+          )}
+        </div>
+      </div>
 
-        {/* Today's Scheduled Work */}
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
-            Today&apos;s Schedule
-          </h2>
-          <div className="rounded-lg border bg-card">
-            {todayScheduled.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">Nothing scheduled today</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {todayScheduled.map(job => {
-                  const customer = job.customers as { first_name: string; last_name: string } | null;
-                  const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-                  return (
-                    <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {vehicle ? formatVehicle(vehicle) : ""}{job.title ? ` \u00b7 ${job.title}` : ""}
-                          </p>
-                        </div>
-                        <Car className="h-4 w-4 shrink-0 text-muted-foreground" />
+      {/* ── Pending Estimates + Today's Schedule ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+
+        {/* Pending Estimates */}
+        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Pending Estimates</h3>
+          {pendingEstimates.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">No pending estimates</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-200 dark:divide-stone-800">
+              {pendingEstimates.map(est => {
+                const job = est.jobs as { id: string; title: string | null; customers: { first_name: string; last_name: string } | null; vehicles: { year: number | null; make: string | null; model: string | null } | null } | null;
+                const customer = job?.customers;
+                const vehicle = job?.vehicles;
+                const sentDate = est.sent_at ? est.sent_at.split("T")[0] : null;
+                const days = daysBetween(sentDate, today);
+                return (
+                  <Link key={est.id} href={job ? `/jobs/${job.id}` : "#"} className="block">
+                    <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+                          {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                        </p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+                          {vehicle ? formatVehicle(vehicle) : job?.title || "Estimate"}
+                        </p>
                       </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+                      <div className="flex shrink-0 items-center gap-2.5 pl-3">
+                        <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">{formatCurrency(est.total)}</span>
+                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap ${
+                          days >= 3
+                            ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
+                            : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
+                        }`}>
+                          {days}d
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Today's Schedule */}
+        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Today&apos;s Schedule</h3>
+            <Link href="/jobs/new" className="w-7 h-7 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
+              <Plus className="h-3.5 w-3.5" />
+            </Link>
           </div>
-        </section>
+          {todayScheduled.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">Nothing scheduled today</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {todayScheduled.map(job => {
+                const customer = job.customers as { first_name: string; last_name: string } | null;
+                const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+                return (
+                  <Link key={job.id} href={`/jobs/${job.id}`} className="block">
+                    <div className="flex items-center gap-4 p-3.5 rounded-xl bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                      <Car className="h-4 w-4 shrink-0 text-stone-400 dark:text-stone-500" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate leading-tight">
+                          {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                        </p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+                          {vehicle ? formatVehicle(vehicle) : ""}{job.title ? ` \u00b7 ${job.title}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ── Shop Floor Group Card ── */
-function ShopFloorGroup({
+/* ── Shop Floor Column — one card per job ── */
+function ShopFloorColumn({
   label,
-  icon,
   jobs,
   today,
-  accentColor,
+  status,
 }: {
   label: string;
-  icon: React.ReactNode;
   jobs: Array<{
     id: string;
     status: string;
@@ -554,49 +546,59 @@ function ShopFloorGroup({
     users: unknown;
   }>;
   today: string;
-  accentColor: "blue" | "amber" | "stone";
+  status: "in_progress" | "waiting_for_parts" | "not_started";
 }) {
-  const borderColors = {
-    blue: "border-l-blue-500 dark:border-l-blue-400",
-    amber: "border-l-amber-500 dark:border-l-amber-400",
-    stone: "border-l-stone-400 dark:border-l-stone-500",
-  };
+  const config = {
+    in_progress: {
+      dot: "bg-blue-600 dark:bg-blue-500",
+      border: "border-blue-600 dark:border-blue-500",
+      badge: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
+    },
+    waiting_for_parts: {
+      dot: "bg-amber-500",
+      border: "border-amber-500",
+      badge: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
+    },
+    not_started: {
+      dot: "bg-stone-400 dark:bg-stone-500",
+      border: "border-stone-300 dark:border-stone-600",
+      badge: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400",
+    },
+  }[status];
 
   return (
-    <div className={`rounded-lg border border-l-[3px] ${borderColors[accentColor]} bg-card p-4`}>
-      <div className="flex items-center gap-2 mb-3">
-        {icon}
-        <span className="text-sm font-semibold">{label}</span>
-        <span className="ml-auto text-lg font-bold tabular-nums text-stone-900 dark:text-stone-50">{jobs.length}</span>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 px-1">
+        <span className={`w-2 h-2 rounded-full ${config.dot}`} />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
+          {label} ({jobs.length})
+        </span>
       </div>
       {jobs.length === 0 ? (
-        <p className="text-xs text-muted-foreground">None</p>
+        <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl py-8 flex items-center justify-center">
+          <p className="text-xs text-stone-400 dark:text-stone-500">None</p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {jobs.map(job => {
             const customer = job.customers as { first_name: string; last_name: string } | null;
             const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
             const days = daysBetween(job.date_received, today);
             return (
               <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                <div className="flex items-center justify-between py-0.5 transition-colors hover:text-blue-600 dark:hover:text-blue-400">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
+                <div className={`bg-card p-5 rounded-xl border-l-4 ${config.border} shadow-card hover:shadow-md transition-shadow`}>
+                  <div className="flex justify-between items-start mb-1.5">
+                    <h4 className="font-bold text-stone-900 dark:text-stone-50">
                       {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {vehicle ? formatVehicle(vehicle) : "No vehicle"}
-                    </p>
+                    </h4>
+                    <span className={`shrink-0 ml-2 text-[10px] font-black ${config.badge} px-2 py-1 rounded-full uppercase whitespace-nowrap`}>
+                      {status === "not_started" ? "queue" : `${days} ${days === 1 ? "day" : "days"}`}
+                    </span>
                   </div>
-                  <span className={`shrink-0 ml-2 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                    days >= 5
-                      ? "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400"
-                      : days >= 2
-                        ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
-                        : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400"
-                  }`}>
-                    {days}d
-                  </span>
+                  <p className="text-sm text-stone-500 dark:text-stone-400 font-medium">
+                    {vehicle ? formatVehicle(vehicle) : "No vehicle"}
+                    {job.title ? ` \u00b7 ${job.title}` : ""}
+                  </p>
                 </div>
               </Link>
             );
@@ -607,12 +609,13 @@ function ShopFloorGroup({
   );
 }
 
-/* ── Status dot for tech workload ── */
-function StatusDot({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    in_progress: "bg-blue-500",
-    waiting_for_parts: "bg-amber-500",
-    not_started: "bg-stone-400",
+/* ── Status badge for tech workload ── */
+function StatusBadge({ status }: { status: string }) {
+  const config: Record<string, { label: string; classes: string }> = {
+    in_progress: { label: "In Progress", classes: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400" },
+    waiting_for_parts: { label: "Waiting", classes: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" },
+    not_started: { label: "Queue", classes: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400" },
   };
-  return <span className={`inline-block h-2 w-2 rounded-full ${colors[status] || "bg-stone-400"}`} />;
+  const { label, classes } = config[status] || { label: status, classes: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400" };
+  return <span className={`shrink-0 ml-2 text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap ${classes}`}>{label}</span>;
 }

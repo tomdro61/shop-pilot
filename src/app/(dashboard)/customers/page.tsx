@@ -22,13 +22,13 @@ export default async function CustomersPage({
   const { data: customers, totalCount } = await getCustomers(search, type, page);
 
   return (
-    <div className="p-4 lg:p-6">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+    <div className="p-4 lg:p-10 space-y-6">
+      <div className="flex flex-wrap items-center gap-2">
         <Suspense>
           <CustomerSearch />
         </Suspense>
         <div className="hidden md:flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-          <span className="font-semibold text-stone-900 dark:text-stone-50">All Customers</span>
+          <span className="font-bold text-stone-900 dark:text-stone-50">All Customers</span>
           <span>({totalCount.toLocaleString()})</span>
         </div>
         <Suspense>

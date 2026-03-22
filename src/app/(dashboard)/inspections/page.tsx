@@ -61,7 +61,7 @@ export default function InspectionsPage() {
   const totalCount = stateCount + tncCount;
 
   return (
-    <div className="mx-auto max-w-lg p-4 lg:p-6">
+    <div className="mx-auto max-w-lg p-4 lg:p-10">
       <div className="mb-4">
         <label className="mb-1 block text-sm font-medium">Date</label>
         <Input
@@ -74,7 +74,7 @@ export default function InspectionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
             Inspection Counter
           </CardTitle>
         </CardHeader>
@@ -131,7 +131,7 @@ export default function InspectionsPage() {
 
               {/* Totals */}
               <div className="border-t pt-3">
-                <div className="flex justify-between text-base font-semibold">
+                <div className="flex justify-between text-base font-bold">
                   <span>{totalCount} inspections</span>
                   <span>{formatCurrency(grandTotal)}</span>
                 </div>

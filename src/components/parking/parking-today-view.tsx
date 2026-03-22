@@ -32,15 +32,15 @@ function KPICard({
     <Card>
       <CardContent className="flex items-center gap-3 p-4">
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${accent || "bg-stone-100 dark:bg-stone-800"}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accent || "bg-stone-100 dark:bg-stone-800"}`}
         >
           <Icon className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-2xl font-bold text-stone-900 dark:text-stone-50">
+          <p className="text-3xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {value}
           </p>
-          <p className="text-xs text-stone-500 dark:text-stone-400">{label}</p>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">{label}</p>
         </div>
       </CardContent>
     </Card>
@@ -56,7 +56,7 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
+      <h2 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
         {title}
       </h2>
       <span className="rounded-full bg-stone-100 dark:bg-stone-800 px-2 py-0.5 text-xs text-stone-500 dark:text-stone-400">
@@ -66,7 +66,7 @@ function SectionHeader({
   );
 }
 
-export function ParkingTodayView({ data }: { data: DashboardData }) {
+export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardData; lockBoxCodes?: Record<number, string> }) {
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
@@ -109,6 +109,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                lockBoxCodes={lockBoxCodes}
                 variant={r.status === "checked_out" ? "checked-out" : "pickup"}
                 showActions={r.status === "checked_out"
                   ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
@@ -133,6 +134,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                lockBoxCodes={lockBoxCodes}
                 variant={r.status === "checked_out" ? "checked-out" : "pickup-tomorrow"}
                 showActions={r.status === "checked_out"
                   ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
@@ -157,6 +159,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                lockBoxCodes={lockBoxCodes}
                 variant="arrival"
                 showActions={
                   r.status === "reserved" ? (
@@ -185,6 +188,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                lockBoxCodes={lockBoxCodes}
                 variant="parked"
                 showActions={<CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />}
               />

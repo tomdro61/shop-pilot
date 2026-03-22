@@ -29,7 +29,7 @@ export function ParkingServiceLeads({
 }) {
   if (reservations.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-stone-300 dark:border-stone-700 p-8 text-center">
+      <div className="bg-card rounded-xl shadow-card p-8 text-center">
         <p className="text-sm text-stone-500 dark:text-stone-400">
           No active reservations with service requests.
         </p>
@@ -55,7 +55,7 @@ export function ParkingServiceLeads({
                     <div className="min-w-0 flex-1">
                       {/* Name + Status */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-stone-900 dark:text-stone-50">
+                        <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
                           {r.first_name} {r.last_name}
                         </span>
                         <Badge

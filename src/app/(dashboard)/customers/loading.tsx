@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CustomersLoading() {
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-4 lg:p-10">
       <div className="mb-4 flex items-center gap-4">
         <Skeleton className="h-10 flex-1" />
         <Skeleton className="h-10 w-24" />

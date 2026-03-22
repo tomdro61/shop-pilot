@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Job | ShopPilot</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-background": "#1f1b17",
+              "outline": "#727687",
+              "on-primary-fixed": "#001849",
+              "on-primary-container": "#f8f7ff",
+              "surface-dim": "#e2d8d2",
+              "primary-fixed": "#dae1ff",
+              "on-surface": "#1f1b17",
+              "secondary": "#515f74",
+              "surface-container-low": "#fcf2eb",
+              "surface-bright": "#fff8f5",
+              "primary-fixed-dim": "#b3c5ff",
+              "on-primary": "#ffffff",
+              "surface-variant": "#eae1da",
+              "tertiary-fixed": "#ffdbd0",
+              "on-secondary-fixed-variant": "#3a485b",
+              "primary": "#0050cb",
+              "secondary-fixed-dim": "#b9c7df",
+              "secondary-fixed": "#d5e3fc",
+              "surface-container-lowest": "#ffffff",
+              "background": "#fff8f5",
+              "inverse-on-surface": "#f9efe8",
+              "primary-container": "#0066ff",
+              "on-secondary": "#ffffff",
+              "on-tertiary-fixed": "#390c00",
+              "on-error-container": "#93000a",
+              "on-error": "#ffffff",
+              "on-surface-variant": "#424656",
+              "tertiary-container": "#cc4204",
+              "surface": "#fff8f5",
+              "inverse-primary": "#b3c5ff",
+              "tertiary": "#a33200",
+              "on-tertiary-container": "#fff6f4",
+              "secondary-container": "#d5e3fc",
+              "on-secondary-container": "#57657a",
+              "inverse-surface": "#342f2b",
+              "on-tertiary": "#ffffff",
+              "surface-tint": "#0054d6",
+              "on-secondary-fixed": "#0d1c2e",
+              "outline-variant": "#c2c6d8",
+              "on-primary-fixed-variant": "#003fa4",
+              "on-tertiary-fixed-variant": "#832600",
+              "tertiary-fixed-dim": "#ffb59d",
+              "surface-container-high": "#f0e6e0",
+              "surface-container": "#f6ece6",
+              "error": "#ba1a1a",
+              "surface-container-highest": "#eae1da",
+              "error-container": "#ffdad6"
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden">
+<!-- Sidebar Navigation Shell -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-[#342f2b] dark:bg-stone-950 flex flex-col py-6 space-y-1 shadow-2xl z-50">
+<div class="px-6 mb-8">
+<h1 class="text-xl font-bold tracking-tighter text-white uppercase">ShopPilot</h1>
+<p class="text-xs text-stone-400 font-medium">The Precision Atelier</p>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="dashboard">dashboard</span>
+<span class="text-sm font-['Inter'] tracking-tight">Dashboard</span>
+</div>
+<div class="bg-[#0050cb] text-white rounded-lg font-medium mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer">
+<span class="material-symbols-outlined text-lg" data-icon="build">build</span>
+<span class="text-sm font-['Inter'] tracking-tight">Jobs</span>
+</div>
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="group">group</span>
+<span class="text-sm font-['Inter'] tracking-tight">Customers</span>
+</div>
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="payments">payments</span>
+<span class="text-sm font-['Inter'] tracking-tight">Quick Pay</span>
+</div>
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="description">description</span>
+<span class="text-sm font-['Inter'] tracking-tight">Invoices</span>
+</div>
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="fact_check">fact_check</span>
+<span class="text-sm font-['Inter'] tracking-tight">Inspections</span>
+</div>
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="local_parking">local_parking</span>
+<span class="text-sm font-['Inter'] tracking-tight">Parking</span>
+</div>
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="request_quote">request_quote</span>
+<span class="text-sm font-['Inter'] tracking-tight">Quotes</span>
+</div>
+</nav>
+<div class="pt-6 border-t border-stone-700/50 space-y-1">
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="analytics">analytics</span>
+<span class="text-sm font-['Inter'] tracking-tight">Reports</span>
+</div>
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="settings">settings</span>
+<span class="text-sm font-['Inter'] tracking-tight">Settings</span>
+</div>
+<div class="text-stone-400 hover:text-white mx-2 my-1 group flex items-center px-4 py-2 space-x-3 cursor-pointer transition-all duration-200">
+<span class="material-symbols-outlined text-lg" data-icon="smart_toy">smart_toy</span>
+<span class="text-sm font-['Inter'] tracking-tight">AI Assistant</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- Top App Bar Shell -->
+<header class="h-16 flex justify-between items-center px-8 bg-surface-bright dark:bg-stone-950 font-['Inter'] antialiased text-sm">
+<div class="flex items-center space-x-4">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 material-symbols-outlined" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container rounded-full border-none focus:ring-2 focus:ring-primary w-64 text-sm transition-all duration-200" placeholder="Search orders, customers..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<span class="material-symbols-outlined text-stone-500 cursor-pointer hover:text-primary transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-stone-500 cursor-pointer hover:text-primary transition-colors" data-icon="help_outline">help_outline</span>
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant/20">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="Professional user profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2UYJcoU_U4LWiODV4aq15lajRpD10Y3q_Nbwswo3MIz-nHrDQFZJykPpV0_TQn2pxeVYGxg_k96yO6qFhYIyEjLZ7C_fhxOKEHXRkm32-h6MhT63_elxvVJ2O6HSpqSKM9DoupzZR38JMe_3cnKKvODOD8dV5IJKLCyUhXN8nTo-Mf9nZSHEwvKXp0lpY5iAEtGXP_LzTp8fzH-hzGKCqj_PuWSgiikTiahv-TlZHVt7uITC37Ok6cgNI44U9aI08lqjYmJVTXepy"/>
+</div>
+</div>
+</header>
+<!-- Focused Content Area -->
+<div class="max-w-[800px] mx-auto py-12 px-6">
+<header class="mb-10 flex items-center justify-between">
+<div>
+<h2 class="text-3xl font-extrabold tracking-tight text-on-surface">New Job</h2>
+<p class="text-stone-500 mt-1">Configure repair order and assignment details.</p>
+</div>
+<div class="flex items-center text-xs font-bold uppercase tracking-widest text-primary bg-primary-container/10 px-3 py-1 rounded-full border border-primary/20">
+                    Draft Job
+                </div>
+</header>
+<div class="space-y-8">
+<!-- 1. PRESET SELECTOR -->
+<section class="p-6 border-2 border-dashed border-outline-variant rounded-xl bg-surface-container-low/30">
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface-variant mb-4">Start from a preset</h3>
+<div class="flex flex-wrap gap-3">
+<button class="flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-full text-sm font-medium transition-all active:scale-95">
+<span>MA State Inspection $35</span>
+<span class="material-symbols-outlined text-sm" data-icon="close">close</span>
+</button>
+<button class="px-4 py-2 bg-surface-container-lowest border border-outline-variant/30 text-on-surface rounded-full text-sm font-medium hover:bg-surface-container-high transition-all active:scale-95">
+                            Oil Change $89
+                        </button>
+<button class="px-4 py-2 bg-surface-container-lowest border border-outline-variant/30 text-on-surface rounded-full text-sm font-medium hover:bg-surface-container-high transition-all active:scale-95">
+                            Brake Pads Front $285
+                        </button>
+</div>
+</section>
+<!-- 2. CUSTOMER & VEHICLE CARD -->
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+<div class="mb-6">
+<h3 class="text-xs font-bold uppercase tracking-[0.05rem] text-primary">CUSTOMER &amp; VEHICLE</h3>
+<p class="text-sm text-stone-500">Who's the job for?</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Customer Name/Phone</label>
+<div class="relative">
+<span class="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-stone-400" data-icon="expand_more">expand_more</span>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm transition-all" placeholder="Search customer..." type="text"/>
+</div>
+<a class="inline-block text-xs font-semibold text-primary hover:underline" href="#">+ New Customer</a>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-stone-400 uppercase tracking-tighter">Vehicle</label>
+<div class="relative">
+<select class="w-full bg-surface-container border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm appearance-none text-stone-400 cursor-not-allowed" disabled="">
+<option>Select Customer first</option>
+</select>
+</div>
+<a class="inline-block text-xs font-semibold text-stone-400 cursor-not-allowed" href="#">+ Add Vehicle</a>
+</div>
+</div>
+</section>
+<!-- 3. JOB DETAILS CARD -->
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+<div class="mb-6">
+<h3 class="text-xs font-bold uppercase tracking-[0.05rem] text-primary">JOB DETAILS</h3>
+<p class="text-sm text-stone-500">Title, status, and assignment</p>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Job Title</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm font-medium transition-all" type="text" value="Brake job and coolant filter"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Status</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-stone-400"></span>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 pl-8 pr-4 text-sm appearance-none transition-all">
+<option>Not Started</option>
+<option>Waiting for Parts</option>
+<option>In Progress</option>
+<option>Complete</option>
+</select>
+</div>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Assigned Tech</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm appearance-none transition-all">
+<option>Unassigned</option>
+<option>Paul</option>
+<option>Christian</option>
+<option>Luis</option>
+<option>Joe</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Job Date</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm transition-all" type="date" value="2023-10-27"/>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. PAYMENT & NOTES CARD -->
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+<div class="mb-6">
+<h3 class="text-xs font-bold uppercase tracking-[0.05rem] text-primary">PAYMENT &amp; NOTES</h3>
+<p class="text-sm text-stone-500">Billing info and additional details</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Payment Status</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm appearance-none transition-all">
+<option>Unpaid</option>
+<option>Invoiced</option>
+<option>Paid</option>
+<option>Waived</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Payment Method</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm appearance-none transition-all">
+<option>Not Set</option>
+<option>Stripe</option>
+<option>Cash</option>
+<option>Check</option>
+<option>ACH</option>
+<option>Terminal</option>
+</select>
+</div>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Mileage In</label>
+<input class="w-full md:w-1/3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm transition-all" placeholder="0" type="number"/>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Notes</label>
+<textarea class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 py-3 px-4 text-sm transition-all resize-none" placeholder="Add internal notes or customer requests..." rows="4"></textarea>
+</div>
+</div>
+</section>
+<!-- 5. ACTIONS -->
+<footer class="pt-6 flex items-center justify-end space-x-4">
+<button class="px-8 py-3 rounded-full border border-outline-variant text-stone-600 font-semibold text-sm hover:bg-surface-container transition-all active:scale-95">
+                        Cancel
+                    </button>
+<button class="px-10 py-3 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-full text-sm shadow-lg shadow-primary/20 transition-all hover:translate-y-[-1px] active:scale-95">
+                        Create Job
+                    </button>
+</footer>
+</div>
+</div>
+</main>
+</body></html>

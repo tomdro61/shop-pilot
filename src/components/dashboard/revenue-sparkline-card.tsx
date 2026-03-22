@@ -32,7 +32,7 @@ export function RevenueSparklineCard({
     <Card className="border-t-2 border-t-emerald-500 dark:border-t-emerald-400 gap-0 py-0 overflow-hidden">
       <CardContent className="px-4 pt-3 pb-0">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
             {label}
           </p>
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 dark:bg-emerald-400/10">

@@ -68,10 +68,10 @@ type TechOption = { id: string; name: string };
 
 function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="mb-3">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">{title}</h3>
+    <div className="mb-5">
+      <h3 className="text-xs font-bold uppercase tracking-[0.05rem] text-blue-600 dark:text-blue-400">{title}</h3>
       {description && (
-        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{description}</p>
+        <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">{description}</p>
       )}
     </div>
   );
@@ -258,7 +258,7 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
         {/* ── Preset (Step 0) ── */}
         {!isEditing && presets && presets.length > 0 && (
           <Card className="border-dashed">
-            <CardContent className="pt-5">
+            <CardContent className="p-6 lg:p-8">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h3 className="text-sm font-semibold">Start from a preset</h3>
@@ -309,7 +309,7 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
 
         {/* ── Section 1: Customer & Vehicle ── */}
         <Card>
-          <CardContent className="pt-5">
+          <CardContent className="p-6 lg:p-8">
             <SectionHeader
               title="Customer & Vehicle"
               description="Who's the job for?"
@@ -443,7 +443,7 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
 
         {/* ── Section 2: Job Setup ── */}
         <Card>
-          <CardContent className="pt-5">
+          <CardContent className="p-6 lg:p-8">
             <SectionHeader
               title="Job Details"
               description="Title, status, and assignment"
@@ -567,7 +567,7 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
 
         {/* ── Section 3: Payment & Notes ── */}
         <Card>
-          <CardContent className="pt-5">
+          <CardContent className="p-6 lg:p-8">
             <SectionHeader
               title="Payment & Notes"
               description="Billing info and additional details"
@@ -673,20 +673,21 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
         </Card>
 
         {/* ── Actions ── */}
-        <div className="flex gap-3">
-          <Button type="submit" disabled={form.formState.isSubmitting}>
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full px-8"
+            onClick={() => router.back()}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" className="rounded-full px-8" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting
               ? "Saving..."
               : isEditing
                 ? "Update Job"
                 : "Create Job"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-          >
-            Cancel
           </Button>
         </div>
       </form>

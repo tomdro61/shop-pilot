@@ -118,7 +118,7 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
             {headerLabel}
           </h3>
-          <div className="flex rounded-md border border-stone-200 dark:border-stone-700 overflow-hidden text-xs">
+          <div className="flex rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden text-xs">
             <button
               className={`px-2.5 py-1 transition-colors ${
                 mode === "month"

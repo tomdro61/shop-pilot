@@ -22,7 +22,7 @@ export function HorizontalBarChart({ title, data }: HorizontalBarChartProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
             {title}
           </CardTitle>
         </CardHeader>
@@ -40,7 +40,7 @@ export function HorizontalBarChart({ title, data }: HorizontalBarChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+        <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
           {title}
         </CardTitle>
       </CardHeader>
@@ -61,7 +61,7 @@ export function HorizontalBarChart({ title, data }: HorizontalBarChartProps) {
                     style={{ width: `${Math.max(pct, 1)}%` }}
                   />
                 </div>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-stone-900 dark:text-stone-50">
+                <span className="shrink-0 text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">
                   {formatCurrency(row.revenue)}
                 </span>
                 <span className="shrink-0 text-xs tabular-nums text-stone-400 dark:text-stone-500">

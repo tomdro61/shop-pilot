@@ -236,7 +236,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
       {/* Service presets */}
       {presets.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-400 dark:text-stone-500">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
             Quick Services
           </p>
           <div className="flex flex-wrap gap-2">
