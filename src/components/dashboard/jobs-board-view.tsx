@@ -68,7 +68,7 @@ function BoardColumn({
 
   return (
     <div className={className}>
-      <Card className="h-full">
+      <Card className="h-full bg-[oklch(0.94_0.008_75)] dark:bg-stone-800 shadow-none">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
             <Badge
