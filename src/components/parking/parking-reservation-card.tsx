@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, PARKING_SERVICE_LABELS } from "@/lib/constants";
-import { Car, Clock } from "lucide-react";
+import { Car, Clock, KeyRound } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 function formatTime(time: string) {
@@ -110,10 +110,12 @@ export function ParkingReservationCardCompact({
   reservation,
   showActions,
   variant = "arrival",
+  lockBoxCodes = {},
 }: {
   reservation: ParkingReservation;
   showActions?: React.ReactNode;
   variant?: "arrival" | "pickup" | "pickup-tomorrow" | "parked" | "checked-out";
+  lockBoxCodes?: Record<number, string>;
 }) {
   const isPickup = variant === "pickup" || variant === "pickup-tomorrow" || variant === "checked-out";
   const timeLabel =
@@ -160,30 +162,9 @@ export function ParkingReservationCardCompact({
             <span className="font-medium text-stone-700 dark:text-stone-300">
               {timeLabel} {timeValue}
             </span>
-            {/* Car info inline on desktop */}
-            <span className="hidden md:contents">
-              <span className="text-stone-300 dark:text-stone-600">·</span>
-              <span>{reservation.make} {reservation.model}</span>
-              <span className="text-stone-300 dark:text-stone-600">·</span>
-              <span>{reservation.license_plate}</span>
-              {reservation.color && (
-                <>
-                  <span className="text-stone-300 dark:text-stone-600">·</span>
-                  <span>{reservation.color}</span>
-                </>
-              )}
-            </span>
-            {reservation.services_interested.length > 0 && (
-              <>
-                <span className="text-stone-300 dark:text-stone-600">·</span>
-                <span className="text-violet-600 dark:text-violet-400">
-                  {reservation.services_interested.length} service{reservation.services_interested.length > 1 ? "s" : ""}
-                </span>
-              </>
-            )}
           </div>
-          {/* Car info on its own line on mobile */}
-          <div className="flex items-center gap-2 mt-0.5 md:hidden">
+          <div className="flex items-center gap-2 mt-0.5">
+            <Car className="h-3 w-3" />
             <span>{reservation.make} {reservation.model}</span>
             <span className="text-stone-300 dark:text-stone-600">·</span>
             <span>{reservation.license_plate}</span>
@@ -193,7 +174,31 @@ export function ParkingReservationCardCompact({
                 <span>{reservation.color}</span>
               </>
             )}
+            {reservation.services_interested.length > 0 && (
+              <>
+                <span className="text-stone-300 dark:text-stone-600">·</span>
+                <span className="text-violet-600 dark:text-violet-400">
+                  {reservation.services_interested.length} service{reservation.services_interested.length > 1 ? "s" : ""}
+                </span>
+              </>
+            )}
           </div>
+          {/* Lockbox info for checked-out reservations */}
+          {reservation.status === "checked_out" && (
+            <div className="flex items-center gap-1.5 mt-1 text-xs">
+              <KeyRound className="h-3 w-3 text-stone-400" />
+              {reservation.lock_box_number ? (
+                <span className="font-medium text-stone-700 dark:text-stone-300">
+                  Lockbox #{reservation.lock_box_number}
+                  {lockBoxCodes[reservation.lock_box_number] && (
+                    <span className="text-stone-400 dark:text-stone-500"> · Code: {lockBoxCodes[reservation.lock_box_number]}</span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-stone-400 dark:text-stone-500">In person pickup</span>
+              )}
+            </div>
+          )}
         </div>
       </Link>
       {showActions && <div className="shrink-0">{showActions}</div>}

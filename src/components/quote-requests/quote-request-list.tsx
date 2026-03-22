@@ -23,6 +23,14 @@ import Link from "next/link";
 import { toast } from "sonner";
 import type { QuoteRequest, QuoteRequestStatus } from "@/types";
 
+const filterTabs: { value: string; label: string }[] = [
+  { value: "", label: "All" },
+  ...QUOTE_REQUEST_STATUS_ORDER.map((s) => ({
+    value: s,
+    label: QUOTE_REQUEST_STATUS_LABELS[s],
+  })),
+];
+
 export function QuoteRequestList({
   quoteRequests,
 }: {
@@ -65,42 +73,35 @@ export function QuoteRequestList({
   }, [searchInput, updateParams]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative sm:max-w-xs flex-1">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
           <Input
-            placeholder="Search name, email, phone, vehicle..."
-            className="pl-9 h-9 text-sm"
+            placeholder="Search quotes..."
+            className="pl-11 h-10 text-sm"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
-        <Select
-          value={currentStatus || "all"}
-          onValueChange={(value) =>
-            updateParams({ status: value === "all" ? "" : value })
-          }
-        >
-          <SelectTrigger className="w-full sm:w-[160px] h-9 text-xs">
-            <SelectValue placeholder="All Statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {QUOTE_REQUEST_STATUS_ORDER.map((status) => (
-              <SelectItem key={status} value={status}>
-                {QUOTE_REQUEST_STATUS_LABELS[status]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-1 flex-wrap">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => updateParams({ status: tab.value })}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors",
+                currentStatus === tab.value
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Count */}
-      <p className="text-xs text-stone-500 dark:text-stone-400">
-        {quoteRequests.length} quote request{quoteRequests.length !== 1 ? "s" : ""}
-      </p>
 
       {/* List */}
       <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
@@ -111,7 +112,7 @@ export function QuoteRequestList({
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {quoteRequests.map((qr) => (
               <QuoteRequestCard key={qr.id} quoteRequest={qr} />
             ))}
@@ -126,7 +127,6 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const status = qr.status as QuoteRequestStatus;
-  const statusColors = QUOTE_REQUEST_STATUS_COLORS[status] || QUOTE_REQUEST_STATUS_COLORS.new;
 
   const vehicle = [qr.vehicle_year, qr.vehicle_make, qr.vehicle_model].filter(Boolean).join(" ");
   const date = new Date(qr.created_at).toLocaleDateString("en-US", {
@@ -135,6 +135,8 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
     hour: "numeric",
     minute: "2-digit",
   });
+
+  const initials = `${qr.first_name?.[0] ?? ""}${qr.last_name?.[0] ?? ""}`.toUpperCase();
 
   async function handleStatusChange(newStatus: string) {
     setIsUpdating(true);
@@ -168,119 +170,115 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
   return (
     <div
       className={cn(
-        "bg-card rounded-xl shadow-card p-4 transition-opacity",
+        "bg-card rounded-xl shadow-card px-6 py-5 transition-opacity",
         isUpdating && "opacity-50"
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-2">
-          {/* Name + Status + Date */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-sm">
+      {/* Header: Avatar + Name/Date + Status */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-xs font-bold text-blue-700 dark:text-blue-400">
+            {initials}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-stone-900 dark:text-stone-50">
               {qr.first_name} {qr.last_name}
-            </span>
-            <span
-              className={cn(
-                "inline-flex items-center text-[10px] font-black px-2 py-1 rounded-full uppercase",
-                statusColors.bg,
-                statusColors.text
-              )}
-            >
-              {QUOTE_REQUEST_STATUS_LABELS[status] || status}
-            </span>
-            <span className="text-[11px] text-stone-400 dark:text-stone-500">{date}</span>
+            </p>
+            <p className="text-[11px] uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              Submission <span className="normal-case tracking-normal">{date}</span>
+            </p>
           </div>
+        </div>
+        <Select value={status} onValueChange={handleStatusChange}>
+          <SelectTrigger className="w-auto h-8 text-xs border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 shadow-none gap-1.5 px-3">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {QUOTE_REQUEST_STATUS_ORDER.map((s) => (
+              <SelectItem key={s} value={s} className="text-xs">
+                {QUOTE_REQUEST_STATUS_LABELS[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-          {/* Contact */}
-          <div className="flex flex-col gap-1 text-xs text-stone-500 dark:text-stone-400">
-            <span className="flex items-center gap-1">
-              <Phone className="h-3 w-3" />
-              {qr.phone}
-            </span>
-            {qr.email && (
-              <span className="flex items-center gap-1">
-                <Mail className="h-3 w-3" />
-                {qr.email}
-              </span>
-            )}
-          </div>
+      {/* Contact */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-stone-500 dark:text-stone-400 mb-4">
+        {qr.email && (
+          <span className="flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5" />
+            {qr.email}
+          </span>
+        )}
+        <span className="flex items-center gap-1.5">
+          <Phone className="h-3.5 w-3.5" />
+          {qr.phone}
+        </span>
+      </div>
 
-          {/* Vehicle */}
+      {/* Vehicle + Services */}
+      {(vehicle || qr.services.length > 0) && (
+        <div className="flex items-center justify-between gap-3 mb-4">
           {vehicle && (
-            <div className="flex items-center gap-1 text-xs text-stone-600 dark:text-stone-300">
-              <Car className="h-3 w-3 text-stone-400" />
+            <div className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
+              <Car className="h-4 w-4 text-stone-400 dark:text-stone-500" />
               {vehicle}
             </div>
           )}
-
-          {/* Services */}
-          <div className="flex flex-wrap gap-1">
-            {qr.services.map((s) => (
-              <span
-                key={s}
-                className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-400"
-              >
-                {s}
-              </span>
-            ))}
-          </div>
-
-          {/* Message */}
-          {qr.message && (
-            <div className="flex items-start gap-1 text-xs text-stone-500 dark:text-stone-400">
-              <MessageSquare className="mt-0.5 h-3 w-3 shrink-0" />
-              <span className="line-clamp-2">{qr.message}</span>
+          {qr.services.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {qr.services.map((s) => (
+                <span
+                  key={s}
+                  className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400"
+                >
+                  {s}
+                </span>
+              ))}
             </div>
           )}
         </div>
+      )}
 
-        {/* Actions */}
-        <div className="flex flex-col gap-1 shrink-0">
-          <Select value={status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="h-7 w-[120px] text-[11px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {QUOTE_REQUEST_STATUS_ORDER.map((s) => (
-                <SelectItem key={s} value={s} className="text-xs">
-                  {QUOTE_REQUEST_STATUS_LABELS[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {status !== "converted" && (
-            <Link href={convertUrl}>
-              <Button variant="outline" size="sm" className="h-7 w-[120px] gap-1 text-[11px]">
-                <Wrench className="h-3 w-3" />
-                Convert to Job
-              </Button>
-            </Link>
-          )}
-
-          {qr.quo_contact_id && (
-            <a
-              href={`https://my.quo.com/inbox/PNq6UNTzCW/c/${qr.quo_contact_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="ghost" size="sm" className="h-7 w-[120px] gap-1 text-[11px]">
-                <ExternalLink className="h-3 w-3" />
-                Quo Contact
-              </Button>
-            </a>
-          )}
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-[120px] gap-1 text-[11px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-            onClick={handleDelete}
-          >
-            <Trash2 className="h-3 w-3" />
-            Delete
-          </Button>
+      {/* Message */}
+      {qr.message && (
+        <div className="mb-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 px-4 py-3">
+          <p className="text-sm italic text-stone-500 dark:text-stone-400 line-clamp-3">
+            &ldquo;{qr.message}&rdquo;
+          </p>
         </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-3">
+        {status !== "converted" && (
+          <Link href={convertUrl}>
+            <Button size="sm">
+              <Wrench className="mr-1.5 h-3.5 w-3.5" />
+              Convert to Job
+            </Button>
+          </Link>
+        )}
+
+        {qr.quo_contact_id && (
+          <a
+            href={`https://my.quo.com/inbox/PNq6UNTzCW/c/${qr.quo_contact_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open in Quo
+          </a>
+        )}
+
+        <button
+          onClick={handleDelete}
+          className="ml-auto text-stone-300 dark:text-stone-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

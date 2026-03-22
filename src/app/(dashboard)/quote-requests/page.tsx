@@ -19,8 +19,11 @@ export default async function QuoteRequestsPage({
   });
 
   return (
-    <div className="p-4 lg:p-10">
-      <h1 className="mb-4 text-xl font-bold tracking-tight">Quote Requests</h1>
+    <div className="p-4 lg:p-10 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-50">Quote Requests</h1>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Manage incoming service inquiries and convert them to shop jobs.</p>
+      </div>
       <QuoteRequestList quoteRequests={quoteRequests} />
     </div>
   );

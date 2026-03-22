@@ -66,7 +66,7 @@ function SectionHeader({
   );
 }
 
-export function ParkingTodayView({ data }: { data: DashboardData }) {
+export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardData; lockBoxCodes?: Record<number, string> }) {
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
@@ -109,6 +109,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                lockBoxCodes={lockBoxCodes}
                 variant={r.status === "checked_out" ? "checked-out" : "pickup"}
                 showActions={r.status === "checked_out"
                   ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
@@ -133,6 +134,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                lockBoxCodes={lockBoxCodes}
                 variant={r.status === "checked_out" ? "checked-out" : "pickup-tomorrow"}
                 showActions={r.status === "checked_out"
                   ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
@@ -157,6 +159,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                lockBoxCodes={lockBoxCodes}
                 variant="arrival"
                 showActions={
                   r.status === "reserved" ? (
@@ -185,6 +188,7 @@ export function ParkingTodayView({ data }: { data: DashboardData }) {
               <ParkingReservationCardCompact
                 key={r.id}
                 reservation={r}
+                lockBoxCodes={lockBoxCodes}
                 variant="parked"
                 showActions={<CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />}
               />

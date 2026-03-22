@@ -286,34 +286,34 @@ export default async function DashboardPage() {
         <div className="space-y-2">
           {stats.unpaidJobCount > 0 && (
             <Link href="/jobs?payment_status=unpaid&status=complete" className="block">
-              <div className="flex items-center gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 px-5 py-3 transition-colors hover:bg-red-100 dark:hover:bg-red-900">
+              <div className="flex items-center gap-3 rounded-xl bg-red-100 dark:bg-red-950 shadow-card border-l-4 border-l-red-500 px-5 py-3.5 transition-colors hover:bg-red-200 dark:hover:bg-red-900">
                 <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-                <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
                   {stats.unpaidJobCount} unpaid {stats.unpaidJobCount === 1 ? "job" : "jobs"}
                 </span>
-                <span className="ml-auto hidden text-xs text-red-600 dark:text-red-400 sm:inline">Complete but not paid</span>
+                <span className="ml-auto hidden text-xs text-stone-500 dark:text-stone-400 sm:inline">Complete but not paid</span>
               </div>
             </Link>
           )}
           {stats.unassignedJobs > 0 && (
             <Link href="/jobs?status=not_started" className="block">
-              <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:hover:bg-amber-900">
+              <div className="flex items-center gap-3 rounded-xl bg-amber-100 dark:bg-amber-950 shadow-card border-l-4 border-l-amber-500 px-5 py-3.5 transition-colors hover:bg-amber-200 dark:hover:bg-amber-900">
                 <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
                   {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
                 </span>
-                <span className="ml-auto hidden text-xs text-amber-600 dark:text-amber-400 sm:inline">Not started, no tech</span>
+                <span className="ml-auto hidden text-xs text-stone-500 dark:text-stone-400 sm:inline">Not started, no tech</span>
               </div>
             </Link>
           )}
           {newQuoteRequests > 0 && (
             <Link href="/quote-requests?status=new" className="block">
-              <div className="flex items-center gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-5 py-3 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900">
+              <div className="flex items-center gap-3 rounded-xl bg-blue-100 dark:bg-blue-950 shadow-card border-l-4 border-l-blue-500 px-5 py-3.5 transition-colors hover:bg-blue-200 dark:hover:bg-blue-900">
                 <FileQuestion className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
                   {newQuoteRequests} new quote {newQuoteRequests === 1 ? "request" : "requests"}
                 </span>
-                <span className="ml-auto hidden text-xs text-blue-600 dark:text-blue-400 sm:inline">From website form</span>
+                <span className="ml-auto hidden text-xs text-stone-500 dark:text-stone-400 sm:inline">From website form</span>
               </div>
             </Link>
           )}
@@ -490,7 +490,7 @@ export default async function DashboardPage() {
         <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Today&apos;s Schedule</h3>
-            <Link href="/jobs/new" className="w-7 h-7 flex items-center justify-center bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <Link href="/jobs/new" className="w-7 h-7 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
               <Plus className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -552,12 +552,12 @@ function ShopFloorColumn({
     in_progress: {
       dot: "bg-blue-600 dark:bg-blue-500",
       border: "border-blue-600 dark:border-blue-500",
-      badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400",
+      badge: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
     },
     waiting_for_parts: {
       dot: "bg-amber-500",
       border: "border-amber-500",
-      badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400",
+      badge: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400",
     },
     not_started: {
       dot: "bg-stone-400 dark:bg-stone-500",
@@ -612,10 +612,10 @@ function ShopFloorColumn({
 /* ── Status badge for tech workload ── */
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; classes: string }> = {
-    in_progress: { label: "In Progress", classes: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400" },
-    waiting_for_parts: { label: "Waiting", classes: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400" },
+    in_progress: { label: "In Progress", classes: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400" },
+    waiting_for_parts: { label: "Waiting", classes: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" },
     not_started: { label: "Queue", classes: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400" },
   };
   const { label, classes } = config[status] || { label: status, classes: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400" };
-  return <span className={`shrink-0 ml-2 text-[10px] font-black px-2 py-0.5 rounded-full uppercase whitespace-nowrap ${classes}`}>{label}</span>;
+  return <span className={`shrink-0 ml-2 text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap ${classes}`}>{label}</span>;
 }

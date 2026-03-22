@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getParkingReservation } from "@/lib/actions/parking";
 import { getInvoicesForParkingReservation } from "@/lib/actions/invoices";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import {
   Mail,
   Hash,
   Palette,
+  KeyRound,
 } from "lucide-react";
 
 export async function generateMetadata({
@@ -80,43 +82,68 @@ export default async function ParkingDetailPage({
 
   if (!reservation) notFound();
 
+  // Look up lockbox code if checked out with a lockbox
+  let lockBoxCode: string | null = null;
+  if (reservation.status === "checked_out" && reservation.lock_box_number) {
+    const admin = createAdminClient();
+    const { data: lb } = await admin
+      .from("lock_boxes")
+      .select("code")
+      .eq("box_number", reservation.lock_box_number)
+      .single();
+    lockBoxCode = lb?.code ?? null;
+  }
+
   const statusColors = PARKING_STATUS_COLORS[reservation.status];
+
+  const timeline = [
+    { label: "Reserved", time: reservation.created_at, active: true },
+    { label: "Checked in", time: reservation.checked_in_at, active: !!reservation.checked_in_at },
+    { label: "Checked out", time: reservation.checked_out_at, active: !!reservation.checked_out_at },
+  ];
 
   return (
     <div className="p-4 lg:p-10 pb-24 lg:pb-6">
-      {/* Back + Header */}
-      <div className="mb-5">
-        <Link href="/parking">
-          <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 mb-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
+      {/* Header */}
+      <div className="mb-8">
+        <Link
+          href="/parking"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline mb-3"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Return to Dashboard
         </Link>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg font-bold text-stone-900 dark:text-stone-50">
-                {reservation.first_name} {reservation.last_name}
-              </h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
+              Reservation Detail
+            </h1>
+            <span className="text-sm text-stone-400 dark:text-stone-500">
+              #{reservation.confirmation_number}
+            </span>
+            <Badge
+              variant="secondary"
+              className={`${statusColors.bg} ${statusColors.text} border-0`}
+            >
+              {PARKING_STATUS_LABELS[reservation.status]}
+            </Badge>
+            {reservation.parking_type === "shuttle" && (
               <Badge
                 variant="secondary"
-                className={`${statusColors.bg} ${statusColors.text} border-0`}
+                className="bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border-0"
               >
-                {PARKING_STATUS_LABELS[reservation.status]}
+                Shuttle
               </Badge>
-              {reservation.parking_type === "shuttle" && (
-                <Badge
-                  variant="secondary"
-                  className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 border-0"
-                >
-                  Shuttle
-                </Badge>
-              )}
-            </div>
-            <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
-              {reservation.lot} · #{reservation.confirmation_number}
-            </p>
+            )}
+            {reservation.parking_type === "valet" && (
+              <Badge
+                variant="secondary"
+                className="bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 border-0"
+              >
+                Valet
+              </Badge>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -133,60 +160,54 @@ export default async function ParkingDetailPage({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Contact */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Contact</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
-              <Phone className="h-4 w-4 shrink-0 text-stone-400" />
-              <a href={`tel:${reservation.phone}`} className="hover:underline">
-                {reservation.phone}
-              </a>
-            </div>
-            <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
-              <Mail className="h-4 w-4 shrink-0 text-stone-400" />
-              <a
-                href={`mailto:${reservation.email}`}
-                className="hover:underline truncate"
-              >
-                {reservation.email}
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Vehicle */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Vehicle</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
-              <Car className="h-4 w-4 shrink-0 text-stone-400" />
-              {reservation.make} {reservation.model}
-            </div>
-            <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
-              <Hash className="h-4 w-4 shrink-0 text-stone-400" />
-              {reservation.license_plate}
-            </div>
-            {reservation.color && (
-              <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400">
-                <Palette className="h-4 w-4 shrink-0 text-stone-400" />
-                {reservation.color}
+      {/* Two-column layout */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        {/* ── Left Column ── */}
+        <div className="space-y-6">
+          {/* Customer & Vehicle */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-card rounded-xl shadow-card p-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">Customer</p>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50 mb-3">
+                {reservation.first_name} {reservation.last_name}
+              </h2>
+              <div className="space-y-1.5 text-sm text-stone-500 dark:text-stone-400">
+                <a href={`tel:${reservation.phone}`} className="flex items-center gap-1.5 hover:underline">
+                  <Phone className="h-3.5 w-3.5" />
+                  {reservation.phone}
+                </a>
+                <a href={`mailto:${reservation.email}`} className="flex items-center gap-1.5 hover:underline truncate">
+                  <Mail className="h-3.5 w-3.5" />
+                  {reservation.email}
+                </a>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+            <div className="bg-card rounded-xl shadow-card p-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">Vehicle</p>
+              <div className="space-y-2.5 text-sm">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-0.5">Make / Model</p>
+                  <p className="font-medium text-stone-900 dark:text-stone-50">{reservation.make} {reservation.model}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-0.5">License Plate</p>
+                  <p className="font-medium text-stone-900 dark:text-stone-50">{reservation.license_plate}</p>
+                </div>
+                {reservation.color && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-0.5">Color</p>
+                    <p className="font-medium text-stone-900 dark:text-stone-50">{reservation.color}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
-        {/* Trip Dates */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Trip Dates</CardTitle>
-          </CardHeader>
-          <CardContent>
+          {/* Trip Dates + Timeline */}
+          <div className="bg-card rounded-xl shadow-card p-6">
+            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">
+              Trip Dates
+            </p>
             <ParkingDatesForm
               id={reservation.id}
               dropOffDate={reservation.drop_off_date}
@@ -194,78 +215,105 @@ export default async function ParkingDetailPage({
               pickUpDate={reservation.pick_up_date}
               pickUpTime={reservation.pick_up_time}
             />
-          </CardContent>
-        </Card>
 
-        {/* Timestamps */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Timestamps</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0 text-stone-400" />
-              <div>
-                <span className="font-medium text-stone-700 dark:text-stone-300">
-                  Reserved:
-                </span>{" "}
-                {formatTimestamp(reservation.created_at)}
-              </div>
+            {/* Timeline */}
+            <div className="mt-6 space-y-4">
+              {timeline.map((step, i) => (
+                <div key={step.label} className="flex items-start gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-2.5 h-2.5 rounded-full mt-1 ${
+                      step.active
+                        ? "bg-blue-600 dark:bg-blue-500"
+                        : "bg-stone-200 dark:bg-stone-700"
+                    }`} />
+                    {i < timeline.length - 1 && (
+                      <div className="w-px h-6 bg-stone-200 dark:bg-stone-700 mt-1" />
+                    )}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      step.active
+                        ? "text-stone-900 dark:text-stone-50"
+                        : "text-stone-400 dark:text-stone-500"
+                    }`}>
+                      {step.label}
+                    </p>
+                    <p className="text-xs text-stone-400 dark:text-stone-500">
+                      {formatTimestamp(step.time)}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0 text-stone-400" />
-              <div>
-                <span className="font-medium text-stone-700 dark:text-stone-300">
-                  Checked in:
-                </span>{" "}
-                {formatTimestamp(reservation.checked_in_at)}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 shrink-0 text-stone-400" />
-              <div>
-                <span className="font-medium text-stone-700 dark:text-stone-300">
-                  Checked out:
-                </span>{" "}
-                {formatTimestamp(reservation.checked_out_at)}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Services */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Services</CardTitle>
-          </CardHeader>
-          <CardContent>
+          {/* Key Pickup — only when checked out */}
+          {reservation.status === "checked_out" && (
+            <div className="bg-card rounded-xl shadow-card p-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">
+                Key Pickup
+              </p>
+              {reservation.lock_box_number ? (
+                <div className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="h-4 w-4 shrink-0 text-stone-400" />
+                    <span>
+                      <span className="font-medium text-stone-700 dark:text-stone-300">Lock box:</span>{" "}
+                      #{reservation.lock_box_number}
+                    </span>
+                  </div>
+                  {lockBoxCode && (
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4 shrink-0 text-stone-400" />
+                      <span>
+                        <span className="font-medium text-stone-700 dark:text-stone-300">Code:</span>{" "}
+                        {lockBoxCode}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm">
+                  <KeyRound className="h-4 w-4 shrink-0 text-stone-400" />
+                  <span className="font-medium text-stone-700 dark:text-stone-300">In person pickup</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Service Interests */}
+          <div className="bg-card rounded-xl shadow-card p-6">
+            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">
+              Service Interests
+            </p>
             <ParkingServicesForm
               id={reservation.id}
               services={reservation.services_interested}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Invoices */}
-        <ParkingInvoiceSection
-          reservationId={reservation.id}
-          invoices={invoices}
-          customerPhone={reservation.phone}
-          customerEmail={reservation.email}
-        />
+        {/* ── Right Column ── */}
+        <div className="space-y-6">
+          {/* Invoices */}
+          <ParkingInvoiceSection
+            reservationId={reservation.id}
+            invoices={invoices}
+            customerPhone={reservation.phone}
+            customerEmail={reservation.email}
+          />
 
-        {/* Staff Notes */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Staff Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
+          {/* Staff Notes */}
+          <div className="bg-card rounded-xl shadow-card p-6">
+            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">
+              Staff Notes
+            </p>
             <ParkingNotesForm
               id={reservation.id}
               staffNotes={reservation.staff_notes}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

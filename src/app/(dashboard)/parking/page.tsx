@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getParkingDashboard, getParkingReservations } from "@/lib/actions/parking";
+import { getLockBoxes } from "@/lib/actions/lock-boxes";
 import { ParkingTabs } from "@/components/parking/parking-tabs";
 import { ParkingTodayView } from "@/components/parking/parking-today-view";
 import { ParkingAllView } from "@/components/parking/parking-all-view";
@@ -33,13 +34,20 @@ export default async function ParkingPage({
   const page = parseInt(params.page || "1", 10) || 1;
 
   if (tab === "today") {
-    const dashboard = await getParkingDashboard(lot);
+    const [dashboard, lockBoxes] = await Promise.all([
+      getParkingDashboard(lot),
+      getLockBoxes(),
+    ]);
+    const lockBoxCodes: Record<number, string> = {};
+    for (const lb of lockBoxes) {
+      lockBoxCodes[lb.box_number] = lb.code;
+    }
     return (
       <div className="p-4 lg:p-10 space-y-6">
         <Suspense>
           <ParkingTabs />
         </Suspense>
-        <ParkingTodayView data={dashboard} />
+        <ParkingTodayView data={dashboard} lockBoxCodes={lockBoxCodes} />
       </div>
     );
   }

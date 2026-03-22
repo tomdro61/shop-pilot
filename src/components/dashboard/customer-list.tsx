@@ -92,12 +92,12 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
                         {customer.first_name} {customer.last_name}
                       </p>
                       {customer.customer_type === "fleet" && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 shrink-0">
+                        <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 shrink-0">
                           Fleet
                         </span>
                       )}
                       {customer.customer_type === "parking" && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 shrink-0">
+                        <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 shrink-0">
                           Parking
                         </span>
                       )}
