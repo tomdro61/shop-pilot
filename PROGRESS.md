@@ -2092,3 +2092,33 @@ Visual refresh of the ShopPilot UI to feel more like Linear/Notion/ShopMonkey �
 
 ### Build Status
 - `npm run build` passes cleanly
+
+## Session 29 — 2026-03-22 — UI Consistency Audit + Page Redesigns
+
+### What Was Completed
+
+**UI Consistency Audit:**
+- Standardized all status pill badges to canonical recipe: `text-[10px] font-black px-2 py-1 rounded-full uppercase`
+- Normalized all dark mode status colors in `constants.ts` to `-100/-950` pattern
+- Restyled dashboard alert banners as tinted cards with `border-l-4` accent bars
+- Base components: Input/Select `rounded-full` + `bg-stone-50` globally
+
+**Page Redesigns:**
+- Quote requests: pill filter buttons, spacious cards with avatars, quoted messages, inline actions
+- Parking detail: two-column layout, customer/vehicle side-by-side cards, trip timeline, Key Pickup section with lockbox info
+- Parking dashboard cards: lockbox info, car icon, vehicle on own line
+- Customer forms: wrapped in white card containers
+- Kanban board: warm tan column backgrounds for card contrast
+
+**Code Cleanup:**
+- Removed unused imports, replaced inline lockbox query with `getLockBoxes()` action
+- Normalized shuttle/service badge colors, replaced nested ternary with lookup object
+
+### Modified Files (14)
+- `src/lib/constants.ts`, `src/components/ui/input.tsx`, `src/components/ui/select.tsx`
+- `src/app/(dashboard)/dashboard/page.tsx`, `src/app/(dashboard)/parking/[id]/page.tsx`
+- `src/app/(dashboard)/parking/page.tsx`, `src/app/(dashboard)/quote-requests/page.tsx`
+- `src/app/(dashboard)/customers/[id]/edit/page.tsx`, `src/app/(dashboard)/customers/new/page.tsx`
+- `src/components/quote-requests/quote-request-list.tsx`, `src/components/parking/parking-reservation-card.tsx`
+- `src/components/parking/parking-today-view.tsx`, `src/components/dashboard/customer-list.tsx`
+- `src/components/dashboard/jobs-board-view.tsx`
