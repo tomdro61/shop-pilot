@@ -50,7 +50,7 @@ export function ParkingReservationCard({
             {reservation.parking_type === "shuttle" && (
               <Badge
                 variant="secondary"
-                className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 border-0 text-[11px]"
+                className="bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border-0 text-[11px]"
               >
                 Shuttle
               </Badge>
@@ -80,7 +80,7 @@ export function ParkingReservationCard({
                 <Badge
                   key={service}
                   variant="secondary"
-                  className="bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300 border-0 text-[10px]"
+                  className="bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 border-0 text-[10px]"
                 >
                   {PARKING_SERVICE_LABELS[service] || service}
                 </Badge>
@@ -117,13 +117,16 @@ export function ParkingReservationCardCompact({
   variant?: "arrival" | "pickup" | "pickup-tomorrow" | "parked" | "checked-out";
   lockBoxCodes?: Record<number, string>;
 }) {
+  const variantStyles: Record<string, string> = {
+    arrival: "border-l-blue-400 dark:border-l-blue-500 border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-950/50",
+    pickup: "border-l-amber-400 dark:border-l-amber-500 border-amber-200 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/50",
+    "pickup-tomorrow": "border-l-orange-400 dark:border-l-orange-500 border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-950/50",
+    "checked-out": "border-l-green-400 dark:border-l-green-500 border-green-200 dark:border-green-800 bg-green-100 dark:bg-green-950/50",
+    parked: "border-l-stone-300 dark:border-l-stone-600 border-stone-200 dark:border-stone-700 bg-card",
+  };
+
   const isPickup = variant === "pickup" || variant === "pickup-tomorrow" || variant === "checked-out";
-  const timeLabel =
-    isPickup
-      ? "Pickup"
-      : variant === "parked"
-        ? "Departs"
-        : "Arrival";
+  const timeLabel = isPickup ? "Pickup" : variant === "parked" ? "Departs" : "Arrival";
   const timeValue =
     isPickup
       ? formatTime(reservation.pick_up_time)
@@ -132,17 +135,7 @@ export function ParkingReservationCardCompact({
         : formatTime(reservation.drop_off_time);
 
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-xl border border-l-4 px-4 py-3 ${
-      variant === "arrival"
-        ? "border-l-blue-400 dark:border-l-blue-500 border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-950/50"
-        : variant === "pickup"
-          ? "border-l-amber-400 dark:border-l-amber-500 border-amber-200 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/50"
-        : variant === "pickup-tomorrow"
-          ? "border-l-orange-400 dark:border-l-orange-500 border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-950/50"
-        : variant === "checked-out"
-          ? "border-l-green-400 dark:border-l-green-500 border-green-200 dark:border-green-800 bg-green-100 dark:bg-green-950/50"
-          : "border-l-stone-300 dark:border-l-stone-600 border-stone-200 dark:border-stone-700 bg-card"
-    }`}>
+    <div className={`flex items-center justify-between gap-3 rounded-xl border border-l-4 px-4 py-3 ${variantStyles[variant]}`}>
       <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
@@ -151,7 +144,7 @@ export function ParkingReservationCardCompact({
           {reservation.parking_type === "shuttle" && (
             <Badge
               variant="secondary"
-              className="bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 border-0 text-[10px] shrink-0"
+              className="bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border-0 text-[10px] shrink-0"
             >
               Shuttle
             </Badge>

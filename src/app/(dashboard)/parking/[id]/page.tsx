@@ -2,14 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getParkingReservation } from "@/lib/actions/parking";
 import { getInvoicesForParkingReservation } from "@/lib/actions/invoices";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getLockBoxes } from "@/lib/actions/lock-boxes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   PARKING_STATUS_LABELS,
   PARKING_STATUS_COLORS,
-  PARKING_SERVICE_LABELS,
 } from "@/lib/constants";
 import { ParkingActionButtons } from "@/components/parking/parking-actions";
 import { SendSpecialsButton } from "@/components/parking/send-specials-button";
@@ -19,13 +17,10 @@ import { ParkingServicesForm } from "@/components/parking/parking-services-form"
 import { ParkingInvoiceSection } from "@/components/parking/parking-invoice-section";
 import {
   ArrowLeft,
-  Car,
-  Calendar,
   Clock,
   Phone,
   Mail,
   Hash,
-  Palette,
   KeyRound,
 } from "lucide-react";
 
@@ -85,13 +80,8 @@ export default async function ParkingDetailPage({
   // Look up lockbox code if checked out with a lockbox
   let lockBoxCode: string | null = null;
   if (reservation.status === "checked_out" && reservation.lock_box_number) {
-    const admin = createAdminClient();
-    const { data: lb } = await admin
-      .from("lock_boxes")
-      .select("code")
-      .eq("box_number", reservation.lock_box_number)
-      .single();
-    lockBoxCode = lb?.code ?? null;
+    const lockBoxes = await getLockBoxes();
+    lockBoxCode = lockBoxes.find(lb => lb.box_number === reservation.lock_box_number)?.code ?? null;
   }
 
   const statusColors = PARKING_STATUS_COLORS[reservation.status];

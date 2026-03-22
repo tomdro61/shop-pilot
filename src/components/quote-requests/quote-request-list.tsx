@@ -14,7 +14,6 @@ import {
 import {
   QUOTE_REQUEST_STATUS_ORDER,
   QUOTE_REQUEST_STATUS_LABELS,
-  QUOTE_REQUEST_STATUS_COLORS,
 } from "@/lib/constants";
 import { updateQuoteRequestStatus, deleteQuoteRequest } from "@/lib/actions/quote-requests";
 import { Search, Phone, Mail, Car, MessageSquare, ExternalLink, Wrench, Trash2 } from "lucide-react";
