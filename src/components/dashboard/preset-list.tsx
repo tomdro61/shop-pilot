@@ -62,7 +62,7 @@ export function PresetList({ presets, categories }: PresetListProps) {
               No presets yet. Create one to speed up job creation.
             </p>
           ) : (
-            <div className="space-y-1">
+            <div className="divide-y divide-stone-200 dark:divide-stone-800">
               {presets.map((preset) => {
                 const items = preset.line_items as PresetLineItem[];
                 return (

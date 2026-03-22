@@ -64,7 +64,7 @@ export function ParkingTabs() {
         value={currentLot || "all"}
         onValueChange={(value) => updateParams({ lot: value === "all" ? "" : value })}
       >
-        <SelectTrigger className="w-full sm:w-[220px] h-8 text-xs">
+        <SelectTrigger className="w-full sm:w-[220px] h-10 text-xs">
           <SelectValue placeholder="All Lots" />
         </SelectTrigger>
         <SelectContent>

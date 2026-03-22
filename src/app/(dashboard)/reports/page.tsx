@@ -137,7 +137,7 @@ function ReportSection({ title, reports }: { title: string; reports: ReportCard[
 
           if (report.status === "live") {
             return (
-              <Link key={report.href} href={report.href}>
+              <Link key={report.href} href={report.href} className="block">
                 {content}
               </Link>
             );

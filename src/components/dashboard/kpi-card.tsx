@@ -44,7 +44,7 @@ export function KpiCard({
         <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
           {title}
         </p>
-        <p className="mt-2 text-3xl lg:text-4xl font-black tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{value}</p>
+        <p className="mt-2 text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{value}</p>
         {subtitle && (
           <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
         )}

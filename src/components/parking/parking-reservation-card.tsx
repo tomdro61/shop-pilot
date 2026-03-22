@@ -130,16 +130,16 @@ export function ParkingReservationCardCompact({
         : formatTime(reservation.drop_off_time);
 
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-xl bg-card shadow-card border-l-4 px-4 py-3 ${
+    <div className={`flex items-center justify-between gap-3 rounded-xl border border-l-4 px-4 py-3 ${
       variant === "arrival"
-        ? "border-l-blue-400 dark:border-l-blue-500"
+        ? "border-l-blue-400 dark:border-l-blue-500 border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-950/50"
         : variant === "pickup"
-          ? "border-l-amber-400 dark:border-l-amber-500"
+          ? "border-l-amber-400 dark:border-l-amber-500 border-amber-200 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/50"
         : variant === "pickup-tomorrow"
-          ? "border-l-orange-400 dark:border-l-orange-500"
+          ? "border-l-orange-400 dark:border-l-orange-500 border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-950/50"
         : variant === "checked-out"
-          ? "border-l-green-400 dark:border-l-green-500"
-          : "border-l-stone-300 dark:border-l-stone-600"
+          ? "border-l-green-400 dark:border-l-green-500 border-green-200 dark:border-green-800 bg-green-100 dark:bg-green-950/50"
+          : "border-l-stone-300 dark:border-l-stone-600 border-stone-200 dark:border-stone-700 bg-card"
     }`}>
       <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
         <div className="flex items-center gap-2">

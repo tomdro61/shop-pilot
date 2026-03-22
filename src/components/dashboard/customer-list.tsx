@@ -45,7 +45,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
 
-        <div className="divide-y divide-stone-100/60 dark:divide-stone-800/40">
+        <div className="divide-y divide-stone-200 dark:divide-stone-800">
           {customers.map((customer) => {
             const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
             return (

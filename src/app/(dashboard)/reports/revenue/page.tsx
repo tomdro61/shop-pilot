@@ -157,7 +157,7 @@ export default async function RevenueReportPage({
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-100 dark:border-stone-800 text-left">
+                    <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
                       <th className="pb-2 pr-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Category</th>
                       <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
                       <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Parts Cost</th>
@@ -202,7 +202,7 @@ export default async function RevenueReportPage({
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-100 dark:border-stone-800 text-left">
+                    <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
                       <th className="pb-2 pr-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Account</th>
                       <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">0-30 Days</th>
                       <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">31-60 Days</th>

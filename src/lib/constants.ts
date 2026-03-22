@@ -125,8 +125,8 @@ export const ESTIMATE_STATUS_COLORS: Record<
     text: "text-stone-500 dark:text-stone-400",
   },
   sent: {
-    bg: "bg-blue-50 dark:bg-blue-950",
-    text: "text-blue-700 dark:text-blue-400",
+    bg: "bg-green-50 dark:bg-green-950",
+    text: "text-green-700 dark:text-green-400",
   },
   approved: {
     bg: "bg-green-50 dark:bg-green-950",

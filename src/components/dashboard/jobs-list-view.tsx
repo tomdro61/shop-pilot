@@ -70,7 +70,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         header: "RO#",
         size: 80,
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-stone-400 dark:text-stone-500">
+          <span className="text-xs text-stone-400 dark:text-stone-500">
             {formatRONumber(row.original.ro_number)}
           </span>
         ),

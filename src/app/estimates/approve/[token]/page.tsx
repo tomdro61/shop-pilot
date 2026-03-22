@@ -113,7 +113,7 @@ export default async function EstimateApprovalPage({
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex justify-between rounded-md border p-3"
+                    className="flex justify-between rounded-lg border p-3"
                   >
                     <div>
                       <p className="font-medium">{item.description}</p>

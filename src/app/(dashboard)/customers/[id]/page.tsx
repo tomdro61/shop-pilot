@@ -159,7 +159,7 @@ export default async function CustomerDetailPage({
                 <p className="mt-1 text-xs text-muted-foreground/70">Create a job to start tracking work</p>
               </div>
             ) : (
-              <div className="space-y-1 p-2">
+              <div className="divide-y divide-stone-200 dark:divide-stone-800 px-2">
                 {jobs.map((job) => {
                   const status = job.status as JobStatus;
                   const colors = JOB_STATUS_COLORS[status];
@@ -199,7 +199,7 @@ export default async function CustomerDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="space-y-1 p-2">
+              <div className="divide-y divide-stone-200 dark:divide-stone-800 px-2">
                 {parkingReservations.map((res) => {
                   const status = res.status as ParkingStatus;
                   const colors = PARKING_STATUS_COLORS[status];

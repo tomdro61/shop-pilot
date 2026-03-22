@@ -226,7 +226,7 @@ export default async function DashboardPage() {
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">Today&apos;s Revenue</p>
-          <h3 className="text-3xl lg:text-4xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+          <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {formatCurrencyWhole(stats.todayRevenue)}
           </h3>
         </div>
@@ -234,7 +234,7 @@ export default async function DashboardPage() {
         <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Week</p>
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-3xl lg:text-4xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+            <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
               {formatCurrencyWhole(stats.weeklyRevenue)}
             </h3>
             <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
@@ -255,7 +255,7 @@ export default async function DashboardPage() {
         <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Month</p>
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-3xl lg:text-4xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+            <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
               {formatCurrencyWhole(stats.monthlyRevenue)}
             </h3>
             <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
 
         <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">Avg Ticket</p>
-          <h3 className="text-3xl lg:text-4xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+          <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {formatCurrencyWhole(stats.avgTicketWeek)}
           </h3>
         </div>
@@ -397,14 +397,14 @@ export default async function DashboardPage() {
           ) : (
             <>
               <div className="mb-5">
-                <p className="text-3xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+                <p className="text-3xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
                   {formatCurrency(totalOutstanding)}
                 </p>
                 <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                   across {unpaidJobs.length} {unpaidJobs.length === 1 ? "job" : "jobs"}
                 </p>
               </div>
-              <div className="space-y-1">
+              <div className="divide-y divide-stone-200 dark:divide-stone-800">
                 {unpaidJobs.map(job => {
                   const customer = job.customers as { first_name: string; last_name: string } | null;
                   const days = daysBetween(job.date_finished, today);
@@ -450,7 +450,7 @@ export default async function DashboardPage() {
               <p className="mt-2 text-sm text-muted-foreground">No pending estimates</p>
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="divide-y divide-stone-200 dark:divide-stone-800">
               {pendingEstimates.map(est => {
                 const job = est.jobs as { id: string; title: string | null; customers: { first_name: string; last_name: string } | null; vehicles: { year: number | null; make: string | null; model: string | null } | null } | null;
                 const customer = job?.customers;

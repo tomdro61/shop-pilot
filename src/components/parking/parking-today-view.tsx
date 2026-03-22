@@ -37,7 +37,7 @@ function KPICard({
           <Icon className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-3xl font-black tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+          <p className="text-3xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {value}
           </p>
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">{label}</p>

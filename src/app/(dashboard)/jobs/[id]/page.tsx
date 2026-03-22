@@ -5,7 +5,6 @@ import { getInvoiceForJob } from "@/lib/actions/invoices";
 import { getEstimateForJob } from "@/lib/actions/estimates";
 import { getShopSettings } from "@/lib/actions/settings";
 import { calculateTotals } from "@/lib/utils/totals";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/dashboard/status-select";
 import { LineItemsList } from "@/components/dashboard/line-items-list";
@@ -17,7 +16,7 @@ import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor"
 import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
 import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
-import { ArrowLeft, Pencil, Car, Printer, MessageSquare, StickyNote } from "lucide-react";
+import { ArrowLeft, Pencil, Car, Printer, StickyNote } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -53,7 +52,7 @@ export default async function JobDetailPage({
   const initials = customer ? `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase() : null;
 
   return (
-    <><div className="p-4 pb-24 lg:p-10 lg:pb-24">
+    <><div className="p-4 pb-24 lg:p-10 lg:pb-24 max-w-5xl mx-auto">
 
       {/* ── Header ── */}
       <div className="mb-8 animate-in-up">
@@ -141,7 +140,7 @@ export default async function JobDetailPage({
       {/* ── Customer & Vehicle Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-8 animate-in-up stagger-2">
         {customer && (
-          <div className="bg-card rounded-xl shadow-card p-5">
+          <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">Customer</p>
               <Link href={`/customers/${customer.id}`} className="text-stone-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
@@ -172,7 +171,7 @@ export default async function JobDetailPage({
         )}
 
         {vehicle && (
-          <div className="bg-card rounded-xl shadow-card p-5">
+          <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">Vehicle</p>
               <Car className="h-4 w-4 text-stone-400 dark:text-stone-500" />
@@ -185,7 +184,7 @@ export default async function JobDetailPage({
             {vehicle.vin && (
               <div className="mt-3">
                 <p className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">VIN</p>
-                <p className="text-sm font-mono text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 px-2 py-1 rounded inline-block mt-0.5">{vehicle.vin}</p>
+                <p className="text-sm text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 px-2 py-1 rounded inline-block mt-0.5">{vehicle.vin}</p>
               </div>
             )}
           </div>
