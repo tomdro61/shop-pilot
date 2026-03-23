@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { HardHat, ClipboardList, DollarSign, Tag, ChevronRight } from "lucide-react";
+import { HardHat, ClipboardList, DollarSign, Tag, ChevronRight, BookOpen } from "lucide-react";
 
 export const metadata = {
   title: "Settings | ShopPilot",
@@ -30,6 +30,12 @@ const settingsItems = [
     label: "Job Presets",
     description: "Reusable templates for common jobs",
     icon: ClipboardList,
+  },
+  {
+    href: "/settings/catalog",
+    label: "Parts & Labor Catalog",
+    description: "Saved parts and labor items for quick job building",
+    icon: BookOpen,
   },
 ];
 

@@ -65,7 +65,7 @@ function NavItem({
   pathname: string;
   badge?: number;
 }) {
-  const settingsRoutes = ["/settings", "/team", "/presets"];
+  const settingsRoutes = ["/settings", "/team", "/presets", "/settings/catalog"];
   const isActive =
     pathname === item.href ||
     (item.href !== "/dashboard" && pathname.startsWith(item.href)) ||

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { lineItemSchema, type LineItemFormData } from "@/lib/validators/job";
 import { createLineItem, updateLineItem } from "@/lib/actions/job-line-items";
+import { incrementUsageCount } from "@/lib/actions/catalog";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,7 +32,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { formatCurrency } from "@/lib/utils/format";
-import type { JobLineItem } from "@/types";
+import { cn } from "@/lib/utils";
+import { Search } from "lucide-react";
+import type { JobLineItem, CatalogItem } from "@/types";
 
 interface LineItemFormProps {
   jobId: string;
@@ -51,6 +55,49 @@ export function LineItemForm({
 }: LineItemFormProps) {
   const isEditing = !!lineItem;
   const categoryLocked = !isEditing && !!defaultCategory;
+
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogResults, setCatalogResults] = useState<CatalogItem[]>([]);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Search catalog items
+  useEffect(() => {
+    if (!open || isEditing) return;
+    const timer = setTimeout(async () => {
+      if (!catalogSearch.trim()) {
+        setCatalogResults([]);
+        return;
+      }
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("catalog_items")
+        .select("*")
+        .eq("is_active", true)
+        .ilike("description", `%${catalogSearch.trim()}%`)
+        .order("usage_count", { ascending: false })
+        .limit(10);
+      setCatalogResults(data || []);
+      setCatalogOpen(true);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [catalogSearch, open, isEditing]);
+
+  function selectCatalogItem(item: CatalogItem) {
+    form.setValue("type", item.type);
+    form.setValue("description", item.description);
+    form.setValue("quantity", item.default_quantity);
+    form.setValue("unit_cost", item.default_unit_cost);
+    form.setValue("cost", item.type === "part" ? (item.default_cost ?? null) : null);
+    form.setValue("part_number", item.part_number || "");
+    if (!categoryLocked && item.category) {
+      form.setValue("category", item.category);
+    }
+    setSelectedCatalogId(item.id);
+    setCatalogOpen(false);
+    setCatalogSearch("");
+  }
 
   const form = useForm<LineItemFormData>({
     resolver: zodResolver(lineItemSchema),
@@ -78,6 +125,10 @@ export function LineItemForm({
         part_number: "",
         category: defaultCategory || "",
       });
+      setCatalogSearch("");
+      setCatalogResults([]);
+      setCatalogOpen(false);
+      setSelectedCatalogId(null);
     }
   }, [open, defaultCategory, isEditing, form, jobId]);
 
@@ -111,8 +162,14 @@ export function LineItemForm({
       return;
     }
 
+    // Bump catalog usage count
+    if (selectedCatalogId) {
+      incrementUsageCount(selectedCatalogId);
+    }
+
     toast.success(isEditing ? "Line item updated" : "Line item added");
     onOpenChange(false);
+    setSelectedCatalogId(null);
     form.reset({
       job_id: jobId,
       type: "labor",
@@ -139,6 +196,49 @@ export function LineItemForm({
             className="mt-3 space-y-3"
           >
             <input type="hidden" {...form.register("job_id")} />
+
+            {/* Catalog search */}
+            {!isEditing && (
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Input
+                    ref={searchRef}
+                    placeholder="Search catalog..."
+                    value={catalogSearch}
+                    onChange={(e) => setCatalogSearch(e.target.value)}
+                    onFocus={() => catalogResults.length > 0 && setCatalogOpen(true)}
+                    className="pl-9"
+                  />
+                </div>
+                {catalogOpen && catalogResults.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+                    {catalogResults.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                        onClick={() => selectCatalogItem(item)}
+                      >
+                        <div
+                          className={cn(
+                            "h-5 w-1 shrink-0 rounded-full",
+                            item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
+                          )}
+                        />
+                        <span className="flex-1 truncate font-medium">{item.description}</span>
+                        <span className="text-[10px] font-black uppercase text-stone-400">
+                          {item.type}
+                        </span>
+                        <span className="text-xs tabular-nums text-stone-500">
+                          {formatCurrency(item.default_unit_cost)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <FormField
               control={form.control}

@@ -738,4 +738,111 @@ export const tools: Anthropic.Tool[] = [
       required: ["reservation_id", "line_items"],
     },
   },
+
+  // ── Catalog tools ───────────────────────────────────────────────
+  {
+    name: "search_catalog",
+    description:
+      "Search the parts & labor catalog for saved items with default pricing. Use this before adding items to a job to find the right catalog entries.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        search: {
+          type: "string",
+          description: "Search query (matches description, e.g. 'brake pads', 'alternator')",
+        },
+        category: {
+          type: "string",
+          description: "Filter by category (e.g. 'Brake Service', 'Engine Repair')",
+        },
+        type: {
+          type: "string",
+          enum: ["labor", "part"],
+          description: "Filter by type",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "add_catalog_items_to_job",
+    description:
+      "Add one or more catalog items to a job as line items. More efficient than calling create_line_item multiple times. Each item can have its quantity and price overridden from the catalog defaults.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        job_id: { type: "string", description: "Job UUID (required)" },
+        items: {
+          type: "array",
+          description: "Array of catalog items to add",
+          items: {
+            type: "object",
+            properties: {
+              catalog_item_id: {
+                type: "string",
+                description: "Catalog item UUID (required)",
+              },
+              quantity: {
+                type: "number",
+                description: "Override default quantity (optional)",
+              },
+              unit_cost: {
+                type: "number",
+                description: "Override default price (optional)",
+              },
+              category: {
+                type: "string",
+                description: "Override default category (optional)",
+              },
+            },
+            required: ["catalog_item_id"],
+          },
+        },
+      },
+      required: ["job_id", "items"],
+    },
+  },
+  {
+    name: "manage_catalog_item",
+    description:
+      "Create, update, or deactivate a catalog item. Use 'create' to add new items to the catalog, 'update' to modify existing items, 'deactivate' to hide items without deleting.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        action: {
+          type: "string",
+          enum: ["create", "update", "deactivate"],
+          description: "Action to perform (required)",
+        },
+        id: {
+          type: "string",
+          description: "Catalog item UUID (required for update/deactivate)",
+        },
+        type: {
+          type: "string",
+          enum: ["labor", "part"],
+          description: "Item type (required for create)",
+        },
+        description: {
+          type: "string",
+          description: "Item description (required for create)",
+        },
+        default_quantity: { type: "number", description: "Default quantity" },
+        default_unit_cost: {
+          type: "number",
+          description: "Default retail price",
+        },
+        default_cost: {
+          type: "number",
+          description: "Default wholesale cost (parts only)",
+        },
+        part_number: { type: "string", description: "Part number (parts only)" },
+        category: {
+          type: "string",
+          description: "Service category (e.g. 'Brake Service')",
+        },
+      },
+      required: ["action"],
+    },
+  },
 ];

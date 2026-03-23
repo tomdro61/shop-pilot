@@ -1,6 +1,10 @@
 import type { Database } from "./supabase";
 
 // Convenience type aliases
+export type CatalogItem = Database["public"]["Tables"]["catalog_items"]["Row"];
+export type CatalogItemInsert = Database["public"]["Tables"]["catalog_items"]["Insert"];
+export type CatalogItemUpdate = Database["public"]["Tables"]["catalog_items"]["Update"];
+
 export type Customer = Database["public"]["Tables"]["customers"]["Row"];
 export type CustomerInsert = Database["public"]["Tables"]["customers"]["Insert"];
 export type CustomerUpdate = Database["public"]["Tables"]["customers"]["Update"];

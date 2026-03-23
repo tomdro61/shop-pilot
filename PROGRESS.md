@@ -2122,3 +2122,42 @@ Visual refresh of the ShopPilot UI to feel more like Linear/Notion/ShopMonkey �
 - `src/components/quote-requests/quote-request-list.tsx`, `src/components/parking/parking-reservation-card.tsx`
 - `src/components/parking/parking-today-view.tsx`, `src/components/dashboard/customer-list.tsx`
 - `src/components/dashboard/jobs-board-view.tsx`
+
+## Session 30 — 2026-03-23 — Parts & Labor Catalog
+
+### What Was Completed
+
+**Parts & Labor Catalog — full feature build:**
+A saved catalog of individual parts and labor items for fast job building. Distinct from Job Presets (which are full job bundles).
+
+1. **Database** — new `catalog_items` table with type, description, default pricing, part number, category, usage count, active flag. Trigram index for fast search. Seeded with 30 common auto repair items (brakes, oil change, electrical, suspension, diagnostics, inspections).
+
+2. **Server Actions** — `searchCatalog()`, `getCatalogItems()`, `createCatalogItem()`, `updateCatalogItem()`, `deleteCatalogItem()`, `deactivateCatalogItem()`, `saveToCatalog()` (case-insensitive duplicate check), `incrementUsageCount()`, `addCatalogItemsToJob()` (bulk insert from catalog to job line items).
+
+3. **Catalog Management Page** — Settings > Parts & Labor Catalog (`/settings/catalog`). Search bar + type filter pills (All/Labor/Part). Items grouped by category with type color bars. Add/edit via bottom sheet form, delete via confirmation dialog.
+
+4. **Catalog Search in Line Item Form** — when adding a line item to a job, a "Search catalog..." bar appears at the top. Typing filters catalog items in real-time. Selecting an item pre-fills all form fields (type, description, quantity, price, cost, part number, category). All fields remain editable. Usage count bumped on submit.
+
+5. **Catalog Search in Job Creation Form** — "Add individual items" section below presets on `/jobs/new`. Search and select catalog items, edit quantity/price inline. Applied as line items after job creation. Works alongside presets.
+
+6. **Save to Catalog** — bookmark button on each line item row in job detail. Saves item to catalog with case-insensitive duplicate detection.
+
+7. **AI Integration** — 3 new tools (46 total): `search_catalog`, `add_catalog_items_to_job`, `manage_catalog_item`. System prompt updated to prefer catalog items for common parts/services.
+
+**Also fixed:** Quote requests page — long messages now have expand/collapse toggle instead of hard 3-line truncation.
+
+### New Files (6)
+- `supabase/migrations/20260323000000_catalog_items.sql`
+- `src/lib/actions/catalog.ts`
+- `src/lib/validators/catalog.ts`
+- `src/app/(dashboard)/settings/catalog/page.tsx`
+- `src/components/dashboard/catalog-list.tsx`
+- `src/components/forms/catalog-item-form.tsx`
+
+### Modified Files (11)
+- `src/types/supabase.ts`, `src/types/index.ts`
+- `src/components/forms/line-item-form.tsx`, `src/components/forms/job-form.tsx`
+- `src/components/dashboard/line-items-list.tsx`
+- `src/app/(dashboard)/settings/page.tsx`, `src/components/layout/sidebar.tsx`
+- `src/lib/ai/tools.ts`, `src/lib/ai/handlers.ts`, `src/lib/ai/system-prompt.ts`
+- `src/components/quote-requests/quote-request-list.tsx`

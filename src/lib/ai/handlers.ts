@@ -55,6 +55,14 @@ import {
   checkOutReservation,
   updateReservation as updateParkingReservation,
 } from "@/lib/actions/parking";
+import {
+  searchCatalog,
+  addCatalogItemsToJob,
+  createCatalogItem,
+  updateCatalogItem,
+  getCatalogItem,
+  deactivateCatalogItem,
+} from "@/lib/actions/catalog";
 
 type Input = Record<string, unknown>;
 
@@ -529,6 +537,69 @@ export async function executeToolCall(
           }))
         );
         return JSON.stringify(result);
+      }
+
+      // ── Catalog tools ──
+      case "search_catalog": {
+        const results = await searchCatalog(
+          str(toolInput.search) || undefined,
+          str(toolInput.category) || undefined,
+          toolInput.type as "labor" | "part" | undefined
+        );
+        return JSON.stringify({ items: results, count: results.length });
+      }
+
+      case "add_catalog_items_to_job": {
+        const items = (toolInput.items as { catalog_item_id: string; quantity?: number; unit_cost?: number; category?: string }[]) || [];
+        const result = await addCatalogItemsToJob(
+          str(toolInput.job_id),
+          items.map((item) => ({
+            catalog_item_id: String(item.catalog_item_id),
+            quantity: item.quantity != null ? Number(item.quantity) : undefined,
+            unit_cost: item.unit_cost != null ? Number(item.unit_cost) : undefined,
+            category: item.category ? String(item.category) : undefined,
+          }))
+        );
+        return JSON.stringify(result);
+      }
+
+      case "manage_catalog_item": {
+        const action = str(toolInput.action);
+        if (action === "create") {
+          const result = await createCatalogItem({
+            type: (str(toolInput.type) || "part") as "labor" | "part",
+            description: str(toolInput.description),
+            default_quantity: num(toolInput.default_quantity) ?? 1,
+            default_unit_cost: num(toolInput.default_unit_cost) ?? 0,
+            default_cost: num(toolInput.default_cost) ?? null,
+            part_number: str(toolInput.part_number) || undefined,
+            category: str(toolInput.category) || undefined,
+          });
+          return JSON.stringify(result);
+        }
+        if (action === "update") {
+          const id = str(toolInput.id);
+          if (!id) return JSON.stringify({ error: "id is required for update" });
+          const existing = await getCatalogItem(id);
+          if (!existing) return JSON.stringify({ error: "Catalog item not found" });
+          const result = await updateCatalogItem(id, {
+            type: (str(toolInput.type) || existing.type) as "labor" | "part",
+            description: str(toolInput.description) || existing.description,
+            default_quantity: num(toolInput.default_quantity) ?? existing.default_quantity,
+            default_unit_cost: num(toolInput.default_unit_cost) ?? existing.default_unit_cost,
+            default_cost: num(toolInput.default_cost) ?? existing.default_cost ?? null,
+            part_number: str(toolInput.part_number) || existing.part_number || undefined,
+            category: str(toolInput.category) || existing.category || undefined,
+          });
+          return JSON.stringify(result);
+        }
+        if (action === "deactivate") {
+          const id = str(toolInput.id);
+          if (!id) return JSON.stringify({ error: "id is required for deactivate" });
+          const result = await deactivateCatalogItem(id);
+          return JSON.stringify(result);
+        }
+        return JSON.stringify({ error: `Unknown action: ${action}` });
       }
 
       default:

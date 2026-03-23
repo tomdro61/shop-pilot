@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { jobSchema, type JobFormData } from "@/lib/validators/job";
 import { createJob, updateJob } from "@/lib/actions/jobs";
 import { applyPresetToJob } from "@/lib/actions/presets";
+import { addCatalogItemsToJob } from "@/lib/actions/catalog";
 import { updateQuoteRequestStatus } from "@/lib/actions/quote-requests";
 import { createClient } from "@/lib/supabase/client";
 import { VehicleForm } from "@/components/forms/vehicle-form";
@@ -48,8 +49,8 @@ import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER, PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { formatCustomerName, formatCurrency } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, X, Plus } from "lucide-react";
-import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, JobStatus, PaymentStatus, PaymentMethod } from "@/types";
+import { Check, ChevronsUpDown, X, Plus, Search, Trash2 } from "lucide-react";
+import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, CatalogItem, JobStatus, PaymentStatus, PaymentMethod } from "@/types";
 
 interface JobFormProps {
   job?: Job & {
@@ -88,6 +89,14 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [vehicleAddOpen, setVehicleAddOpen] = useState(false);
+
+  // Catalog item picking
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogResults, setCatalogResults] = useState<CatalogItem[]>([]);
+  const [catalogDropdownOpen, setCatalogDropdownOpen] = useState(false);
+  const [selectedCatalogItems, setSelectedCatalogItems] = useState<
+    { item: CatalogItem; quantity: number; unit_cost: number }[]
+  >([]);
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -206,6 +215,43 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
     loadTechnicians();
   }, []);
 
+  // Search catalog
+  useEffect(() => {
+    if (isEditing) return;
+    const timer = setTimeout(async () => {
+      if (!catalogSearch.trim()) {
+        setCatalogResults([]);
+        return;
+      }
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("catalog_items")
+        .select("*")
+        .eq("is_active", true)
+        .ilike("description", `%${catalogSearch.trim()}%`)
+        .order("usage_count", { ascending: false })
+        .limit(10);
+      setCatalogResults(data || []);
+      setCatalogDropdownOpen(true);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [catalogSearch, isEditing]);
+
+  function addCatalogSelection(item: CatalogItem) {
+    // Don't add duplicates
+    if (selectedCatalogItems.some((s) => s.item.id === item.id)) return;
+    setSelectedCatalogItems((prev) => [
+      ...prev,
+      { item, quantity: item.default_quantity, unit_cost: item.default_unit_cost },
+    ]);
+    setCatalogSearch("");
+    setCatalogDropdownOpen(false);
+  }
+
+  function removeCatalogSelection(index: number) {
+    setSelectedCatalogItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
   function handlePresetSelect(preset: JobPreset) {
     if (selectedPresetId === preset.id) {
       setSelectedPresetId(null);
@@ -232,6 +278,21 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
       const presetResult = await applyPresetToJob(result.data.id, selectedPresetId);
       if ("error" in presetResult && presetResult.error) {
         toast.error(`Job created but failed to apply preset: ${presetResult.error}`);
+      }
+    }
+
+    // Apply selected catalog items
+    if (!isEditing && "data" in result && result.data && selectedCatalogItems.length > 0) {
+      const catalogResult = await addCatalogItemsToJob(
+        result.data.id,
+        selectedCatalogItems.map((s) => ({
+          catalog_item_id: s.item.id,
+          quantity: s.quantity,
+          unit_cost: s.unit_cost,
+        }))
+      );
+      if ("error" in catalogResult && catalogResult.error) {
+        toast.error(`Job created but failed to add catalog items: ${catalogResult.error}`);
       }
     }
 
@@ -303,6 +364,128 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Catalog Items (Step 0b) ── */}
+        {!isEditing && (
+          <Card className="border-dashed">
+            <CardContent className="p-6 lg:p-8">
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold">Add individual items</h3>
+                <p className="text-xs text-muted-foreground">Search your parts & labor catalog</p>
+              </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                <Input
+                  placeholder="Search catalog..."
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  onFocus={() => catalogResults.length > 0 && setCatalogDropdownOpen(true)}
+                  className="pl-9"
+                />
+                {catalogDropdownOpen && catalogResults.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+                    {catalogResults.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                        onClick={() => addCatalogSelection(item)}
+                      >
+                        <div
+                          className={cn(
+                            "h-5 w-1 shrink-0 rounded-full",
+                            item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
+                          )}
+                        />
+                        <span className="flex-1 truncate font-medium">{item.description}</span>
+                        <span className="text-[10px] font-black uppercase text-stone-400">
+                          {item.type}
+                        </span>
+                        <span className="text-xs tabular-nums text-stone-500">
+                          {formatCurrency(item.default_unit_cost)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected items */}
+              {selectedCatalogItems.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {selectedCatalogItems.map((sel, idx) => (
+                    <div
+                      key={sel.item.id}
+                      className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
+                    >
+                      <div
+                        className={cn(
+                          "h-6 w-1 shrink-0 rounded-full",
+                          sel.item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
+                        )}
+                      />
+                      <span className="flex-1 truncate text-sm font-medium">
+                        {sel.item.description}
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={sel.quantity}
+                        onChange={(e) =>
+                          setSelectedCatalogItems((prev) =>
+                            prev.map((s, i) =>
+                              i === idx ? { ...s, quantity: Number(e.target.value) || 1 } : s
+                            )
+                          )
+                        }
+                        className="w-16 h-8 text-xs text-center"
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={sel.unit_cost}
+                        onChange={(e) =>
+                          setSelectedCatalogItems((prev) =>
+                            prev.map((s, i) =>
+                              i === idx
+                                ? { ...s, unit_cost: Number(e.target.value) || 0 }
+                                : s
+                            )
+                          )
+                        }
+                        className="w-20 h-8 text-xs text-right"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => removeCatalogSelection(idx)}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="text-right text-sm text-stone-500">
+                    Catalog items total:{" "}
+                    <span className="font-semibold text-stone-900 dark:text-stone-50">
+                      {formatCurrency(
+                        selectedCatalogItems.reduce(
+                          (sum, s) => sum + s.quantity * s.unit_cost,
+                          0
+                        )
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

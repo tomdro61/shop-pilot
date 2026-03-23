@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      catalog_items: {
+        Row: {
+          id: string;
+          type: "labor" | "part";
+          description: string;
+          default_quantity: number;
+          default_unit_cost: number;
+          default_cost: number | null;
+          part_number: string | null;
+          category: string | null;
+          is_active: boolean;
+          usage_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          type: "labor" | "part";
+          description: string;
+          default_quantity?: number;
+          default_unit_cost?: number;
+          default_cost?: number | null;
+          part_number?: string | null;
+          category?: string | null;
+          is_active?: boolean;
+          usage_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          type?: "labor" | "part";
+          description?: string;
+          default_quantity?: number;
+          default_unit_cost?: number;
+          default_cost?: number | null;
+          part_number?: string | null;
+          category?: string | null;
+          is_active?: boolean;
+          usage_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       customers: {
         Row: {
           id: string;

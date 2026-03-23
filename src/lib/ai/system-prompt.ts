@@ -26,6 +26,7 @@ export function getSystemPrompt(): string {
 - **Estimates** are created from a job's line items, sent to customers for approval
 - **Estimate Line Items** can be edited independently (only when estimate is in "draft" status)
 - **Invoices** are created from completed jobs via Stripe (retail only)
+- **Catalog Items** are saved parts and labor with default pricing (description, quantity, unit cost, part number, category). Use search_catalog to find items, then add_catalog_items_to_job to add them to a job efficiently. The catalog grows over time as the shop saves commonly used items. When the user asks to add common parts or services, prefer catalog items over manually specifying descriptions/prices.
 
 ## Job Status Flow
 not_started → waiting_for_parts → in_progress → complete

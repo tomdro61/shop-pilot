@@ -38,6 +38,7 @@ Core tables in Supabase PostgreSQL:
 - **estimate_line_items** — id, estimate_id, type, description, quantity, unit_cost, total, part_number, category
 - **invoices** — id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status (draft/sent/paid), amount, paid_at
 - **messages** — id, customer_id, job_id, channel (sms/email), direction (in/out), body, status (sent/failed), sent_at, phone_line (text, nullable — 'shop' or 'parking')
+- **catalog_items** — id, type (labor/part), description, default_quantity, default_unit_cost, default_cost (nullable, wholesale), part_number, category, is_active (boolean), usage_count (int), created_at, updated_at. Trigram-indexed description for fast search. Seeded with 30 common items.
 - **lock_boxes** — id, box_number (int, unique), code (text), created_at. 8 physical lockboxes for parking key handoff.
 - **users** — id, name, email, role (manager/tech), auth_id (Supabase Auth linked)
 - **shop_settings** — single-row config: tax_rate, shop_supplies_enabled, shop_supplies_method (percent_of_labor/parts/total/flat), shop_supplies_rate, shop_supplies_cap, shop_supplies_categories (jsonb, nullable — scopes fee to specific job categories), hazmat_enabled, hazmat_amount, hazmat_label, hazmat_categories (jsonb, nullable — scopes fee to specific job categories)
@@ -236,7 +237,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 
 **Phase 1: COMPLETE** — Deployed and live on Vercel
 **Phase 2: COMPLETE** — Stripe invoicing + estimates + Quo SMS + Terminal + Resend email all built
-**Phase 3: COMPLETE** — AI Assistant with Claude API, 43 tools, streaming chat UI
+**Phase 3: COMPLETE** — AI Assistant with Claude API, 46 tools, streaming chat UI
 **Session 4:** Team management, tech assignment on jobs, reports date filtering + tech charts
 **Session 5:** Full AI chat assistant (Phase 3)
 **Session 6:** Dashboard operational intelligence, UI refresh phase 2
@@ -262,6 +263,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 27:** New parking forms (shuttle + valet) on BroadwayMotorsMA.com, lot-specific confirmation pages with instructions, lot-specific confirmation SMS, triple-line phone routing (shop/parking/APB), Wix automation deactivated
 **Session 28:** Unified revenue reporting — dashboard and reports now use shared revenue calculation, inspection-category line items excluded from job revenue, inspection revenue from inspections page included in both, State/TNC Inspection shown in category and profitability reports
 **Session 29:** Stitch UI refresh — full design system overhaul (Inter font, pill-shaped controls, warm stone palette, card shadows, dark sidebar), then UI consistency audit (standardized pills, normalized dark mode colors, restyled dashboard alerts, redesigned quote requests and parking detail pages, lockbox info on parking cards)
+**Session 30:** Parts & Labor Catalog — `catalog_items` table with 30 seeded items, catalog management page at `/settings/catalog`, catalog search in line item form + job creation form, "Save to Catalog" button on line items, 3 new AI tools (search_catalog, add_catalog_items_to_job, manage_catalog_item). Also: quote request message expand/collapse.
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stitch design language — Inter font, warm stone/blue palette, oklch color system. Page bg `oklch(0.99 0.002 75)`, white card surfaces with `shadow-card`. All status badges use borderless pills (`text-[10px] font-black px-2 py-1 rounded-full uppercase`) with `-100/-950` tinted backgrounds (normalized across all status types). All buttons, inputs, and selects are `rounded-full` (pill-shaped) globally via base components. Input/select fields use `bg-stone-50` for contrast against white cards. Line items have flat rows with color accent bars (blue=labor, amber=parts). Dashboard alerts use accent-bordered tinted cards (`border-l-4`). Kanban board columns use warm tan background (`oklch(0.94 0.008 75)`).
@@ -270,9 +272,10 @@ Read `PROGRESS.md` first to pick up where we left off.
 - Stripe Terminal: server-driven WisePOS E integration with 3 API routes, TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI
 - Quo SMS: fully wired (send/receive/webhook), triple-line routing — shop (617-996-8371, `QUO_SHOP_PHONE_NUMBER`), parking (978-684-9254, `QUO_PHONE_NUMBER`), APB (978-644-9391, `QUO_APB_PHONE_NUMBER`). Auto-texts estimate/invoice links on shop line. Lot-specific confirmation SMS enabled for all 5 lots. Quo contact auto-creation for parking customers with "Parking" tag. 7 SMS templates in `src/lib/messaging/templates.ts` (reservation confirmation is lot-aware). Phone line tracked on all messages (`phone_line` column). Blocked on A2P registration.
 - Resend Email: full transactional email — branded HTML templates (estimate, receipt, generic), auto-send on estimate send + invoice paid, AI `send_email` tool, test mode with console logging, delivery status tracking in `messages` table
-- AI Assistant: conversational chat at `/chat` with 43 tools covering all CRUD + SMS + email + settings + parking operations, streaming SSE, floating chat bubble on all pages
+- AI Assistant: conversational chat at `/chat` with 46 tools covering all CRUD + SMS + email + settings + parking operations, streaming SSE, floating chat bubble on all pages
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
 - Job Presets: reusable templates with pre-filled line items, `/presets` management page
+- **Parts & Labor Catalog:** Saved individual parts and labor items with default pricing at `/settings/catalog`. Searchable when adding line items to jobs (both on job detail page and job creation form). "Save to Catalog" button on line items for building up the catalog over time. Case-insensitive duplicate detection. Usage count tracking for popularity sorting. 3 AI tools: `search_catalog`, `add_catalog_items_to_job`, `manage_catalog_item`. Seeded with 30 common auto repair items.
 - Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs). Revenue cards include inspection revenue from `daily_inspection_counts`; job line items with `category = "Inspection"` are excluded from revenue to prevent double-counting.
 - **Revenue Reporting:** Shared utility at `src/lib/utils/revenue.ts` — `sumJobRevenue()` excludes inspection-category items, `calcInspectionRevenue()` computes inspection revenue/cost/profit. Both dashboard and reports use these. State Inspection cost: $11.50/unit (`INSPECTION_COST_STATE`). Reports show "State Inspection" and "TNC Inspection" as rows in Revenue by Category and Service Profitability.
 - Customer list: server-side pagination (50 per page) with URL params, handles 3,000+ imported contacts

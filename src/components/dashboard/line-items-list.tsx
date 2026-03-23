@@ -11,9 +11,10 @@ import {
 import { LineItemForm } from "@/components/forms/line-item-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteLineItem } from "@/lib/actions/job-line-items";
+import { saveToCatalog } from "@/lib/actions/catalog";
 import { formatCurrency } from "@/lib/utils/format";
 import { calculateTotals, DEFAULT_SETTINGS } from "@/lib/utils/totals";
-import { Plus, Pencil, Trash2, Wrench } from "lucide-react";
+import { Plus, Pencil, Trash2, Wrench, BookmarkPlus } from "lucide-react";
 import type { JobLineItem, ShopSettings } from "@/types";
 
 interface LineItemsListProps {
@@ -38,6 +39,25 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
       toast.success("Line item deleted");
     }
     return result;
+  }
+
+  async function handleSaveToCatalog(item: JobLineItem) {
+    const result = await saveToCatalog({
+      type: item.type as "labor" | "part",
+      description: item.description,
+      quantity: item.quantity,
+      unit_cost: item.unit_cost,
+      cost: item.cost,
+      part_number: item.part_number,
+      category: item.category,
+    });
+    if ("duplicate" in result && result.duplicate) {
+      toast.info("Already in catalog");
+    } else if ("error" in result && result.error) {
+      toast.error(typeof result.error === "string" ? result.error : "Failed to save");
+    } else {
+      toast.success("Saved to catalog");
+    }
   }
 
   function handleAddService(category: string) {
@@ -161,6 +181,15 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
                         </p>
                       </div>
                       <div className="flex shrink-0 gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Save to catalog"
+                          onClick={() => handleSaveToCatalog(item)}
+                        >
+                          <BookmarkPlus className="h-3 w-3" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
