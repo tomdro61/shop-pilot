@@ -259,7 +259,7 @@ function AddItemSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[85vh] overflow-y-auto">
+      <SheetContent side="bottom" className="h-[92vh] max-h-[92vh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Add to Job</SheetTitle>
         </SheetHeader>
@@ -336,7 +336,7 @@ function PresetsTab({
           className="pl-9"
         />
       </div>
-      <div className="max-h-64 overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
+      <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
         {filtered.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">No presets match</p>
         ) : (
@@ -461,7 +461,7 @@ function CatalogTab({
           className="pl-9"
         />
       </div>
-      <div className="max-h-64 overflow-y-auto">
+      <div className="max-h-[60vh] overflow-y-auto">
         {results.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">No items found</p>
         ) : (
