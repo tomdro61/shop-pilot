@@ -22,7 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { Search, Trash2, Plus } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import type { JobPreset, PresetLineItem, CatalogItem } from "@/types";
 
 interface PresetFormProps {
@@ -104,13 +104,6 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
 
     setCatalogSearch("");
     setCatalogOpen(false);
-  }
-
-  function addManualLineItem() {
-    setLineItems((prev) => [
-      ...prev,
-      { type: "labor", description: "", quantity: 1, unit_cost: 0 },
-    ]);
   }
 
   function updateLineItem(index: number, updates: Partial<PresetLineItem>) {
@@ -253,10 +246,6 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Preset Items ({lineItems.length})</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addManualLineItem}>
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  Manual
-                </Button>
               </div>
 
               {lineItems.map((item, index) => (
@@ -270,13 +259,9 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
                       item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
                     )}
                   />
-                  {/* Description — editable for manual items, display for catalog items */}
-                  <Input
-                    value={item.description}
-                    onChange={(e) => updateLineItem(index, { description: e.target.value })}
-                    placeholder="Description"
-                    className="flex-1 h-8 text-sm"
-                  />
+                  <span className="flex-1 text-sm font-medium truncate">
+                    {item.description}
+                  </span>
                   <Input
                     type="number"
                     step="0.01"
@@ -288,17 +273,9 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
                     className="w-16 h-8 text-xs text-center"
                     title="Quantity"
                   />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={item.unit_cost}
-                    onChange={(e) =>
-                      updateLineItem(index, { unit_cost: Number(e.target.value) || 0 })
-                    }
-                    className="w-20 h-8 text-xs text-right"
-                    title="Price"
-                  />
+                  <span className="w-16 text-right text-xs tabular-nums text-stone-500 shrink-0">
+                    {formatCurrency(item.unit_cost)}
+                  </span>
                   <span className="w-16 text-right text-xs font-medium tabular-nums shrink-0">
                     {formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_cost) || 0))}
                   </span>
