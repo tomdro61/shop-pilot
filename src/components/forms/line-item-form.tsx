@@ -43,6 +43,7 @@ interface LineItemFormProps {
   categories?: string[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  inline?: boolean;
 }
 
 export function LineItemForm({
@@ -52,6 +53,7 @@ export function LineItemForm({
   categories = [],
   open,
   onOpenChange,
+  inline,
 }: LineItemFormProps) {
   const isEditing = !!lineItem;
   const categoryLocked = !isEditing && !!defaultCategory;
@@ -182,18 +184,11 @@ export function LineItemForm({
     });
   }
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[85vh] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>
-            {isEditing ? "Edit Line Item" : defaultCategory ? `Add ${defaultCategory} Item` : "Add Line Item"}
-          </SheetTitle>
-        </SheetHeader>
+  const formContent = (
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="mt-3 space-y-3"
+            className={cn(inline ? "space-y-3" : "mt-3 space-y-3")}
           >
             <input type="hidden" {...form.register("job_id")} />
 
@@ -413,6 +408,19 @@ export function LineItemForm({
             </div>
           </form>
         </Form>
+  );
+
+  if (inline) return formContent;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="h-auto max-h-[85vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>
+            {isEditing ? "Edit Line Item" : defaultCategory ? `Add ${defaultCategory} Item` : "Add Line Item"}
+          </SheetTitle>
+        </SheetHeader>
+        {formContent}
       </SheetContent>
     </Sheet>
   );
