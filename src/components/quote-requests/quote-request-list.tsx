@@ -122,6 +122,40 @@ export function QuoteRequestList({
   );
 }
 
+function MessageBlock({ message }: { message: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (el) setIsTruncated(el.scrollHeight > el.clientHeight);
+  }, [message]);
+
+  return (
+    <div className="mb-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 px-4 py-3">
+      <p
+        ref={textRef}
+        className={cn(
+          "text-sm italic text-stone-500 dark:text-stone-400",
+          !expanded && "line-clamp-3"
+        )}
+      >
+        &ldquo;{message}&rdquo;
+      </p>
+      {(isTruncated || expanded) && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) {
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -242,11 +276,7 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
 
       {/* Message */}
       {qr.message && (
-        <div className="mb-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 px-4 py-3">
-          <p className="text-sm italic text-stone-500 dark:text-stone-400 line-clamp-3">
-            &ldquo;{qr.message}&rdquo;
-          </p>
-        </div>
+        <MessageBlock message={qr.message} />
       )}
 
       {/* Actions */}
