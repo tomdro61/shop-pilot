@@ -513,193 +513,7 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
           </CardContent>
         </Card>
 
-        {/* ── Preset ── */}
-        {!isEditing && presets && presets.length > 0 && (
-          <Card className="border-dashed">
-            <CardContent className="p-6 lg:p-8">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h3 className="text-sm font-semibold">Start from a preset</h3>
-                  <p className="text-xs text-muted-foreground">Pre-fills line items</p>
-                </div>
-                {selectedPresetIds.length > 0 && (
-                  <button
-                    type="button"
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setSelectedPresetIds([])}
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
-
-              {/* Selected presets display */}
-              {selectedPresetIds.length > 0 && (
-                <div className="space-y-2 mb-3">
-                  {selectedPresetIds.map((presetId) => {
-                    const selected = presets.find((p) => p.id === presetId);
-                    if (!selected) return null;
-                    const items = selected.line_items as PresetLineItem[];
-                    const total = items.reduce(
-                      (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
-                      0
-                    );
-                    return (
-                      <div key={presetId} className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-2.5">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{selected.name}</p>
-                          <p className="text-xs text-blue-600/70 dark:text-blue-400/70 truncate">
-                            {items.map((item) => item.description).join(", ")}
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400 shrink-0">
-                          {formatCurrency(total)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handlePresetSelect(selected)}
-                          className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Searchable preset picker — always visible */}
-              <PresetSearchPicker
-                presets={presets.filter((p) => !selectedPresetIds.includes(p.id))}
-                onSelect={handlePresetSelect}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ── Catalog Items (Step 0b) ── */}
-        {!isEditing && (
-          <Card className="border-dashed">
-            <CardContent className="p-6 lg:p-8">
-              <div className="mb-3">
-                <h3 className="text-sm font-semibold">Add individual items</h3>
-                <p className="text-xs text-muted-foreground">Search your parts & labor catalog</p>
-              </div>
-
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-                <Input
-                  placeholder="Search catalog..."
-                  value={catalogSearch}
-                  onChange={(e) => setCatalogSearch(e.target.value)}
-                  onFocus={() => catalogResults.length > 0 && setCatalogDropdownOpen(true)}
-                  className="pl-9"
-                />
-                {catalogDropdownOpen && catalogResults.length > 0 && (
-                  <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
-                    {catalogResults.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
-                        onClick={() => addCatalogSelection(item)}
-                      >
-                        <div
-                          className={cn(
-                            "h-5 w-1 shrink-0 rounded-full",
-                            item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
-                          )}
-                        />
-                        <span className="flex-1 truncate font-medium">{item.description}</span>
-                        <span className="text-[10px] font-black uppercase text-stone-400">
-                          {item.type}
-                        </span>
-                        <span className="text-xs tabular-nums text-stone-500">
-                          {formatCurrency(item.default_unit_cost)}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Selected items */}
-              {selectedCatalogItems.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {selectedCatalogItems.map((sel, idx) => (
-                    <div
-                      key={sel.item.id}
-                      className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
-                    >
-                      <div
-                        className={cn(
-                          "h-6 w-1 shrink-0 rounded-full",
-                          sel.item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
-                        )}
-                      />
-                      <span className="flex-1 truncate text-sm font-medium">
-                        {sel.item.description}
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={sel.quantity}
-                        onChange={(e) =>
-                          setSelectedCatalogItems((prev) =>
-                            prev.map((s, i) =>
-                              i === idx ? { ...s, quantity: Number(e.target.value) || 1 } : s
-                            )
-                          )
-                        }
-                        className="w-16 h-8 text-xs text-center"
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={sel.unit_cost}
-                        onChange={(e) =>
-                          setSelectedCatalogItems((prev) =>
-                            prev.map((s, i) =>
-                              i === idx
-                                ? { ...s, unit_cost: Number(e.target.value) || 0 }
-                                : s
-                            )
-                          )
-                        }
-                        className="w-20 h-8 text-xs text-right"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0"
-                        onClick={() => removeCatalogSelection(idx)}
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="text-right text-sm text-stone-500">
-                    Catalog items total:{" "}
-                    <span className="font-semibold text-stone-900 dark:text-stone-50">
-                      {formatCurrency(
-                        selectedCatalogItems.reduce(
-                          (sum, s) => sum + s.quantity * s.unit_cost,
-                          0
-                        )
-                      )}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ── Section 2: Job Setup ── */}
+        {/* ── Job Details ── */}
         <Card>
           <CardContent className="p-6 lg:p-8">
             <SectionHeader
@@ -726,6 +540,178 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
                   </FormItem>
                 )}
               />
+
+              {/* Presets */}
+              {!isEditing && presets && presets.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Presets</FormLabel>
+                    {selectedPresetIds.length > 0 && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setSelectedPresetIds([])}
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Selected presets */}
+                  {selectedPresetIds.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedPresetIds.map((presetId) => {
+                        const selected = presets.find((p) => p.id === presetId);
+                        if (!selected) return null;
+                        const items = selected.line_items as PresetLineItem[];
+                        const total = items.reduce(
+                          (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
+                          0
+                        );
+                        return (
+                          <div key={presetId} className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-2.5">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{selected.name}</p>
+                              <p className="text-xs text-blue-600/70 dark:text-blue-400/70 truncate">
+                                {items.map((item) => item.description).join(", ")}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400 shrink-0">
+                              {formatCurrency(total)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handlePresetSelect(selected)}
+                              className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <PresetSearchPicker
+                    presets={presets.filter((p) => !selectedPresetIds.includes(p.id))}
+                    onSelect={handlePresetSelect}
+                  />
+                </div>
+              )}
+
+              {/* Catalog items */}
+              {!isEditing && (
+                <div className="space-y-2">
+                  <FormLabel>Catalog Items</FormLabel>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                    <Input
+                      placeholder="Search catalog..."
+                      value={catalogSearch}
+                      onChange={(e) => setCatalogSearch(e.target.value)}
+                      onFocus={() => catalogResults.length > 0 && setCatalogDropdownOpen(true)}
+                      className="pl-9"
+                    />
+                    {catalogDropdownOpen && catalogResults.length > 0 && (
+                      <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+                        {catalogResults.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                            onClick={() => addCatalogSelection(item)}
+                          >
+                            <div
+                              className={cn(
+                                "h-5 w-1 shrink-0 rounded-full",
+                                item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
+                              )}
+                            />
+                            <span className="flex-1 truncate font-medium">{item.description}</span>
+                            <span className="text-[10px] font-black uppercase text-stone-400">
+                              {item.type}
+                            </span>
+                            <span className="text-xs tabular-nums text-stone-500">
+                              {formatCurrency(item.default_unit_cost)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedCatalogItems.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedCatalogItems.map((sel, idx) => (
+                        <div
+                          key={sel.item.id}
+                          className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
+                        >
+                          <div
+                            className={cn(
+                              "h-6 w-1 shrink-0 rounded-full",
+                              sel.item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
+                            )}
+                          />
+                          <span className="flex-1 truncate text-sm font-medium">
+                            {sel.item.description}
+                          </span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={sel.quantity}
+                            onChange={(e) =>
+                              setSelectedCatalogItems((prev) =>
+                                prev.map((s, i) =>
+                                  i === idx ? { ...s, quantity: Number(e.target.value) || 1 } : s
+                                )
+                              )
+                            }
+                            className="w-16 h-8 text-xs text-center"
+                          />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={sel.unit_cost}
+                            onChange={(e) =>
+                              setSelectedCatalogItems((prev) =>
+                                prev.map((s, i) =>
+                                  i === idx
+                                    ? { ...s, unit_cost: Number(e.target.value) || 0 }
+                                    : s
+                                )
+                              )
+                            }
+                            className="w-20 h-8 text-xs text-right"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={() => removeCatalogSelection(idx)}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="text-right text-sm text-stone-500">
+                        Catalog items total:{" "}
+                        <span className="font-semibold text-stone-900 dark:text-stone-50">
+                          {formatCurrency(
+                            selectedCatalogItems.reduce(
+                              (sum, s) => sum + s.quantity * s.unit_cost,
+                              0
+                            )
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
