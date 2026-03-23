@@ -1,6 +1,9 @@
+import Link from "next/link";
 import { getCatalogItems } from "@/lib/actions/catalog";
 import { getShopSettings } from "@/lib/actions/settings";
 import { CatalogList } from "@/components/dashboard/catalog-list";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
 
 export const metadata = {
@@ -17,6 +20,14 @@ export default async function CatalogPage() {
 
   return (
     <div className="p-4 lg:p-10">
+      <div className="mb-4">
+        <Link href="/settings">
+          <Button variant="ghost" size="sm" className="mb-2">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Settings
+          </Button>
+        </Link>
+      </div>
       <CatalogList items={items} categories={categories} />
     </div>
   );
