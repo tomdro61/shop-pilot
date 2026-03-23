@@ -148,7 +148,7 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [technicians, setTechnicians] = useState<TechOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
-  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
   const [vehicleAddOpen, setVehicleAddOpen] = useState(false);
 
   // Catalog item picking
@@ -314,11 +314,11 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
   }
 
   function handlePresetSelect(preset: JobPreset) {
-    if (selectedPresetId === preset.id) {
-      setSelectedPresetId(null);
-      return;
-    }
-    setSelectedPresetId(preset.id);
+    setSelectedPresetIds((prev) =>
+      prev.includes(preset.id)
+        ? prev.filter((id) => id !== preset.id)
+        : [...prev, preset.id]
+    );
   }
 
   async function onSubmit(data: JobFormData) {
@@ -335,10 +335,12 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
       return;
     }
 
-    if (!isEditing && "data" in result && result.data && selectedPresetId) {
-      const presetResult = await applyPresetToJob(result.data.id, selectedPresetId);
-      if ("error" in presetResult && presetResult.error) {
-        toast.error(`Job created but failed to apply preset: ${presetResult.error}`);
+    if (!isEditing && "data" in result && result.data && selectedPresetIds.length > 0) {
+      for (const presetId of selectedPresetIds) {
+        const presetResult = await applyPresetToJob(result.data.id, presetId);
+        if ("error" in presetResult && presetResult.error) {
+          toast.error(`Failed to apply preset: ${presetResult.error}`);
+        }
       }
     }
 
@@ -386,50 +388,57 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
                   <h3 className="text-sm font-semibold">Start from a preset</h3>
                   <p className="text-xs text-muted-foreground">Pre-fills line items</p>
                 </div>
-                {selectedPresetId && (
+                {selectedPresetIds.length > 0 && (
                   <button
                     type="button"
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setSelectedPresetId(null)}
+                    onClick={() => setSelectedPresetIds([])}
                   >
-                    Clear
+                    Clear all
                   </button>
                 )}
               </div>
 
-              {/* Selected preset display */}
-              {selectedPresetId && (() => {
-                const selected = presets.find((p) => p.id === selectedPresetId);
-                if (!selected) return null;
-                const items = selected.line_items as PresetLineItem[];
-                const total = items.reduce(
-                  (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
-                  0
-                );
-                return (
-                  <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-bold text-blue-700 dark:text-blue-400">
-                        {selected.name}
-                      </span>
-                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
-                        {formatCurrency(total)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-blue-600/70 dark:text-blue-400/70">
-                      {items.map((item) => item.description).join(", ")}
-                    </p>
-                  </div>
-                );
-              })()}
-
-              {/* Searchable preset picker */}
-              {!selectedPresetId && (
-                <PresetSearchPicker
-                  presets={presets}
-                  onSelect={handlePresetSelect}
-                />
+              {/* Selected presets display */}
+              {selectedPresetIds.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {selectedPresetIds.map((presetId) => {
+                    const selected = presets.find((p) => p.id === presetId);
+                    if (!selected) return null;
+                    const items = selected.line_items as PresetLineItem[];
+                    const total = items.reduce(
+                      (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
+                      0
+                    );
+                    return (
+                      <div key={presetId} className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{selected.name}</p>
+                          <p className="text-xs text-blue-600/70 dark:text-blue-400/70 truncate">
+                            {items.map((item) => item.description).join(", ")}
+                          </p>
+                        </div>
+                        <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400 shrink-0">
+                          {formatCurrency(total)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handlePresetSelect(selected)}
+                          className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
+
+              {/* Searchable preset picker — always visible */}
+              <PresetSearchPicker
+                presets={presets.filter((p) => !selectedPresetIds.includes(p.id))}
+                onSelect={handlePresetSelect}
+              />
             </CardContent>
           </Card>
         )}

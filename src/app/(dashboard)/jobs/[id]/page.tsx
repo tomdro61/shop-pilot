@@ -4,6 +4,7 @@ import { getJob } from "@/lib/actions/jobs";
 import { getInvoiceForJob } from "@/lib/actions/invoices";
 import { getEstimateForJob } from "@/lib/actions/estimates";
 import { getShopSettings } from "@/lib/actions/settings";
+import { getPresets } from "@/lib/actions/presets";
 import { calculateTotals } from "@/lib/utils/totals";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/dashboard/status-select";
@@ -35,11 +36,12 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, invoice, estimate, settings] = await Promise.all([
+  const [job, invoice, estimate, settings, presets] = await Promise.all([
     getJob(id),
     getInvoiceForJob(id),
     getEstimateForJob(id),
     getShopSettings(),
+    getPresets(),
   ]);
   if (!job) notFound();
 
@@ -204,7 +206,7 @@ export default async function JobDetailPage({
 
       {/* ── Line Items ── */}
       <div className="mb-8 animate-in-up stagger-3">
-        <LineItemsList jobId={id} lineItems={lineItems} settings={settings} />
+        <LineItemsList jobId={id} lineItems={lineItems} settings={settings} presets={presets} />
       </div>
 
       {/* ── Estimate + Invoice ── */}

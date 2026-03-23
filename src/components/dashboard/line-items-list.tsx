@@ -12,22 +12,27 @@ import { LineItemForm } from "@/components/forms/line-item-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteLineItem } from "@/lib/actions/job-line-items";
 import { saveToCatalog } from "@/lib/actions/catalog";
+import { applyPresetToJob } from "@/lib/actions/presets";
 import { formatCurrency } from "@/lib/utils/format";
 import { calculateTotals, DEFAULT_SETTINGS } from "@/lib/utils/totals";
-import { Plus, Pencil, Trash2, Wrench, BookmarkPlus } from "lucide-react";
-import type { JobLineItem, ShopSettings } from "@/types";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Plus, Pencil, Trash2, Wrench, BookmarkPlus, ClipboardList, Search } from "lucide-react";
+import type { JobLineItem, JobPreset, PresetLineItem, ShopSettings } from "@/types";
 
 interface LineItemsListProps {
   jobId: string;
   lineItems: JobLineItem[];
   settings?: ShopSettings | null;
+  presets?: JobPreset[];
 }
 
-export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps) {
+export function LineItemsList({ jobId, lineItems, settings, presets = [] }: LineItemsListProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
   const [defaultCategory, setDefaultCategory] = useState<string | undefined>(undefined);
+  const [presetPickerOpen, setPresetPickerOpen] = useState(false);
 
   const totals = calculateTotals(lineItems, settings);
 
@@ -71,6 +76,16 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
     setAddOpen(true);
   }
 
+  async function handleApplyPreset(preset: JobPreset) {
+    setPresetPickerOpen(false);
+    const result = await applyPresetToJob(jobId, preset.id);
+    if ("error" in result && result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success(`Added "${preset.name}" items`);
+    }
+  }
+
   // Group line items by category
   const categoryGroups: Record<string, JobLineItem[]> = {};
   lineItems.forEach((li) => {
@@ -109,6 +124,12 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
               </div>
             </PopoverContent>
           </Popover>
+          {presets.length > 0 && (
+            <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPresetPickerOpen(true)}>
+              <ClipboardList className="mr-2 h-3.5 w-3.5" />
+              Add Preset
+            </Button>
+          )}
           <Button size="sm" variant="outline" className="rounded-full" onClick={() => handleAddItem()}>
             <Plus className="mr-2 h-3.5 w-3.5" />
             Add Item
@@ -269,6 +290,86 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
           }}
         />
       )}
+
+      {/* Preset picker sheet */}
+      <PresetPickerSheet
+        presets={presets}
+        open={presetPickerOpen}
+        onOpenChange={setPresetPickerOpen}
+        onSelect={handleApplyPreset}
+      />
     </div>
+  );
+}
+
+function PresetPickerSheet({
+  presets,
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  presets: JobPreset[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (preset: JobPreset) => void;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filtered = presets.filter(
+    (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
+  );
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="h-auto max-h-[85vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Add Preset</SheetTitle>
+        </SheetHeader>
+        <div className="mt-3 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            <Input
+              placeholder="Search presets..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
+            {filtered.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No presets match
+              </p>
+            ) : (
+              filtered.map((preset) => {
+                const items = preset.line_items as PresetLineItem[];
+                const total = items.reduce(
+                  (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
+                  0
+                );
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => onSelect(preset)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">{preset.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {items.map((item) => item.description).join(", ")}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold tabular-nums shrink-0">
+                      {formatCurrency(total)}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
