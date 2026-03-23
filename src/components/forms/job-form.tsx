@@ -67,6 +67,67 @@ type CustomerOption = { id: string; first_name: string; last_name: string; phone
 type VehicleOption = { id: string; year: number | null; make: string | null; model: string | null };
 type TechOption = { id: string; name: string };
 
+function PresetSearchPicker({
+  presets,
+  onSelect,
+}: {
+  presets: JobPreset[];
+  onSelect: (preset: JobPreset) => void;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filtered = presets.filter((p) =>
+    !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="relative mb-2">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+        <Input
+          placeholder="Search presets... (e.g. brake job)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+      <div className="max-h-48 overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
+        {filtered.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            No presets match
+          </p>
+        ) : (
+          filtered.map((preset) => {
+            const items = preset.line_items as PresetLineItem[];
+            const total = items.reduce(
+              (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
+              0
+            );
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onSelect(preset)}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate">{preset.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {items.map((item) => item.description).join(", ")}
+                  </p>
+                </div>
+                <span className="text-sm font-semibold tabular-nums shrink-0">
+                  {formatCurrency(total)}
+                </span>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className="mb-5">
@@ -335,35 +396,40 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {presets.map((preset) => {
-                  const isSelected = selectedPresetId === preset.id;
-                  const items = preset.line_items as PresetLineItem[];
-                  const total = items.reduce(
-                    (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
-                    0
-                  );
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => handlePresetSelect(preset)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all",
-                        isSelected
-                          ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 font-medium shadow-sm"
-                          : "border-stone-300 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 hover:text-stone-900 dark:hover:text-stone-100"
-                      )}
-                    >
-                      {preset.name}
-                      <span className={cn("text-xs", isSelected ? "opacity-80" : "opacity-50")}>
+
+              {/* Selected preset display */}
+              {selectedPresetId && (() => {
+                const selected = presets.find((p) => p.id === selectedPresetId);
+                if (!selected) return null;
+                const items = selected.line_items as PresetLineItem[];
+                const total = items.reduce(
+                  (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
+                  0
+                );
+                return (
+                  <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-bold text-blue-700 dark:text-blue-400">
+                        {selected.name}
+                      </span>
+                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
                         {formatCurrency(total)}
                       </span>
-                      {isSelected && <X className="h-3 w-3" />}
-                    </button>
-                  );
-                })}
-              </div>
+                    </div>
+                    <p className="text-xs text-blue-600/70 dark:text-blue-400/70">
+                      {items.map((item) => item.description).join(", ")}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Searchable preset picker */}
+              {!selectedPresetId && (
+                <PresetSearchPicker
+                  presets={presets}
+                  onSelect={handlePresetSelect}
+                />
+              )}
             </CardContent>
           </Card>
         )}
