@@ -379,7 +379,141 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
-        {/* ── Preset (Step 0) ── */}
+        {/* ── Customer & Vehicle ── */}
+        <Card>
+          <CardContent className="p-6 lg:p-8">
+            <SectionHeader
+              title="Customer & Vehicle"
+              description="Who's the job for?"
+            />
+
+            <div className="space-y-4">
+              {/* Customer — full width, prominent */}
+              <FormField
+                control={form.control}
+                name="customer_id"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Customer</FormLabel>
+                      <Link
+                        href="/customers/new"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Plus className="h-3 w-3" />
+                        New Customer
+                      </Link>
+                    </div>
+                    <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between h-10",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {selectedCustomer
+                              ? formatCustomerName(selectedCustomer)
+                              : "Select customer..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command shouldFilter={false}>
+                          <CommandInput
+                            placeholder="Search by name or phone..."
+                            value={customerSearch}
+                            onValueChange={setCustomerSearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No customers found.</CommandEmpty>
+                            <CommandGroup>
+                              {customers.map((customer) => (
+                                <CommandItem
+                                  key={customer.id}
+                                  value={customer.id}
+                                  onSelect={() => {
+                                    field.onChange(customer.id);
+                                    form.setValue("vehicle_id", undefined);
+                                    setCustomerOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      customer.id === field.value ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {formatCustomerName(customer)}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Vehicle — depends on customer */}
+              <FormField
+                control={form.control}
+                name="vehicle_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Vehicle</FormLabel>
+                      {selectedCustomerId && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => setVehicleAddOpen(true)}
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add Vehicle
+                        </button>
+                      )}
+                    </div>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                      disabled={!selectedCustomerId}
+                    >
+                      <FormControl>
+                        <SelectTrigger className={cn(!selectedCustomerId && "text-muted-foreground")}>
+                          <SelectValue
+                            placeholder={
+                              selectedCustomerId
+                                ? "Select vehicle (optional)"
+                                : "Select customer first"
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">No vehicle</SelectItem>
+                        {vehicles.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Preset ── */}
         {!isEditing && presets && presets.length > 0 && (
           <Card className="border-dashed">
             <CardContent className="p-6 lg:p-8">
@@ -564,140 +698,6 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
             </CardContent>
           </Card>
         )}
-
-        {/* ── Section 1: Customer & Vehicle ── */}
-        <Card>
-          <CardContent className="p-6 lg:p-8">
-            <SectionHeader
-              title="Customer & Vehicle"
-              description="Who's the job for?"
-            />
-
-            <div className="space-y-4">
-              {/* Customer — full width, prominent */}
-              <FormField
-                control={form.control}
-                name="customer_id"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Customer</FormLabel>
-                      <Link
-                        href="/customers/new"
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Plus className="h-3 w-3" />
-                        New Customer
-                      </Link>
-                    </div>
-                    <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              "w-full justify-between h-10",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {selectedCustomer
-                              ? formatCustomerName(selectedCustomer)
-                              : "Select customer..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command shouldFilter={false}>
-                          <CommandInput
-                            placeholder="Search by name or phone..."
-                            value={customerSearch}
-                            onValueChange={setCustomerSearch}
-                          />
-                          <CommandList>
-                            <CommandEmpty>No customers found.</CommandEmpty>
-                            <CommandGroup>
-                              {customers.map((customer) => (
-                                <CommandItem
-                                  key={customer.id}
-                                  value={customer.id}
-                                  onSelect={() => {
-                                    field.onChange(customer.id);
-                                    form.setValue("vehicle_id", undefined);
-                                    setCustomerOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      customer.id === field.value ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {formatCustomerName(customer)}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Vehicle — depends on customer */}
-              <FormField
-                control={form.control}
-                name="vehicle_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Vehicle</FormLabel>
-                      {selectedCustomerId && (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          onClick={() => setVehicleAddOpen(true)}
-                        >
-                          <Plus className="h-3 w-3" />
-                          Add Vehicle
-                        </button>
-                      )}
-                    </div>
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-                      disabled={!selectedCustomerId}
-                    >
-                      <FormControl>
-                        <SelectTrigger className={cn(!selectedCustomerId && "text-muted-foreground")}>
-                          <SelectValue
-                            placeholder={
-                              selectedCustomerId
-                                ? "Select vehicle (optional)"
-                                : "Select customer first"
-                            }
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No vehicle</SelectItem>
-                        {vehicles.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-        </Card>
 
         {/* ── Section 2: Job Setup ── */}
         <Card>
