@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, CheckCircle2, XCircle, Delete } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Delete, Search, X } from "lucide-react";
 import { createQuickPayJob } from "@/lib/actions/terminal";
 import { formatCurrency } from "@/lib/utils/format";
 
@@ -17,6 +17,87 @@ interface QuickPayPreset {
   name: string;
   category: string | null;
   total: number;
+}
+
+function QuickPayPresetPicker({
+  presets,
+  selectedPresetId,
+  onSelect,
+}: {
+  presets: QuickPayPreset[];
+  selectedPresetId: string | null;
+  onSelect: (preset: QuickPayPreset) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const filtered = presets.filter(
+    (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
+  );
+
+  const selected = selectedPresetId ? presets.find((p) => p.id === selectedPresetId) : null;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+        Quick Services
+      </p>
+
+      {selected ? (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
+          <span className="flex-1 text-sm font-bold text-blue-700 dark:text-blue-400">
+            {selected.name}
+          </span>
+          <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400">
+            {formatCurrency(selected.total)}
+          </span>
+          <button
+            type="button"
+            onClick={() => onSelect(selected)}
+            className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <Input
+            placeholder="Search presets..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setDropdownOpen(true); }}
+            onFocus={() => setDropdownOpen(true)}
+            className="pl-9"
+          />
+          {dropdownOpen && (
+            <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+              {filtered.length === 0 ? (
+                <p className="py-3 text-center text-sm text-muted-foreground">No presets match</p>
+              ) : (
+                filtered.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                    onClick={() => {
+                      onSelect(preset);
+                      setSearch("");
+                      setDropdownOpen(false);
+                    }}
+                  >
+                    <span className="flex-1 truncate font-medium">{preset.name}</span>
+                    <span className="text-xs tabular-nums text-stone-500 shrink-0">
+                      {formatCurrency(preset.total)}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const NUM_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"];
@@ -235,27 +316,11 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
 
       {/* Service presets */}
       {presets.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
-            Quick Services
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {presets.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => handlePresetSelect(preset)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  selectedPresetId === preset.id
-                    ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400"
-                    : "border-stone-200 dark:border-stone-700 bg-card text-foreground hover:bg-stone-50 dark:hover:bg-stone-800"
-                }`}
-              >
-                {preset.name} · {formatCurrency(preset.total)}
-              </button>
-            ))}
-          </div>
-        </div>
+        <QuickPayPresetPicker
+          presets={presets}
+          selectedPresetId={selectedPresetId}
+          onSelect={handlePresetSelect}
+        />
       )}
 
       {/* Numpad */}
