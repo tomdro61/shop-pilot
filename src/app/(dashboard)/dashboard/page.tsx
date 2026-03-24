@@ -231,46 +231,42 @@ export default async function DashboardPage() {
           </h3>
         </div>
 
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Week</p>
-          <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
-              {formatCurrencyWhole(stats.weeklyRevenue)}
-            </h3>
-            <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
-              weekChange >= 0
-                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
-                : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
-            }`}>
-              {weekChange >= 0 ? (
-                <TrendingUp className="h-3.5 w-3.5" />
-              ) : (
-                <TrendingDown className="h-3.5 w-3.5" />
-              )}
-              {weekChange >= 0 ? "+" : ""}{weekChange.toFixed(0)}%
-            </span>
-          </div>
+          <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+            {formatCurrencyWhole(stats.weeklyRevenue)}
+          </h3>
+          <span className={`mt-1.5 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+            weekChange >= 0
+              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+              : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+          }`}>
+            {weekChange >= 0 ? (
+              <TrendingUp className="h-3.5 w-3.5" />
+            ) : (
+              <TrendingDown className="h-3.5 w-3.5" />
+            )}
+            {weekChange >= 0 ? "+" : ""}{weekChange.toFixed(0)}%
+          </span>
         </div>
 
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Month</p>
-          <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
-              {formatCurrencyWhole(stats.monthlyRevenue)}
-            </h3>
-            <span className={`shrink-0 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
-              monthChange >= 0
-                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
-                : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
-            }`}>
-              {monthChange >= 0 ? (
-                <TrendingUp className="h-3.5 w-3.5" />
-              ) : (
-                <TrendingDown className="h-3.5 w-3.5" />
-              )}
-              {monthChange >= 0 ? "+" : ""}{monthChange.toFixed(0)}%
-            </span>
-          </div>
+          <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
+            {formatCurrencyWhole(stats.monthlyRevenue)}
+          </h3>
+          <span className={`mt-1.5 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+            monthChange >= 0
+              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
+              : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+          }`}>
+            {monthChange >= 0 ? (
+              <TrendingUp className="h-3.5 w-3.5" />
+            ) : (
+              <TrendingDown className="h-3.5 w-3.5" />
+            )}
+            {monthChange >= 0 ? "+" : ""}{monthChange.toFixed(0)}%
+          </span>
         </div>
 
         <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
