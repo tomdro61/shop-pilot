@@ -6,9 +6,15 @@ import { Button } from "@/components/ui/button";
 import { sendParkingSpecialsSMS } from "@/lib/actions/messages";
 import { Gift } from "lucide-react";
 
-export function SendSpecialsButton({ reservationId }: { reservationId: string }) {
+export function SendSpecialsButton({
+  reservationId,
+  alreadySent = false,
+}: {
+  reservationId: string;
+  alreadySent?: boolean;
+}) {
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState(alreadySent);
 
   async function handleSend() {
     setLoading(true);

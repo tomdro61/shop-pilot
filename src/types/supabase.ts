@@ -628,6 +628,7 @@ export type Database = {
           parking_type: string | null;
           departing_flight: string | null;
           arriving_flight: string | null;
+          specials_sent_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -659,6 +660,7 @@ export type Database = {
           parking_type?: string | null;
           departing_flight?: string | null;
           arriving_flight?: string | null;
+          specials_sent_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -690,6 +692,7 @@ export type Database = {
           parking_type?: string | null;
           departing_flight?: string | null;
           arriving_flight?: string | null;
+          specials_sent_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

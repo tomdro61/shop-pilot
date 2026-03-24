@@ -2161,3 +2161,29 @@ A saved catalog of individual parts and labor items for fast job building. Disti
 - `src/app/(dashboard)/settings/page.tsx`, `src/components/layout/sidebar.tsx`
 - `src/lib/ai/tools.ts`, `src/lib/ai/handlers.ts`, `src/lib/ai/system-prompt.ts`
 - `src/components/quote-requests/quote-request-list.tsx`
+
+## Session 31 — 2026-03-24 — Specials Sent Tracking
+
+### What Was Completed
+
+**Specials sent indicator on parking reservations** — Added `specials_sent_at` timestamp column to `parking_reservations` so the system tracks when specials were sent to each reservation. Previously, the "Specials Sent" state was local-only and lost on page reload.
+
+1. **Database** — New `specials_sent_at timestamptz` column on `parking_reservations`. Migration: `20260324000000_specials_sent_at.sql`.
+
+2. **Server action** — `sendParkingSpecialsSMS()` now sets `specials_sent_at` on the reservation after successful SMS send.
+
+3. **SendSpecialsButton** — Accepts `alreadySent` prop to initialize as disabled/sent when specials were already sent. No more duplicate sends after page reload.
+
+4. **Reservation detail page** — Emerald "Specials Sent" badge (with Gift icon) appears in the header next to status/parking type badges when specials have been sent.
+
+5. **Reservation cards** — Both `ParkingReservationCard` (standard) and `ParkingReservationCardCompact` show an emerald "Specials Sent" / "Specials" badge when `specials_sent_at` is set.
+
+### New Files (1)
+- `supabase/migrations/20260324000000_specials_sent_at.sql`
+
+### Modified Files (5)
+- `src/types/supabase.ts` — added `specials_sent_at` to Row/Insert/Update
+- `src/lib/actions/messages.ts` — set `specials_sent_at` after successful send
+- `src/components/parking/send-specials-button.tsx` — `alreadySent` prop
+- `src/components/parking/parking-reservation-card.tsx` — specials badge on both card variants
+- `src/app/(dashboard)/parking/[id]/page.tsx` — specials badge in header + pass `alreadySent` to button

@@ -134,6 +134,11 @@ export async function sendParkingSpecialsSMS(reservationId: string) {
       phone_line: "parking",
     });
 
+    await supabase
+      .from("parking_reservations")
+      .update({ specials_sent_at: new Date().toISOString() })
+      .eq("id", reservationId);
+
     return { data: { sent: true, testMode: result.testMode } };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to send SMS";
