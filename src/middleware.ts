@@ -1,7 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const BOT_PATTERN =
+  /bot|crawler|spider|crawling|slurp|baidu|yandex|sogou|semrush|ahrefs|dotbot|mj12bot|bytespider|gptbot|claudebot|facebookexternalhit|linkedinbot|twitterbot|pinterestbot|applebot|bingpreview|petalbot|dataforseo|ccbot|amazonbot/i;
+
 export async function middleware(request: NextRequest) {
+  // Block bots immediately — no Supabase call, no SSR, no CPU burned
+  const ua = request.headers.get("user-agent") || "";
+  if (BOT_PATTERN.test(ua)) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
