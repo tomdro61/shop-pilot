@@ -17,7 +17,8 @@ import {
   PARKING_STATUS_ORDER,
   PARKING_STATUS_LABELS,
 } from "@/lib/constants";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 export function ParkingAllView({
@@ -73,8 +74,28 @@ export function ParkingAllView({
     return () => clearTimeout(timeout);
   }, [searchInput, updateParams]);
 
-  const currentDropoff = searchParams.get("dropoff") || "";
-  const currentPickup = searchParams.get("pickup") || "";
+  const currentDropoffs = searchParams.get("dropoff")?.split(",").filter(Boolean) || [];
+  const currentPickups = searchParams.get("pickup")?.split(",").filter(Boolean) || [];
+
+  function addDate(key: "dropoff" | "pickup", date: string) {
+    const current = key === "dropoff" ? currentDropoffs : currentPickups;
+    if (!date || current.includes(date)) return;
+    const updated = [...current, date].sort();
+    updateParams({ [key]: updated.join(","), page: "" });
+  }
+
+  function removeDate(key: "dropoff" | "pickup", date: string) {
+    const current = key === "dropoff" ? currentDropoffs : currentPickups;
+    const updated = current.filter((d) => d !== date);
+    updateParams({ [key]: updated.join(","), page: "" });
+  }
+
+  function formatShortDate(date: string) {
+    return new Date(date + "T00:00:00").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -94,8 +115,8 @@ export function ParkingAllView({
           <Input
             type="date"
             className="w-full sm:w-[150px] h-9 text-xs"
-            value={currentDropoff}
-            onChange={(e) => updateParams({ dropoff: e.target.value, page: "" })}
+            value=""
+            onChange={(e) => { addDate("dropoff", e.target.value); e.target.value = ""; }}
           />
         </div>
         <div className="flex items-center gap-1.5">
@@ -103,8 +124,8 @@ export function ParkingAllView({
           <Input
             type="date"
             className="w-full sm:w-[150px] h-9 text-xs"
-            value={currentPickup}
-            onChange={(e) => updateParams({ pickup: e.target.value, page: "" })}
+            value=""
+            onChange={(e) => { addDate("pickup", e.target.value); e.target.value = ""; }}
           />
         </div>
         <Select
@@ -126,6 +147,44 @@ export function ParkingAllView({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Selected date badges */}
+      {(currentDropoffs.length > 0 || currentPickups.length > 0) && (
+        <div className="flex flex-wrap gap-1.5">
+          {currentDropoffs.map((date) => (
+            <Badge
+              key={`dropoff-${date}`}
+              variant="secondary"
+              className="bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-0 text-xs gap-1 pr-1"
+            >
+              Drop-off: {formatShortDate(date)}
+              <button
+                type="button"
+                onClick={() => removeDate("dropoff", date)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+          {currentPickups.map((date) => (
+            <Badge
+              key={`pickup-${date}`}
+              variant="secondary"
+              className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-0 text-xs gap-1 pr-1"
+            >
+              Pick-up: {formatShortDate(date)}
+              <button
+                type="button"
+                onClick={() => removeDate("pickup", date)}
+                className="ml-0.5 rounded-full p-0.5 hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {/* Results count + pagination info */}
       <div className="flex items-center justify-between">

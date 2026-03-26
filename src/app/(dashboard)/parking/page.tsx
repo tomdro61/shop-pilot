@@ -71,8 +71,8 @@ export default async function ParkingPage({
     lot,
     dateFrom: params.from,
     dateTo: params.to,
-    dropOffDate: params.dropoff || undefined,
-    pickUpDate: params.pickup || undefined,
+    dropOffDates: params.dropoff ? params.dropoff.split(",") : undefined,
+    pickUpDates: params.pickup ? params.pickup.split(",") : undefined,
     page,
   });
 

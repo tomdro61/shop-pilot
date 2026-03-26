@@ -17,7 +17,9 @@ export async function getParkingReservations(filters?: {
   dateFrom?: string;
   dateTo?: string;
   dropOffDate?: string;
+  dropOffDates?: string[];
   pickUpDate?: string;
+  pickUpDates?: string[];
   dateAny?: string;
   hasServices?: boolean;
   page?: number;
@@ -46,10 +48,14 @@ export async function getParkingReservations(filters?: {
   if (filters?.dateTo) {
     query = query.lte("drop_off_date", filters.dateTo);
   }
-  if (filters?.dropOffDate) {
+  if (filters?.dropOffDates && filters.dropOffDates.length > 0) {
+    query = query.in("drop_off_date", filters.dropOffDates);
+  } else if (filters?.dropOffDate) {
     query = query.eq("drop_off_date", filters.dropOffDate);
   }
-  if (filters?.pickUpDate) {
+  if (filters?.pickUpDates && filters.pickUpDates.length > 0) {
+    query = query.in("pick_up_date", filters.pickUpDates);
+  } else if (filters?.pickUpDate) {
     query = query.eq("pick_up_date", filters.pickUpDate);
   }
   if (filters?.dateAny) {
