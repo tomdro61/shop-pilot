@@ -12,8 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ParkingReservationCard } from "@/components/parking/parking-reservation-card";
-import { CheckInButton, CheckOutButton } from "@/components/parking/parking-actions";
-import { SendSpecialsButton } from "@/components/parking/send-specials-button";
+import { ParkingCardActions } from "@/components/parking/parking-card-actions";
 import {
   PARKING_STATUS_ORDER,
   PARKING_STATUS_LABELS,
@@ -211,21 +210,7 @@ export function ParkingAllView({
             <ParkingReservationCard
               key={r.id}
               reservation={r}
-              showActions={
-                r.status === "reserved" ? (
-                  <CheckInButton id={r.id} size="sm" />
-                ) : r.status === "checked_in" ? (
-                  <div className="flex flex-col items-end gap-1.5">
-                    <CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />
-                    {r.phone && (
-                      <SendSpecialsButton
-                        reservationId={r.id}
-                        alreadySent={!!r.specials_sent_at}
-                      />
-                    )}
-                  </div>
-                ) : undefined
-              }
+              showActions={<ParkingCardActions reservation={r} />}
             />
           ))}
         </div>

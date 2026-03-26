@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ParkingReservationCardCompact,
 } from "@/components/parking/parking-reservation-card";
-import { CheckInButton, CheckOutButton } from "@/components/parking/parking-actions";
-import { SendSpecialsButton } from "@/components/parking/send-specials-button";
+import { ParkingCardActions } from "@/components/parking/parking-card-actions";
 import { Badge } from "@/components/ui/badge";
 import { PlaneLanding, PlaneTakeoff, Car } from "lucide-react";
 import type { ParkingReservation } from "@/types";
@@ -112,10 +111,7 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
                 reservation={r}
                 lockBoxCodes={lockBoxCodes}
                 variant={r.status === "checked_out" ? "checked-out" : "pickup"}
-                showActions={r.status === "checked_out"
-                  ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
-                  : <CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />
-                }
+                showActions={<ParkingCardActions reservation={r} />}
               />
             ))}
           </div>
@@ -137,10 +133,7 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
                 reservation={r}
                 lockBoxCodes={lockBoxCodes}
                 variant={r.status === "checked_out" ? "checked-out" : "pickup-tomorrow"}
-                showActions={r.status === "checked_out"
-                  ? <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs">Prepared</Badge>
-                  : <CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />
-                }
+                showActions={<ParkingCardActions reservation={r} />}
               />
             ))}
           </div>
@@ -162,11 +155,7 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
                 reservation={r}
                 lockBoxCodes={lockBoxCodes}
                 variant="arrival"
-                showActions={
-                  r.status === "reserved" ? (
-                    <CheckInButton id={r.id} size="sm" />
-                  ) : undefined
-                }
+                showActions={<ParkingCardActions reservation={r} />}
               />
             ))}
           </div>
@@ -191,17 +180,7 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
                 reservation={r}
                 lockBoxCodes={lockBoxCodes}
                 variant="parked"
-                showActions={
-                  <div className="flex flex-col items-end gap-1.5">
-                    <CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />
-                    {r.phone && (
-                      <SendSpecialsButton
-                        reservationId={r.id}
-                        alreadySent={!!r.specials_sent_at}
-                      />
-                    )}
-                  </div>
-                }
+                showActions={<ParkingCardActions reservation={r} />}
               />
             ))}
           </div>
