@@ -315,7 +315,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 - **Database** — snake_case for all table and column names
 - **Migrations** — all schema changes via Supabase migrations (never edit schema manually in dashboard)
 - **Environment variables** — all secrets in `.env.local`, never committed. Use `NEXT_PUBLIC_` prefix only for client-safe values.
-- **Git** — conventional commits (feat:, fix:, chore:, etc.)
+- **Git** — conventional commits (feat:, fix:, chore:, etc.). Work on the `staging` branch. Push feature changes to `staging` first so they can be validated before merging to `master`. Only merge to `master` when the user explicitly asks.
 - **Mobile-first** — design for phone screens first, then expand to desktop
 
 ## Useful Commands
@@ -332,5 +332,6 @@ npx supabase db push     # Push migrations to remote
 npx supabase gen types typescript --project-id <id> > src/types/supabase.ts  # Generate types
 
 # Deployment
-git push origin main     # Auto-deploys to Vercel
+git push origin staging  # Push to staging for validation
+git checkout master && git merge staging && git push  # Merge to production (only when user approves)
 ```
