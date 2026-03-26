@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { PARKING_SERVICE_LABELS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS } from "@/lib/constants";
-import { Phone, Mail, Car, Calendar } from "lucide-react";
+import { Phone, Mail, Car, Calendar, Check } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 const SERVICE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -66,9 +66,22 @@ export function ParkingServiceLeads({
                         </Badge>
                       </div>
 
-                      {/* Services — prominent */}
+                      {/* Services — prominent, with completion status */}
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {r.services_interested.map((service) => {
+                          const isComplete = r.services_completed?.includes(service);
+                          if (isComplete) {
+                            return (
+                              <Badge
+                                key={service}
+                                variant="secondary"
+                                className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-0 text-xs font-medium gap-1"
+                              >
+                                <Check className="h-3 w-3" />
+                                {PARKING_SERVICE_LABELS[service] || service}
+                              </Badge>
+                            );
+                          }
                           const colors = SERVICE_COLORS[service] || SERVICE_COLORS.wipers;
                           return (
                             <Badge

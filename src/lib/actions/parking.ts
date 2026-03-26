@@ -280,6 +280,7 @@ export async function updateReservation(
   data: {
     staff_notes?: string | null;
     services_interested?: string[];
+    services_completed?: string[];
     drop_off_date?: string;
     drop_off_time?: string;
     pick_up_date?: string;

@@ -616,6 +616,7 @@ export type Database = {
           lot: string;
           confirmation_number: string;
           services_interested: string[];
+          services_completed: string[];
           liability_acknowledged: boolean;
           status: Database["public"]["Enums"]["parking_status"];
           checked_in_at: string | null;
@@ -648,6 +649,7 @@ export type Database = {
           lot: string;
           confirmation_number: string;
           services_interested?: string[];
+          services_completed?: string[];
           liability_acknowledged?: boolean;
           status?: Database["public"]["Enums"]["parking_status"];
           checked_in_at?: string | null;
@@ -680,6 +682,7 @@ export type Database = {
           lot?: string;
           confirmation_number?: string;
           services_interested?: string[];
+          services_completed?: string[];
           liability_acknowledged?: boolean;
           status?: Database["public"]["Enums"]["parking_status"];
           checked_in_at?: string | null;

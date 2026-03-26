@@ -6,16 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PARKING_SERVICES, PARKING_SERVICE_LABELS } from "@/lib/constants";
 import { updateReservation } from "@/lib/actions/parking";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Check, Circle } from "lucide-react";
 
 export function ParkingServicesForm({
   id,
   services,
+  completed,
 }: {
   id: string;
   services: string[];
+  completed: string[];
 }) {
   const [current, setCurrent] = useState<string[]>(services);
+  const [currentCompleted, setCurrentCompleted] = useState<string[]>(completed);
   const [showPicker, setShowPicker] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -36,9 +39,25 @@ export function ParkingServicesForm({
 
   function removeService(value: string) {
     const updated = current.filter((s) => s !== value);
+    const updatedCompleted = currentCompleted.filter((s) => s !== value);
     setCurrent(updated);
+    setCurrentCompleted(updatedCompleted);
     startTransition(async () => {
-      await updateReservation(id, { services_interested: updated });
+      await updateReservation(id, {
+        services_interested: updated,
+        services_completed: updatedCompleted,
+      });
+    });
+  }
+
+  function toggleServiceStatus(value: string) {
+    const isComplete = currentCompleted.includes(value);
+    const updatedCompleted = isComplete
+      ? currentCompleted.filter((s) => s !== value)
+      : [...currentCompleted, value];
+    setCurrentCompleted(updatedCompleted);
+    startTransition(async () => {
+      await updateReservation(id, { services_completed: updatedCompleted });
     });
   }
 
@@ -52,24 +71,56 @@ export function ParkingServicesForm({
   return (
     <div className="space-y-3">
       {current.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {current.map((service) => (
-            <Badge
-              key={service}
-              variant="secondary"
-              className="bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300 border-0 gap-1 pr-1"
-            >
-              {PARKING_SERVICE_LABELS[service] || service}
-              <button
-                type="button"
-                onClick={() => removeService(service)}
-                disabled={isPending}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-violet-200 dark:hover:bg-violet-800 transition-colors"
+        <div className="space-y-2">
+          {current.map((service) => {
+            const isComplete = currentCompleted.includes(service);
+            return (
+              <div
+                key={service}
+                className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
               >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                    {PARKING_SERVICE_LABELS[service] || service}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleServiceStatus(service)}
+                    disabled={isPending}
+                    className="transition-colors"
+                  >
+                    {isComplete ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-0 text-[11px] gap-1 cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900"
+                      >
+                        <Check className="h-3 w-3" />
+                        Complete
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className="bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 border-0 text-[11px] gap-1 cursor-pointer hover:bg-stone-200 dark:hover:bg-stone-700"
+                      >
+                        <Circle className="h-3 w-3" />
+                        Not Started
+                      </Badge>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeService(service)}
+                    disabled={isPending}
+                    className="rounded-full p-1 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-400"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <p className="text-sm text-stone-400 dark:text-stone-500">
