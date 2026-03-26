@@ -76,7 +76,11 @@ export function SendSpecialsButton({
     <Button
       variant="outline"
       size="sm"
-      className="gap-1.5"
+      className={`gap-1.5 ${
+        sent
+          ? "bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400"
+          : "bg-violet-50 dark:bg-violet-950 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900"
+      }`}
       onClick={sent ? undefined : handleClick}
       disabled={loading || sent}
     >

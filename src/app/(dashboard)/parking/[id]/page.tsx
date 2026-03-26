@@ -22,7 +22,7 @@ import {
   Mail,
   Hash,
   KeyRound,
-  Gift,
+
 } from "lucide-react";
 
 export async function generateMetadata({
@@ -133,15 +133,6 @@ export default async function ParkingDetailPage({
                 className="bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 border-0"
               >
                 Valet
-              </Badge>
-            )}
-            {reservation.specials_sent_at && (
-              <Badge
-                variant="secondary"
-                className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-0 gap-1"
-              >
-                <Gift className="h-3 w-3" />
-                Specials Sent
               </Badge>
             )}
           </div>

@@ -176,5 +176,5 @@ export function parkingSpecialsSMS({
   specials: { label: string; price: string }[];
 }) {
   const list = specials.map((s) => `- ${s.label}: ${s.price}`).join("\n");
-  return `Hi ${firstName}! While your car is with us, check out our specials:\n${list}\nInterested? Just reply to this text! — Broadway Motors`;
+  return `Hi ${firstName}, this is John, the manager at Broadway Motors. While your car is parked with us, we'd love the chance to take care of any maintenance or repairs for you — saves you a trip later! Here are some of our most popular services:\n\n${list}\n\nIf anything catches your eye, just reply to this text and we'll take a look and send you an estimate before doing any work. No pressure at all — John`;
 }

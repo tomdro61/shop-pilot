@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, PARKING_SERVICE_LABELS } from "@/lib/constants";
-import { Car, Clock, Gift, KeyRound } from "lucide-react";
+import { Car, Clock, KeyRound } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 function formatTime(time: string) {
@@ -53,15 +53,6 @@ export function ParkingReservationCard({
                 className="bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border-0 text-[11px]"
               >
                 Shuttle
-              </Badge>
-            )}
-            {reservation.specials_sent_at && (
-              <Badge
-                variant="secondary"
-                className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-0 text-[11px] gap-0.5"
-              >
-                <Gift className="h-2.5 w-2.5" />
-                Specials Sent
               </Badge>
             )}
           </div>
@@ -156,15 +147,6 @@ export function ParkingReservationCardCompact({
               className="bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 border-0 text-[10px] shrink-0"
             >
               Shuttle
-            </Badge>
-          )}
-          {reservation.specials_sent_at && (
-            <Badge
-              variant="secondary"
-              className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-0 text-[10px] shrink-0 gap-0.5"
-            >
-              <Gift className="h-2.5 w-2.5" />
-              Specials
             </Badge>
           )}
         </div>
