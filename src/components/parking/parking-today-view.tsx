@@ -5,6 +5,7 @@ import {
   ParkingReservationCardCompact,
 } from "@/components/parking/parking-reservation-card";
 import { CheckInButton, CheckOutButton } from "@/components/parking/parking-actions";
+import { SendSpecialsButton } from "@/components/parking/send-specials-button";
 import { Badge } from "@/components/ui/badge";
 import { PlaneLanding, PlaneTakeoff, Car } from "lucide-react";
 import type { ParkingReservation } from "@/types";
@@ -190,7 +191,17 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
                 reservation={r}
                 lockBoxCodes={lockBoxCodes}
                 variant="parked"
-                showActions={<CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />}
+                showActions={
+                  <div className="flex flex-col items-end gap-1.5">
+                    <CheckOutButton id={r.id} size="sm" customerName={`${r.first_name} ${r.last_name}`} customerPhone={r.phone} />
+                    {r.phone && (
+                      <SendSpecialsButton
+                        reservationId={r.id}
+                        alreadySent={!!r.specials_sent_at}
+                      />
+                    )}
+                  </div>
+                }
               />
             ))}
           </div>
