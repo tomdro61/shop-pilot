@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -22,7 +22,7 @@ const presets = [
   { key: "all_time", label: "All Time" },
 ] as const;
 
-export function ReportsToolbar({ basePath = "/reports/revenue" }: { basePath?: string }) {
+export function ReportsToolbar({ basePath = "/reports/revenue", showExport = false }: { basePath?: string; showExport?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeRange = searchParams.get("range") || "this_month";
@@ -61,6 +61,11 @@ export function ReportsToolbar({ basePath = "/reports/revenue" }: { basePath?: s
   }
 
   const isCustom = activeRange === "custom";
+
+  function handleExport() {
+    const params = new URLSearchParams(searchParams.toString());
+    window.location.href = `/api/reports/export?${params.toString()}`;
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -108,6 +113,13 @@ export function ReportsToolbar({ basePath = "/reports/revenue" }: { basePath?: s
           </div>
         </PopoverContent>
       </Popover>
+
+      {showExport && (
+        <Button variant="outline" size="sm" onClick={handleExport}>
+          <DownloadIcon className="mr-2 h-4 w-4" />
+          Export CSV
+        </Button>
+      )}
     </div>
   );
 }

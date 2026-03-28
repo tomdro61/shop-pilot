@@ -71,7 +71,7 @@ export default async function RevenueReportPage({
           Financial performance and shop analytics
         </p>
         <Suspense fallback={null}>
-          <ReportsToolbar basePath="/reports/revenue" />
+          <ReportsToolbar basePath="/reports/revenue" showExport />
         </Suspense>
       </div>
 
