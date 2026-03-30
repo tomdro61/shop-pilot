@@ -65,7 +65,7 @@ export function paymentReceivedSMS({
   model?: string | null;
 }) {
   const vehicle = [year, make, model].filter(Boolean).join(" ");
-  return `Hi ${firstName}, we received your payment of ${amount}${vehicle ? ` for your ${vehicle}` : ""}. Thank you for choosing Broadway Motors!`;
+  return `Hi ${firstName}, we received your payment of ${amount}${vehicle ? ` for your ${vehicle}` : ""}. Thank you for choosing Broadway Motors!\n\nIf you have a moment, a Google review would mean a lot to a local business like ours: https://g.page/r/CTjykJeAA929EBM/review`;
 }
 
 export function reservationConfirmationSMS({
