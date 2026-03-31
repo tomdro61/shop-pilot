@@ -37,7 +37,7 @@ export function CatalogItemForm({
 }: CatalogItemFormProps) {
   const isEditing = !!item;
 
-  const [type, setType] = useState<"labor" | "part">(item?.type || "part");
+  const [type, setType] = useState<"labor" | "part">((item?.type as "labor" | "part") || "part");
   const [description, setDescription] = useState(item?.description || "");
   const [defaultQuantity, setDefaultQuantity] = useState(
     item?.default_quantity ?? 1

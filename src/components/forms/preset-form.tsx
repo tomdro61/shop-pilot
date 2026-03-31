@@ -85,7 +85,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
 
   function addCatalogItem(item: CatalogItem) {
     const newLineItem: PresetLineItem = {
-      type: item.type,
+      type: item.type as "labor" | "part",
       description: item.description,
       quantity: item.default_quantity,
       unit_cost: item.default_unit_cost,

@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const supabase = createAdminClient();
     await supabase
       .from("jobs")
-      .update({ stripe_payment_intent_id: paymentIntent.id })
+      .update({ stripe_payment_intent_id: paymentIntent.id } as Record<string, unknown>)
       .eq("id", jobId);
 
     return NextResponse.json({

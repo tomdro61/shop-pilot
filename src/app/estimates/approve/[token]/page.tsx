@@ -122,7 +122,7 @@ export default async function EstimateApprovalPage({
                         {item.part_number && ` · #${item.part_number}`}
                       </p>
                     </div>
-                    <p className="font-medium">{formatCurrency(item.total)}</p>
+                    <p className="font-medium">{formatCurrency(item.total ?? 0)}</p>
                   </div>
                 ))}
               </div>

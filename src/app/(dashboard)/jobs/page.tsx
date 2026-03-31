@@ -52,7 +52,7 @@ export default async function JobsPage({
     getShopSettings(),
   ]);
 
-  const configuredCategories = settings?.job_categories ?? DEFAULT_JOB_CATEGORIES;
+  const configuredCategories = (settings?.job_categories as string[] | undefined) ?? DEFAULT_JOB_CATEGORIES;
   const allCategories = [
     ...new Set([...configuredCategories, ...dbCategories]),
   ].sort();

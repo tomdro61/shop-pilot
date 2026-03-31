@@ -282,8 +282,8 @@ export default async function ParkingDetailPage({
             </p>
             <ParkingServicesForm
               id={reservation.id}
-              services={reservation.services_interested}
-              completed={reservation.services_completed}
+              services={reservation.services_interested ?? []}
+              completed={reservation.services_completed ?? []}
             />
           </div>
         </div>

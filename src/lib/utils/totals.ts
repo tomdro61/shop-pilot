@@ -46,7 +46,7 @@ interface LineItemLike {
   type: string;
   quantity: number;
   unit_cost: number;
-  total?: number;
+  total?: number | null;
   category?: string | null;
 }
 
@@ -128,7 +128,7 @@ export function calculateTotals(
   const shopSuppliesEnabled =
     s.shop_supplies_enabled &&
     feeAppliesToJob(
-      "shop_supplies_categories" in s ? s.shop_supplies_categories : null,
+      "shop_supplies_categories" in s ? (s.shop_supplies_categories as string[] | null) : null,
       lineItems
     );
   const shopSupplies = shopSuppliesEnabled
@@ -144,7 +144,7 @@ export function calculateTotals(
   const hazmatEnabled =
     s.hazmat_enabled &&
     feeAppliesToJob(
-      "hazmat_categories" in s ? s.hazmat_categories : null,
+      "hazmat_categories" in s ? (s.hazmat_categories as string[] | null) : null,
       lineItems
     );
   const hazmat = hazmatEnabled ? s.hazmat_amount : 0;

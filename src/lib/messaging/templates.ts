@@ -178,3 +178,69 @@ export function parkingSpecialsSMS({
   const list = specials.map((s) => `- ${s.label}: ${s.price}`).join("\n");
   return `Hi ${firstName}, this is John, the manager at Broadway Motors. While your car is parked with us, we'd love the chance to take care of any maintenance or repairs for you — saves you a trip later! Here are some of our most popular services:\n\n${list}\n\nIf anything catches your eye, just reply to this text and we'll take a look and send you an estimate before doing any work. No pressure at all — John`;
 }
+
+// ── DVI Templates ──────────────────────────────────────────
+
+import { formatRONumber } from "@/lib/utils/format";
+
+export function dviReportSMS({
+  firstName,
+  year,
+  make,
+  model,
+  link,
+}: {
+  firstName: string;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  link: string;
+}) {
+  const vehicle = [year, make, model].filter(Boolean).join(" ");
+  return `Hi ${firstName}, your vehicle inspection report${vehicle ? ` for your ${vehicle}` : ""} is ready. View it here: ${link} — Broadway Motors`;
+}
+
+export function dviCompletedInternalSMS({
+  year,
+  make,
+  model,
+  roNumber,
+  good,
+  monitor,
+  attention,
+}: {
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  roNumber?: number | null;
+  good: number;
+  monitor: number;
+  attention: number;
+}) {
+  const vehicle = [year, make, model].filter(Boolean).join(" ");
+  const ro = roNumber ? formatRONumber(roNumber) : "RO";
+  return `DVI completed for ${vehicle || "vehicle"} — ${ro}. ${good} good, ${monitor} monitor, ${attention} attention.`;
+}
+
+export function dviApprovalInternalSMS({
+  customerName,
+  year,
+  make,
+  model,
+  roNumber,
+  approvedItems,
+  total,
+}: {
+  customerName: string;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  roNumber?: number | null;
+  approvedItems: string[];
+  total: number;
+}) {
+  const vehicle = [year, make, model].filter(Boolean).join(" ");
+  const ro = roNumber ? `RO #${String(roNumber).padStart(4, "0")}` : "";
+  const itemList = approvedItems.join(", ");
+  return `${customerName} approved ${approvedItems.length} service${approvedItems.length !== 1 ? "s" : ""} from DVI on ${vehicle || "vehicle"}${ro ? ` (${ro})` : ""}: ${itemList} — $${total.toLocaleString()} total.`;
+}

@@ -1,4 +1,4 @@
-import type { JobStatus, EstimateStatus, InvoiceStatus, PaymentStatus, PaymentMethod, CustomerType, ParkingStatus, QuoteRequestStatus } from "@/types";
+import type { JobStatus, EstimateStatus, InvoiceStatus, PaymentStatus, PaymentMethod, CustomerType, ParkingStatus, QuoteRequestStatus, DviStatus, DviCondition } from "@/types";
 
 export const JOB_STATUS_ORDER: JobStatus[] = [
   "not_started",
@@ -283,3 +283,61 @@ export const QUOTE_REQUEST_STATUS_COLORS: Record<
     text: "text-stone-500 dark:text-stone-400",
   },
 };
+
+// ── DVI Inspection ─────────────────────────────────────────
+
+export const DVI_STATUS_ORDER: DviStatus[] = [
+  "in_progress",
+  "completed",
+  "sent",
+];
+
+export const DVI_STATUS_LABELS: Record<DviStatus, string> = {
+  in_progress: "In Progress",
+  completed: "Completed",
+  sent: "Sent",
+};
+
+export const DVI_STATUS_COLORS: Record<DviStatus, { bg: string; text: string }> = {
+  in_progress: {
+    bg: "bg-blue-100 dark:bg-blue-950",
+    text: "text-blue-700 dark:text-blue-400",
+  },
+  completed: {
+    bg: "bg-green-100 dark:bg-green-950",
+    text: "text-green-700 dark:text-green-400",
+  },
+  sent: {
+    bg: "bg-purple-100 dark:bg-purple-950",
+    text: "text-purple-700 dark:text-purple-400",
+  },
+};
+
+export const DVI_CONDITION_LABELS: Record<DviCondition, string> = {
+  good: "Good",
+  monitor: "Monitor",
+  attention: "Needs Attention",
+};
+
+export const DVI_CONDITION_COLORS: Record<
+  DviCondition,
+  { bg: string; text: string; border: string }
+> = {
+  good: {
+    bg: "bg-green-100 dark:bg-green-950",
+    text: "text-green-700 dark:text-green-400",
+    border: "border-green-500",
+  },
+  monitor: {
+    bg: "bg-amber-100 dark:bg-amber-950",
+    text: "text-amber-700 dark:text-amber-400",
+    border: "border-amber-500",
+  },
+  attention: {
+    bg: "bg-red-100 dark:bg-red-950",
+    text: "text-red-700 dark:text-red-400",
+    border: "border-red-500",
+  },
+};
+
+export const DVI_MAX_PHOTOS_PER_ITEM = 3;

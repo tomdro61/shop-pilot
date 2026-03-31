@@ -95,7 +95,7 @@ export function EstimateLineItemsList({
                                 <span className="ml-2 text-xs text-stone-400 dark:text-stone-500">#{item.part_number}</span>
                               )}
                             </p>
-                            <span className="ml-3 shrink-0 text-sm font-semibold text-stone-900 dark:text-stone-50">{formatCurrency(item.total)}</span>
+                            <span className="ml-3 shrink-0 text-sm font-semibold text-stone-900 dark:text-stone-50">{formatCurrency(item.total ?? 0)}</span>
                           </div>
                           <p className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">{formatDetail(item)}</p>
                         </div>

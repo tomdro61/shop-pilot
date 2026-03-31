@@ -16,7 +16,7 @@ export default async function PresetsPage() {
     getShopSettings(),
   ]);
 
-  const categories = settings?.job_categories ?? DEFAULT_JOB_CATEGORIES;
+  const categories = (settings?.job_categories as string[] | undefined) ?? DEFAULT_JOB_CATEGORIES;
 
   return (
     <div className="p-4 lg:p-10">

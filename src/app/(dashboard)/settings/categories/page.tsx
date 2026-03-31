@@ -12,7 +12,7 @@ export const metadata = {
 export default async function CategoriesSettingsPage() {
   const settings = await getShopSettings();
 
-  const categories = settings?.job_categories ?? DEFAULT_JOB_CATEGORIES;
+  const categories = (settings?.job_categories as string[] | undefined) ?? DEFAULT_JOB_CATEGORIES;
 
   return (
     <div className="mx-auto max-w-2xl p-4 lg:p-10">

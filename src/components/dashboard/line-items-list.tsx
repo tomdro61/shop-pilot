@@ -120,7 +120,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
                               <span className="ml-2 text-xs text-stone-400 dark:text-stone-500">#{item.part_number}</span>
                             )}
                           </p>
-                          <span className="ml-3 shrink-0 text-sm font-semibold text-stone-900 dark:text-stone-50">{formatCurrency(item.total)}</span>
+                          <span className="ml-3 shrink-0 text-sm font-semibold text-stone-900 dark:text-stone-50">{formatCurrency(item.total ?? 0)}</span>
                         </div>
                         <p className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">
                           {item.type === "labor"
@@ -205,7 +205,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
         <LineItemForm
           jobId={jobId}
           lineItem={editItem}
-          categories={settings?.job_categories ?? DEFAULT_SETTINGS.job_categories}
+          categories={((settings?.job_categories ?? DEFAULT_SETTINGS.job_categories) as string[])}
           open={!!editItem}
           onOpenChange={(open) => {
             if (!open) setEditItem(null);
@@ -217,7 +217,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
       <AddItemSheet
         jobId={jobId}
         presets={presets}
-        categories={settings?.job_categories ?? DEFAULT_SETTINGS.job_categories}
+        categories={((settings?.job_categories ?? DEFAULT_SETTINGS.job_categories) as string[])}
         open={addSheetOpen}
         onOpenChange={setAddSheetOpen}
       />
@@ -415,7 +415,7 @@ function CatalogTab({
     setAdding(item.id);
     const result = await createLineItem({
       job_id: jobId,
-      type: item.type,
+      type: item.type as "labor" | "part",
       description: item.description,
       quantity: item.default_quantity,
       unit_cost: item.default_unit_cost,

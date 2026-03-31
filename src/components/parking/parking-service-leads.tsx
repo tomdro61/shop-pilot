@@ -68,7 +68,7 @@ export function ParkingServiceLeads({
 
                       {/* Services — prominent, with completion status */}
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        {r.services_interested.map((service) => {
+                        {(r.services_interested ?? []).map((service) => {
                           const isComplete = r.services_completed?.includes(service);
                           if (isComplete) {
                             return (

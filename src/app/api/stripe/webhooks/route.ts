@@ -341,6 +341,6 @@ async function handleTerminalPayment(pi: Stripe.PaymentIntent) {
       payment_method: "terminal",
       stripe_payment_intent_id: pi.id,
       paid_at: new Date().toISOString(),
-    })
+    } as Record<string, unknown>)
     .eq("id", jobId);
 }

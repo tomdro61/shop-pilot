@@ -87,7 +87,7 @@ export function LineItemForm({
   }, [catalogSearch, open, isEditing]);
 
   function selectCatalogItem(item: CatalogItem) {
-    form.setValue("type", item.type);
+    form.setValue("type", item.type as "labor" | "part");
     form.setValue("description", item.description);
     form.setValue("quantity", item.default_quantity);
     form.setValue("unit_cost", item.default_unit_cost);

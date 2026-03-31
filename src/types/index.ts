@@ -77,7 +77,19 @@ export interface DailyInspectionCount {
   updated_at: string;
 }
 
+// DVI types
+export type DviTemplate = Database["public"]["Tables"]["dvi_templates"]["Row"];
+export type DviTemplateCategory = Database["public"]["Tables"]["dvi_template_categories"]["Row"];
+export type DviTemplateItem = Database["public"]["Tables"]["dvi_template_items"]["Row"];
+export type DviInspection = Database["public"]["Tables"]["dvi_inspections"]["Row"];
+export type DviInspectionInsert = Database["public"]["Tables"]["dvi_inspections"]["Insert"];
+export type DviResult = Database["public"]["Tables"]["dvi_results"]["Row"];
+export type DviResultUpdate = Database["public"]["Tables"]["dvi_results"]["Update"];
+export type DviPhoto = Database["public"]["Tables"]["dvi_photos"]["Row"];
+
 // Enum types
+export type DviStatus = Database["public"]["Enums"]["dvi_status"];
+export type DviCondition = Database["public"]["Enums"]["dvi_condition"];
 export type JobStatus = Database["public"]["Enums"]["job_status"];
 export type LineItemType = Database["public"]["Enums"]["line_item_type"];
 export type EstimateStatus = Database["public"]["Enums"]["estimate_status"];

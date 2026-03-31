@@ -19,6 +19,20 @@ export async function signIn(formData: FormData) {
     return { error: error.message };
   }
 
+  // Redirect based on role — use session from sign-in response
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("auth_id", session.user.id)
+      .single();
+
+    if (profile?.role === "tech") {
+      redirect("/tech");
+    }
+  }
+
   redirect("/dashboard");
 }
 

@@ -112,7 +112,7 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
 
   // Shop Supplies Categories
   const [suppliesCategories, setSuppliesCategories] = useState<string[] | null>(
-    settings.shop_supplies_categories ?? null
+    (settings.shop_supplies_categories as string[] | null) ?? null
   );
 
   // Hazmat / Environmental
@@ -124,7 +124,7 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
 
   // Hazmat Categories
   const [hazmatCategories, setHazmatCategories] = useState<string[] | null>(
-    settings.hazmat_categories ?? null
+    (settings.hazmat_categories as string[] | null) ?? null
   );
 
   function handleMethodChange(value: ShopSuppliesMethod) {
@@ -303,7 +303,7 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
               )}
             </div>
             <CategorySelector
-              allCategories={settings.job_categories}
+              allCategories={settings.job_categories as string[]}
               selected={suppliesCategories}
               onChange={setSuppliesCategories}
               label="Apply to categories"
@@ -366,7 +366,7 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
               </p>
             </div>
             <CategorySelector
-              allCategories={settings.job_categories}
+              allCategories={settings.job_categories as string[]}
               selected={hazmatCategories}
               onChange={setHazmatCategories}
               label="Apply to categories"

@@ -3,7 +3,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { teamMemberSchema, type TeamMemberFormData } from "@/lib/validators/team";
+import {
+  teamMemberCreateSchema,
+  type TeamMemberCreateData,
+  type TeamMemberUpdateData,
+} from "@/lib/validators/team";
 import { createTeamMember, updateTeamMember } from "@/lib/actions/team";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +21,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -43,32 +48,38 @@ export function TeamMemberForm({
 }: TeamMemberFormProps) {
   const isEditing = !!member;
 
-  const form = useForm<TeamMemberFormData>({
-    resolver: zodResolver(teamMemberSchema),
+  // Always use the create schema for the form (it's a superset).
+  // On edit, password is hidden and we strip it before submitting.
+  const form = useForm<TeamMemberCreateData>({
+    resolver: zodResolver(teamMemberCreateSchema),
     defaultValues: {
       name: member?.name || "",
       email: member?.email || "",
       role: member?.role || "tech",
+      password: isEditing ? "placeholder" : "", // Satisfy validation for edit mode
     },
   });
 
-  async function onSubmit(data: TeamMemberFormData) {
-    const result = isEditing
-      ? await updateTeamMember(member.id, data)
-      : await createTeamMember(data);
-
-    if ("error" in result && result.error) {
-      if (typeof result.error === "string") {
-        toast.error(result.error);
-      } else {
-        toast.error("Please fix the form errors");
+  async function onSubmit(data: TeamMemberCreateData) {
+    if (isEditing) {
+      const { password: _, ...updateData } = data;
+      const result = await updateTeamMember(member.id, updateData as TeamMemberUpdateData);
+      if ("error" in result && result.error) {
+        toast.error(typeof result.error === "string" ? result.error : "Please fix the form errors");
+        return;
       }
-      return;
+      toast.success("Team member updated");
+    } else {
+      const result = await createTeamMember(data);
+      if ("error" in result && result.error) {
+        toast.error(typeof result.error === "string" ? result.error : "Please fix the form errors");
+        return;
+      }
+      toast.success("Team member added");
     }
 
-    toast.success(isEditing ? "Team member updated" : "Team member added");
     onOpenChange(false);
-    form.reset({ name: "", email: "", role: "tech" });
+    form.reset({ name: "", email: "", role: "tech", password: "" });
   }
 
   return (
@@ -103,7 +114,7 @@ export function TeamMemberForm({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email (optional)</FormLabel>
+                  <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="john@example.com" {...field} />
                   </FormControl>
@@ -111,6 +122,25 @@ export function TeamMemberForm({
                 </FormItem>
               )}
             />
+
+            {!isEditing && (
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Temporary Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Min 8 characters" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Tech will use this to log in
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

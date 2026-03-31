@@ -74,7 +74,7 @@ export function ParkingReservationCard({
             </span>
           </div>
 
-          {reservation.services_interested.length > 0 && (
+          {reservation.services_interested && reservation.services_interested.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {reservation.services_interested.map((service) => (
                 <Badge
@@ -167,7 +167,7 @@ export function ParkingReservationCardCompact({
                 <span>{reservation.color}</span>
               </>
             )}
-            {reservation.services_interested.length > 0 && (
+            {reservation.services_interested && reservation.services_interested.length > 0 && (
               <>
                 <span className="text-stone-300 dark:text-stone-600">·</span>
                 <span className="text-violet-600 dark:text-violet-400">

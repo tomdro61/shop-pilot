@@ -363,6 +363,41 @@ export function parkingPaymentReceiptEmail({
   };
 }
 
+export function dviReportEmail({
+  customerName,
+  vehicleDesc,
+  link,
+}: {
+  customerName: string;
+  vehicleDesc: string;
+  link: string;
+}): { subject: string; html: string } {
+  const content = `
+    <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
+      Hi ${customerName},
+    </p>
+    <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
+      Your vehicle inspection report${vehicleDesc ? ` for your <strong>${vehicleDesc}</strong>` : ""} is ready for review.
+    </p>
+    <p style="margin:0 0 24px;color:#44403c;font-size:15px;line-height:1.6;">
+      The report includes a color-coded overview of your vehicle's condition with photos from our technician.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+      <tr>
+        <td align="center">
+          <a href="${link}" style="display:inline-block;padding:14px 32px;background-color:#1c1917;color:#ffffff;text-decoration:none;border-radius:9999px;font-size:14px;font-weight:600;">
+            View Inspection Report
+          </a>
+        </td>
+      </tr>
+    </table>`;
+
+  return {
+    subject: `Vehicle inspection report from Broadway Motors`,
+    html: baseLayout(content),
+  };
+}
+
 export function genericEmail({
   customerName,
   body,

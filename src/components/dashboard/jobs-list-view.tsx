@@ -39,7 +39,7 @@ type JobRow = {
   customers: { id: string; first_name: string; last_name: string; phone: string | null } | null;
   vehicles: { id: string; year: number | null; make: string | null; model: string | null } | null;
   users?: { id: string; name: string } | null;
-  job_line_items?: { total: number }[];
+  job_line_items?: { total: number | null }[];
 };
 
 interface JobsListViewProps {
