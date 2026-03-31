@@ -32,13 +32,13 @@ export default async function TechJobListPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {jobs.map((job) => {
             const vehicle = job.vehicles;
             const dviStatus = job.dvi_status as DviStatus | null;
 
             return (
-              <Link key={job.id} href={`/tech/${job.id}`}>
+              <Link key={job.id} href={`/tech/${job.id}`} className="block">
                 <div className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">

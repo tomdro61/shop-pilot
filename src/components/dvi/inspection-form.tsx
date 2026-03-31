@@ -7,7 +7,7 @@ import { InspectionItem } from "./inspection-item";
 import { InspectionProgress } from "./inspection-progress";
 import { updateResult, completeInspection } from "@/lib/actions/dvi";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { DviCondition } from "@/types";
 
@@ -183,9 +183,19 @@ export function InspectionForm({
     <div className="pb-24">
       {/* Sticky header with progress */}
       <div className="sticky top-[57px] z-40 -mx-4 bg-background/95 backdrop-blur-sm border-b border-stone-200/50 dark:border-stone-700/30 px-4 py-3">
-        <p className="text-xs font-bold text-stone-500 dark:text-stone-400 mb-2 truncate">
-          {vehicleDesc}
-        </p>
+        <div className="flex items-center justify-between mb-2">
+          <button
+            type="button"
+            onClick={() => router.push(`/tech/${jobId}`)}
+            className="flex items-center gap-1.5 rounded-full bg-stone-100 dark:bg-stone-800 px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-stone-300 active:scale-95 transition-transform"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
+          <h2 className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate ml-3">
+            {vehicleDesc}
+          </h2>
+        </div>
         <InspectionProgress
           rated={rated}
           total={total}
