@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
 import { getInvoiceForJob } from "@/lib/actions/invoices";
 import { getEstimateForJob } from "@/lib/actions/estimates";
+import { getInspectionForJob } from "@/lib/actions/dvi";
 import { getShopSettings } from "@/lib/actions/settings";
 import { getPresets } from "@/lib/actions/presets";
 import { calculateTotals } from "@/lib/utils/totals";
@@ -11,6 +12,7 @@ import { StatusSelect } from "@/components/dashboard/status-select";
 import { LineItemsList } from "@/components/dashboard/line-items-list";
 import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
+import { DviSection } from "@/components/dashboard/dvi-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
@@ -36,10 +38,11 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, invoice, estimate, settings, presets] = await Promise.all([
+  const [job, invoice, estimate, dviInspection, settings, presets] = await Promise.all([
     getJob(id),
     getInvoiceForJob(id),
     getEstimateForJob(id),
+    getInspectionForJob(id),
     getShopSettings(),
     getPresets(),
   ]);
@@ -207,6 +210,11 @@ export default async function JobDetailPage({
       {/* ── Line Items ── */}
       <div className="mb-8 animate-in-up stagger-3">
         <LineItemsList jobId={id} lineItems={lineItems} settings={settings} presets={presets} />
+      </div>
+
+      {/* ── DVI ── */}
+      <div className="mb-8 animate-in-up stagger-3">
+        <DviSection jobId={id} inspection={dviInspection as any} />
       </div>
 
       {/* ── Estimate + Invoice ── */}
