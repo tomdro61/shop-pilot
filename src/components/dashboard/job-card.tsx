@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusSelect } from "./status-select";
 import { formatCustomerName, formatVehicle, formatRONumber, formatDate } from "@/lib/utils/format";
-import type { JobStatus } from "@/types";
+import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
+import type { JobStatus, DviStatus } from "@/types";
 
 interface JobCardProps {
   job: {
@@ -18,6 +19,7 @@ interface JobCardProps {
     customers: { id: string; first_name: string; last_name: string; phone: string | null } | null;
     vehicles: { id: string; year: number | null; make: string | null; model: string | null } | null;
     users?: { id: string; name: string } | null;
+    dvi_inspections?: { status: string }[];
   };
   showStatus?: boolean;
 }
@@ -57,6 +59,18 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
                 )}
                 <span className="text-border">·</span>
                 <span className="tabular-nums">{formatDate(job.date_received)}</span>
+                {job.dvi_inspections?.[0] && (() => {
+                  const dviStatus = job.dvi_inspections[0].status as DviStatus;
+                  const colors = DVI_STATUS_COLORS[dviStatus];
+                  return (
+                    <>
+                      <span className="text-border">·</span>
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ${colors?.bg} ${colors?.text}`}>
+                        DVI {DVI_STATUS_LABELS[dviStatus]}
+                      </span>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </Link>

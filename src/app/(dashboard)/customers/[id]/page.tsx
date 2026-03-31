@@ -1,16 +1,17 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCustomer } from "@/lib/actions/customers";
+import { getInspectionsForVehicle } from "@/lib/actions/dvi";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-import { formatPhone, formatVehicle, formatDate } from "@/lib/utils/format";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS } from "@/lib/constants";
+import { formatPhone, formatVehicle, formatDate, formatRONumber } from "@/lib/utils/format";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, DVI_CONDITION_COLORS } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
 import { VehicleSection } from "@/components/dashboard/vehicle-section";
-import { ArrowLeft, Pencil, Wrench, Phone, Mail, MapPin, Car } from "lucide-react";
+import { ArrowLeft, Pencil, Wrench, Phone, Mail, MapPin, Car, ClipboardCheck } from "lucide-react";
 import type { JobStatus, ParkingStatus } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -57,6 +58,15 @@ export default async function CustomerDetailPage({
   const jobs = jobsResult.data || [];
   const parkingReservations = parkingResult.data || [];
   const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
+
+  // Fetch DVI history for each vehicle in parallel
+  const vehicleDviMap = new Map<string, Awaited<ReturnType<typeof getInspectionsForVehicle>>>();
+  if (vehicles.length > 0) {
+    const dviResults = await Promise.all(
+      vehicles.map((v) => getInspectionsForVehicle(v.id))
+    );
+    vehicles.forEach((v, i) => vehicleDviMap.set(v.id, dviResults[i]));
+  }
 
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-10">
@@ -134,6 +144,54 @@ export default async function CustomerDetailPage({
       <div className="animate-in-up stagger-2">
         <VehicleSection customerId={id} vehicles={vehicles} />
       </div>
+
+      {/* Vehicle DVI History */}
+      {vehicles.some((v) => (vehicleDviMap.get(v.id) ?? []).length > 0) && (
+        <div className="mt-4 animate-in-up stagger-2">
+          <Card>
+            <CardHeader className="px-5 py-3">
+              <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
+                <ClipboardCheck className="h-3.5 w-3.5" />
+                Past Inspections
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-stone-200 dark:divide-stone-800 px-2">
+                {vehicles.map((v) => {
+                  const inspections = vehicleDviMap.get(v.id) ?? [];
+                  if (inspections.length === 0) return null;
+                  return inspections.map((insp) => {
+                    const job = insp.job as { id: string; ro_number: number | null } | null;
+                    return (
+                      <Link key={insp.id} href={job ? `/jobs/${job.id}/dvi` : "#"} className="block">
+                        <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{formatVehicle(v)}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {[job?.ro_number ? formatRONumber(job.ro_number) : null, formatDate(insp.created_at)].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {(["good", "monitor", "attention"] as const).map((c) => {
+                              const count = insp.counts[c];
+                              if (count === 0) return null;
+                              return (
+                                <span key={c} className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}>
+                                  {count}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  });
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Job History */}
       <div className="animate-in-up stagger-3">

@@ -20,7 +20,7 @@ export async function getJobs(filters?: {
 
   let query = supabase
     .from("jobs")
-    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model), users(id, name), job_line_items(total)")
+    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model), users(id, name), job_line_items(total), dvi_inspections(status)")
     .order("date_received", { ascending: false });
 
   if (filters?.dateFrom) {
