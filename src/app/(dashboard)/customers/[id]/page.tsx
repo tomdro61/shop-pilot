@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import { formatPhone, formatVehicle, formatDate, formatRONumber } from "@/lib/utils/format";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, DVI_CONDITION_COLORS } from "@/lib/constants";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
 import { VehicleSection } from "@/components/dashboard/vehicle-section";
-import { ArrowLeft, Pencil, Wrench, Phone, Mail, MapPin, Car, ClipboardCheck, StickyNote, Plus } from "lucide-react";
+import { ArrowLeft, Pencil, Wrench, Phone, Mail, MapPin, Car, StickyNote, Plus } from "lucide-react";
 import type { JobStatus, ParkingStatus } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -169,62 +169,7 @@ export default async function CustomerDetailPage({
 
       {/* ── Vehicles & Inspections ── */}
       <div className="mb-6 animate-in-up stagger-2">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 flex items-center gap-2">
-            <Car className="h-3.5 w-3.5" />
-            Vehicles ({vehicles.length})
-          </h3>
-        </div>
-
-        <VehicleSection customerId={id} vehicles={vehicles} />
-
-        {/* Per-vehicle inspection history */}
-        {vehicles.map((v) => {
-          const inspections = vehicleDviMap.get(v.id) ?? [];
-          if (inspections.length === 0) return null;
-          return (
-            <Card key={`dvi-${v.id}`} className="mt-3">
-              <CardContent className="p-0">
-                <div className="flex items-center gap-2 px-5 py-3 border-b border-stone-100 dark:border-stone-800">
-                  <ClipboardCheck className="h-3.5 w-3.5 text-stone-400" />
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
-                    Inspections — {formatVehicle(v)}
-                  </p>
-                </div>
-                <div className="divide-y divide-stone-100 dark:divide-stone-800 px-2">
-                  {inspections.map((insp) => {
-                    const job = insp.job as { id: string; ro_number: number | null } | null;
-                    return (
-                      <Link key={insp.id} href={job ? `/jobs/${job.id}/dvi` : "#"} className="block">
-                        <div className="flex items-center justify-between rounded-xl px-4 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium">
-                              {job?.ro_number ? formatRONumber(job.ro_number) : "Inspection"}
-                            </p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              {formatDate(insp.created_at)}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {(["good", "monitor", "attention"] as const).map((c) => {
-                              const count = insp.counts[c];
-                              if (count === 0) return null;
-                              return (
-                                <span key={c} className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}>
-                                  {count}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <VehicleSection customerId={id} vehicles={vehicles} inspectionsByVehicle={vehicleDviMap} />
       </div>
 
       {/* ── Jobs ── */}
