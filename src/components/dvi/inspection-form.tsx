@@ -193,7 +193,7 @@ export function InspectionForm({
   return (
     <div className="pb-24">
       {/* Sticky header with progress */}
-      <div className="sticky top-[57px] z-40 -mx-4 bg-background/95 backdrop-blur-sm border-b border-stone-200/50 dark:border-stone-700/30 px-4 py-3">
+      <div className="sticky top-14 z-20 -mx-4 bg-background/95 backdrop-blur-sm border-b border-stone-200/50 dark:border-stone-700/30 px-4 py-3">
         <div className="flex items-center justify-between mb-2">
           <button
             type="button"

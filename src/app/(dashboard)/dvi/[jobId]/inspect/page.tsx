@@ -55,13 +55,15 @@ export default async function DviInspectPage({
   const photoUrls = await getDviPhotoSignedUrls(allPhotoPaths);
 
   return (
-    <InspectionForm
-      inspectionId={inspection.id}
-      jobId={jobId}
-      results={results}
-      photoUrls={photoUrls}
-      vehicleDesc={vehicleDesc}
-      isCompleted={inspection.status === "completed" || inspection.status === "sent"}
-    />
+    <div className="mx-auto max-w-2xl p-4">
+      <InspectionForm
+        inspectionId={inspection.id}
+        jobId={jobId}
+        results={results}
+        photoUrls={photoUrls}
+        vehicleDesc={vehicleDesc}
+        isCompleted={inspection.status === "completed" || inspection.status === "sent"}
+      />
+    </div>
   );
 }
