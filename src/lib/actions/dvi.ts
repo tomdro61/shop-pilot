@@ -283,8 +283,11 @@ export async function getTechJobs() {
 
   // Map dvi_inspections to a flat dvi_status field
   return (data ?? []).map((job) => {
-    const inspections = job.dvi_inspections as { status: string }[] | null;
-    const dvi_status = inspections && inspections.length > 0 ? inspections[0].status : null;
+    const raw = job.dvi_inspections;
+    // Supabase returns an object (one-to-one) or array depending on FK uniqueness
+    const dvi_status = Array.isArray(raw)
+      ? (raw.length > 0 ? (raw[0] as { status: string }).status : null)
+      : (raw as { status: string } | null)?.status ?? null;
     return { ...job, dvi_status };
   });
 }
