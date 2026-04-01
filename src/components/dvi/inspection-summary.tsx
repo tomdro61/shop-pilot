@@ -1,5 +1,5 @@
 import { DVI_CONDITION_LABELS, DVI_CONDITION_COLORS } from "@/lib/constants";
-import { Camera } from "lucide-react";
+import { PhotoLightbox } from "./photo-lightbox";
 import type { DviCondition } from "@/types";
 
 interface SummaryResult {
@@ -103,28 +103,7 @@ export function InspectionSummary({ results, showRecommendations }: InspectionSu
                     </div>
                   )}
 
-                  {item.photos.length > 0 && (
-                    <div className="mt-2 flex gap-2 flex-wrap">
-                      {item.photos.map((photo) => (
-                        <div
-                          key={photo.id}
-                          className="h-16 w-16 rounded-lg overflow-hidden bg-stone-100 dark:bg-stone-800"
-                        >
-                          {photo.signedUrl ? (
-                            <img
-                              src={photo.signedUrl}
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center">
-                              <Camera className="h-4 w-4 text-stone-400" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <PhotoLightbox photos={item.photos} />
                 </div>
               );
             })}
