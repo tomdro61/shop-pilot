@@ -60,6 +60,17 @@ export function InspectionForm({
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // Sync photos from server when props change (after router.refresh)
+  useEffect(() => {
+    setResults((prev) =>
+      prev.map((r) => {
+        const fresh = initialResults.find((ir) => ir.id === r.id);
+        if (!fresh) return r;
+        return { ...r, dvi_photos: fresh.dvi_photos };
+      })
+    );
+  }, [initialResults]);
+
   // Attach signed URLs to photos
   const resultsWithUrls = results.map((r) => ({
     ...r,

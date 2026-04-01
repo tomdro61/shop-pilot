@@ -42,8 +42,11 @@ export default async function CustomerDviPage({
     vehicles: { year: number | null; make: string | null; model: string | null; color: string | null; vin: string | null } | null;
   } | null;
 
-  const customer = job?.customers;
-  const vehicle = job?.vehicles;
+  // Use direct vehicle/customer, fall back to job's nested data
+  const directCustomer = (inspection as Record<string, unknown>).customers as { id: string; first_name: string; last_name: string; phone: string | null; email: string | null } | null;
+  const directVehicle = (inspection as Record<string, unknown>).vehicles as { year: number | null; make: string | null; model: string | null; color: string | null; vin: string | null } | null;
+  const customer = directCustomer ?? job?.customers;
+  const vehicle = directVehicle ?? job?.vehicles;
   const vehicleDesc = [vehicle?.year, vehicle?.make, vehicle?.model].filter(Boolean).join(" ");
   const isJobClosed = job?.status === "complete" || job?.payment_status === "paid";
   const isRecommendations = inspection.send_mode === "recommendations";
@@ -102,6 +105,18 @@ export default async function CustomerDviPage({
           </p>
         )}
       </div>
+
+      {/* Manager note */}
+      {inspection.customer_note && (
+        <div className="mb-6 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-4">
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
+            Note from Broadway Motors
+          </p>
+          <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-line">
+            {inspection.customer_note}
+          </p>
+        </div>
+      )}
 
       {/* Inspection report */}
       <InspectionSummary

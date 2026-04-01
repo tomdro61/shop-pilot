@@ -63,6 +63,7 @@ export function PhotoUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const canUpload = photos.length < DVI_MAX_PHOTOS_PER_ITEM && !disabled;
@@ -120,7 +121,8 @@ export function PhotoUpload({
               <img
                 src={photo.signedUrl}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover cursor-pointer"
+                onClick={() => setLightboxUrl(photo.signedUrl!)}
               />
             ) : (
               <div className="h-full w-full flex items-center justify-center">
@@ -173,6 +175,28 @@ export function PhotoUpload({
         <p className="mt-1 text-[10px] text-muted-foreground">
           Max {DVI_MAX_PHOTOS_PER_ITEM} photos per item
         </p>
+      )}
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-h-[85vh] max-w-full rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
     </div>
   );

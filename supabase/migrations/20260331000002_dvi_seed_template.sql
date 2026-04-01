@@ -40,9 +40,9 @@ VALUES ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000
 
 INSERT INTO dvi_template_items (category_id, name, sort_order) VALUES
   ('10000000-0000-0000-0000-000000000003', 'Front Brake Pads', 1),
-  ('10000000-0000-0000-0000-000000000003', 'Rear Brake Pads/Shoes', 2),
-  ('10000000-0000-0000-0000-000000000003', 'Front Rotors/Drums', 3),
-  ('10000000-0000-0000-0000-000000000003', 'Rear Rotors/Drums', 4),
+  ('10000000-0000-0000-0000-000000000003', 'Rear Brake Pads', 2),
+  ('10000000-0000-0000-0000-000000000003', 'Front Rotors', 3),
+  ('10000000-0000-0000-0000-000000000003', 'Rear Rotors', 4),
   ('10000000-0000-0000-0000-000000000003', 'Brake Hardware', 5),
   ('10000000-0000-0000-0000-000000000003', 'Parking Brake', 6);
 
@@ -57,8 +57,7 @@ INSERT INTO dvi_template_items (category_id, name, sort_order) VALUES
   ('10000000-0000-0000-0000-000000000004', 'Right Rear Tire', 4),
   ('10000000-0000-0000-0000-000000000004', 'Tire Tread Depth', 5),
   ('10000000-0000-0000-0000-000000000004', 'Wheel Condition', 6),
-  ('10000000-0000-0000-0000-000000000004', 'Spare Tire', 7),
-  ('10000000-0000-0000-0000-000000000004', 'TPMS', 8);
+  ('10000000-0000-0000-0000-000000000004', 'TPMS', 7);
 
 -- ── Exterior (sort_order 5) ──
 INSERT INTO dvi_template_categories (id, template_id, name, sort_order)

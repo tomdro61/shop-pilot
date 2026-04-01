@@ -136,40 +136,49 @@ export type Database = {
           approval_token: string | null
           completed_at: string | null
           created_at: string
+          customer_id: string | null
+          customer_note: string | null
           id: string
-          job_id: string
+          job_id: string | null
           send_mode: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["dvi_status"]
           tech_id: string
           template_id: string | null
           updated_at: string
+          vehicle_id: string | null
         }
         Insert: {
           approval_token?: string | null
           completed_at?: string | null
           created_at?: string
+          customer_id?: string | null
+          customer_note?: string | null
           id?: string
-          job_id: string
+          job_id?: string | null
           send_mode?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["dvi_status"]
           tech_id: string
           template_id?: string | null
           updated_at?: string
+          vehicle_id?: string | null
         }
         Update: {
           approval_token?: string | null
           completed_at?: string | null
           created_at?: string
+          customer_id?: string | null
+          customer_note?: string | null
           id?: string
-          job_id?: string
+          job_id?: string | null
           send_mode?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["dvi_status"]
           tech_id?: string
           template_id?: string | null
           updated_at?: string
+          vehicle_id?: string | null
         }
         Relationships: [
           {

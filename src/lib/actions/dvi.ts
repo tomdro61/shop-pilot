@@ -60,11 +60,20 @@ export async function startInspection(jobId: string) {
 
   if (existing) return { error: "An inspection already exists for this job" };
 
+  // Look up the job's vehicle and customer for direct linking
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("vehicle_id, customer_id")
+    .eq("id", jobId)
+    .single();
+
   // Create the inspection
   const { data: inspection, error: insErr } = await supabase
     .from("dvi_inspections")
     .insert({
       job_id: jobId,
+      vehicle_id: job?.vehicle_id ?? null,
+      customer_id: job?.customer_id ?? null,
       template_id: template.id,
       tech_id: user.id,
     })
@@ -126,7 +135,7 @@ export async function getInspectionByToken(token: string) {
   const { data, error } = await supabase
     .from("dvi_inspections")
     .select(
-      "*, dvi_results(*, dvi_photos(*)), jobs(id, status, payment_status, ro_number, customer_id, customers(id, first_name, last_name, phone, email), vehicles(year, make, model, color, vin))"
+      "*, dvi_results(*, dvi_photos(*)), jobs(id, status, payment_status, ro_number, customer_id, customers(id, first_name, last_name, phone, email), vehicles(year, make, model, color, vin)), vehicles(year, make, model, color, vin), customers(id, first_name, last_name, phone, email)"
     )
     .eq("approval_token", token)
     .single();
@@ -287,6 +296,7 @@ export async function sendInspection(
   options: {
     mode: "informational" | "recommendations";
     recommendedItems?: { resultId: string; description: string; price: number }[];
+    customerNote?: string;
   }
 ) {
   const supabase = await createClient();
@@ -319,6 +329,7 @@ export async function sendInspection(
       approval_token: token,
       send_mode: options.mode,
       sent_at: new Date().toISOString(),
+      customer_note: options.customerNote || null,
     })
     .eq("id", inspectionId);
 
@@ -415,6 +426,7 @@ export async function approveRecommendations(
     .single();
 
   if (fetchErr || !inspection) return { error: "Inspection not found" };
+  if (!inspection.job_id) return { error: "This inspection is no longer linked to a job" };
   if (inspection.status !== "sent") return { error: "Inspection is not in sent status" };
   if (inspection.send_mode !== "recommendations") return { error: "Inspection was not sent with recommendations" };
 
@@ -444,7 +456,7 @@ export async function approveRecommendations(
 
   // Create job line items
   const lineItems = results.map((r) => ({
-    job_id: inspection.job_id,
+    job_id: inspection.job_id!,
     type: "labor" as const,
     description: r.recommended_description || `${r.item_name} — needs attention`,
     quantity: 1,
@@ -500,9 +512,9 @@ export async function getInspectionsForVehicle(vehicleId: string) {
   const { data, error } = await supabase
     .from("dvi_inspections")
     .select(
-      "id, status, created_at, completed_at, jobs!inner(id, ro_number, vehicle_id), dvi_results(condition)"
+      "id, status, created_at, completed_at, job_id, jobs(id, ro_number), dvi_results(condition)"
     )
-    .eq("jobs.vehicle_id", vehicleId)
+    .eq("vehicle_id", vehicleId)
     .order("created_at", { ascending: false });
 
   if (error) return [];

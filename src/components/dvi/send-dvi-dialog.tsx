@@ -41,6 +41,7 @@ export function SendDviDialog({
 }: SendDviDialogProps) {
   const router = useRouter();
   const [mode, setMode] = useState<"informational" | "recommendations">("informational");
+  const [customerNote, setCustomerNote] = useState("");
   const [isPending, startTransition] = useTransition();
 
   // Items eligible for recommendations (monitor + attention only)
@@ -90,6 +91,7 @@ export function SendDviDialog({
       const result = await sendInspection(inspectionId, {
         mode,
         recommendedItems,
+        customerNote: customerNote.trim() || undefined,
       });
 
       if ("error" in result) {
@@ -112,6 +114,20 @@ export function SendDviDialog({
             Choose how to share the inspection report.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Note to customer */}
+        <div>
+          <label className="text-xs font-bold uppercase tracking-wider text-stone-400">
+            Note to Customer <span className="font-normal normal-case text-muted-foreground">(optional)</span>
+          </label>
+          <textarea
+            value={customerNote}
+            onChange={(e) => setCustomerNote(e.target.value)}
+            placeholder="e.g. Everything looks great, just keep an eye on those front brakes over the next few months."
+            rows={3}
+            className="mt-1.5 w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-stone-700 dark:bg-stone-900"
+          />
+        </div>
 
         {/* Mode toggle */}
         <div className="flex gap-2">
