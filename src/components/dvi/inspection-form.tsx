@@ -26,6 +26,7 @@ interface InspectionFormProps {
   jobId: string;
   results: ResultItem[];
   photoUrls: Record<string, string>;
+  customerName?: string | null;
   vehicleDesc: string;
   isCompleted: boolean;
 }
@@ -50,6 +51,7 @@ export function InspectionForm({
   jobId,
   results: initialResults,
   photoUrls,
+  customerName,
   vehicleDesc,
   isCompleted,
 }: InspectionFormProps) {
@@ -203,9 +205,14 @@ export function InspectionForm({
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
-          <h2 className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate ml-3">
-            {vehicleDesc}
-          </h2>
+          <div className="text-right ml-3 min-w-0">
+            {customerName && (
+              <p className="text-xs text-muted-foreground truncate">{customerName}</p>
+            )}
+            <h2 className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
+              {vehicleDesc}
+            </h2>
+          </div>
         </div>
         <InspectionProgress
           rated={rated}

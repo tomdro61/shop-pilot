@@ -32,6 +32,8 @@ export default async function DviInspectPage({
 
   const vehicle = job.vehicles as Vehicle | null;
   const vehicleDesc = vehicle ? formatVehicle(vehicle) : "Vehicle";
+  const customer = job.customers as { first_name: string; last_name: string } | null;
+  const customerName = customer ? `${customer.first_name} ${customer.last_name}` : null;
 
   // Collect all photo storage paths for batch signed URL generation
   const allPhotoPaths: string[] = [];
@@ -61,6 +63,7 @@ export default async function DviInspectPage({
         jobId={jobId}
         results={results}
         photoUrls={photoUrls}
+        customerName={customerName}
         vehicleDesc={vehicleDesc}
         isCompleted={inspection.status === "completed" || inspection.status === "sent"}
       />
