@@ -1,13 +1,12 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
-import { getInspectionForJob, startInspection } from "@/lib/actions/dvi";
-import { getCurrentUser } from "@/lib/actions/auth";
+import { getInspectionForJob } from "@/lib/actions/dvi";
 import { formatVehicle, formatRONumber } from "@/lib/utils/format";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS, JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Car, StickyNote, ClipboardCheck, Eye } from "lucide-react";
-import type { Customer, Vehicle, DviStatus, JobStatus } from "@/types";
+import type { Vehicle, DviStatus, JobStatus } from "@/types";
 import { StartInspectionButton } from "@/components/dvi/start-inspection-button";
 
 export async function generateMetadata({ params }: { params: Promise<{ jobId: string }> }) {
@@ -16,25 +15,23 @@ export async function generateMetadata({ params }: { params: Promise<{ jobId: st
   if (!job) return { title: "Job Not Found | ShopPilot" };
   const vehicle = job.vehicles as Vehicle | null;
   return {
-    title: `${vehicle ? formatVehicle(vehicle) : "Job"} | ShopPilot`,
+    title: `${vehicle ? formatVehicle(vehicle) : "Job"} — DVI | ShopPilot`,
   };
 }
 
-export default async function TechJobDetailPage({
+export default async function DviJobDetailPage({
   params,
 }: {
   params: Promise<{ jobId: string }>;
 }) {
   const { jobId } = await params;
-  const [job, inspection, user] = await Promise.all([
+  const [job, inspection] = await Promise.all([
     getJob(jobId),
     getInspectionForJob(jobId),
-    getCurrentUser(),
   ]);
 
   if (!job) notFound();
 
-  const customer = job.customers as Customer | null;
   const vehicle = job.vehicles as Vehicle | null;
   const dviStatus = inspection?.status as DviStatus | null;
 
@@ -43,10 +40,10 @@ export default async function TechJobDetailPage({
   const ratedItems = inspection?.dvi_results?.filter((r: { condition: string | null }) => r.condition !== null).length ?? 0;
 
   return (
-    <div>
+    <div className="mx-auto max-w-4xl p-4 lg:p-10">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/tech">
+        <Link href="/dvi">
           <Button variant="ghost" size="sm" className="mb-3">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Jobs
@@ -142,7 +139,7 @@ export default async function TechJobDetailPage({
                 />
               </div>
             </div>
-            <Link href={`/tech/${jobId}/inspect`}>
+            <Link href={`/dvi/${jobId}/inspect`}>
               <Button className="w-full">
                 <ClipboardCheck className="mr-2 h-4 w-4" />
                 Continue Inspection
@@ -154,7 +151,7 @@ export default async function TechJobDetailPage({
             <p className="text-sm text-muted-foreground mb-3">
               Inspection {dviStatus === "sent" ? "sent to customer" : "completed"}
             </p>
-            <Link href={`/tech/${jobId}/inspect`}>
+            <Link href={`/dvi/${jobId}/inspect`}>
               <Button variant="outline">
                 <Eye className="mr-2 h-4 w-4" />
                 View Inspection

@@ -2,33 +2,45 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding, Receipt, FileQuestion } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding, Receipt, FileQuestion, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const mainNav = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  techVisible?: boolean; // If true, techs can see this item
+}
+
+const mainNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/jobs", label: "Jobs", icon: Wrench },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/quick-pay", label: "Quick Pay", icon: CircleDollarSign },
   { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/inspections", label: "Inspections", icon: ClipboardCheck },
-  { href: "/parking", label: "Parking", icon: PlaneLanding },
+  { href: "/parking", label: "Parking", icon: PlaneLanding, techVisible: true },
+  { href: "/dvi", label: "DVI", icon: Search, techVisible: true },
   { href: "/quote-requests", label: "Quotes", icon: FileQuestion },
 ];
 
-const secondaryNav = [
+const secondaryNav: NavItem[] = [
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/chat", label: "AI Assistant", icon: MessageCircle },
 ];
 
-export function Sidebar({ badgeCounts }: { badgeCounts?: Record<string, number> }) {
+export function Sidebar({ badgeCounts, userRole }: { badgeCounts?: Record<string, number>; userRole?: string }) {
   const pathname = usePathname();
+  const isTech = userRole === "tech";
+
+  const visibleMain = isTech ? mainNav.filter((item) => item.techVisible) : mainNav;
+  const visibleSecondary = isTech ? [] : secondaryNav;
 
   return (
     <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:border-r lg:border-stone-800 lg:bg-stone-900">
       <div className="flex h-16 items-center border-b border-stone-800 px-6">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
+        <Link href={isTech ? "/dvi" : "/dashboard"} className="flex items-center gap-2.5">
           <Wrench className="h-5 w-5 text-blue-500" />
           <div className="flex flex-col">
             <span className="text-base font-semibold tracking-tight leading-tight text-stone-50">ShopPilot</span>
@@ -39,29 +51,32 @@ export function Sidebar({ badgeCounts }: { badgeCounts?: Record<string, number> 
 
       <nav className="flex flex-1 flex-col px-3 pt-4">
         <div className="space-y-0.5">
-          {mainNav.map((item) => (
-            <NavItem key={item.href} item={item} pathname={pathname} badge={badgeCounts?.[item.href]} />
+          {visibleMain.map((item) => (
+            <NavItemLink key={item.href} item={item} pathname={pathname} badge={badgeCounts?.[item.href]} />
           ))}
         </div>
 
-        <div className="my-3 h-px bg-stone-800" />
-
-        <div className="space-y-0.5">
-          {secondaryNav.map((item) => (
-            <NavItem key={item.href} item={item} pathname={pathname} />
-          ))}
-        </div>
+        {visibleSecondary.length > 0 && (
+          <>
+            <div className="my-3 h-px bg-stone-800" />
+            <div className="space-y-0.5">
+              {visibleSecondary.map((item) => (
+                <NavItemLink key={item.href} item={item} pathname={pathname} />
+              ))}
+            </div>
+          </>
+        )}
       </nav>
     </aside>
   );
 }
 
-function NavItem({
+function NavItemLink({
   item,
   pathname,
   badge,
 }: {
-  item: { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
+  item: NavItem;
   pathname: string;
   badge?: number;
 }) {

@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ jobId: st
   };
 }
 
-export default async function InspectPage({
+export default async function DviInspectPage({
   params,
 }: {
   params: Promise<{ jobId: string }>;
@@ -28,7 +28,7 @@ export default async function InspectPage({
   ]);
 
   if (!job) notFound();
-  if (!inspection) redirect(`/tech/${jobId}`);
+  if (!inspection) redirect(`/dvi/${jobId}`);
 
   const vehicle = job.vehicles as Vehicle | null;
   const vehicleDesc = vehicle ? formatVehicle(vehicle) : "Vehicle";

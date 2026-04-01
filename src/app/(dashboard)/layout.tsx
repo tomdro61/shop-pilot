@@ -18,16 +18,18 @@ export default async function DashboardLayout({
   const badgeCounts: Record<string, number> = {};
   if (newQuoteCount > 0) badgeCounts["/quote-requests"] = newQuoteCount;
 
+  const userRole = user?.role ?? "manager";
+
   return (
     <div className="flex h-svh">
-      <Sidebar badgeCounts={badgeCounts} />
+      <Sidebar badgeCounts={badgeCounts} userRole={userRole} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header user={user} />
         <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-stone-75 dark:bg-stone-950">
           {children}
         </main>
-        <BottomNav />
-        <ChatBubble />
+        <BottomNav userRole={userRole} />
+        {userRole !== "tech" && <ChatBubble />}
       </div>
     </div>
   );

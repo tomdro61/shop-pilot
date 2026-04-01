@@ -4,6 +4,9 @@ import { NextResponse, type NextRequest } from "next/server";
 const BOT_PATTERN =
   /bot|crawler|spider|crawling|slurp|baidu|yandex|sogou|semrush|ahrefs|dotbot|mj12bot|bytespider|gptbot|claudebot|facebookexternalhit|linkedinbot|twitterbot|pinterestbot|applebot|bingpreview|petalbot|dataforseo|ccbot|amazonbot/i;
 
+// Routes techs are allowed to access
+const TECH_ALLOWED = ["/dvi", "/parking"];
+
 export async function middleware(request: NextRequest) {
   // Block bots immediately — no Supabase call, no SSR, no CPU burned
   const ua = request.headers.get("user-agent") || "";
@@ -50,8 +53,15 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/estimates/approve") ||
-    pathname.startsWith("/dvi") ||
+    pathname.startsWith("/inspect") ||
     pathname === "/";
+
+  // Redirect old /tech/* URLs to /dvi/*
+  if (pathname.startsWith("/tech")) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace(/^\/tech/, "/dvi");
+    return NextResponse.redirect(url);
+  }
 
   // If not authenticated and trying to access protected routes
   if (!user && !isPublicRoute) {
@@ -60,33 +70,45 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated user — only query role when the result would change behavior
-  if (user) {
-    const needsRoleCheck =
-      pathname.startsWith("/login") ||
-      (!pathname.startsWith("/tech") && !isPublicRoute);
+  // Authenticated user — check role for login redirect and tech route restriction
+  if (user && !isPublicRoute) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("auth_id", user.id)
+      .single();
 
-    if (needsRoleCheck) {
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("auth_id", user.id)
-        .single();
+    const role = profile?.role;
 
-      const role = profile?.role;
+    // Login page → redirect to appropriate home
+    if (pathname.startsWith("/login")) {
+      const url = request.nextUrl.clone();
+      url.pathname = role === "tech" ? "/dvi" : "/dashboard";
+      return NextResponse.redirect(url);
+    }
 
-      if (pathname.startsWith("/login")) {
+    // Tech role restriction — only allowed on TECH_ALLOWED routes
+    if (role === "tech") {
+      const isAllowed = TECH_ALLOWED.some((route) => pathname.startsWith(route));
+      if (!isAllowed) {
         const url = request.nextUrl.clone();
-        url.pathname = role === "tech" ? "/tech" : "/dashboard";
-        return NextResponse.redirect(url);
-      }
-
-      if (role === "tech") {
-        const url = request.nextUrl.clone();
-        url.pathname = "/tech";
+        url.pathname = "/dvi";
         return NextResponse.redirect(url);
       }
     }
+  }
+
+  // Handle login redirect for authenticated users hitting /login
+  if (user && pathname.startsWith("/login")) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("auth_id", user.id)
+      .single();
+
+    const url = request.nextUrl.clone();
+    url.pathname = profile?.role === "tech" ? "/dvi" : "/dashboard";
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

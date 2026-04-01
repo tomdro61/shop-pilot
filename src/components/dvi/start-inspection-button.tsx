@@ -18,7 +18,7 @@ export function StartInspectionButton({ jobId }: { jobId: string }) {
         toast.error(typeof result.error === "string" ? result.error : "Failed to start inspection");
         return;
       }
-      router.push(`/tech/${jobId}/inspect`);
+      router.push(`/dvi/${jobId}/inspect`);
     });
   }
 

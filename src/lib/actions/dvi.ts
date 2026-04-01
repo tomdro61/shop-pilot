@@ -112,7 +112,7 @@ export async function startInspection(jobId: string) {
     if (resErr) return { error: resErr.message };
   }
 
-  revalidatePath(`/tech/${jobId}`);
+  revalidatePath(`/dvi/${jobId}`);
   return { data: { inspectionId: inspection.id } };
 }
 
@@ -232,7 +232,7 @@ export async function completeInspection(inspectionId: string) {
 
   // Revalidate both tech and manager views
   if (inspection?.job_id) {
-    revalidatePath(`/tech/${inspection.job_id}`);
+    revalidatePath(`/dvi/${inspection.job_id}`);
     revalidatePath(`/jobs/${inspection.job_id}`);
   }
 
@@ -259,7 +259,7 @@ export async function reopenInspection(inspectionId: string) {
 
   if (error) return { error: error.message };
 
-  revalidatePath(`/tech/${inspection.job_id}`);
+  revalidatePath(`/dvi/${inspection.job_id}`);
   return { success: true };
 }
 
@@ -303,7 +303,7 @@ export async function sendInspection(
 
   const token = crypto.randomUUID();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const dviUrl = `${appUrl}/dvi/${token}`;
+  const dviUrl = `${appUrl}/inspect/${token}`;
 
   // Update recommended items if in recommendations mode
   if (options.mode === "recommendations" && options.recommendedItems) {

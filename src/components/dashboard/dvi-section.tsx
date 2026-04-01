@@ -147,7 +147,7 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
                   </Button>
                 </a>
                 {inspection.approval_token && (
-                  <a href={`${appUrl}/dvi/${inspection.approval_token}`} target="_blank" rel="noopener noreferrer">
+                  <a href={`${appUrl}/inspect/${inspection.approval_token}`} target="_blank" rel="noopener noreferrer">
                     <Button variant="outline" size="sm">
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Customer Link

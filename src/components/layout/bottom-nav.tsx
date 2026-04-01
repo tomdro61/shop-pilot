@@ -2,19 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, PlaneLanding, CircleDollarSign } from "lucide-react";
+import { LayoutDashboard, Users, Wrench, PlaneLanding, CircleDollarSign, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  techVisible?: boolean;
+}
+
+const allNavItems: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/jobs", label: "Jobs", icon: Wrench },
   { href: "/customers", label: "Customers", icon: Users },
-  { href: "/parking", label: "Parking", icon: PlaneLanding },
+  { href: "/parking", label: "Parking", icon: PlaneLanding, techVisible: true },
   { href: "/quick-pay", label: "Pay", icon: CircleDollarSign },
+  { href: "/dvi", label: "DVI", icon: Search, techVisible: true },
 ];
 
-export function BottomNav() {
+export function BottomNav({ userRole }: { userRole?: string }) {
   const pathname = usePathname();
+  const isTech = userRole === "tech";
+
+  const navItems = isTech
+    ? allNavItems.filter((item) => item.techVisible)
+    : allNavItems.filter((item) => item.href !== "/dvi"); // managers see original 5 items on mobile
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 lg:hidden">

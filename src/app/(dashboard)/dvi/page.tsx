@@ -5,19 +5,19 @@ import { ClipboardCheck, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { DviStatus } from "@/types";
 
-export const metadata = { title: "My Jobs | ShopPilot" };
+export const metadata = { title: "DVI | ShopPilot" };
 
-export default async function TechJobListPage() {
+export default async function DviJobListPage() {
   const jobs = await getTechJobs();
 
   return (
-    <div>
+    <div className="mx-auto max-w-4xl p-4 lg:p-10">
       <div className="mb-4">
         <h2 className="text-xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
-          Active Jobs
+          Vehicle Inspections
         </h2>
         <p className="text-sm text-muted-foreground">
-          {jobs.length} job{jobs.length !== 1 ? "s" : ""} assigned to you
+          {jobs.length} active job{jobs.length !== 1 ? "s" : ""}
         </p>
       </div>
 
@@ -28,7 +28,7 @@ export default async function TechJobListPage() {
             No active jobs
           </p>
           <p className="text-xs text-muted-foreground">
-            Jobs assigned to you will appear here
+            Active jobs will appear here for inspection
           </p>
         </div>
       ) : (
@@ -38,7 +38,7 @@ export default async function TechJobListPage() {
             const dviStatus = job.dvi_status as DviStatus | null;
 
             return (
-              <Link key={job.id} href={`/tech/${job.id}`} className="block">
+              <Link key={job.id} href={`/dvi/${job.id}`} className="block">
                 <div className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">

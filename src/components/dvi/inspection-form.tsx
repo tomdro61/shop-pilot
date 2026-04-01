@@ -177,7 +177,7 @@ export function InspectionForm({
         return;
       }
       toast.success("Inspection completed!");
-      router.push(`/tech/${jobId}`);
+      router.push(`/dvi/${jobId}`);
     });
   }
 
@@ -197,7 +197,7 @@ export function InspectionForm({
         <div className="flex items-center justify-between mb-2">
           <button
             type="button"
-            onClick={() => router.push(`/tech/${jobId}`)}
+            onClick={() => router.push(`/dvi/${jobId}`)}
             className="flex items-center gap-1.5 rounded-full bg-stone-100 dark:bg-stone-800 px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-stone-300 active:scale-95 transition-transform"
           >
             <ArrowLeft className="h-4 w-4" />

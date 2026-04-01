@@ -29,7 +29,7 @@ export async function signIn(formData: FormData) {
       .single();
 
     if (profile?.role === "tech") {
-      redirect("/tech");
+      redirect("/dvi");
     }
   }
 
