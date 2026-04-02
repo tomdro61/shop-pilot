@@ -62,7 +62,7 @@ export function JobPaymentFooter({
   }
 
   return (
-    <div className="sticky bottom-0 z-20 border-t border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl">
+    <div className="sticky bottom-14 lg:bottom-0 z-20 border-t border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 lg:px-6">
         <div className="flex items-center gap-3">
           <p className="text-2xl font-bold tabular-nums tracking-tight">
