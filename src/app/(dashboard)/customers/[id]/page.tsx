@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCustomer } from "@/lib/actions/customers";
 import { getInspectionsForVehicle } from "@/lib/actions/dvi";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -174,20 +174,19 @@ export default async function CustomerDetailPage({
 
       {/* ── Jobs ── */}
       <div className="mb-6 animate-in-up stagger-3">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 flex items-center gap-2">
-            <Wrench className="h-3.5 w-3.5" />
-            Jobs ({jobs.length})
-          </h3>
-          <Link href={`/jobs/new?customerId=${id}`}>
-            <Button variant="outline" size="sm">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New Job
-            </Button>
-          </Link>
-        </div>
-
         <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-5 py-3 bg-stone-800 dark:bg-stone-900 rounded-t-xl">
+            <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-100">
+              <Wrench className="h-3.5 w-3.5" />
+              Jobs ({jobs.length})
+            </CardTitle>
+            <Link href={`/jobs/new?customerId=${id}`}>
+              <Button variant="outline" size="sm" className="border-stone-600 text-stone-100 hover:bg-stone-700">
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New Job
+              </Button>
+            </Link>
+          </CardHeader>
           <CardContent className="p-0">
             {jobs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -234,14 +233,13 @@ export default async function CustomerDetailPage({
       {/* ── Parking History ── */}
       {parkingReservations.length > 0 && (
         <div className="mb-6 animate-in-up stagger-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 flex items-center gap-2">
-              <Car className="h-3.5 w-3.5" />
-              Parking History ({parkingReservations.length})
-            </h3>
-          </div>
-
           <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 px-5 py-3 bg-stone-800 dark:bg-stone-900 rounded-t-xl">
+              <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-100">
+                <Car className="h-3.5 w-3.5" />
+                Parking History ({parkingReservations.length})
+              </CardTitle>
+            </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-stone-100 dark:divide-stone-800 px-2">
                 {parkingReservations.map((res) => {

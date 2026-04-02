@@ -44,7 +44,7 @@ export default async function InvoicesPage({
           <div className="hidden md:block bg-card rounded-xl shadow-card overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
+                <tr className="text-left text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100">
                   <th className="px-5 py-4">Customer</th>
                   <th className="px-5 py-4">Vehicle</th>
                   <th className="px-5 py-4">Job</th>

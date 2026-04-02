@@ -184,7 +184,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         ) : (
           <Card>
             <CardContent className="p-0">
-              <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
+              <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100 rounded-t-xl">
                 {jobs.length} jobs
               </div>
               <div className="space-y-1 p-2">

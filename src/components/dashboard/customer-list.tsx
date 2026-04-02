@@ -33,7 +33,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
     <Card>
       <CardContent className="p-0">
         {/* Table header — hidden on mobile */}
-        <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
+        <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] px-5 py-3 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100 rounded-t-xl">
           <span>Name</span>
           <span>Email</span>
           <span>Phone</span>
@@ -41,7 +41,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
         </div>
 
         {/* Customer count — mobile only */}
-        <div className="md:hidden px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
+        <div className="md:hidden px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100 rounded-t-xl">
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
 

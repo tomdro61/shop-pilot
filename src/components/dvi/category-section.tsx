@@ -27,18 +27,18 @@ export function CategorySection({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between px-4 py-3 active:bg-stone-50 dark:active:bg-stone-800 transition-colors"
+        className="flex w-full items-center justify-between px-4 py-3 bg-stone-800 dark:bg-stone-900 rounded-t-xl active:bg-stone-700 dark:active:bg-stone-800 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-stone-900 dark:text-stone-50">
+          <h3 className="text-sm font-bold text-stone-100">
             {name}
           </h3>
           <span
             className={cn(
               "text-[10px] font-black px-2 py-0.5 rounded-full",
               isComplete
-                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400"
-                : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+                ? "bg-green-500/20 text-green-300"
+                : "bg-stone-600 text-stone-300"
             )}
           >
             {ratedCount}/{totalCount}

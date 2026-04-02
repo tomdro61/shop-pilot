@@ -160,8 +160,11 @@ export default async function ParkingDetailPage({
         <div className="space-y-6">
           {/* Customer & Vehicle */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-card rounded-xl shadow-card p-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">Customer</p>
+            <div className="bg-card rounded-xl shadow-card overflow-hidden">
+              <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
+                <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Customer</p>
+              </div>
+              <div className="p-6">
               <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50 mb-3">
                 {reservation.first_name} {reservation.last_name}
               </h2>
@@ -175,10 +178,13 @@ export default async function ParkingDetailPage({
                   {reservation.email}
                 </a>
               </div>
+              </div>
             </div>
-            <div className="bg-card rounded-xl shadow-card p-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">Vehicle</p>
-              <div className="space-y-2.5 text-sm">
+            <div className="bg-card rounded-xl shadow-card overflow-hidden">
+              <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
+                <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Vehicle</p>
+              </div>
+              <div className="p-6 space-y-2.5 text-sm">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-0.5">Make / Model</p>
                   <p className="font-medium text-stone-900 dark:text-stone-50">{reservation.make} {reservation.model}</p>
@@ -198,10 +204,13 @@ export default async function ParkingDetailPage({
           </div>
 
           {/* Trip Dates + Timeline */}
-          <div className="bg-card rounded-xl shadow-card p-6">
-            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">
-              Trip Dates
-            </p>
+          <div className="bg-card rounded-xl shadow-card overflow-hidden">
+            <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">
+                Trip Dates
+              </p>
+            </div>
+            <div className="p-6">
             <ParkingDatesForm
               id={reservation.id}
               dropOffDate={reservation.drop_off_date}
@@ -239,14 +248,16 @@ export default async function ParkingDetailPage({
                 </div>
               ))}
             </div>
+            </div>
           </div>
 
           {/* Key Pickup — only when checked out */}
           {reservation.status === "checked_out" && (
-            <div className="bg-card rounded-xl shadow-card p-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">
-                Key Pickup
-              </p>
+            <div className="bg-card rounded-xl shadow-card overflow-hidden">
+              <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
+                <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Key Pickup</p>
+              </div>
+              <div className="p-6">
               {reservation.lock_box_number ? (
                 <div className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
                   <div className="flex items-center gap-2">
@@ -272,19 +283,22 @@ export default async function ParkingDetailPage({
                   <span className="font-medium text-stone-700 dark:text-stone-300">In person pickup</span>
                 </div>
               )}
+              </div>
             </div>
           )}
 
           {/* Service Interests */}
-          <div className="bg-card rounded-xl shadow-card p-6">
-            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">
-              Service Interests
-            </p>
+          <div className="bg-card rounded-xl shadow-card overflow-hidden">
+            <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Service Interests</p>
+            </div>
+            <div className="p-6">
             <ParkingServicesForm
               id={reservation.id}
               services={reservation.services_interested ?? []}
               completed={reservation.services_completed ?? []}
             />
+            </div>
           </div>
         </div>
 
@@ -299,14 +313,16 @@ export default async function ParkingDetailPage({
           />
 
           {/* Staff Notes */}
-          <div className="bg-card rounded-xl shadow-card p-6">
-            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-4">
-              Staff Notes
-            </p>
+          <div className="bg-card rounded-xl shadow-card overflow-hidden">
+            <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Staff Notes</p>
+            </div>
+            <div className="p-6">
             <ParkingNotesForm
               id={reservation.id}
               staffNotes={reservation.staff_notes}
             />
+            </div>
           </div>
         </div>
       </div>

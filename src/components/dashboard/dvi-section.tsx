@@ -57,8 +57,8 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-stone-800 dark:bg-stone-900 rounded-t-xl">
+          <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-100">
             <ClipboardCheck className="h-3.5 w-3.5" />
             Vehicle Inspection
           </CardTitle>
