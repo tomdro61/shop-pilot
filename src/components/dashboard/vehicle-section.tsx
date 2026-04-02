@@ -50,7 +50,7 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
             <Car className="h-3.5 w-3.5" />
             Vehicles ({vehicles.length})
           </CardTitle>
-          <Button variant="ghost" size="sm" className="text-stone-100 border border-stone-500 hover:bg-stone-700 hover:text-white" onClick={() => setAddOpen(true)}>
+          <Button size="sm" onClick={() => setAddOpen(true)}>
             Add Vehicle
           </Button>
         </CardHeader>
