@@ -77,8 +77,11 @@ export default async function JobDetailPage({
               <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
             </div>
             <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
-              {job.ro_number ? `${formatRONumber(job.ro_number)} — ` : ""}{job.title || "Job"}
+              {job.title || "Job"}
             </h2>
+            {job.ro_number && (
+              <p className="text-sm text-stone-400 dark:text-stone-500 mt-0.5">{formatRONumber(job.ro_number)}</p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {job.status === "complete" && customer?.phone && (

@@ -181,7 +181,7 @@ export default async function CustomerDetailPage({
               Jobs ({jobs.length})
             </CardTitle>
             <Link href={`/jobs/new?customerId=${id}`}>
-              <Button variant="outline" size="sm" className="border-stone-600 text-stone-100 hover:bg-stone-700">
+              <Button variant="ghost" size="sm" className="text-stone-100 border border-stone-500 hover:bg-stone-700 hover:text-white">
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                 New Job
               </Button>
