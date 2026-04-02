@@ -145,65 +145,71 @@ export default async function JobDetailPage({
       {/* ── Customer & Vehicle Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-8 animate-in-up stagger-2">
         {customer && (
-          <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">Customer</p>
-              <Link href={`/customers/${customer.id}`} className="text-stone-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
+            <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Customer</p>
+              <Link href={`/customers/${customer.id}`} className="text-stone-300 hover:text-white transition-colors">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
               </Link>
             </div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-sm font-black text-blue-700 dark:text-blue-400 border-4 border-white dark:border-stone-900 shadow-sm">
-                {initials}
+            <div className="p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-sm font-black text-blue-700 dark:text-blue-400 border-4 border-white dark:border-stone-900 shadow-sm">
+                  {initials}
+                </div>
+                <div>
+                  <p className="text-base font-bold text-stone-900 dark:text-stone-50">{formatCustomerName(customer)}</p>
+                  {customer.phone && <p className="text-sm text-stone-500 dark:text-stone-400">{formatPhone(customer.phone)}</p>}
+                  {customer.email && <p className="text-sm text-blue-600 dark:text-blue-400 truncate max-w-[180px]">{customer.email}</p>}
+                </div>
               </div>
-              <div>
-                <p className="text-base font-bold text-stone-900 dark:text-stone-50">{formatCustomerName(customer)}</p>
-                {customer.phone && <p className="text-sm text-stone-500 dark:text-stone-400">{formatPhone(customer.phone)}</p>}
-                {customer.email && <p className="text-sm text-blue-600 dark:text-blue-400 truncate max-w-[180px]">{customer.email}</p>}
-              </div>
+              {customer.phone && (
+                <div className="flex gap-2">
+                  <a href={`tel:${customer.phone}`} className="flex-1 py-2 bg-stone-100 dark:bg-stone-800 text-[11px] font-bold uppercase text-center text-stone-900 dark:text-stone-50 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
+                    Call
+                  </a>
+                  <a href={`sms:${customer.phone}`} className="flex-1 py-2 bg-stone-100 dark:bg-stone-800 text-[11px] font-bold uppercase text-center text-stone-900 dark:text-stone-50 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
+                    Text
+                  </a>
+                </div>
+              )}
             </div>
-            {customer.phone && (
-              <div className="flex gap-2">
-                <a href={`tel:${customer.phone}`} className="flex-1 py-2 bg-stone-100 dark:bg-stone-800 text-[11px] font-bold uppercase text-center text-stone-900 dark:text-stone-50 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
-                  Call
-                </a>
-                <a href={`sms:${customer.phone}`} className="flex-1 py-2 bg-stone-100 dark:bg-stone-800 text-[11px] font-bold uppercase text-center text-stone-900 dark:text-stone-50 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
-                  Text
-                </a>
-              </div>
-            )}
           </div>
         )}
 
         {vehicle && (
-          <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">Vehicle</p>
-              <Car className="h-4 w-4 text-stone-400 dark:text-stone-500" />
+          <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
+            <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Vehicle</p>
+              <Car className="h-4 w-4 text-stone-300" />
             </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">Model</p>
-              <p className="text-lg font-bold text-stone-900 dark:text-stone-50 leading-tight">{formatVehicle(vehicle)}</p>
-              {vehicle.color && <p className="text-sm text-stone-500 dark:text-stone-400">{vehicle.color}</p>}
-            </div>
-            {vehicle.vin && (
-              <div className="mt-3">
-                <p className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">VIN</p>
-                <p className="text-sm text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 px-2 py-1 rounded inline-block mt-0.5">{vehicle.vin}</p>
+            <div className="p-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">Model</p>
+                <p className="text-lg font-bold text-stone-900 dark:text-stone-50 leading-tight">{formatVehicle(vehicle)}</p>
+                {vehicle.color && <p className="text-sm text-stone-500 dark:text-stone-400">{vehicle.color}</p>}
               </div>
-            )}
+              {vehicle.vin && (
+                <div className="mt-3">
+                  <p className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">VIN</p>
+                  <p className="text-sm text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 px-2 py-1 rounded inline-block mt-0.5">{vehicle.vin}</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
 
       {/* ── Notes ── */}
       {job.notes && (
-        <div className="bg-stone-50 dark:bg-stone-800/50 rounded-xl p-5 border-l-4 border-blue-600 dark:border-blue-500 mb-8 animate-in-up stagger-2">
-          <div className="flex items-center gap-2 mb-2">
-            <StickyNote className="h-3.5 w-3.5 text-stone-400 dark:text-stone-500" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">Primary Complaint / Notes</p>
+        <div className="bg-card rounded-xl shadow-card overflow-hidden mb-8 animate-in-up stagger-2">
+          <div className="flex items-center gap-2 bg-stone-800 dark:bg-stone-900 px-5 py-3">
+            <StickyNote className="h-3.5 w-3.5 text-stone-300" />
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Primary Complaint / Notes</p>
           </div>
-          <p className="text-sm text-stone-900 dark:text-stone-50 leading-relaxed italic whitespace-pre-wrap">{job.notes}</p>
+          <div className="p-5">
+            <p className="text-sm text-stone-900 dark:text-stone-50 leading-relaxed italic whitespace-pre-wrap">{job.notes}</p>
+          </div>
         </div>
       )}
 

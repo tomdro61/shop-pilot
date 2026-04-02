@@ -337,15 +337,17 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
         {/* Tech Workload */}
-        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
-          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Tech Workload</h3>
+        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Tech Workload</h3>
+          </div>
           {techWorkload.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
               <p className="mt-2 text-sm text-muted-foreground">No active jobs assigned</p>
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-5 p-5 lg:p-6">
               {techWorkload.map(tech => (
                 <div key={tech.name}>
                   <div className="flex items-center gap-3 mb-3">
@@ -383,8 +385,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* Unpaid / Outstanding */}
-        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
-          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Unpaid / Outstanding</h3>
+        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Unpaid / Outstanding</h3>
+          </div>
           {unpaidJobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -392,7 +396,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <>
-              <div className="mb-5">
+              <div className="mb-5 px-5 lg:px-6 pt-5">
                 <p className="text-3xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
                   {formatCurrency(totalOutstanding)}
                 </p>
@@ -438,8 +442,10 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
         {/* Pending Estimates */}
-        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
-          <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 mb-5">Pending Estimates</h3>
+        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Pending Estimates</h3>
+          </div>
           {pendingEstimates.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <FileText className="h-5 w-5 text-muted-foreground" />
@@ -483,10 +489,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* Today's Schedule */}
-        <div className="bg-card rounded-xl shadow-card p-5 lg:p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Today&apos;s Schedule</h3>
-            <Link href="/jobs/new" className="w-7 h-7 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
+        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Today&apos;s Schedule</h3>
+            <Link href="/jobs/new" className="w-7 h-7 flex items-center justify-center bg-stone-600 text-white rounded-full hover:bg-stone-500 transition-colors">
               <Plus className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -496,7 +502,7 @@ export default async function DashboardPage() {
               <p className="mt-2 text-sm text-muted-foreground">Nothing scheduled today</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 p-5 lg:p-6">
               {todayScheduled.map(job => {
                 const customer = job.customers as { first_name: string; last_name: string } | null;
                 const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;

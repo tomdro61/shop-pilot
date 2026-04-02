@@ -149,21 +149,21 @@ export default async function RevenueReportPage({
       {/* Service Profitability */}
       {profitability.length > 0 && (
         <div className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Service Profitability ({resolved.label})</CardTitle>
+          <Card className="py-0 gap-0">
+            <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
+              <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Service Profitability ({resolved.label})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                      <th className="pb-2 pr-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Category</th>
-                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
-                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Parts Cost</th>
-                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Labor Rev</th>
-                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Gross Profit</th>
-                      <th className="pb-2 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Margin %</th>
+                      <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Category</th>
+                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
+                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Parts Cost</th>
+                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Labor Rev</th>
+                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Gross Profit</th>
+                      <th className="pb-2 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Margin %</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -194,20 +194,20 @@ export default async function RevenueReportPage({
       {/* Fleet A/R Aging */}
       {fleetAR.length > 0 && (
         <div className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Fleet A/R Aging</CardTitle>
+          <Card className="py-0 gap-0">
+            <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
+              <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Fleet A/R Aging</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                      <th className="pb-2 pr-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Account</th>
-                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">0-30 Days</th>
-                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">31-60 Days</th>
-                      <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">60+ Days</th>
-                      <th className="pb-2 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Total</th>
+                      <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Account</th>
+                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">0-30 Days</th>
+                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">31-60 Days</th>
+                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">60+ Days</th>
+                      <th className="pb-2 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Total</th>
                     </tr>
                   </thead>
                   <tbody>

@@ -51,7 +51,7 @@ function SortableHeader({ column, children }: { column: { toggleSorting: (desc: 
     <Button
       variant="ghost"
       size="sm"
-      className="-ml-3 h-8 text-[10px] font-black uppercase tracking-[0.1em] text-stone-400 dark:text-stone-500 hover:text-stone-900 dark:hover:text-stone-100"
+      className="-ml-3 h-8 text-[10px] font-black uppercase tracking-[0.1em] text-stone-100 hover:text-white hover:bg-stone-700"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
     >
       {children}
@@ -182,9 +182,9 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             <p className="mt-1 text-xs text-muted-foreground/70">Try adjusting your filters</p>
           </div>
         ) : (
-          <Card>
+          <Card className="py-0 gap-0">
             <CardContent className="p-0">
-              <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100 rounded-t-xl">
+              <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100">
                 {jobs.length} jobs
               </div>
               <div className="space-y-1 p-2">
@@ -197,14 +197,14 @@ export function JobsListView({ jobs }: JobsListViewProps) {
 
       {/* Desktop: Data table */}
       <div className="hidden lg:block">
-        <Card>
+        <Card className="py-0 gap-0">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  <TableRow key={headerGroup.id} className="bg-stone-800 dark:bg-stone-900 hover:bg-stone-800 dark:hover:bg-stone-900">
                     {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="text-[10px] font-black uppercase tracking-[0.1em] text-stone-400 dark:text-stone-500">
+                      <TableHead key={header.id} className="text-[10px] font-black uppercase tracking-[0.1em] text-stone-100">
                         {header.isPlaceholder
                           ? null
                           : flexRender(

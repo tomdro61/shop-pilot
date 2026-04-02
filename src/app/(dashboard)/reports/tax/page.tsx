@@ -78,9 +78,9 @@ export default async function TaxReportPage({
       </div>
 
       {/* Monthly Breakdown Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
+      <Card className="py-0 gap-0">
+        <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
+          <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
             Monthly Breakdown — {year}
           </CardTitle>
         </CardHeader>
@@ -89,11 +89,11 @@ export default async function TaxReportPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                  <th className="pb-2 pr-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Month</th>
-                  <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Total Revenue</th>
-                  <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Taxable Amt</th>
-                  <th className="pb-2 pr-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Tax Collected</th>
-                  <th className="pb-2 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Non-Taxable</th>
+                  <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Month</th>
+                  <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Total Revenue</th>
+                  <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Taxable Amt</th>
+                  <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Tax Collected</th>
+                  <th className="pb-2 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Non-Taxable</th>
                 </tr>
               </thead>
               <tbody>
