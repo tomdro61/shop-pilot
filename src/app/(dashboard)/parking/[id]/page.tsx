@@ -14,6 +14,7 @@ import { SendSpecialsButton } from "@/components/parking/send-specials-button";
 import { ParkingNotesForm } from "@/components/parking/parking-notes-form";
 import { ParkingDatesForm } from "@/components/parking/parking-dates-form";
 import { ParkingServicesForm } from "@/components/parking/parking-services-form";
+import { ParkingVehicleForm } from "@/components/parking/parking-vehicle-form";
 import { ParkingInvoiceSection } from "@/components/parking/parking-invoice-section";
 import {
   ArrowLeft,
@@ -184,21 +185,14 @@ export default async function ParkingDetailPage({
               <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
                 <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Vehicle</p>
               </div>
-              <div className="p-6 space-y-2.5 text-sm">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-0.5">Make / Model</p>
-                  <p className="font-medium text-stone-900 dark:text-stone-50">{reservation.make} {reservation.model}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-0.5">License Plate</p>
-                  <p className="font-medium text-stone-900 dark:text-stone-50">{reservation.license_plate}</p>
-                </div>
-                {reservation.color && (
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-0.5">Color</p>
-                    <p className="font-medium text-stone-900 dark:text-stone-50">{reservation.color}</p>
-                  </div>
-                )}
+              <div className="p-6">
+                <ParkingVehicleForm
+                  id={reservation.id}
+                  make={reservation.make}
+                  model={reservation.model}
+                  licensePlate={reservation.license_plate}
+                  color={reservation.color}
+                />
               </div>
             </div>
           </div>

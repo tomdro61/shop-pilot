@@ -291,6 +291,10 @@ export async function updateReservation(
     drop_off_time?: string;
     pick_up_date?: string;
     pick_up_time?: string;
+    make?: string;
+    model?: string;
+    license_plate?: string;
+    color?: string | null;
   }
 ) {
   const supabase = await createClient();
