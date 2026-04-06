@@ -58,7 +58,7 @@ export default async function StandaloneInspectPage({
     <div className="mx-auto max-w-2xl p-4">
       <InspectionForm
         inspectionId={inspection.id}
-        backUrl="/dvi"
+        backUrl={isCompleted ? "/dvi" : `/dvi/inspect/${inspection.id}`}
         results={results}
         photoUrls={photoUrls}
         customerName={customerName}
