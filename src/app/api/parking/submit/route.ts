@@ -11,13 +11,20 @@ const ALLOWED_ORIGINS = [
   "https://broadwaymotorsrevere.com",
   "https://www.broadwaymotorsrevere.com",
   "https://broadway-motors-web.vercel.app",
-  ...(process.env.NODE_ENV === "development"
-    ? ["http://localhost:3000", "http://localhost:3001"]
-    : []),
+  "http://localhost:3000",
+  "http://localhost:3001",
 ];
 
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Allow Vercel preview deployments for staging
+  if (origin.endsWith(".vercel.app") && origin.includes("broadway-motors")) return true;
+  return false;
+}
+
 function corsHeaders(origin: string | null) {
-  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : "";
+  const allowed = isAllowedOrigin(origin) ? origin! : "";
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
