@@ -231,7 +231,7 @@ export const PARKING_SERVICE_LABELS: Record<string, string> = {
 };
 
 export const PARKING_SPECIALS = [
-  { label: "Digital Vehicle Inspection (60+ point photo report)", price: "$20" },
+  { label: "Digital Vehicle Inspection (50-point photo report)", price: "$20" },
   { label: "Free Diagnostics", price: "Free" },
   { label: "Vehicle Repairs, Brakes, etc.", price: "20% off" },
   { label: "Full Synthetic Oil Change", price: "10% off", note: "for any Vehicle" },
