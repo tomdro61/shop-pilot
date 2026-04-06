@@ -56,6 +56,13 @@ export default async function StandaloneInspectPage({
 
   return (
     <div className="mx-auto max-w-2xl p-4">
+      {/* Send to Customer controls — top of page for completed inspections */}
+      {inspection.status === "completed" && (
+        <div className="mb-6">
+          <SendDviSection inspectionId={inspection.id} results={results} />
+        </div>
+      )}
+
       <InspectionForm
         inspectionId={inspection.id}
         backUrl={isCompleted ? "/dvi" : `/dvi/inspect/${inspection.id}`}
@@ -65,13 +72,6 @@ export default async function StandaloneInspectPage({
         vehicleDesc={vehicleDesc}
         isCompleted={isCompleted}
       />
-
-      {/* Send to Customer controls for completed standalone inspections */}
-      {inspection.status === "completed" && (
-        <div className="mt-6">
-          <SendDviSection inspectionId={inspection.id} results={results} />
-        </div>
-      )}
     </div>
   );
 }
