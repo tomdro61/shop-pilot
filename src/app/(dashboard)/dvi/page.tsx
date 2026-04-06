@@ -1,4 +1,4 @@
-import { getTechJobs, getPendingParkingDviRequests } from "@/lib/actions/dvi";
+import { getTechJobs, getPendingParkingDviRequests, getStandaloneInspections } from "@/lib/actions/dvi";
 import { formatVehicle, formatRONumber, formatDateShort } from "@/lib/utils/format";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
 import { ClipboardCheck, ChevronRight, Car, Calendar } from "lucide-react";
@@ -9,9 +9,10 @@ import type { DviStatus } from "@/types";
 export const metadata = { title: "DVI | ShopPilot" };
 
 export default async function DviJobListPage() {
-  const [jobs, parkingRequests] = await Promise.all([
+  const [jobs, parkingRequests, standaloneInspections] = await Promise.all([
     getTechJobs(),
     getPendingParkingDviRequests(),
+    getStandaloneInspections(),
   ]);
 
   return (
@@ -60,6 +61,48 @@ export default async function DviJobListPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Standalone Parking DVIs (in progress, completed, sent) */}
+      {standaloneInspections.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+              Parking DVIs
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {standaloneInspections.map((insp) => {
+              const dviStatus = insp.status as DviStatus;
+              return (
+                <Link key={insp.id} href={`/dvi/inspect/${insp.id}`} className="block">
+                  <div className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
+                        {insp.vehicle
+                          ? formatVehicle(insp.vehicle)
+                          : "Vehicle"}
+                      </p>
+                      {insp.customer && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {insp.customer.first_name} {insp.customer.last_name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="ml-3 flex items-center gap-2 shrink-0">
+                      <span
+                        className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
+                      >
+                        {DVI_STATUS_LABELS[dviStatus]}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-stone-400" />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}

@@ -709,6 +709,55 @@ export async function getInspectionsForVehicle(vehicleId: string) {
   });
 }
 
+export async function getStandaloneInspections() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("dvi_inspections")
+    .select(
+      "id, status, created_at, completed_at, sent_at, customer_id, vehicle_id, dvi_results(condition)"
+    )
+    .is("job_id", null)
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+
+  const admin = createAdminClient();
+
+  // Batch-fetch vehicle + customer data for all inspections
+  const vehicleIds = [...new Set((data ?? []).map((i) => i.vehicle_id).filter(Boolean))] as string[];
+  const customerIds = [...new Set((data ?? []).map((i) => i.customer_id).filter(Boolean))] as string[];
+
+  const [{ data: vehicles }, { data: customers }] = await Promise.all([
+    vehicleIds.length > 0
+      ? admin.from("vehicles").select("id, year, make, model, color").in("id", vehicleIds)
+      : Promise.resolve({ data: [] as { id: string; year: number | null; make: string | null; model: string | null; color: string | null }[] }),
+    customerIds.length > 0
+      ? admin.from("customers").select("id, first_name, last_name").in("id", customerIds)
+      : Promise.resolve({ data: [] as { id: string; first_name: string; last_name: string }[] }),
+  ]);
+
+  const vehicleMap = new Map((vehicles ?? []).map((v) => [v.id, v]));
+  const customerMap = new Map((customers ?? []).map((c) => [c.id, c]));
+
+  return (data ?? []).map((insp) => {
+    const results = (insp.dvi_results ?? []) as { condition: string | null }[];
+    return {
+      id: insp.id,
+      status: insp.status,
+      created_at: insp.created_at,
+      vehicle: insp.vehicle_id ? vehicleMap.get(insp.vehicle_id) ?? null : null,
+      customer: insp.customer_id ? customerMap.get(insp.customer_id) ?? null : null,
+      counts: {
+        good: results.filter((r) => r.condition === "good").length,
+        monitor: results.filter((r) => r.condition === "monitor").length,
+        attention: results.filter((r) => r.condition === "attention").length,
+        total: results.length,
+      },
+    };
+  });
+}
+
 // ── Parking DVI Requests ────────────────────────────────────
 
 export async function getPendingParkingDviRequests() {
