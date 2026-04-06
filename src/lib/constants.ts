@@ -213,6 +213,7 @@ export const PARKING_STATUS_COLORS: Record<
 };
 
 export const PARKING_SERVICES = [
+  { value: "dvi_inspection", label: "DVI ($20)" },
   { value: "oil_change", label: "Oil Change" },
   { value: "detailing", label: "Detailing" },
   { value: "brakes", label: "Brakes" },
@@ -221,6 +222,7 @@ export const PARKING_SERVICES = [
 ] as const;
 
 export const PARKING_SERVICE_LABELS: Record<string, string> = {
+  dvi_inspection: "DVI ($20)",
   oil_change: "Oil Change",
   detailing: "Detailing",
   brakes: "Brakes",
@@ -229,6 +231,7 @@ export const PARKING_SERVICE_LABELS: Record<string, string> = {
 };
 
 export const PARKING_SPECIALS = [
+  { label: "Digital Vehicle Inspection (60+ point photo report)", price: "$20" },
   { label: "Free Diagnostics", price: "Free" },
   { label: "Vehicle Repairs, Brakes, etc.", price: "20% off" },
   { label: "Full Synthetic Oil Change", price: "10% off", note: "for any Vehicle" },

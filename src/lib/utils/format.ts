@@ -58,6 +58,13 @@ export function formatDate(dateStr: string): string {
   return d.toLocaleDateString();
 }
 
+export function formatDateShort(dateStr: string): string {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 // Format customer name
 export function formatCustomerName(customer: {
   first_name: string;

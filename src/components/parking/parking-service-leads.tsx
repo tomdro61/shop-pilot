@@ -8,6 +8,7 @@ import { Phone, Mail, Car, Calendar, Check } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
 const SERVICE_COLORS: Record<string, { bg: string; text: string }> = {
+  dvi_inspection: { bg: "bg-emerald-100 dark:bg-emerald-900", text: "text-emerald-700 dark:text-emerald-300" },
   oil_change: { bg: "bg-amber-100 dark:bg-amber-900", text: "text-amber-700 dark:text-amber-300" },
   detailing: { bg: "bg-violet-100 dark:bg-violet-900", text: "text-violet-700 dark:text-violet-300" },
   brakes: { bg: "bg-red-100 dark:bg-red-900", text: "text-red-700 dark:text-red-300" },

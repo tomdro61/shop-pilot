@@ -23,7 +23,8 @@ interface ResultItem {
 
 interface InspectionFormProps {
   inspectionId: string;
-  jobId: string;
+  jobId?: string | null;
+  backUrl?: string;
   results: ResultItem[];
   photoUrls: Record<string, string>;
   customerName?: string | null;
@@ -49,6 +50,7 @@ function groupByCategory(results: ResultItem[]) {
 export function InspectionForm({
   inspectionId,
   jobId,
+  backUrl,
   results: initialResults,
   photoUrls,
   customerName,
@@ -56,6 +58,7 @@ export function InspectionForm({
   isCompleted,
 }: InspectionFormProps) {
   const router = useRouter();
+  const resolvedBackUrl = backUrl ?? (jobId ? `/dvi/${jobId}` : "/dvi");
   const [results, setResults] = useState(initialResults);
   const [isCompleting, startCompleting] = useTransition();
   const [, startSaving] = useTransition();
@@ -179,7 +182,7 @@ export function InspectionForm({
         return;
       }
       toast.success("Inspection completed!");
-      router.push(`/dvi/${jobId}`);
+      router.push(resolvedBackUrl);
     });
   }
 
@@ -199,7 +202,7 @@ export function InspectionForm({
         <div className="flex items-center justify-between mb-2">
           <button
             type="button"
-            onClick={() => router.push(`/dvi/${jobId}`)}
+            onClick={() => router.push(resolvedBackUrl)}
             className="flex items-center gap-1.5 rounded-full bg-stone-100 dark:bg-stone-800 px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-stone-300 active:scale-95 transition-transform"
           >
             <ArrowLeft className="h-4 w-4" />

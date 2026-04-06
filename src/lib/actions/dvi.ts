@@ -4,7 +4,11 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/actions/auth";
+import { findOrCreateParkingVehicle } from "@/lib/parking-vehicle";
+import { todayET } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+
+const DVI_SERVICE = "dvi_inspection" as const;
 
 // ── Template ────────────────────────────────────────────────
 
@@ -39,6 +43,45 @@ export const getTemplateWithItems = cache(async () => {
     })),
   };
 });
+
+// ── Shared Helpers ──────────────────────────────────────────
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+type Template = NonNullable<Awaited<ReturnType<typeof getTemplateWithItems>>>;
+
+async function insertResultRows(
+  supabase: SupabaseClient,
+  inspectionId: string,
+  template: Template
+): Promise<{ error?: string }> {
+  const resultRows: {
+    inspection_id: string;
+    template_item_id: string;
+    category_name: string;
+    item_name: string;
+    sort_order: number;
+  }[] = [];
+
+  let globalSort = 0;
+  for (const category of template.categories) {
+    for (const item of category.items) {
+      resultRows.push({
+        inspection_id: inspectionId,
+        template_item_id: item.id,
+        category_name: category.name,
+        item_name: item.name,
+        sort_order: globalSort++,
+      });
+    }
+  }
+
+  if (resultRows.length > 0) {
+    const { error } = await supabase.from("dvi_results").insert(resultRows);
+    if (error) return { error: error.message };
+  }
+
+  return {};
+}
 
 // ── Inspections ─────────────────────────────────────────────
 
@@ -82,37 +125,45 @@ export async function startInspection(jobId: string) {
 
   if (insErr) return { error: insErr.message };
 
-  // Build result rows from template items (denormalized)
-  const resultRows: {
-    inspection_id: string;
-    template_item_id: string;
-    category_name: string;
-    item_name: string;
-    sort_order: number;
-  }[] = [];
-
-  let globalSort = 0;
-  for (const category of template.categories) {
-    for (const item of category.items) {
-      resultRows.push({
-        inspection_id: inspection.id,
-        template_item_id: item.id,
-        category_name: category.name,
-        item_name: item.name,
-        sort_order: globalSort++,
-      });
-    }
-  }
-
-  if (resultRows.length > 0) {
-    const { error: resErr } = await supabase
-      .from("dvi_results")
-      .insert(resultRows);
-
-    if (resErr) return { error: resErr.message };
-  }
+  const rowResult = await insertResultRows(supabase, inspection.id, template);
+  if (rowResult.error) return { error: rowResult.error };
 
   revalidatePath(`/dvi/${jobId}`);
+  return { data: { inspectionId: inspection.id } };
+}
+
+export async function startStandaloneInspection(params: {
+  vehicleId: string;
+  customerId: string;
+  parkingReservationId?: string;
+}) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const template = await getTemplateWithItems();
+  if (!template) return { error: "No default inspection template found" };
+
+  const supabase = await createClient();
+
+  const { data: inspection, error: insErr } = await supabase
+    .from("dvi_inspections")
+    .insert({
+      job_id: null,
+      vehicle_id: params.vehicleId,
+      customer_id: params.customerId,
+      parking_reservation_id: params.parkingReservationId ?? null,
+      template_id: template.id,
+      tech_id: user.id,
+    })
+    .select()
+    .single();
+
+  if (insErr) return { error: insErr.message };
+
+  const rowResult = await insertResultRows(supabase, inspection.id, template);
+  if (rowResult.error) return { error: rowResult.error };
+
+  revalidatePath("/dvi");
   return { data: { inspectionId: inspection.id } };
 }
 
@@ -127,6 +178,31 @@ export const getInspectionForJob = cache(async (jobId: string) => {
 
   if (error) return null;
   return data;
+});
+
+export const getInspectionById = cache(async (inspectionId: string) => {
+  const admin = createAdminClient();
+
+  // Fetch inspection + results
+  const { data: inspection, error } = await admin
+    .from("dvi_inspections")
+    .select("*, dvi_results(*, dvi_photos(*))")
+    .eq("id", inspectionId)
+    .single();
+
+  if (error || !inspection) return null;
+
+  // Fetch vehicle and customer via direct FKs (separate queries to avoid PostgREST relationship issues)
+  const [{ data: vehicle }, { data: customer }] = await Promise.all([
+    inspection.vehicle_id
+      ? admin.from("vehicles").select("id, year, make, model, color, vin").eq("id", inspection.vehicle_id).single()
+      : Promise.resolve({ data: null }),
+    inspection.customer_id
+      ? admin.from("customers").select("id, first_name, last_name, phone, email").eq("id", inspection.customer_id).single()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  return { ...inspection, vehicles: vehicle, customers: customer };
 });
 
 export async function getInspectionByToken(token: string) {
@@ -172,7 +248,9 @@ export async function completeInspection(inspectionId: string) {
       .eq("inspection_id", inspectionId),
     supabase
       .from("dvi_inspections")
-      .select("job_id, jobs(ro_number, vehicles(year, make, model))")
+      .select(
+        "job_id, parking_reservation_id, vehicle_id, jobs(ro_number, vehicles(year, make, model))"
+      )
       .eq("id", inspectionId)
       .single(),
   ]);
@@ -202,10 +280,23 @@ export async function completeInspection(inspectionId: string) {
     else if (r.condition === "attention") counts.attention++;
   }
 
+  // Resolve vehicle data — prefer job's vehicle, fall back to direct FK lookup
+  const jobData = inspection?.jobs as { ro_number: number | null; vehicles: { year: number | null; make: string | null; model: string | null } | null } | null;
+  let vehicle = jobData?.vehicles ?? null;
+  const roNumber = jobData?.ro_number ?? null;
+
+  // If no vehicle from job, fetch directly
+  if (!vehicle && inspection?.vehicle_id) {
+    const { data: v } = await supabase
+      .from("vehicles")
+      .select("year, make, model")
+      .eq("id", inspection.vehicle_id)
+      .single();
+    vehicle = v;
+  }
+
   // Fire-and-forget internal SMS notification to shop line
-  if (inspection?.jobs) {
-    const job = inspection.jobs as { ro_number: number | null; vehicles: { year: number | null; make: string | null; model: string | null } | null };
-    const vehicle = job.vehicles;
+  if (vehicle) {
     import("@/lib/messaging/templates")
       .then(({ dviCompletedInternalSMS }) => {
         return import("@/lib/quo/client").then(({ sendSMS }) => {
@@ -218,7 +309,7 @@ export async function completeInspection(inspectionId: string) {
               year: vehicle?.year,
               make: vehicle?.make,
               model: vehicle?.model,
-              roNumber: job.ro_number,
+              roNumber,
               good: counts.good,
               monitor: counts.monitor,
               attention: counts.attention,
@@ -230,11 +321,21 @@ export async function completeInspection(inspectionId: string) {
       .catch((err) => console.error("Failed to send DVI completion SMS:", err));
   }
 
-  // Revalidate both tech and manager views
+  // Mark DVI service as completed on parking reservation (atomic)
+  if (inspection?.parking_reservation_id) {
+    const { error: rpcErr } = await supabase.rpc("append_service_completed", {
+      reservation_id: inspection.parking_reservation_id,
+      service_value: DVI_SERVICE,
+    });
+    if (rpcErr) console.error("Failed to mark DVI completed on reservation:", rpcErr);
+  }
+
+  // Revalidate views
   if (inspection?.job_id) {
     revalidatePath(`/dvi/${inspection.job_id}`);
     revalidatePath(`/jobs/${inspection.job_id}`);
   }
+  revalidatePath("/dvi");
 
   return { success: true, counts };
 }
@@ -259,7 +360,10 @@ export async function reopenInspection(inspectionId: string) {
 
   if (error) return { error: error.message };
 
-  revalidatePath(`/dvi/${inspection.job_id}`);
+  if (inspection.job_id) {
+    revalidatePath(`/dvi/${inspection.job_id}`);
+  }
+  revalidatePath("/dvi");
   return { success: true };
 }
 
@@ -338,11 +442,11 @@ export async function sendInspection(
 
   if (error) return { error: error.message };
 
-  // Get inspection with job/customer/vehicle for messaging
+  // Get inspection with job fallback for customer/vehicle
   const { data: inspection } = await supabase
     .from("dvi_inspections")
     .select(
-      "job_id, jobs(id, customer_id, customers(id, first_name, phone, email), vehicles(year, make, model))"
+      "job_id, customer_id, vehicle_id, jobs(id, customer_id, customers(id, first_name, phone, email), vehicles(year, make, model))"
     )
     .eq("id", inspectionId)
     .single();
@@ -354,13 +458,35 @@ export async function sendInspection(
     vehicles: { year: number | null; make: string | null; model: string | null } | null;
   } | null;
 
-  const customer = job?.customers;
+  // Resolve customer/vehicle: prefer job's nested data, fall back to direct FK lookups
+  let customer = job?.customers ?? null;
+  let vehicle = job?.vehicles ?? null;
+  const resolvedJobId = job?.id;
+
+  // If no customer from job, fetch directly
+  if (!customer && inspection?.customer_id) {
+    const { data: c } = await supabase
+      .from("customers")
+      .select("id, first_name, phone, email")
+      .eq("id", inspection.customer_id)
+      .single();
+    customer = c;
+  }
+
+  // If no vehicle from job, fetch directly
+  if (!vehicle && inspection?.vehicle_id) {
+    const { data: v } = await supabase
+      .from("vehicles")
+      .select("year, make, model")
+      .eq("id", inspection.vehicle_id)
+      .single();
+    vehicle = v;
+  }
 
   // Fire-and-forget SMS to customer
   if (customer?.phone) {
     import("@/lib/messaging/templates")
       .then(({ dviReportSMS }) => {
-        const vehicle = job?.vehicles;
         return import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
           sendCustomerSMS({
             customerId: customer.id,
@@ -371,7 +497,7 @@ export async function sendInspection(
               model: vehicle?.model,
               link: dviUrl,
             }),
-            jobId: job!.id,
+            jobId: resolvedJobId,
             line: "shop",
           })
         );
@@ -383,11 +509,10 @@ export async function sendInspection(
   if (customer?.email) {
     import("@/lib/actions/email")
       .then(({ sendCustomerEmail }) => {
+        const vehicleDesc = [vehicle?.year, vehicle?.make, vehicle?.model]
+          .filter(Boolean)
+          .join(" ");
         return import("@/lib/resend/templates").then(({ dviReportEmail }) => {
-          const vehicle = job?.vehicles;
-          const vehicleDesc = [vehicle?.year, vehicle?.make, vehicle?.model]
-            .filter(Boolean)
-            .join(" ");
           const { subject, html } = dviReportEmail({
             customerName: customer.first_name,
             vehicleDesc,
@@ -397,7 +522,7 @@ export async function sendInspection(
             customerId: customer.id,
             subject,
             html,
-            jobId: job!.id,
+            jobId: resolvedJobId,
           });
         });
       })
@@ -407,6 +532,7 @@ export async function sendInspection(
   if (inspection?.job_id) {
     revalidatePath(`/jobs/${inspection.job_id}`);
   }
+  revalidatePath("/dvi");
 
   return { data: { dviUrl } };
 }
@@ -423,18 +549,17 @@ export async function approveRecommendations(
   const { data: inspection, error: fetchErr } = await admin
     .from("dvi_inspections")
     .select(
-      "id, status, send_mode, job_id, jobs(id, status, payment_status, ro_number, customer_id, customers(id, first_name, last_name), vehicles(year, make, model))"
+      "id, status, send_mode, job_id, customer_id, vehicle_id, jobs(id, status, payment_status, ro_number, customer_id, customers(id, first_name, last_name), vehicles(year, make, model))"
     )
     .eq("approval_token", token)
     .single();
 
   if (fetchErr || !inspection) return { error: "Inspection not found" };
-  if (!inspection.job_id) return { error: "This inspection is no longer linked to a job" };
   if (inspection.status !== "sent") return { error: "Inspection is not in sent status" };
   if (inspection.send_mode !== "recommendations") return { error: "Inspection was not sent with recommendations" };
 
-  // Check job is still open
-  const job = inspection.jobs as {
+  let jobId = inspection.job_id;
+  let job = inspection.jobs as {
     id: string;
     status: string;
     payment_status: string;
@@ -444,6 +569,50 @@ export async function approveRecommendations(
     vehicles: { year: number | null; make: string | null; model: string | null } | null;
   } | null;
 
+  // If no job linked, auto-create one for the standalone DVI
+  if (!jobId) {
+    if (!inspection.customer_id) return { error: "No customer linked to this inspection" };
+
+    // Fetch customer/vehicle separately (PostgREST doesn't resolve late-added FKs on dvi_inspections)
+    const [{ data: custData }, { data: vehData }] = await Promise.all([
+      admin.from("customers").select("id, first_name, last_name").eq("id", inspection.customer_id).single(),
+      inspection.vehicle_id
+        ? admin.from("vehicles").select("year, make, model").eq("id", inspection.vehicle_id).single()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    const { data: newJob, error: jobErr } = await admin
+      .from("jobs")
+      .insert({
+        customer_id: inspection.customer_id,
+        vehicle_id: inspection.vehicle_id,
+        status: "not_started",
+        title: "DVI Recommended Services",
+        notes: "Auto-created from parking DVI recommendation approval",
+        date_received: todayET(),
+        payment_status: "unpaid",
+      })
+      .select("id, status, payment_status, ro_number")
+      .single();
+
+    if (jobErr || !newJob) return { error: "Failed to create job for recommendations" };
+
+    // Link inspection to the new job
+    await admin
+      .from("dvi_inspections")
+      .update({ job_id: newJob.id })
+      .eq("id", inspection.id);
+
+    jobId = newJob.id;
+    job = {
+      ...newJob,
+      customer_id: inspection.customer_id!,
+      customers: custData,
+      vehicles: vehData,
+    };
+  }
+
+  // Check job is still open
   if (job?.status === "complete" || job?.payment_status === "paid") {
     return { error: "This job has already been completed" };
   }
@@ -459,7 +628,7 @@ export async function approveRecommendations(
 
   // Create job line items
   const lineItems = results.map((r) => ({
-    job_id: inspection.job_id!,
+    job_id: jobId!,
     type: "labor" as const,
     description: r.recommended_description || `${r.item_name} — needs attention`,
     quantity: 1,
@@ -494,7 +663,7 @@ export async function approveRecommendations(
             year: vehicle?.year,
             make: vehicle?.make,
             model: vehicle?.model,
-            roNumber: job?.ro_number,
+            roNumber: job?.ro_number ?? null,
             approvedItems: approvedItemNames,
             total,
           }),
@@ -537,5 +706,70 @@ export async function getInspectionsForVehicle(vehicleId: string) {
         total: results.length,
       },
     };
+  });
+}
+
+// ── Parking DVI Requests ────────────────────────────────────
+
+export async function getPendingParkingDviRequests() {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("parking_reservations")
+    .select(
+      "id, first_name, last_name, phone, make, model, color, license_plate, lot, drop_off_date, pick_up_date, status, customer_id, services_interested, services_completed"
+    )
+    .contains("services_interested", [DVI_SERVICE])
+    .in("status", ["reserved", "checked_in"])
+    .order("drop_off_date", { ascending: true });
+
+  // Filter out already-completed DVIs (services_completed contains "dvi_inspection")
+  return (data ?? []).filter(
+    (r) => !r.services_completed?.includes(DVI_SERVICE)
+  );
+}
+
+export async function getPendingDviRequestCount(): Promise<number> {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("parking_reservations")
+    .select("id", { count: "exact", head: true })
+    .contains("services_interested", [DVI_SERVICE])
+    .in("status", ["reserved", "checked_in"])
+    .not("services_completed", "cs", `{"${DVI_SERVICE}"}`);
+
+  if (error) return 0;
+  return count || 0;
+}
+
+export async function startParkingDvi(reservationId: string) {
+  const supabase = await createClient();
+
+  // Fetch reservation
+  const { data: reservation, error: resErr } = await supabase
+    .from("parking_reservations")
+    .select("id, customer_id, make, model, color, license_plate")
+    .eq("id", reservationId)
+    .single();
+
+  if (resErr || !reservation) return { error: "Reservation not found" };
+  if (!reservation.customer_id) return { error: "No customer linked to this reservation" };
+
+  const vehicleId = await findOrCreateParkingVehicle({
+    customerId: reservation.customer_id,
+    make: reservation.make,
+    model: reservation.model,
+    color: reservation.color,
+    licensePlate: reservation.license_plate,
+  });
+
+  if (!vehicleId) return { error: "Failed to create vehicle record" };
+
+  // Start standalone inspection
+  return startStandaloneInspection({
+    vehicleId,
+    customerId: reservation.customer_id,
+    parkingReservationId: reservation.id,
   });
 }
