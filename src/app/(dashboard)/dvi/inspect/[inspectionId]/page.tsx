@@ -4,6 +4,7 @@ import { getDviPhotoSignedUrls } from "@/lib/supabase/storage";
 import { formatVehicle } from "@/lib/utils/format";
 import { InspectionForm } from "@/components/dvi/inspection-form";
 import { SendDviSection } from "@/components/dvi/send-dvi-section";
+import { DeleteDviButton } from "@/components/dvi/delete-dvi-button";
 import type { DviCondition, Vehicle } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ inspectionId: string }> }) {
@@ -72,6 +73,11 @@ export default async function StandaloneInspectPage({
         vehicleDesc={vehicleDesc}
         isCompleted={isCompleted}
       />
+
+      {/* Delete option */}
+      <div className="mt-6 flex justify-end">
+        <DeleteDviButton inspectionId={inspection.id} />
+      </div>
     </div>
   );
 }

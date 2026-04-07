@@ -396,6 +396,53 @@ export async function getTechJobs() {
   });
 }
 
+// ── Delete ──────────────────────────────────────────────────
+
+export async function deleteInspection(inspectionId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const supabase = await createClient();
+
+  // Fetch inspection to verify it exists and get photo paths
+  const { data: inspection } = await supabase
+    .from("dvi_inspections")
+    .select("id, job_id, dvi_results(dvi_photos(storage_path))")
+    .eq("id", inspectionId)
+    .single();
+
+  if (!inspection) return { error: "Inspection not found" };
+
+  // Collect photo storage paths for cleanup
+  const photoPaths: string[] = [];
+  for (const result of (inspection.dvi_results ?? []) as { dvi_photos: { storage_path: string }[] }[]) {
+    for (const photo of result.dvi_photos ?? []) {
+      photoPaths.push(photo.storage_path);
+    }
+  }
+
+  // Delete photos from storage
+  if (photoPaths.length > 0) {
+    await supabase.storage.from("dvi-photos").remove(photoPaths);
+  }
+
+  // Delete inspection (cascades to dvi_results and dvi_photos via FK)
+  const { error } = await supabase
+    .from("dvi_inspections")
+    .delete()
+    .eq("id", inspectionId);
+
+  if (error) return { error: error.message };
+
+  if (inspection.job_id) {
+    revalidatePath(`/dvi/${inspection.job_id}`);
+    revalidatePath(`/jobs/${inspection.job_id}`);
+  }
+  revalidatePath("/dvi");
+
+  return { success: true };
+}
+
 // ── Sending ─────────────────────────────────────────────────
 
 export async function sendInspection(
