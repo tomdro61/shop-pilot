@@ -869,3 +869,28 @@ export async function startParkingDvi(reservationId: string) {
     parkingReservationId: reservation.id,
   });
 }
+
+export async function startWalkinDvi(params: {
+  customerId: string;
+  vehicleId?: string;
+  make?: string;
+  model?: string;
+  color?: string | null;
+  licensePlate?: string | null;
+}) {
+  let vehicleId: string | null | undefined = params.vehicleId;
+
+  if (!vehicleId) {
+    if (!params.make || !params.model) return { error: "Make and model are required" };
+    vehicleId = await findOrCreateParkingVehicle({
+      customerId: params.customerId,
+      make: params.make,
+      model: params.model,
+      color: params.color ?? null,
+      licensePlate: params.licensePlate ?? null,
+    });
+    if (!vehicleId) return { error: "Failed to create vehicle record" };
+  }
+
+  return startStandaloneInspection({ vehicleId, customerId: params.customerId });
+}
