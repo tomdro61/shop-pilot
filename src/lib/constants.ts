@@ -297,7 +297,7 @@ export const DVI_STATUS_ORDER: DviStatus[] = [
 
 export const DVI_STATUS_LABELS: Record<DviStatus, string> = {
   in_progress: "In Progress",
-  completed: "Completed",
+  completed: "Ready to Send",
   sent: "Sent",
 };
 
