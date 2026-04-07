@@ -4,6 +4,7 @@ import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
 import { ClipboardCheck, ChevronRight, Car, Calendar } from "lucide-react";
 import Link from "next/link";
 import { StartParkingDviButton } from "@/components/dvi/start-parking-dvi-button";
+import { CreateDviDialog } from "@/components/dvi/create-dvi-dialog";
 import type { DviStatus } from "@/types";
 
 export const metadata = { title: "DVI | ShopPilot" };
@@ -17,10 +18,11 @@ export default async function DviJobListPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-10">
-      <div className="mb-4">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
           Vehicle Inspections
         </h2>
+        <CreateDviDialog />
       </div>
 
       {/* Parking DVI Requests */}
