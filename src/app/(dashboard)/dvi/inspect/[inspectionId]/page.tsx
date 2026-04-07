@@ -57,10 +57,16 @@ export default async function StandaloneInspectPage({
 
   return (
     <div className="mx-auto max-w-2xl p-4">
-      {/* Send to Customer controls — top of page for completed inspections */}
-      {inspection.status === "completed" && (
-        <div className="mb-6">
-          <SendDviSection inspectionId={inspection.id} results={results} />
+      {/* Send to Customer + Delete controls for completed inspections */}
+      {isCompleted && (
+        <div className="mb-6 space-y-3">
+          {inspection.status === "completed" && (
+            <SendDviSection inspectionId={inspection.id} results={results} />
+          )}
+          <div className="rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Delete this inspection and all its data</p>
+            <DeleteDviButton inspectionId={inspection.id} />
+          </div>
         </div>
       )}
 
@@ -73,11 +79,6 @@ export default async function StandaloneInspectPage({
         vehicleDesc={vehicleDesc}
         isCompleted={isCompleted}
       />
-
-      {/* Delete option */}
-      <div className="mt-6 flex justify-end">
-        <DeleteDviButton inspectionId={inspection.id} />
-      </div>
     </div>
   );
 }
