@@ -756,24 +756,54 @@ export async function getInspectionsForVehicle(vehicleId: string) {
   });
 }
 
-export async function getStandaloneInspections() {
+export async function getStandaloneInspections(showAll = false) {
   const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("dvi_inspections")
     .select(
-      "id, status, created_at, completed_at, sent_at, customer_id, vehicle_id, dvi_results(condition)"
+      "id, status, created_at, completed_at, sent_at, customer_id, vehicle_id, parking_reservation_id, job_id, dvi_results(condition)"
     )
     .is("job_id", null)
     .order("created_at", { ascending: false });
 
+  if (!showAll) {
+    // Only show in_progress and completed (these need action)
+    query = query.in("status", ["in_progress", "completed"]);
+  }
+
+  const { data, error } = await query;
   if (error) return [];
 
-  const admin = createAdminClient();
+  let inspections = data ?? [];
 
-  // Batch-fetch vehicle + customer data for all inspections
-  const vehicleIds = [...new Set((data ?? []).map((i) => i.vehicle_id).filter(Boolean))] as string[];
-  const customerIds = [...new Set((data ?? []).map((i) => i.customer_id).filter(Boolean))] as string[];
+  // For "sent" DVIs in showAll mode, filter out ones where the parking reservation
+  // is already checked out/cancelled (car is gone)
+  if (showAll && inspections.length > 0) {
+    const sentWithParking = inspections.filter(
+      (i) => i.status === "sent" && i.parking_reservation_id
+    );
+    if (sentWithParking.length > 0) {
+      const resIds = sentWithParking.map((i) => i.parking_reservation_id!);
+      const { data: reservations } = await admin
+        .from("parking_reservations")
+        .select("id, status")
+        .in("id", resIds);
+      const goneIds = new Set(
+        (reservations ?? [])
+          .filter((r) => r.status === "checked_out" || r.status === "cancelled" || r.status === "no_show")
+          .map((r) => r.id)
+      );
+      inspections = inspections.filter(
+        (i) => !(i.status === "sent" && i.parking_reservation_id && goneIds.has(i.parking_reservation_id))
+      );
+    }
+  }
+
+  // Batch-fetch vehicle + customer data
+  const vehicleIds = [...new Set(inspections.map((i) => i.vehicle_id).filter(Boolean))] as string[];
+  const customerIds = [...new Set(inspections.map((i) => i.customer_id).filter(Boolean))] as string[];
 
   const [{ data: vehicles }, { data: customers }] = await Promise.all([
     vehicleIds.length > 0
@@ -787,7 +817,7 @@ export async function getStandaloneInspections() {
   const vehicleMap = new Map((vehicles ?? []).map((v) => [v.id, v]));
   const customerMap = new Map((customers ?? []).map((c) => [c.id, c]));
 
-  return (data ?? []).map((insp) => {
+  return inspections.map((insp) => {
     const results = (insp.dvi_results ?? []) as { condition: string | null }[];
     return {
       id: insp.id,

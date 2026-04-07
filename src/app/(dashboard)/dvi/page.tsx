@@ -9,11 +9,18 @@ import type { DviStatus } from "@/types";
 
 export const metadata = { title: "DVI | ShopPilot" };
 
-export default async function DviJobListPage() {
+export default async function DviJobListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ showAll?: string }>;
+}) {
+  const { showAll: showAllParam } = await searchParams;
+  const showAll = showAllParam === "true";
+
   const [jobs, parkingRequests, standaloneInspections] = await Promise.all([
     getTechJobs(),
     getPendingParkingDviRequests(),
-    getStandaloneInspections(),
+    getStandaloneInspections(showAll),
   ]);
 
   return (
@@ -67,44 +74,56 @@ export default async function DviJobListPage() {
         </div>
       )}
 
-      {/* Standalone Parking DVIs (in progress, completed, sent) */}
-      {standaloneInspections.length > 0 && (
+      {/* Standalone Parking DVIs */}
+      {(standaloneInspections.length > 0 || showAll) && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
             <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
               Parking DVIs
             </h3>
           </div>
-          <div className="space-y-2">
-            {standaloneInspections.map((insp) => {
-              const dviStatus = insp.status as DviStatus;
-              return (
-                <Link key={insp.id} href={`/dvi/inspect/${insp.id}`} className="block">
-                  <div className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
-                        {insp.vehicle
-                          ? formatVehicle(insp.vehicle)
-                          : "Vehicle"}
-                      </p>
-                      {insp.customer && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {insp.customer.first_name} {insp.customer.last_name}
+          {standaloneInspections.length > 0 ? (
+            <div className="space-y-2">
+              {standaloneInspections.map((insp) => {
+                const dviStatus = insp.status as DviStatus;
+                return (
+                  <Link key={insp.id} href={`/dvi/inspect/${insp.id}`} className="block">
+                    <div className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
+                          {insp.vehicle
+                            ? formatVehicle(insp.vehicle)
+                            : "Vehicle"}
                         </p>
-                      )}
+                        {insp.customer && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {insp.customer.first_name} {insp.customer.last_name}
+                          </p>
+                        )}
+                      </div>
+                      <div className="ml-3 flex items-center gap-2 shrink-0">
+                        <span
+                          className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
+                        >
+                          {DVI_STATUS_LABELS[dviStatus]}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-stone-400" />
+                      </div>
                     </div>
-                    <div className="ml-3 flex items-center gap-2 shrink-0">
-                      <span
-                        className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
-                      >
-                        {DVI_STATUS_LABELS[dviStatus]}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-stone-400" />
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-2">No sent DVIs to show.</p>
+          )}
+          <div className="mt-2">
+            <Link
+              href={showAll ? "/dvi" : "/dvi?showAll=true"}
+              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              {showAll ? "Hide sent DVIs" : "Show sent DVIs"}
+            </Link>
           </div>
         </div>
       )}
