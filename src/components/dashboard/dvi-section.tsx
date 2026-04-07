@@ -68,7 +68,7 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
             </Badge>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="py-4">
           {!inspection ? (
             <p className="text-sm text-muted-foreground py-2 text-center">
               No inspection yet — tech will start from their portal.
