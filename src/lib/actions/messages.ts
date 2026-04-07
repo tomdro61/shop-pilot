@@ -116,7 +116,7 @@ export async function sendParkingSpecialsSMS(reservationId: string) {
 
   const body = parkingSpecialsSMS({
     firstName: reservation.first_name,
-    specials: PARKING_SPECIALS.map((s) => ({ label: s.label, price: s.price })),
+    specials: PARKING_SPECIALS.map((s) => ({ label: s.label, price: s.price, link: "link" in s ? (s.link as string) : undefined })),
   });
 
   const phone = toE164(reservation.phone);
