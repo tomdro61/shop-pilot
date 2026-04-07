@@ -130,14 +130,9 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
                 ))}
               </div>
 
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Sent</span>
-                <span>{inspection.sent_at ? formatDate(inspection.sent_at) : "—"}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Mode</span>
-                <span className="capitalize">{inspection.send_mode || "—"}</span>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Sent {inspection.sent_at ? formatDate(inspection.sent_at) : ""}
+              </p>
 
               <div className="flex gap-2">
                 <a href={`/jobs/${jobId}/dvi`} className="flex-1">
