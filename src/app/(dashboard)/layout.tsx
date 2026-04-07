@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/actions/auth";
 import { getNewQuoteRequestCount } from "@/lib/actions/quote-requests";
+import { getPendingDviRequestCount } from "@/lib/actions/dvi";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
@@ -10,13 +11,15 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, newQuoteCount] = await Promise.all([
+  const [user, newQuoteCount, pendingDviCount] = await Promise.all([
     getCurrentUser(),
     getNewQuoteRequestCount(),
+    getPendingDviRequestCount(),
   ]);
 
   const badgeCounts: Record<string, number> = {};
   if (newQuoteCount > 0) badgeCounts["/quote-requests"] = newQuoteCount;
+  if (pendingDviCount > 0) badgeCounts["/dvi"] = pendingDviCount;
 
   const userRole = user?.role ?? "manager";
 

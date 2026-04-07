@@ -1,14 +1,19 @@
-import { getTechJobs } from "@/lib/actions/dvi";
-import { formatVehicle, formatRONumber } from "@/lib/utils/format";
+import { getTechJobs, getPendingParkingDviRequests, getStandaloneInspections } from "@/lib/actions/dvi";
+import { formatVehicle, formatRONumber, formatDateShort } from "@/lib/utils/format";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
-import { ClipboardCheck, ChevronRight } from "lucide-react";
+import { ClipboardCheck, ChevronRight, Car, Calendar } from "lucide-react";
 import Link from "next/link";
+import { StartParkingDviButton } from "@/components/dvi/start-parking-dvi-button";
 import type { DviStatus } from "@/types";
 
 export const metadata = { title: "DVI | ShopPilot" };
 
 export default async function DviJobListPage() {
-  const jobs = await getTechJobs();
+  const [jobs, parkingRequests, standaloneInspections] = await Promise.all([
+    getTechJobs(),
+    getPendingParkingDviRequests(),
+    getStandaloneInspections(),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl p-4 lg:p-10">
@@ -16,7 +21,98 @@ export default async function DviJobListPage() {
         <h2 className="text-xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
           Vehicle Inspections
         </h2>
-        <p className="text-sm text-muted-foreground">
+      </div>
+
+      {/* Parking DVI Requests */}
+      {parkingRequests.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+              Parking DVI Requests
+            </h3>
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-semibold text-white">
+              {parkingRequests.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {parkingRequests.map((req) => (
+              <div
+                key={req.id}
+                className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-emerald-200/20 dark:ring-emerald-800/20 border-l-4 border-emerald-500"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
+                    {req.first_name} {req.last_name}
+                  </p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Car className="h-3 w-3" />
+                      {req.make} {req.model}
+                      {req.color ? ` · ${req.color}` : ""}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      {formatDateShort(req.drop_off_date)} – {formatDateShort(req.pick_up_date)}
+                    </span>
+                  </div>
+                </div>
+                <div className="ml-3 shrink-0">
+                  <StartParkingDviButton reservationId={req.id} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Standalone Parking DVIs (in progress, completed, sent) */}
+      {standaloneInspections.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+              Parking DVIs
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {standaloneInspections.map((insp) => {
+              const dviStatus = insp.status as DviStatus;
+              return (
+                <Link key={insp.id} href={`/dvi/inspect/${insp.id}`} className="block">
+                  <div className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
+                        {insp.vehicle
+                          ? formatVehicle(insp.vehicle)
+                          : "Vehicle"}
+                      </p>
+                      {insp.customer && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {insp.customer.first_name} {insp.customer.last_name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="ml-3 flex items-center gap-2 shrink-0">
+                      <span
+                        className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
+                      >
+                        {DVI_STATUS_LABELS[dviStatus]}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-stone-400" />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Active Jobs */}
+      <div className="mb-3">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+          Active Jobs
+        </h3>
+        <p className="text-xs text-muted-foreground">
           {jobs.length} active job{jobs.length !== 1 ? "s" : ""}
         </p>
       </div>

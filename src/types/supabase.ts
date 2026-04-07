@@ -140,6 +140,7 @@ export type Database = {
           customer_note: string | null
           id: string
           job_id: string | null
+          parking_reservation_id: string | null
           send_mode: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["dvi_status"]
@@ -156,6 +157,7 @@ export type Database = {
           customer_note?: string | null
           id?: string
           job_id?: string | null
+          parking_reservation_id?: string | null
           send_mode?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["dvi_status"]
@@ -172,6 +174,7 @@ export type Database = {
           customer_note?: string | null
           id?: string
           job_id?: string | null
+          parking_reservation_id?: string | null
           send_mode?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["dvi_status"]
@@ -1108,6 +1111,10 @@ export type Database = {
       is_manager: { Args: never; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      append_service_completed: {
+        Args: { reservation_id: string; service_value: string }
+        Returns: undefined
+      }
     }
     Enums: {
       customer_type: "retail" | "fleet" | "parking"
