@@ -763,7 +763,7 @@ export async function getStandaloneInspections(showAll = false) {
   let query = supabase
     .from("dvi_inspections")
     .select(
-      "id, status, created_at, completed_at, sent_at, customer_id, vehicle_id, parking_reservation_id, job_id, dvi_results(condition)"
+      "id, status, created_at, completed_at, customer_id, vehicle_id, parking_reservation_id, dvi_results(condition)"
     )
     .is("job_id", null)
     .order("created_at", { ascending: false });

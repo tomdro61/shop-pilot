@@ -115,7 +115,7 @@ export default async function DviJobListPage({
               })}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground py-2">No sent DVIs to show.</p>
+            <p className="text-sm text-muted-foreground py-2">No parking DVIs to show.</p>
           )}
           <div className="mt-2">
             <Link
