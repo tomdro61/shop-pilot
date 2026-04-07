@@ -176,7 +176,10 @@ export function parkingSpecialsSMS({
   specials: { label: string; price: string; link?: string }[];
 }) {
   const list = specials
-    .map((s) => s.link ? `- ${s.label}: ${s.price}\n  ${s.link}` : `- ${s.label}: ${s.price}`)
+    .map((s) => {
+      const line = s.price ? `- ${s.label}: ${s.price}` : `- ${s.label}`;
+      return s.link ? `${line}\n  ${s.link}` : line;
+    })
     .join("\n");
   return `Hi ${firstName}, this is John, the manager at Broadway Motors. While your car is parked with us, we'd love the chance to take care of any maintenance or repairs for you, saves you a trip later! Here are some of our most popular services:\n\n${list}\n\nIf anything catches your eye, just reply to this text and we'll take a look and send you an estimate before doing any work. No pressure at all — John`;
 }

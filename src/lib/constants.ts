@@ -232,9 +232,9 @@ export const PARKING_SERVICE_LABELS: Record<string, string> = {
 
 export const PARKING_SPECIALS = [
   { label: "Digital Vehicle Inspection (50-point photo report)", price: "$20", link: "https://broadwaymotorsma.com/dvi-example" },
-  { label: "Free Diagnostics", price: "Free" },
   { label: "Vehicle Repairs, Brakes, etc.", price: "10% off" },
   { label: "Full Synthetic Oil Change", price: "10% off", note: "for any Vehicle" },
+  { label: "Free Diagnostics", price: "" },
   { label: "Tire Rotation", price: "$40" },
   { label: "Interior Detail all cars", price: "$225", note: "Limited Time Offer!!" },
   { label: "New Windshield Wipers", price: "$35", note: "pair" },
