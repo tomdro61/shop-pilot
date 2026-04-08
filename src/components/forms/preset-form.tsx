@@ -47,9 +47,9 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
   const [catalogResults, setCatalogResults] = useState<CatalogItem[]>([]);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
-  // Search catalog items
+  // Search catalog items filtered by selected category
   useEffect(() => {
-    if (!open) return;
+    if (!open || !category) return;
     const timer = setTimeout(async () => {
       if (!catalogSearch.trim()) {
         setCatalogResults([]);
@@ -60,6 +60,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
         .from("catalog_items")
         .select("*")
         .eq("is_active", true)
+        .eq("category", category)
         .ilike("description", `%${catalogSearch.trim()}%`)
         .order("usage_count", { ascending: false })
         .limit(10);
@@ -67,7 +68,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
       setCatalogOpen(true);
     }, 200);
     return () => clearTimeout(timer);
-  }, [catalogSearch, open]);
+  }, [catalogSearch, open, category]);
 
   // Reset catalog search when sheet opens/closes
   useEffect(() => {
@@ -93,14 +94,9 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
         ? { cost: item.default_cost }
         : {}),
       ...(item.part_number ? { part_number: item.part_number } : {}),
-      ...(item.category ? { category: item.category } : {}),
+      ...(category ? { category } : {}),
     };
     setLineItems((prev) => [...prev, newLineItem]);
-
-    // Auto-set preset category from first item if not set
-    if (!category && item.category) {
-      setCategory(item.category);
-    }
 
     setCatalogSearch("");
     setCatalogOpen(false);
@@ -185,7 +181,14 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
             </div>
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={(val) => {
+              if (val !== category) {
+                setCategory(val);
+                setLineItems([]);
+                setCatalogSearch("");
+                setCatalogResults([]);
+              }
+            }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select..." />
                 </SelectTrigger>
@@ -203,10 +206,15 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
           {/* Catalog search to add items */}
           <div className="space-y-2">
             <Label>Add Items from Catalog</Label>
+            {!category ? (
+              <p className="text-sm text-muted-foreground py-2">
+                Select a category first to search catalog items
+              </p>
+            ) : (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
               <Input
-                placeholder="Search catalog... (e.g. brake pads, rotors)"
+                placeholder={`Search ${category} catalog items...`}
                 value={catalogSearch}
                 onChange={(e) => setCatalogSearch(e.target.value)}
                 onFocus={() => catalogResults.length > 0 && setCatalogOpen(true)}
@@ -239,6 +247,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Line items list */}
