@@ -38,6 +38,7 @@ export async function createQuickPayJob(amountCents: number, note?: string, cate
       description: note || "Quick Pay",
       quantity: 1,
       unit_cost: amountDollars,
+      category: category || null,
     });
 
   if (lineItemError) {
