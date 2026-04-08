@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
 import {
-  INSPECTION_CATEGORY,
+  INSPECTION_CATEGORIES,
   calcInspectionRevenue,
 } from "@/lib/utils/revenue";
 import {
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
 
     // Filter out inspection-category items (counted separately)
     const reportableItems = lineItems.filter(
-      (li) => li.category !== INSPECTION_CATEGORY
+      (li) => !INSPECTION_CATEGORIES.has(li.category ?? "")
     );
 
     if (reportableItems.length === 0) {

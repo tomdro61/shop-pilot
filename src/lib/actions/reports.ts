@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { subDays, differenceInDays, parseISO } from "date-fns";
 import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
-import { INSPECTION_CATEGORY, calcInspectionRevenue } from "@/lib/utils/revenue";
+import { INSPECTION_CATEGORIES, calcInspectionRevenue } from "@/lib/utils/revenue";
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
 
 function toDateStr(date: Date): string {
@@ -76,7 +76,7 @@ export async function getReportData(params: {
 
   function sumLineItemTotals(job: { job_line_items: unknown }): number {
     return getLineItems(job)
-      .filter((li) => li.category !== INSPECTION_CATEGORY)
+      .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
       .reduce((s, li) => s + (li.total || 0), 0);
   }
 
@@ -95,7 +95,7 @@ export async function getReportData(params: {
     let priorPartsCost = 0;
     priorJobs.forEach((job) => {
       const items = (job.job_line_items as { type: string; total: number; cost: number | null; quantity: number; category: string | null }[]) || [];
-      items.filter((li) => li.category !== INSPECTION_CATEGORY).forEach((li) => {
+      items.filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? "")).forEach((li) => {
         priorRev += li.total || 0;
         if (li.type === "part") {
           priorPartsCost += li.cost != null ? li.cost * li.quantity : (li.total || 0) * 0.6;
@@ -129,7 +129,7 @@ export async function getReportData(params: {
   currentJobs.forEach((job) => {
     const user = job.users as { name: string } | null;
     const techName = user?.name || "Unassigned";
-    const lineItems = getLineItems(job).filter((li) => li.category !== INSPECTION_CATEGORY);
+    const lineItems = getLineItems(job).filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""));
     const jobTotal = lineItems.reduce((s, li) => s + (li.total || 0), 0);
 
     // Derive job category from highest-revenue line-item category
@@ -575,7 +575,7 @@ export async function getTaxReportData(year: number): Promise<TaxReportData> {
     const lineItems = (job.job_line_items as { type: string; total: number; category: string | null }[]) || [];
 
     lineItems
-      .filter((li) => li.category !== INSPECTION_CATEGORY)
+      .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
       .forEach((li) => {
         const total = li.total || 0;
         monthBuckets[month].totalRevenue += total;

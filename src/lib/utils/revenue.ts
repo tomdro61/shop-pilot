@@ -4,7 +4,11 @@ import {
   INSPECTION_COST_STATE,
 } from "@/lib/constants";
 
-export const INSPECTION_CATEGORY = "Inspection";
+export const INSPECTION_CATEGORIES = new Set([
+  "Inspection",
+  "State Inspection",
+  "TNC Inspection",
+]);
 
 type LineItem = { total: number; category?: string | null };
 
@@ -16,7 +20,7 @@ export function sumJobRevenue(
     jobs?.reduce((sum, job) => {
       const items = (job.job_line_items as LineItem[]) || [];
       const jobTotal = items
-        .filter((li) => li.category !== INSPECTION_CATEGORY)
+        .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
         .reduce((s, li) => s + (li.total || 0), 0);
       return sum + jobTotal;
     }, 0) || 0
