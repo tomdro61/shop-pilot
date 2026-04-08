@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // When payment succeeds, update the job directly (belt-and-suspenders with webhook)
     if (status.status === "succeeded" && status.metadata?.job_id) {
       const supabase = createAdminClient();
-      await supabase
+      const { error: updateError } = await supabase
         .from("jobs")
         .update({
           payment_status: "paid",
@@ -27,6 +27,14 @@ export async function GET(request: NextRequest) {
           paid_at: new Date().toISOString(),
         } as Record<string, unknown>)
         .eq("id", status.metadata.job_id);
+
+      if (updateError) {
+        console.error("[Terminal] Failed to update job payment status:", updateError);
+      } else {
+        console.log("[Terminal] Job marked as paid:", status.metadata.job_id);
+      }
+    } else if (status.status === "succeeded") {
+      console.warn("[Terminal] Payment succeeded but no job_id in metadata:", pi);
     }
 
     return NextResponse.json(status);

@@ -334,7 +334,7 @@ async function handleTerminalPayment(pi: Stripe.PaymentIntent) {
   const supabase = createAdminClient();
   const jobId = pi.metadata.job_id;
 
-  await supabase
+  const { error } = await supabase
     .from("jobs")
     .update({
       payment_status: "paid",
@@ -343,4 +343,10 @@ async function handleTerminalPayment(pi: Stripe.PaymentIntent) {
       paid_at: new Date().toISOString(),
     } as Record<string, unknown>)
     .eq("id", jobId);
+
+  if (error) {
+    console.error("[Webhook] Failed to update job payment status:", error, "jobId:", jobId);
+  } else {
+    console.log("[Webhook] Terminal payment recorded for job:", jobId);
+  }
 }
