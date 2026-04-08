@@ -67,6 +67,7 @@ function QuickPayPresetPicker({
             value={search}
             onChange={(e) => { setSearch(e.target.value); setDropdownOpen(true); }}
             onFocus={() => setDropdownOpen(true)}
+            onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
             className="pl-9"
           />
           {dropdownOpen && (
