@@ -6,6 +6,7 @@ import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
 import {
   INSPECTION_RATE_STATE,
   INSPECTION_RATE_TNC,
+  INSPECTION_COST_STATE,
 } from "@/lib/constants";
 import {
   subDays,
@@ -152,20 +153,25 @@ function sentAtToDateStr(sentAt: string): string {
 }
 
 function finalize(raw: RawBucket): TrendBucket {
-  const grossProfit = raw.revenue - raw.partsCost;
-  const grossMarginPct = raw.revenue > 0 ? (grossProfit / raw.revenue) * 100 : 0;
-  const aro = raw.jobCount > 0 ? raw.revenue / raw.jobCount : 0;
-  const estimateCloseRate =
-    raw.estimatesSent > 0 ? (raw.estimatesApproved / raw.estimatesSent) * 100 : 0;
   const inspectionCount = raw.inspectionStateCount + raw.inspectionTncCount;
   const inspectionRevenue =
     raw.inspectionStateCount * INSPECTION_RATE_STATE +
     raw.inspectionTncCount * INSPECTION_RATE_TNC;
+  const inspectionCost = raw.inspectionStateCount * INSPECTION_COST_STATE;
+  const inspectionProfit = inspectionRevenue - inspectionCost;
+
+  // Revenue and profit include inspections — matches Revenue Overview page
+  const revenue = raw.revenue + inspectionRevenue;
+  const grossProfit = (raw.revenue - raw.partsCost) + inspectionProfit;
+  const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+  const aro = raw.jobCount > 0 ? raw.revenue / raw.jobCount : 0; // ARO is per-job, excludes inspections
+  const estimateCloseRate =
+    raw.estimatesSent > 0 ? (raw.estimatesApproved / raw.estimatesSent) * 100 : 0;
 
   return {
     key: raw.key,
     label: raw.label,
-    revenue: raw.revenue,
+    revenue,
     grossProfit,
     partsRevenue: raw.partsRevenue,
     laborRevenue: raw.laborRevenue,
@@ -207,25 +213,28 @@ export async function getTrendData(
     endDate = `${resolvedYear}-12-31`;
   }
 
-  // 3 parallel queries
+  // 3 parallel queries (limit 10000 to override Supabase default 1000-row cap)
   const [jobsResult, estimatesResult, inspectionsResult] = await Promise.all([
     supabase
       .from("jobs")
       .select("id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)")
       .eq("status", "complete")
       .gte("date_finished", startDate)
-      .lte("date_finished", endDate),
+      .lte("date_finished", endDate)
+      .limit(10000),
     supabase
       .from("estimates")
       .select("id, status, sent_at")
       .in("status", ["sent", "approved"])
       .gte("sent_at", startDate)
-      .lte("sent_at", endDate),
+      .lte("sent_at", endDate)
+      .limit(10000),
     supabase
       .from("daily_inspection_counts")
       .select("date, state_count, tnc_count")
       .gte("date", startDate)
-      .lte("date", endDate),
+      .lte("date", endDate)
+      .limit(10000),
   ]);
 
   const jobs = jobsResult.data || [];
