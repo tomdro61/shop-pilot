@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
@@ -81,32 +81,24 @@ export function TrendsExplorer({
   initialYear,
 }: TrendsExplorerProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [metric, setMetric] = useState<MetricKey>(initialMetric);
 
   const metricCfg = METRICS[metric];
 
-  // Build URL for navigation
-  function navigate(params: Record<string, string>) {
-    const sp = new URLSearchParams(searchParams.toString());
-    for (const [k, v] of Object.entries(params)) {
-      sp.set(k, v);
-    }
-    // Preserve current metric in URL for bookmarking
+  function pushParams(params: Record<string, string>) {
+    const sp = new URLSearchParams(params);
     sp.set("metric", metric);
     router.push(`/reports/trends?${sp.toString()}`);
   }
 
   function setGranularity(g: Granularity) {
-    const sp = new URLSearchParams();
-    sp.set("granularity", g);
-    sp.set("metric", metric);
-    if (g === "month") sp.set("year", String(initialYear));
-    router.push(`/reports/trends?${sp.toString()}`);
+    const params: Record<string, string> = { granularity: g };
+    if (g === "month") params.year = String(initialYear);
+    pushParams(params);
   }
 
   function setYear(y: number) {
-    navigate({ year: String(y) });
+    pushParams({ granularity: "month", year: String(y) });
   }
 
   // Chart data
@@ -122,55 +114,32 @@ export function TrendsExplorer({
     },
   };
 
-  // Totals row
+  // Totals row — weighted averages for ratio metrics, simple sum for others
   const totalValue = (() => {
     const values = data.buckets.map((b) => b[metric]);
     if (metricCfg.aggregate === "sum") {
       return values.reduce((s, v) => s + v, 0);
     }
-    // Weighted average for ARO: total revenue / total jobs
     if (metric === "aro") {
       const totalRev = data.buckets.reduce((s, b) => s + b.revenue, 0);
       const totalJobs = data.buckets.reduce((s, b) => s + b.jobCount, 0);
       return totalJobs > 0 ? totalRev / totalJobs : 0;
     }
-    // Weighted average for margin: total profit / total revenue
     if (metric === "grossMarginPct") {
       const totalRev = data.buckets.reduce((s, b) => s + b.revenue, 0);
       const totalProfit = data.buckets.reduce((s, b) => s + b.grossProfit, 0);
       return totalRev > 0 ? (totalProfit / totalRev) * 100 : 0;
     }
-    // Weighted average for close rate: total approved / total sent
-    if (metric === "estimateCloseRate") {
-      // We don't have raw sent/approved counts in TrendBucket, so use simple average
-      const nonZero = values.filter((v) => v > 0);
-      return nonZero.length > 0 ? nonZero.reduce((s, v) => s + v, 0) / nonZero.length : 0;
-    }
-    // Simple average for other avg metrics
+    // Simple average for estimateCloseRate and any other avg metrics
     const nonZero = values.filter((v) => v > 0);
     return nonZero.length > 0 ? nonZero.reduce((s, v) => s + v, 0) / nonZero.length : 0;
   })();
-
-  const thisYear = new Date().getFullYear();
-
-  // Custom tooltip formatter
-  function tooltipFormatter(
-    value: number | string,
-    name: string,
-  ) {
-    return (
-      <span className="text-foreground font-mono font-medium tabular-nums">
-        {metricCfg.format(typeof value === "number" ? value : parseFloat(value))}
-      </span>
-    );
-  }
 
   return (
     <div className="space-y-4">
       {/* Controls */}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 py-3">
-          {/* Metric picker */}
           <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
             <SelectTrigger className="w-[220px]">
               <SelectValue />
@@ -184,7 +153,6 @@ export function TrendsExplorer({
             </SelectContent>
           </Select>
 
-          {/* Granularity toggle */}
           <div className="flex gap-1">
             {GRANULARITIES.map((g) => (
               <Button
@@ -198,7 +166,6 @@ export function TrendsExplorer({
             ))}
           </div>
 
-          {/* Year picker — month mode only */}
           {initialGranularity === "month" && (
             <div className="flex items-center gap-1 ml-auto">
               <Button
@@ -216,7 +183,7 @@ export function TrendsExplorer({
                 variant="outline"
                 size="icon"
                 className="h-8 w-8"
-                disabled={initialYear >= thisYear}
+                disabled={initialYear >= (data.year ?? initialYear)}
                 onClick={() => setYear(initialYear + 1)}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -307,7 +274,6 @@ export function TrendsExplorer({
                     </td>
                   </tr>
                 ))}
-                {/* Totals row */}
                 <tr className="border-t border-stone-200 dark:border-stone-700 font-semibold">
                   <td className="py-2 pr-4">
                     {metricCfg.aggregate === "sum" ? "Total" : "Average"}

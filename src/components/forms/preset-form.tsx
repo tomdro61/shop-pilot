@@ -181,14 +181,17 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
             </div>
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <Select value={category} onValueChange={(val) => {
-              if (val !== category) {
-                setCategory(val);
-                setLineItems([]);
-                setCatalogSearch("");
-                setCatalogResults([]);
-              }
-            }}>
+              <Select
+              value={category}
+              onValueChange={(val) => {
+                if (val !== category) {
+                  setCategory(val);
+                  setLineItems([]);
+                  setCatalogSearch("");
+                  setCatalogResults([]);
+                }
+              }}
+            >
                 <SelectTrigger>
                   <SelectValue placeholder="Select..." />
                 </SelectTrigger>

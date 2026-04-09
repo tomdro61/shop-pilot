@@ -65,10 +65,6 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-function toDate(dateStr: string): Date {
-  return parseISO(dateStr);
-}
-
 function toDateStr(d: Date): string {
   return format(d, "yyyy-MM-dd");
 }
@@ -107,14 +103,14 @@ function buildBuckets(granularity: Granularity, startDate: string, endDate: stri
   const map = new Map<string, RawBucket>();
 
   if (granularity === "day") {
-    const days = eachDayOfInterval({ start: toDate(startDate), end: toDate(endDate) });
+    const days = eachDayOfInterval({ start: parseISO(startDate), end: parseISO(endDate) });
     for (const d of days) {
       const key = toDateStr(d);
       map.set(key, emptyRaw(key, format(d, "MMM d")));
     }
   } else if (granularity === "week") {
     const weeks = eachWeekOfInterval(
-      { start: toDate(startDate), end: toDate(endDate) },
+      { start: parseISO(startDate), end: parseISO(endDate) },
       { weekStartsOn: 1 }
     );
     for (const ws of weeks) {
@@ -136,14 +132,14 @@ function buildBuckets(granularity: Granularity, startDate: string, endDate: stri
 
 function getBucketKey(dateStr: string, granularity: Granularity): string {
   if (granularity === "day") {
-    return dateStr; // already YYYY-MM-DD
+    return dateStr;
   }
   if (granularity === "week") {
-    const ws = startOfWeek(toDate(dateStr), { weekStartsOn: 1 });
+    const ws = startOfWeek(parseISO(dateStr), { weekStartsOn: 1 });
     return toDateStr(ws);
   }
   // month
-  return dateStr.substring(0, 7); // "YYYY-MM"
+  return dateStr.substring(0, 7);
 }
 
 function sentAtToDateStr(sentAt: string): string {
@@ -193,7 +189,7 @@ export async function getTrendData(
 ): Promise<TrendData> {
   const supabase = await createClient();
   const today = todayET();
-  const todayDate = toDate(today);
+  const todayDate = parseISO(today);
 
   // Determine date range
   let startDate: string;
@@ -213,7 +209,7 @@ export async function getTrendData(
     endDate = `${resolvedYear}-12-31`;
   }
 
-  // 3 parallel queries (limit 10000 to override Supabase default 1000-row cap)
+  // Limit 10000 to override Supabase default 1000-row cap
   const [jobsResult, estimatesResult, inspectionsResult] = await Promise.all([
     supabase
       .from("jobs")

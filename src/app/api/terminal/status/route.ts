@@ -26,12 +26,11 @@ export async function GET(request: NextRequest) {
           stripe_payment_intent_id: pi,
           paid_at: new Date().toISOString(),
         } as Record<string, unknown>)
-        .eq("id", status.metadata.job_id);
+        .eq("id", status.metadata.job_id)
+        .neq("payment_status", "paid");
 
       if (updateError) {
         console.error("[Terminal] Failed to update job payment status:", updateError);
-      } else {
-        console.log("[Terminal] Job marked as paid:", status.metadata.job_id);
       }
     } else if (status.status === "succeeded") {
       console.warn("[Terminal] Payment succeeded but no job_id in metadata:", pi);
