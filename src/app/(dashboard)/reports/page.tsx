@@ -41,6 +41,13 @@ const financialReports: ReportCard[] = [
     status: "live",
   },
   {
+    href: "/reports/trends",
+    label: "Trends Explorer",
+    description: "Track any metric over time — day, week, or month",
+    icon: TrendingUp,
+    status: "live",
+  },
+  {
     href: "/reports/receivables",
     label: "Accounts Receivable",
     description: "Outstanding invoices and aging buckets",
