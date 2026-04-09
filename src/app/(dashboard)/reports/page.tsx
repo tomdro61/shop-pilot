@@ -80,10 +80,10 @@ const operationsReports: ReportCard[] = [
   },
   {
     href: "/reports/service-mix",
-    label: "Service Mix Trends",
-    description: "Category mix changes over time and seasonality",
+    label: "Service Mix Deep-Dive",
+    description: "Category performance trends and cross-category comparisons",
     icon: TrendingUp,
-    status: "coming_soon",
+    status: "live",
   },
 ];
 

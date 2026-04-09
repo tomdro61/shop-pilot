@@ -9,19 +9,14 @@ import {
   INSPECTION_COST_STATE,
 } from "@/lib/constants";
 import {
-  subDays,
-  subWeeks,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  eachWeekOfInterval,
-  format,
-  parseISO,
-} from "date-fns";
+  type Granularity,
+  buildBucketKeys,
+  getBucketKey,
+  timestampToDateET,
+  getDateRange,
+} from "@/lib/utils/trend-buckets";
 
 // ── Types ────────────────────────────────────────────────────
-
-export type Granularity = "day" | "week" | "month";
 
 export type MetricKey =
   | "revenue"
@@ -58,16 +53,7 @@ export interface TrendData {
   buckets: TrendBucket[];
 }
 
-// ── Helpers ──────────────────────────────────────────────────
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-function toDateStr(d: Date): string {
-  return format(d, "yyyy-MM-dd");
-}
+// ── Trend-specific bucket ────────────────────────────────────
 
 interface RawBucket {
   key: string;
@@ -83,69 +69,17 @@ interface RawBucket {
   inspectionTncCount: number;
 }
 
-function emptyRaw(key: string, label: string): RawBucket {
-  return {
-    key,
-    label,
-    revenue: 0,
-    partsRevenue: 0,
-    laborRevenue: 0,
-    partsCost: 0,
-    jobCount: 0,
-    estimatesSent: 0,
-    estimatesApproved: 0,
-    inspectionStateCount: 0,
-    inspectionTncCount: 0,
-  };
-}
-
-function buildBuckets(granularity: Granularity, startDate: string, endDate: string, year?: number): Map<string, RawBucket> {
+function buildTrendBuckets(granularity: Granularity, startDate: string, endDate: string, year?: number): Map<string, RawBucket> {
   const map = new Map<string, RawBucket>();
-
-  if (granularity === "day") {
-    const days = eachDayOfInterval({ start: parseISO(startDate), end: parseISO(endDate) });
-    for (const d of days) {
-      const key = toDateStr(d);
-      map.set(key, emptyRaw(key, format(d, "MMM d")));
-    }
-  } else if (granularity === "week") {
-    const weeks = eachWeekOfInterval(
-      { start: parseISO(startDate), end: parseISO(endDate) },
-      { weekStartsOn: 1 }
-    );
-    for (const ws of weeks) {
-      const we = endOfWeek(ws, { weekStartsOn: 1 });
-      const key = toDateStr(ws);
-      const label = `${format(ws, "MMM d")} – ${format(we, "MMM d")}`;
-      map.set(key, emptyRaw(key, label));
-    }
-  } else {
-    // month — 12 buckets for the year
-    for (let m = 1; m <= 12; m++) {
-      const key = `${year}-${String(m).padStart(2, "0")}`;
-      map.set(key, emptyRaw(key, MONTH_NAMES[m - 1]));
-    }
+  for (const { key, label } of buildBucketKeys(granularity, startDate, endDate, year)) {
+    map.set(key, {
+      key, label,
+      revenue: 0, partsRevenue: 0, laborRevenue: 0, partsCost: 0, jobCount: 0,
+      estimatesSent: 0, estimatesApproved: 0,
+      inspectionStateCount: 0, inspectionTncCount: 0,
+    });
   }
-
   return map;
-}
-
-function getBucketKey(dateStr: string, granularity: Granularity): string {
-  if (granularity === "day") {
-    return dateStr;
-  }
-  if (granularity === "week") {
-    const ws = startOfWeek(parseISO(dateStr), { weekStartsOn: 1 });
-    return toDateStr(ws);
-  }
-  // month
-  return dateStr.substring(0, 7);
-}
-
-function sentAtToDateStr(sentAt: string): string {
-  // sent_at is a timestamptz — convert to ET date string
-  const utcDate = new Date(sentAt);
-  return utcDate.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
 function finalize(raw: RawBucket): TrendBucket {
@@ -156,11 +90,10 @@ function finalize(raw: RawBucket): TrendBucket {
   const inspectionCost = raw.inspectionStateCount * INSPECTION_COST_STATE;
   const inspectionProfit = inspectionRevenue - inspectionCost;
 
-  // Revenue and profit include inspections — matches Revenue Overview page
   const revenue = raw.revenue + inspectionRevenue;
   const grossProfit = (raw.revenue - raw.partsCost) + inspectionProfit;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-  const aro = raw.jobCount > 0 ? raw.revenue / raw.jobCount : 0; // ARO is per-job, excludes inspections
+  const aro = raw.jobCount > 0 ? raw.revenue / raw.jobCount : 0;
   const estimateCloseRate =
     raw.estimatesSent > 0 ? (raw.estimatesApproved / raw.estimatesSent) * 100 : 0;
 
@@ -189,25 +122,7 @@ export async function getTrendData(
 ): Promise<TrendData> {
   const supabase = await createClient();
   const today = todayET();
-  const todayDate = parseISO(today);
-
-  // Determine date range
-  let startDate: string;
-  let endDate: string;
-  let resolvedYear = year;
-
-  if (granularity === "day") {
-    startDate = toDateStr(subDays(todayDate, 29));
-    endDate = today;
-  } else if (granularity === "week") {
-    const weekStart = startOfWeek(subWeeks(todayDate, 11), { weekStartsOn: 1 });
-    startDate = toDateStr(weekStart);
-    endDate = today;
-  } else {
-    resolvedYear = year || todayDate.getFullYear();
-    startDate = `${resolvedYear}-01-01`;
-    endDate = `${resolvedYear}-12-31`;
-  }
+  const { startDate, endDate, resolvedYear } = getDateRange(granularity, today, year);
 
   // Limit 10000 to override Supabase default 1000-row cap
   const [jobsResult, estimatesResult, inspectionsResult] = await Promise.all([
@@ -237,10 +152,8 @@ export async function getTrendData(
   const estimates = estimatesResult.data || [];
   const inspections = inspectionsResult.data || [];
 
-  // Initialize buckets
-  const bucketMap = buildBuckets(granularity, startDate, endDate, resolvedYear);
+  const bucketMap = buildTrendBuckets(granularity, startDate, endDate, resolvedYear);
 
-  // Aggregate jobs
   type LineItem = {
     type: string;
     total: number;
@@ -276,10 +189,9 @@ export async function getTrendData(
     }
   }
 
-  // Aggregate estimates
   for (const est of estimates) {
     if (!est.sent_at) continue;
-    const dateStr = sentAtToDateStr(est.sent_at);
+    const dateStr = timestampToDateET(est.sent_at);
     const bKey = getBucketKey(dateStr, granularity);
     const bucket = bucketMap.get(bKey);
     if (!bucket) continue;
@@ -290,7 +202,6 @@ export async function getTrendData(
     }
   }
 
-  // Aggregate inspections
   for (const row of inspections) {
     if (!row.date) continue;
     const bKey = getBucketKey(row.date, granularity);
@@ -301,7 +212,6 @@ export async function getTrendData(
     bucket.inspectionTncCount += row.tnc_count || 0;
   }
 
-  // Finalize buckets in order
   const buckets: TrendBucket[] = [];
   for (const raw of bucketMap.values()) {
     buckets.push(finalize(raw));

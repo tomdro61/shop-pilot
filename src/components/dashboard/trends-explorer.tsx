@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
-import type { Granularity, MetricKey, TrendData } from "@/lib/actions/trends";
+import type { Granularity } from "@/lib/utils/trend-buckets";
+import type { MetricKey, TrendData } from "@/lib/actions/trends";
 
 // ── Metric config ────────────────────────────────────────────
 

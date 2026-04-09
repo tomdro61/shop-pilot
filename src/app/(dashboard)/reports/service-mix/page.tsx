@@ -1,26 +1,24 @@
 import Link from "next/link";
-import { getTrendData } from "@/lib/actions/trends";
-import { TrendsExplorer } from "@/components/dashboard/trends-explorer";
+import { getCategoryTrendData } from "@/lib/actions/category-trends";
+import { CategoryDeepDive } from "@/components/dashboard/category-deep-dive";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import type { Granularity } from "@/lib/utils/trend-buckets";
-import type { MetricKey } from "@/lib/actions/trends";
+import type { CategoryMetricKey } from "@/lib/actions/category-trends";
 
 export const metadata = {
-  title: "Trends Explorer | ShopPilot",
+  title: "Service Mix Deep-Dive | ShopPilot",
 };
 
 const VALID_GRANULARITIES = new Set(["day", "week", "month"]);
 const VALID_METRICS = new Set([
-  "revenue", "grossProfit", "partsRevenue", "laborRevenue", "partsCost",
-  "grossMarginPct", "jobCount", "aro", "estimateCloseRate",
-  "inspectionCount", "inspectionRevenue",
+  "revenue", "grossProfit", "jobCount", "aro", "partsCost", "grossMarginPct",
 ]);
 
-export default async function TrendsPage({
+export default async function ServiceMixPage({
   searchParams,
 }: {
-  searchParams: Promise<{ granularity?: string; year?: string; metric?: string }>;
+  searchParams: Promise<{ granularity?: string; year?: string; metric?: string; category?: string }>;
 }) {
   const params = await searchParams;
 
@@ -31,11 +29,13 @@ export default async function TrendsPage({
   const currentYear = new Date().getFullYear();
   const year = params.year ? parseInt(params.year, 10) : currentYear;
 
-  const metric: MetricKey = VALID_METRICS.has(params.metric || "")
-    ? (params.metric as MetricKey)
+  const metric: CategoryMetricKey = VALID_METRICS.has(params.metric || "")
+    ? (params.metric as CategoryMetricKey)
     : "revenue";
 
-  const data = await getTrendData(granularity, year);
+  const category = params.category || "all";
+
+  const data = await getCategoryTrendData(granularity, year);
 
   return (
     <div className="p-4 lg:p-10">
@@ -46,14 +46,15 @@ export default async function TrendsPage({
             Back to Reports
           </Button>
         </Link>
-        <h2 className="text-xl font-bold tracking-tight">Trends Explorer</h2>
+        <h2 className="text-xl font-bold tracking-tight">Service Mix Deep-Dive</h2>
         <p className="text-sm text-muted-foreground">
-          Track any metric over time
+          Category performance trends and cross-category comparisons
         </p>
       </div>
 
-      <TrendsExplorer
+      <CategoryDeepDive
         data={data}
+        initialCategory={category}
         initialMetric={metric}
         initialGranularity={granularity}
         initialYear={year}
