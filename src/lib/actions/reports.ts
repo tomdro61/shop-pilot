@@ -58,8 +58,16 @@ export async function getReportData(params: {
         .lte("sent_at", priorEnd)
     : Promise.resolve({ data: null });
 
-  const [currentResult, priorResult, estimatesResult, priorEstimatesResult] = await Promise.all([
+  const [
+    currentResult, priorResult, estimatesResult, priorEstimatesResult,
+    inspectionTotals, manualEntries,
+    priorInspectionTotals, priorManualEntries,
+  ] = await Promise.all([
     currentPromise, priorPromise, estimatesPromise, priorEstimatesPromise,
+    getInspectionCountsRange(start, end),
+    getManualIncomeForRange(start, end),
+    priorStart && priorEnd ? getInspectionCountsRange(priorStart, priorEnd) : Promise.resolve({ state_count: 0, tnc_count: 0 }),
+    priorStart && priorEnd ? getManualIncomeForRange(priorStart, priorEnd) : Promise.resolve([]),
   ]);
 
   const currentJobs = currentResult.data || [];
@@ -256,8 +264,6 @@ export async function getReportData(params: {
     }))
     .sort((a, b) => b.grossProfit - a.grossProfit);
 
-  // Inspections from dedicated table
-  const inspectionTotals = await getInspectionCountsRange(start, end);
   const inspCalc = calcInspectionRevenue(inspectionTotals);
   const inspectionCount = inspCalc.totalCount;
   const inspectionRevenue = inspCalc.totalRevenue;
@@ -301,8 +307,6 @@ export async function getReportData(params: {
       hasEstimatedCosts: false,
     });
   }
-  // Manual income entries
-  const manualEntries = await getManualIncomeForRange(start, end);
   let manualIncomeTotal = 0;
   let manualProfitTotal = 0;
   const manualByCategory: Record<string, { revenue: number; cost: number }> = {};
@@ -320,7 +324,6 @@ export async function getReportData(params: {
     manualByCategory[entry.category].cost += cost;
   }
 
-  // Add manual income to totals
   revenueCurrent += manualIncomeTotal;
   totalRevenue += manualIncomeTotal;
   grossProfit += manualProfitTotal;
@@ -345,30 +348,19 @@ export async function getReportData(params: {
   categoryBreakdown.sort((a, b) => b.revenue - a.revenue);
   profitability.sort((a, b) => b.revenue - a.revenue);
 
-  // Prior period inspections
+  // Prior period comparisons (data already fetched in parallel above)
   let inspectionCountPrior: number | null = null;
   let inspectionProfitPrior: number | null = null;
   if (priorStart && priorEnd) {
-    const priorInspTotals = await getInspectionCountsRange(priorStart, priorEnd);
-    const priorInspCalc = calcInspectionRevenue(priorInspTotals);
+    const priorInspCalc = calcInspectionRevenue(priorInspectionTotals);
     inspectionCountPrior = priorInspCalc.totalCount;
     inspectionProfitPrior = priorInspCalc.totalProfit;
-    // Add prior inspection profit to gross profit prior
-    if (grossProfitPrior !== null) {
-      grossProfitPrior += priorInspCalc.totalProfit;
-    }
-    // Add prior inspection revenue to revenue prior
-    if (revenuePrior !== null) {
-      revenuePrior += priorInspCalc.totalRevenue;
-    }
-  }
+    if (grossProfitPrior !== null) grossProfitPrior += priorInspCalc.totalProfit;
+    if (revenuePrior !== null) revenuePrior += priorInspCalc.totalRevenue;
 
-  // Prior period manual income
-  if (priorStart && priorEnd) {
-    const priorManual = await getManualIncomeForRange(priorStart, priorEnd);
     let priorManualRevenue = 0;
     let priorManualProfit = 0;
-    for (const entry of priorManual) {
+    for (const entry of priorManualEntries) {
       priorManualRevenue += entry.amount;
       priorManualProfit += entry.amount * (entry.shop_keep_pct / 100);
     }
@@ -599,13 +591,13 @@ export async function getTaxReportData(year: number): Promise<TaxReportData> {
   const supabase = await createClient();
   const taxRate = MA_SALES_TAX_RATE;
 
-  // Query all paid jobs with line items. We filter by year in JS because
-  // the date logic (paid_at with date_finished fallback) is simpler client-side.
-  // For a single shop this is a few hundred jobs per year at most.
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("id, paid_at, date_finished, job_line_items(type, total, category)")
-    .eq("payment_status", "paid");
+  const [{ data: jobs }, taxManualEntries] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select("id, paid_at, date_finished, job_line_items(type, total, category)")
+      .eq("payment_status", "paid"),
+    getManualIncomeForRange(`${year}-01-01`, `${year}-12-31`),
+  ]);
 
   // Aggregate by month
   const monthBuckets: Record<number, { totalRevenue: number; partsTotal: number }> = {};
@@ -640,9 +632,7 @@ export async function getTaxReportData(year: number): Promise<TaxReportData> {
       });
   });
 
-  // Add manual income to month buckets (all non-taxable)
-  const manualEntries = await getManualIncomeForRange(`${year}-01-01`, `${year}-12-31`);
-  for (const entry of manualEntries) {
+  for (const entry of taxManualEntries) {
     if (!entry.date) continue;
     const month = parseInt(entry.date.substring(5, 7), 10);
     if (month >= 1 && month <= 12) {

@@ -106,7 +106,7 @@ export async function getCustomerInsightsData(
   const { startDate, endDate, resolvedYear } = getDateRange(granularity, today, year);
 
   // 2 parallel queries: period jobs (with details) + all-time jobs (for first-visit map)
-  const [periodResult, allTimeResult] = await Promise.all([
+  const [periodResult, allTimeResult, manualEntries] = await Promise.all([
     supabase
       .from("jobs")
       .select("id, customer_id, date_finished, customers(id, first_name, last_name), job_line_items(total, category)")
@@ -120,6 +120,7 @@ export async function getCustomerInsightsData(
       .eq("status", "complete")
       .order("date_finished", { ascending: true })
       .limit(50000),
+    getManualIncomeForRange(startDate, endDate),
   ]);
 
   const periodJobs = periodResult.data || [];
@@ -226,8 +227,6 @@ export async function getCustomerInsightsData(
     ? Math.round((totalJobsInPeriod / uniqueCustomers) * 10) / 10
     : 0;
 
-  // Add manual income linked to specific customers
-  const manualEntries = await getManualIncomeForRange(startDate, endDate);
   for (const entry of manualEntries) {
     if (!entry.customer_id) continue;
     const existing = customerMap.get(entry.customer_id);
