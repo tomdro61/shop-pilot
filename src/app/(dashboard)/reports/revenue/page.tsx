@@ -1,13 +1,10 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { getReportData } from "@/lib/actions/reports";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { HorizontalBarChart } from "@/components/dashboard/horizontal-bar-chart";
 import { ReportsToolbar } from "@/components/dashboard/reports-toolbar";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 
 export const metadata = {
@@ -55,18 +52,8 @@ export default async function RevenueReportPage({
   const inspectionPct = totalRevenue > 0 ? Math.round((inspectionRevenue / totalRevenue) * 100) : 0;
 
   return (
-    <div className="p-4 lg:p-10">
+    <div>
       <div className="mb-6">
-        <Link href="/reports">
-          <Button variant="ghost" size="sm" className="mb-2">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Reports
-          </Button>
-        </Link>
-        <h2 className="text-xl font-bold tracking-tight">Revenue Overview</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Financial performance and shop analytics
-        </p>
         <Suspense fallback={null}>
           <ReportsToolbar basePath="/reports/revenue" showExport />
         </Suspense>

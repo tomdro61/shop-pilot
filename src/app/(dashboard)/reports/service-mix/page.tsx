@@ -1,8 +1,5 @@
-import Link from "next/link";
 import { getCategoryTrendData } from "@/lib/actions/category-trends";
 import { CategoryDeepDive } from "@/components/dashboard/category-deep-dive";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import type { Granularity } from "@/lib/utils/trend-buckets";
 import type { CategoryMetricKey } from "@/lib/actions/category-trends";
 
@@ -38,27 +35,12 @@ export default async function ServiceMixPage({
   const data = await getCategoryTrendData(granularity, year);
 
   return (
-    <div className="p-4 lg:p-10">
-      <div className="mb-6">
-        <Link href="/reports">
-          <Button variant="ghost" size="sm" className="mb-2">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Reports
-          </Button>
-        </Link>
-        <h2 className="text-xl font-bold tracking-tight">Service Mix Deep-Dive</h2>
-        <p className="text-sm text-muted-foreground">
-          Category performance trends and cross-category comparisons
-        </p>
-      </div>
-
-      <CategoryDeepDive
-        data={data}
-        initialCategory={category}
-        initialMetric={metric}
-        initialGranularity={granularity}
-        initialYear={year}
-      />
-    </div>
+    <CategoryDeepDive
+      data={data}
+      initialCategory={category}
+      initialMetric={metric}
+      initialGranularity={granularity}
+      initialYear={year}
+    />
   );
 }

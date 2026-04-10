@@ -1,9 +1,6 @@
-import Link from "next/link";
 import { getTaxReportData } from "@/lib/actions/reports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { TaxYearPicker } from "@/components/dashboard/tax-year-picker";
 import { nowET } from "@/lib/utils";
@@ -24,30 +21,17 @@ export default async function TaxReportPage({
 
   const taxPct = (data.taxRate * 100).toFixed(2);
 
-  // Determine current month index (0-based) for the selected year to know which months have data
-  // Use ET to match shop's timezone (Vercel runs UTC)
   const now = nowET();
   const isCurrentYear = year === now.getFullYear();
-  const currentMonth = isCurrentYear ? now.getMonth() : 11; // 0-based
+  const currentMonth = isCurrentYear ? now.getMonth() : 11;
 
   return (
-    <div className="p-4 lg:p-10">
-      <div className="mb-6">
-        <Link href="/reports">
-          <Button variant="ghost" size="sm" className="mb-2">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Reports
-          </Button>
-        </Link>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">Tax Summary</h2>
-            <p className="text-sm text-muted-foreground">
-              Monthly taxable sales and MA sales tax collected ({taxPct}%)
-            </p>
-          </div>
-          <TaxYearPicker currentYear={year} />
-        </div>
+    <div>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          Monthly taxable sales and MA sales tax collected ({taxPct}%)
+        </p>
+        <TaxYearPicker currentYear={year} />
       </div>
 
       {/* KPI Cards */}

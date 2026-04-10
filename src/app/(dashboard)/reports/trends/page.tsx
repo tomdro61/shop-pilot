@@ -1,8 +1,5 @@
-import Link from "next/link";
 import { getTrendData } from "@/lib/actions/trends";
 import { TrendsExplorer } from "@/components/dashboard/trends-explorer";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import type { Granularity } from "@/lib/utils/trend-buckets";
 import type { MetricKey } from "@/lib/actions/trends";
 
@@ -38,26 +35,11 @@ export default async function TrendsPage({
   const data = await getTrendData(granularity, year);
 
   return (
-    <div className="p-4 lg:p-10">
-      <div className="mb-6">
-        <Link href="/reports">
-          <Button variant="ghost" size="sm" className="mb-2">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Reports
-          </Button>
-        </Link>
-        <h2 className="text-xl font-bold tracking-tight">Trends Explorer</h2>
-        <p className="text-sm text-muted-foreground">
-          Track any metric over time
-        </p>
-      </div>
-
-      <TrendsExplorer
-        data={data}
-        initialMetric={metric}
-        initialGranularity={granularity}
-        initialYear={year}
-      />
-    </div>
+    <TrendsExplorer
+      data={data}
+      initialMetric={metric}
+      initialGranularity={granularity}
+      initialYear={year}
+    />
   );
 }
