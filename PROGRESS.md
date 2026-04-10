@@ -2187,3 +2187,68 @@ A saved catalog of individual parts and labor items for fast job building. Disti
 - `src/components/parking/send-specials-button.tsx` — `alreadySent` prop
 - `src/components/parking/parking-reservation-card.tsx` — specials badge on both card variants
 - `src/app/(dashboard)/parking/[id]/page.tsx` — specials badge in header + pass `alreadySent` to button
+
+## Session 32 — 2026-04-08/09 — Stripe Terminal + Reporting Suite
+
+### What Was Completed
+
+**Stripe Terminal (WisePOS E) — fully operational:**
+1. Registered BBPOS WisePOS E reader ("Front-desk 1") at Broadway Motors location
+2. Set `STRIPE_TERMINAL_READER_ID` env var locally and on Vercel
+3. Created walk-in sentinel customer for Quick Pay jobs (migration)
+4. Added `stripe_payment_intent_id` column to jobs table (migration)
+5. Added `terminal` value to `payment_method` enum (migration)
+6. Fixed terminal status endpoint to update job payment_status on poll success (belt-and-suspenders with webhook)
+7. Added `.neq("payment_status", "paid")` guard to prevent redundant DB writes on repeated polls
+8. Added error logging to both webhook and status endpoint terminal handlers
+9. Quick Pay line items now receive the preset's category (fixes inspection revenue exclusion)
+
+**Revenue filtering fix:**
+- `INSPECTION_CATEGORIES` set expanded to include "State Inspection" and "TNC Inspection" (user's configured categories), not just the old "Inspection"
+- Updated `sumJobRevenue()`, reports, and CSV export to use the expanded set
+
+**Preset form improvements:**
+- Catalog search filtered by selected category (was showing all categories)
+- Category selection required before catalog search is shown
+- Changing category clears existing line items
+- Line items inherit preset's category, not catalog item's original category
+
+**Quick Pay UX:**
+- Preset dropdown closes on blur (click-away)
+
+**Reporting Suite — 3 new report pages:**
+
+1. **Trends Explorer** (`/reports/trends`) — Chart any of 11 metrics (revenue, gross profit, labor/parts revenue, COGS, margin %, job count, ARO, estimate close rate, inspection count/revenue) over time with day/week/month granularity. Vertical bar chart (Recharts) + data table. Revenue includes inspection revenue to match Revenue Overview.
+
+2. **Service Mix Deep-Dive** (`/reports/service-mix`) — Category performance trends. "All Categories" shows stacked bar chart with category mix shift over time. Single category shows that category's metrics trended. 6 metrics (revenue, gross profit, job count, ARO, parts cost, margin %). Inspections appear as selectable categories. Top 8 categories by revenue, rest rolled into "Other".
+
+3. **Tech Scoreboard** (`/reports/tech`) — Technician performance trends. "All Techs" stacked chart for comparison. Single tech drill-down. Same 6 metrics. Reuses CategoryDeepDive component with `groupLabel`/`basePath` props.
+
+**Shared infrastructure:**
+- `src/lib/utils/trend-buckets.ts` — extracted shared helpers (`buildBucketKeys`, `getBucketKey`, `getDateRange`, `timestampToDateET`, `toDateStr`) for reuse across all trend reports
+- CategoryDeepDive component generalized with `groupLabel` and `basePath` props for category and tech reuse
+
+### New Files (12)
+- `supabase/migrations/20260408000000_walk_in_customer.sql`
+- `supabase/migrations/20260408000001_add_stripe_pi_to_jobs.sql`
+- `supabase/migrations/20260408000002_add_terminal_payment_method.sql`
+- `src/lib/utils/trend-buckets.ts`
+- `src/lib/actions/trends.ts`
+- `src/lib/actions/category-trends.ts`
+- `src/lib/actions/tech-trends.ts`
+- `src/components/dashboard/trends-explorer.tsx`
+- `src/components/dashboard/category-deep-dive.tsx`
+- `src/app/(dashboard)/reports/trends/page.tsx` + `loading.tsx`
+- `src/app/(dashboard)/reports/service-mix/page.tsx` + `loading.tsx`
+- `src/app/(dashboard)/reports/tech/page.tsx` + `loading.tsx`
+
+### Modified Files (8)
+- `src/app/api/terminal/status/route.ts` — payment update + guard + logging
+- `src/app/api/stripe/webhooks/route.ts` — error logging on terminal handler
+- `src/lib/utils/revenue.ts` — expanded INSPECTION_CATEGORIES set
+- `src/lib/actions/reports.ts` — use expanded inspection filter
+- `src/app/api/reports/export/route.ts` — use expanded inspection filter
+- `src/components/forms/preset-form.tsx` — category-filtered catalog search
+- `src/components/dashboard/quick-pay-form.tsx` — onBlur dropdown close
+- `src/app/(dashboard)/reports/page.tsx` — Trends Explorer + Service Mix + Tech Scoreboard live cards
+- `src/lib/actions/terminal.ts` — pass category to Quick Pay line items
