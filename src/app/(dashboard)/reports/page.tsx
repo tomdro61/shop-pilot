@@ -9,7 +9,6 @@ import {
   BarChart3,
   TrendingUp,
   Users,
-  UserPlus,
   ChevronRight,
 } from "lucide-react";
 
@@ -89,18 +88,11 @@ const operationsReports: ReportCard[] = [
 
 const customerReports: ReportCard[] = [
   {
-    href: "/reports/top-customers",
-    label: "Top Customers",
-    description: "Most valuable customers by revenue and visit frequency",
+    href: "/reports/customers",
+    label: "Customer Insights",
+    description: "New vs returning trends, top customers, and retention metrics",
     icon: Users,
-    status: "coming_soon",
-  },
-  {
-    href: "/reports/customer-growth",
-    label: "New vs Returning",
-    description: "Customer acquisition and retention trends",
-    icon: UserPlus,
-    status: "coming_soon",
+    status: "live",
   },
 ];
 
