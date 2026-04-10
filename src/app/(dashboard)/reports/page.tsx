@@ -1,19 +1,17 @@
 import Link from "next/link";
 import { getReportData } from "@/lib/actions/reports";
 import { getTrendData } from "@/lib/actions/trends";
-import { getReceivablesData } from "@/lib/actions/receivables";
-import { getCustomerInsightsData } from "@/lib/actions/customer-insights";
+import { getReceivablesSummary } from "@/lib/actions/receivables";
+import { getCustomerKpis } from "@/lib/actions/customer-insights";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
+import { ReportsOverviewChart } from "@/components/dashboard/reports-overview-chart";
 
 export const metadata = {
   title: "Reports | ShopPilot",
 };
-
-// Client wrapper for the mini chart (needs recharts which is client-only)
-import { ReportsOverviewChart } from "@/components/dashboard/reports-overview-chart";
 
 export default async function ReportsOverviewPage() {
   const resolved = resolveDateRange("this_month");
@@ -28,11 +26,11 @@ export default async function ReportsOverviewPage() {
       isAllTime: false,
     }),
     getTrendData("month", currentYear),
-    getReceivablesData(),
-    getCustomerInsightsData("month", currentYear),
+    getReceivablesSummary(),
+    getCustomerKpis(resolved.from, resolved.to),
   ]);
 
-  const { breakdown, inspectionRevenue, inspectionProfit, estimateCloseRate } = reportData;
+  const { breakdown, inspectionRevenue, estimateCloseRate } = reportData;
   const totalRevenue = breakdown.totalRevenue + inspectionRevenue;
   const totalGrossProfit = reportData.totalGrossProfit;
   const grossMarginPct = totalRevenue > 0 ? (totalGrossProfit / totalRevenue) * 100 : 0;

@@ -39,6 +39,38 @@ export interface FleetAccountAging {
 
 const WALK_IN_ID = "00000000-0000-0000-0000-000000000000";
 
+/** Lightweight summary for the overview dashboard — avoids building full job/fleet arrays. */
+export async function getReceivablesSummary(): Promise<{ totalOutstanding: number; aging60plus: number }> {
+  const supabase = await createClient();
+  const today = todayET();
+  const now = parseISO(today);
+
+  const { data } = await supabase
+    .from("jobs")
+    .select("date_finished, job_line_items(total, category)")
+    .eq("status", "complete")
+    .neq("payment_status", "paid")
+    .neq("payment_status", "waived")
+    .limit(10000);
+
+  let totalOutstanding = 0;
+  let aging60plus = 0;
+
+  type LI = { total: number; category: string | null };
+
+  for (const job of (data || [])) {
+    const amount = ((job.job_line_items as LI[]) || [])
+      .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
+      .reduce((s, li) => s + (li.total || 0), 0);
+    if (amount <= 0) continue;
+    totalOutstanding += amount;
+    const days = job.date_finished ? differenceInDays(now, parseISO(job.date_finished)) : 0;
+    if (days > 60) aging60plus += amount;
+  }
+
+  return { totalOutstanding, aging60plus };
+}
+
 // ── Main ─────────────────────────────────────────────────────
 
 export async function getReceivablesData(): Promise<ReceivablesData> {

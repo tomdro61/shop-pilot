@@ -26,7 +26,7 @@ export default async function RevenueReportPage({
     isAllTime: resolved.isAllTime,
   });
 
-  const { profitability, breakdown, inspectionCount, inspectionRevenue, inspectionProfit, estimateCloseRate } = data;
+  const { profitability, breakdown, inspectionCount, inspectionRevenue, estimateCloseRate } = data;
 
   const categoryChartData = data.categoryBreakdown.map((d) => ({
     label: d.category,

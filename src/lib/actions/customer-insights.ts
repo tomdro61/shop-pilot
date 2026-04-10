@@ -37,6 +37,63 @@ export interface CustomerInsightsData {
 
 const WALK_IN_ID = "00000000-0000-0000-0000-000000000000";
 
+/** Lightweight KPIs for the overview dashboard — avoids the full all-time jobs query. */
+export async function getCustomerKpis(
+  startDate: string,
+  endDate: string
+): Promise<{ newCustomers: number; repeatRate: number }> {
+  const supabase = await createClient();
+
+  // Period jobs: just customer_id + date_finished (no line items needed)
+  const [periodResult, firstVisitResult] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select("customer_id")
+      .eq("status", "complete")
+      .gte("date_finished", startDate)
+      .lte("date_finished", endDate)
+      .limit(10000),
+    supabase
+      .from("jobs")
+      .select("customer_id, date_finished")
+      .eq("status", "complete")
+      .order("date_finished", { ascending: true })
+      .limit(50000),
+  ]);
+
+  // Build first-visit map
+  const firstJobDate = new Map<string, string>();
+  for (const job of (firstVisitResult.data || [])) {
+    if (!job.customer_id || job.customer_id === WALK_IN_ID) continue;
+    if (!firstJobDate.has(job.customer_id)) {
+      firstJobDate.set(job.customer_id, job.date_finished!);
+    }
+  }
+
+  // Unique customers in period
+  const periodCustomers = new Set<string>();
+  for (const job of (periodResult.data || [])) {
+    if (job.customer_id && job.customer_id !== WALK_IN_ID) {
+      periodCustomers.add(job.customer_id);
+    }
+  }
+
+  let newCustomers = 0;
+  for (const custId of periodCustomers) {
+    const firstDate = firstJobDate.get(custId);
+    if (firstDate && firstDate >= startDate && firstDate <= endDate) {
+      newCustomers += 1;
+    }
+  }
+
+  const unique = periodCustomers.size;
+  const repeatRate = unique > 0
+    ? Math.round(((unique - newCustomers) / unique) * 100 * 10) / 10
+    : 0;
+
+  return { newCustomers, repeatRate };
+}
+
 // ── Main ─────────────────────────────────────────────────────
 
 export async function getCustomerInsightsData(
