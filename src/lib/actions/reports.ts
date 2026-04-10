@@ -219,7 +219,7 @@ export async function getReportData(params: {
     })
     .sort((a, b) => b.revenue - a.revenue);
 
-  const totalRevenue = laborRevenue + partsRevenue;
+  let totalRevenue = laborRevenue + partsRevenue;
   const totalPartsCost = totalActualPartsCost + totalEstimatedPartsCost;
   let grossProfit = totalRevenue - totalPartsCost;
   const costDataCoverage = totalPartsCount > 0
@@ -322,6 +322,7 @@ export async function getReportData(params: {
 
   // Add manual income to totals
   revenueCurrent += manualIncomeTotal;
+  totalRevenue += manualIncomeTotal;
   grossProfit += manualProfitTotal;
 
   // Inject manual income categories into breakdown and profitability
