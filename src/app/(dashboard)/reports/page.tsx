@@ -66,10 +66,10 @@ const financialReports: ReportCard[] = [
 const operationsReports: ReportCard[] = [
   {
     href: "/reports/tech",
-    label: "Tech Performance",
-    description: "Technician output, revenue, and workload balance",
+    label: "Tech Scoreboard",
+    description: "Technician performance trends and workload comparison",
     icon: Wrench,
-    status: "coming_soon",
+    status: "live",
   },
   {
     href: "/reports/throughput",

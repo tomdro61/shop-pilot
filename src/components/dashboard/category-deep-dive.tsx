@@ -78,6 +78,8 @@ interface CategoryDeepDiveProps {
   initialMetric: CategoryMetricKey;
   initialGranularity: Granularity;
   initialYear: number;
+  groupLabel?: string;
+  basePath?: string;
 }
 
 export function CategoryDeepDive({
@@ -86,6 +88,8 @@ export function CategoryDeepDive({
   initialMetric,
   initialGranularity,
   initialYear,
+  groupLabel = "Category",
+  basePath = "/reports/service-mix",
 }: CategoryDeepDiveProps) {
   const router = useRouter();
   const [category, setCategory] = useState(initialCategory);
@@ -93,12 +97,13 @@ export function CategoryDeepDive({
 
   const metricCfg = METRICS[metric];
   const isAllCategories = category === "all";
+  const allLabel = `All ${groupLabel === "Category" ? "Categories" : `${groupLabel}s`}`;
 
   function pushParams(params: Record<string, string>) {
     const sp = new URLSearchParams(params);
     sp.set("metric", metric);
     sp.set("category", category);
-    router.push(`/reports/service-mix?${sp.toString()}`);
+    router.push(`${basePath}?${sp.toString()}`);
   }
 
   function setGranularity(g: Granularity) {
@@ -184,7 +189,7 @@ export function CategoryDeepDive({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">{allLabel}</SelectItem>
               {data.categories.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat}
@@ -245,7 +250,7 @@ export function CategoryDeepDive({
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-bold">
-            {isAllCategories ? `${metricCfg.label} by Category` : `${category} — ${metricCfg.label}`}
+            {isAllCategories ? `${metricCfg.label} by ${groupLabel}` : `${category} — ${metricCfg.label}`}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -348,7 +353,7 @@ export function CategoryDeepDive({
       <Card className="py-0 gap-0">
         <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
           <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
-            {isAllCategories ? `${metricCfg.label} by Category` : category} — {periodLabel}
+            {isAllCategories ? `${metricCfg.label} by ${groupLabel}` : category} — {periodLabel}
           </CardTitle>
         </CardHeader>
         <CardContent>
