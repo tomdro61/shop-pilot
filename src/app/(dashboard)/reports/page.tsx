@@ -49,9 +49,9 @@ const financialReports: ReportCard[] = [
   {
     href: "/reports/receivables",
     label: "Accounts Receivable",
-    description: "Outstanding invoices and aging buckets",
+    description: "Outstanding balances, aging buckets, and fleet accounts",
     icon: FileText,
-    status: "coming_soon",
+    status: "live",
   },
   {
     href: "/reports/payments",

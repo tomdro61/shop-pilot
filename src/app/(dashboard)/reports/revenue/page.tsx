@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { getReportData, getFleetARSummary } from "@/lib/actions/reports";
+import { getReportData } from "@/lib/actions/reports";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -21,16 +21,13 @@ export default async function RevenueReportPage({
 }) {
   const { range, from, to } = await searchParams;
   const resolved = resolveDateRange(range, from, to);
-  const [data, fleetAR] = await Promise.all([
-    getReportData({
-      from: resolved.from,
-      to: resolved.to,
-      priorFrom: resolved.priorFrom,
-      priorTo: resolved.priorTo,
-      isAllTime: resolved.isAllTime,
-    }),
-    getFleetARSummary(),
-  ]);
+  const data = await getReportData({
+    from: resolved.from,
+    to: resolved.to,
+    priorFrom: resolved.priorFrom,
+    priorTo: resolved.priorTo,
+    isAllTime: resolved.isAllTime,
+  });
 
   const { profitability, breakdown, inspectionCount, inspectionRevenue, inspectionProfit, estimateCloseRate } = data;
 
@@ -191,42 +188,6 @@ export default async function RevenueReportPage({
         </div>
       )}
 
-      {/* Fleet A/R Aging */}
-      {fleetAR.length > 0 && (
-        <div className="mt-6">
-          <Card className="py-0 gap-0">
-            <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
-              <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Fleet A/R Aging</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                      <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Account</th>
-                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">0-30 Days</th>
-                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">31-60 Days</th>
-                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">60+ Days</th>
-                      <th className="pb-2 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fleetAR.map((row) => (
-                      <tr key={row.account}>
-                        <td className="py-2 pr-4 font-medium">{row.account}</td>
-                        <td className="py-2 pr-4 text-right">{formatCurrency(row.current)}</td>
-                        <td className="py-2 pr-4 text-right">{formatCurrency(row.days31to60)}</td>
-                        <td className="py-2 pr-4 text-right text-red-600 dark:text-red-400">{row.days60plus > 0 ? formatCurrency(row.days60plus) : "-"}</td>
-                        <td className="py-2 text-right font-medium">{formatCurrency(row.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
