@@ -119,13 +119,16 @@ export function CategoryDeepDive({
       }))
     : [];
 
+  // Use index-based keys for chart (category names have spaces/special chars that break CSS vars)
+  const catKeys = data.categories.map((_, i) => `cat${i}`);
+
   // ── All categories chart data ──
   const allChartData = isAllCategories
     ? data.buckets.map((b) => {
         const row: Record<string, unknown> = { label: b.label };
-        for (const cat of data.categories) {
-          row[cat] = b.categories[cat]?.[metric] ?? 0;
-        }
+        data.categories.forEach((cat, i) => {
+          row[catKeys[i]] = b.categories[cat]?.[metric] ?? 0;
+        });
         return row;
       })
     : [];
@@ -134,7 +137,7 @@ export function CategoryDeepDive({
   const chartConfig: ChartConfig = isAllCategories
     ? Object.fromEntries(
         data.categories.map((cat, i) => [
-          cat,
+          catKeys[i],
           { label: cat, color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] },
         ])
       )
@@ -285,17 +288,21 @@ export function CategoryDeepDive({
                   return (
                     <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl min-w-[160px]">
                       <p className="font-medium mb-1.5">{label}</p>
-                      {payload.filter((p) => (p.value as number) > 0).reverse().map((p) => (
+                      {payload.filter((p) => (p.value as number) > 0).reverse().map((p) => {
+                        const catIdx = catKeys.indexOf(p.dataKey as string);
+                        const catName = catIdx >= 0 ? data.categories[catIdx] : (p.dataKey as string);
+                        return (
                         <div key={p.dataKey as string} className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-1.5">
                             <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: p.fill }} />
-                            <span className="text-muted-foreground">{p.dataKey as string}</span>
+                            <span className="text-muted-foreground">{catName}</span>
                           </div>
                           <span className="font-mono font-medium tabular-nums">
                             {metricCfg.format(p.value as number)}
                           </span>
                         </div>
-                      ))}
+                        );
+                      })}
                       {metricCfg.aggregate === "sum" && payload.length > 1 && (
                         <div className="flex justify-between gap-3 mt-1 pt-1 border-t border-border/50 font-medium">
                           <span>Total</span>
@@ -307,13 +314,13 @@ export function CategoryDeepDive({
                 }}
               />
               {isAllCategories ? (
-                data.categories.map((cat, i) => (
+                catKeys.map((key, i) => (
                   <Bar
-                    key={cat}
-                    dataKey={cat}
+                    key={key}
+                    dataKey={key}
                     stackId="a"
-                    fill={`var(--color-${CSS.escape(cat)})`}
-                    radius={i === data.categories.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                    fill={`var(--color-${key})`}
+                    radius={i === catKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
                   />
                 ))
               ) : (
