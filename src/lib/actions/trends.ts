@@ -15,6 +15,7 @@ import {
   timestampToDateET,
   getDateRange,
 } from "@/lib/utils/trend-buckets";
+import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -67,6 +68,8 @@ interface RawBucket {
   estimatesApproved: number;
   inspectionStateCount: number;
   inspectionTncCount: number;
+  manualIncome: number;
+  manualProfit: number;
 }
 
 function buildTrendBuckets(granularity: Granularity, startDate: string, endDate: string, year?: number): Map<string, RawBucket> {
@@ -77,6 +80,7 @@ function buildTrendBuckets(granularity: Granularity, startDate: string, endDate:
       revenue: 0, partsRevenue: 0, laborRevenue: 0, partsCost: 0, jobCount: 0,
       estimatesSent: 0, estimatesApproved: 0,
       inspectionStateCount: 0, inspectionTncCount: 0,
+      manualIncome: 0, manualProfit: 0,
     });
   }
   return map;
@@ -90,8 +94,8 @@ function finalize(raw: RawBucket): TrendBucket {
   const inspectionCost = raw.inspectionStateCount * INSPECTION_COST_STATE;
   const inspectionProfit = inspectionRevenue - inspectionCost;
 
-  const revenue = raw.revenue + inspectionRevenue;
-  const grossProfit = (raw.revenue - raw.partsCost) + inspectionProfit;
+  const revenue = raw.revenue + inspectionRevenue + raw.manualIncome;
+  const grossProfit = (raw.revenue - raw.partsCost) + inspectionProfit + raw.manualProfit;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
   const aro = raw.jobCount > 0 ? raw.revenue / raw.jobCount : 0;
   const estimateCloseRate =
@@ -125,7 +129,7 @@ export async function getTrendData(
   const { startDate, endDate, resolvedYear } = getDateRange(granularity, today, year);
 
   // Limit 10000 to override Supabase default 1000-row cap
-  const [jobsResult, estimatesResult, inspectionsResult] = await Promise.all([
+  const [jobsResult, estimatesResult, inspectionsResult, manualEntries] = await Promise.all([
     supabase
       .from("jobs")
       .select("id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)")
@@ -146,6 +150,7 @@ export async function getTrendData(
       .gte("date", startDate)
       .lte("date", endDate)
       .limit(10000),
+    getManualIncomeForRange(startDate, endDate),
   ]);
 
   const jobs = jobsResult.data || [];
@@ -210,6 +215,16 @@ export async function getTrendData(
 
     bucket.inspectionStateCount += row.state_count || 0;
     bucket.inspectionTncCount += row.tnc_count || 0;
+  }
+
+  for (const entry of manualEntries) {
+    if (!entry.date) continue;
+    const bKey = getBucketKey(entry.date, granularity);
+    const bucket = bucketMap.get(bKey);
+    if (!bucket) continue;
+
+    bucket.manualIncome += entry.amount;
+    bucket.manualProfit += entry.amount * (entry.shop_keep_pct / 100);
   }
 
   const buckets: TrendBucket[] = [];

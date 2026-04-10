@@ -6,6 +6,7 @@ import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
 import { INSPECTION_CATEGORIES, calcInspectionRevenue } from "@/lib/utils/revenue";
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -82,7 +83,7 @@ export async function getReportData(params: {
 
   // Job count + revenue
   const jobsCurrent = currentJobs.length;
-  const revenueCurrent = currentJobs.reduce((sum, job) => sum + sumLineItemTotals(job), 0);
+  let revenueCurrent = currentJobs.reduce((sum, job) => sum + sumLineItemTotals(job), 0);
 
   // Prior period — always initialize to 0 when a prior period exists so trends show.
   // null means "no comparison available" (all-time mode only).
@@ -220,7 +221,7 @@ export async function getReportData(params: {
 
   const totalRevenue = laborRevenue + partsRevenue;
   const totalPartsCost = totalActualPartsCost + totalEstimatedPartsCost;
-  const grossProfit = totalRevenue - totalPartsCost;
+  let grossProfit = totalRevenue - totalPartsCost;
   const costDataCoverage = totalPartsCount > 0
     ? Math.round((partsWithCostCount / totalPartsCount) * 100)
     : 100;
@@ -300,6 +301,46 @@ export async function getReportData(params: {
       hasEstimatedCosts: false,
     });
   }
+  // Manual income entries
+  const manualEntries = await getManualIncomeForRange(start, end);
+  let manualIncomeTotal = 0;
+  let manualProfitTotal = 0;
+  const manualByCategory: Record<string, { revenue: number; cost: number }> = {};
+
+  for (const entry of manualEntries) {
+    const profit = entry.amount * (entry.shop_keep_pct / 100);
+    const cost = entry.amount - profit;
+    manualIncomeTotal += entry.amount;
+    manualProfitTotal += profit;
+
+    if (!manualByCategory[entry.category]) {
+      manualByCategory[entry.category] = { revenue: 0, cost: 0 };
+    }
+    manualByCategory[entry.category].revenue += entry.amount;
+    manualByCategory[entry.category].cost += cost;
+  }
+
+  // Add manual income to totals
+  revenueCurrent += manualIncomeTotal;
+  grossProfit += manualProfitTotal;
+
+  // Inject manual income categories into breakdown and profitability
+  for (const [cat, data] of Object.entries(manualByCategory)) {
+    const catProfit = data.revenue - data.cost;
+    const margin = data.revenue > 0 ? (catProfit / data.revenue) * 100 : 0;
+    categoryBreakdown.push({ category: cat, revenue: data.revenue, jobCount: 0 });
+    profitability.push({
+      category: cat,
+      revenue: data.revenue,
+      partsCost: data.cost,
+      partsRevenue: 0,
+      laborRevenue: data.revenue,
+      grossProfit: catProfit,
+      margin,
+      hasEstimatedCosts: false,
+    });
+  }
+
   categoryBreakdown.sort((a, b) => b.revenue - a.revenue);
   profitability.sort((a, b) => b.revenue - a.revenue);
 
@@ -319,6 +360,19 @@ export async function getReportData(params: {
     if (revenuePrior !== null) {
       revenuePrior += priorInspCalc.totalRevenue;
     }
+  }
+
+  // Prior period manual income
+  if (priorStart && priorEnd) {
+    const priorManual = await getManualIncomeForRange(priorStart, priorEnd);
+    let priorManualRevenue = 0;
+    let priorManualProfit = 0;
+    for (const entry of priorManual) {
+      priorManualRevenue += entry.amount;
+      priorManualProfit += entry.amount * (entry.shop_keep_pct / 100);
+    }
+    if (revenuePrior !== null) revenuePrior += priorManualRevenue;
+    if (grossProfitPrior !== null) grossProfitPrior += priorManualProfit;
   }
 
   // Estimate close rate
@@ -584,6 +638,16 @@ export async function getTaxReportData(year: number): Promise<TaxReportData> {
         }
       });
   });
+
+  // Add manual income to month buckets (all non-taxable)
+  const manualEntries = await getManualIncomeForRange(`${year}-01-01`, `${year}-12-31`);
+  for (const entry of manualEntries) {
+    if (!entry.date) continue;
+    const month = parseInt(entry.date.substring(5, 7), 10);
+    if (month >= 1 && month <= 12) {
+      monthBuckets[month].totalRevenue += entry.amount;
+    }
+  }
 
   // Build month rows
   const months: TaxMonthRow[] = [];

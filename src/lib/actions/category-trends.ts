@@ -14,6 +14,7 @@ import {
   getBucketKey,
   getDateRange,
 } from "@/lib/utils/trend-buckets";
+import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -93,8 +94,7 @@ export async function getCategoryTrendData(
   const today = todayET();
   const { startDate, endDate, resolvedYear } = getDateRange(granularity, today, year);
 
-  // 2 parallel queries (no estimates needed for category breakdown)
-  const [jobsResult, inspectionsResult] = await Promise.all([
+  const [jobsResult, inspectionsResult, manualEntries] = await Promise.all([
     supabase
       .from("jobs")
       .select("id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)")
@@ -108,6 +108,7 @@ export async function getCategoryTrendData(
       .gte("date", startDate)
       .lte("date", endDate)
       .limit(10000),
+    getManualIncomeForRange(startDate, endDate),
   ]);
 
   const jobs = jobsResult.data || [];
@@ -196,6 +197,20 @@ export async function getCategoryTrendData(
       accum.jobCount += row.tnc_count;
       categoryTotals["TNC Inspection"] = (categoryTotals["TNC Inspection"] || 0) + rev;
     }
+  }
+
+  // Aggregate manual income as categories
+  for (const entry of manualEntries) {
+    if (!entry.date) continue;
+    const bKey = getBucketKey(entry.date, granularity);
+    const bucket = rawBuckets.get(bKey);
+    if (!bucket) continue;
+
+    const accum = getOrCreate(bucket.categories, entry.category);
+    accum.revenue += entry.amount;
+    accum.partsCost += entry.amount * (1 - entry.shop_keep_pct / 100);
+    accum.laborRevenue += entry.amount;
+    categoryTotals[entry.category] = (categoryTotals[entry.category] || 0) + entry.amount;
   }
 
   // Order categories by total revenue, cap at MAX_CATEGORIES + "Other"

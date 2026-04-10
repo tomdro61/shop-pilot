@@ -793,6 +793,49 @@ export type Database = {
           },
         ]
       }
+      manual_income: {
+        Row: {
+          id: string
+          date: string
+          amount: number
+          shop_keep_pct: number
+          label: string
+          category: string
+          customer_id: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          date: string
+          amount: number
+          shop_keep_pct?: number
+          label: string
+          category: string
+          customer_id?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          date?: string
+          amount?: number
+          shop_keep_pct?: number
+          label?: string
+          category?: string
+          customer_id?: string | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_income_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parking_reservations: {
         Row: {
           arriving_flight: string | null

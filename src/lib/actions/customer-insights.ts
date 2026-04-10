@@ -9,6 +9,7 @@ import {
   getBucketKey,
   getDateRange,
 } from "@/lib/utils/trend-buckets";
+import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -224,6 +225,16 @@ export async function getCustomerInsightsData(
   const avgVisitsPerCustomer = uniqueCustomers > 0
     ? Math.round((totalJobsInPeriod / uniqueCustomers) * 10) / 10
     : 0;
+
+  // Add manual income linked to specific customers
+  const manualEntries = await getManualIncomeForRange(startDate, endDate);
+  for (const entry of manualEntries) {
+    if (!entry.customer_id) continue;
+    const existing = customerMap.get(entry.customer_id);
+    if (existing) {
+      existing.revenue += entry.amount;
+    }
+  }
 
   // Top 15 customers by revenue
   const topCustomers = Array.from(customerMap.values())
