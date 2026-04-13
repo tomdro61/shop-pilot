@@ -2,6 +2,7 @@
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { todayET } from "@/lib/utils";
 import type { ParkingStatus } from "@/types";
@@ -174,7 +175,7 @@ export async function getParkingDashboard(lot?: string) {
 // ── Check in ────────────────────────────────────────────────────
 
 export async function checkInReservation(id: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from("parking_reservations")
@@ -193,7 +194,7 @@ export async function checkInReservation(id: string) {
 // ── Undo check in (back to reserved) ────────────────────────────
 
 export async function undoCheckIn(id: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from("parking_reservations")
@@ -212,7 +213,7 @@ export async function undoCheckIn(id: string) {
 // ── Check out ───────────────────────────────────────────────────
 
 export async function checkOutReservation(id: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from("parking_reservations")
@@ -231,7 +232,7 @@ export async function checkOutReservation(id: string) {
 // ── Undo check out (back to checked in) ─────────────────────────
 
 export async function undoCheckOut(id: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from("parking_reservations")
@@ -250,7 +251,7 @@ export async function undoCheckOut(id: string) {
 // ── Mark no-show ────────────────────────────────────────────────
 
 export async function markNoShow(id: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from("parking_reservations")
@@ -266,7 +267,7 @@ export async function markNoShow(id: string) {
 // ── Cancel ──────────────────────────────────────────────────────
 
 export async function cancelReservation(id: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase
     .from("parking_reservations")

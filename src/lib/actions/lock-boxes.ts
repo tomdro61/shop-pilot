@@ -20,9 +20,9 @@ export async function getLockBoxes() {
 }
 
 export async function checkOutWithLockbox(reservationId: string, boxNumber: number) {
-  const supabase = await createClient();
+  // Use admin client — techs need to check out vehicles but RLS is manager-only for updates
+  const supabase = createAdminClient();
 
-  // Get lock box code
   const { data: lockBox, error: lbError } = await supabase
     .from("lock_boxes")
     .select("box_number, code")
@@ -91,7 +91,7 @@ export async function checkOutWithLockbox(reservationId: string, boxNumber: numb
 }
 
 export async function checkOutInPerson(reservationId: string) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: reservation, error: resError } = await supabase
     .from("parking_reservations")
