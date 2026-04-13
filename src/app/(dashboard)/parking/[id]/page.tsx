@@ -23,7 +23,7 @@ import {
   Mail,
   Hash,
   KeyRound,
-
+  Wrench,
 } from "lucide-react";
 
 export async function generateMetadata({
@@ -150,6 +150,14 @@ export default async function ParkingDetailPage({
                 reservationId={reservation.id}
                 alreadySent={!!reservation.specials_sent_at}
               />
+            )}
+            {reservation.customer_id && (
+              <Link href={`/jobs/new?customerId=${reservation.customer_id}`}>
+                <Button size="sm" variant="outline">
+                  <Wrench className="mr-1.5 h-3.5 w-3.5" />
+                  Create Job
+                </Button>
+              </Link>
             )}
           </div>
         </div>
