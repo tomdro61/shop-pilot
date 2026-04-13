@@ -249,3 +249,23 @@ export function dviApprovalInternalSMS({
   const itemList = approvedItems.join(", ");
   return `${customerName} approved ${approvedItems.length} service${approvedItems.length !== 1 ? "s" : ""} from DVI on ${vehicle || "vehicle"}${ro ? ` (${ro})` : ""}: ${itemList} — $${total.toLocaleString()} total.`;
 }
+
+export function valetReservationInternalSMS({
+  firstName,
+  lastName,
+  dropOffDate,
+  dropOffTime,
+  pickUpDate,
+  pickUpTime,
+  phone,
+}: {
+  firstName: string;
+  lastName: string;
+  dropOffDate: string;
+  dropOffTime: string;
+  pickUpDate: string;
+  pickUpTime: string;
+  phone: string;
+}) {
+  return `New valet reservation: ${firstName} ${lastName}, drop off ${dropOffDate} at ${dropOffTime}, pick up ${pickUpDate} at ${pickUpTime}. Phone: ${phone}`;
+}

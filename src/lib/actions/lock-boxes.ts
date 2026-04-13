@@ -69,8 +69,7 @@ export async function checkOutWithLockbox(reservationId: string, boxNumber: numb
 
         // Log to messages table
         if (reservation.customer_id) {
-          const admin = createAdminClient();
-          await admin.from("messages").insert({
+          await supabase.from("messages").insert({
             customer_id: reservation.customer_id,
             channel: "sms" as const,
             direction: "out" as const,

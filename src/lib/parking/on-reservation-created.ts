@@ -3,7 +3,7 @@ import { toE164 } from "@/lib/quo/format";
 import { sendSMS } from "@/lib/quo/client";
 import { getPhoneNumber, getParkingLine } from "@/lib/quo/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { reservationConfirmationSMS } from "@/lib/messaging/templates";
+import { reservationConfirmationSMS, valetReservationInternalSMS } from "@/lib/messaging/templates";
 
 /**
  * Called after a parking reservation is created (from Wix webhook or direct form).
@@ -94,13 +94,12 @@ export async function onReservationCreated({
   try {
     const line = getParkingLine(lot || "Broadway Motors");
     const from = getPhoneNumber(line);
-    await sendSMS({ to: e164Phone!, body, from });
+    await sendSMS({ to: e164Phone, body, from });
 
-    // 3. Log to messages table if we have a customer ID
     if (customerId) {
       const supabase = createAdminClient();
       await supabase.from("messages").insert({
-        customer_id: customerId!,
+        customer_id: customerId,
         channel: "sms" as const,
         direction: "out" as const,
         body,
@@ -114,10 +113,19 @@ export async function onReservationCreated({
   // 4. Internal notification for valet reservations
   if (parkingType === "valet" || lot === "Boston Logan Valet") {
     try {
-      const valetNotifyPhone = process.env.VALET_NOTIFICATION_PHONE;
+      const valetNotifyRaw = process.env.VALET_NOTIFICATION_PHONE;
+      const valetNotifyPhone = valetNotifyRaw ? toE164(valetNotifyRaw) : null;
       if (valetNotifyPhone) {
         const apbFrom = getPhoneNumber("apb");
-        const notifyBody = `New valet reservation: ${firstName} ${lastName}, drop off ${formatDate(dropOffDate)} at ${formatTime(dropOffTime)}, pick up ${formatDate(pickUpDate)} at ${formatTime(pickUpTime)}. Phone: ${phone}`;
+        const notifyBody = valetReservationInternalSMS({
+          firstName,
+          lastName,
+          dropOffDate: formatDate(dropOffDate),
+          dropOffTime: formatTime(dropOffTime),
+          pickUpDate: formatDate(pickUpDate),
+          pickUpTime: formatTime(pickUpTime),
+          phone,
+        });
         await sendSMS({ to: valetNotifyPhone, body: notifyBody, from: apbFrom });
       }
     } catch (err) {
