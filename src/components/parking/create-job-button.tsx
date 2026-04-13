@@ -1,23 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Wrench, Loader2 } from "lucide-react";
-import { createJobFromReservation } from "@/lib/actions/parking";
+import { prepareJobFromReservation } from "@/lib/actions/parking";
 
 export function CreateJobButton({ reservationId }: { reservationId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const inFlight = useRef(false);
 
   async function handleClick() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setLoading(true);
-    const result = await createJobFromReservation(reservationId);
-    setLoading(false);
+
+    const result = await prepareJobFromReservation(reservationId);
 
     if ("error" in result) {
       toast.error(result.error);
+      setLoading(false);
+      inFlight.current = false;
       return;
     }
 

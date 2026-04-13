@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { todayET } from "@/lib/utils";
 import type { ParkingStatus } from "@/types";
+import { findOrCreateParkingVehicle } from "@/lib/parking-vehicle";
 
 // ── Fetch reservations with filters ─────────────────────────────
 
@@ -332,9 +333,9 @@ export async function deleteReservation(id: string) {
   return { success: true };
 }
 
-// ── Create job from reservation (find or create vehicle) ───────
+// ── Prepare new job from reservation (find or create vehicle) ──
 
-export async function createJobFromReservation(reservationId: string): Promise<{ url: string } | { error: string }> {
+export async function prepareJobFromReservation(reservationId: string): Promise<{ url: string } | { error: string }> {
   const supabase = createAdminClient();
 
   const { data: res, error } = await supabase
@@ -347,39 +348,16 @@ export async function createJobFromReservation(reservationId: string): Promise<{
   if (!res.customer_id) return { error: "No customer linked to this reservation" };
 
   const customerId = res.customer_id;
-  let vehicleId: string | undefined;
+  let vehicleId: string | null = null;
 
-  if (res.make || res.model || res.license_plate) {
-    // Try to find existing vehicle by license plate or make+model
-    const { data: existing } = await supabase
-      .from("vehicles")
-      .select("id")
-      .eq("customer_id", customerId)
-      .or(
-        [
-          res.license_plate ? `license_plate.ilike.${res.license_plate}` : null,
-          res.make && res.model ? `and(make.ilike.${res.make},model.ilike.${res.model})` : null,
-        ].filter(Boolean).join(",")
-      )
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      vehicleId = existing[0].id;
-    } else {
-      const { data: newVehicle } = await supabase
-        .from("vehicles")
-        .insert({
-          customer_id: customerId,
-          make: res.make || null,
-          model: res.model || null,
-          license_plate: res.license_plate || null,
-          color: res.color || null,
-        })
-        .select("id")
-        .single();
-
-      if (newVehicle) vehicleId = newVehicle.id;
-    }
+  if (res.make && res.model) {
+    vehicleId = await findOrCreateParkingVehicle({
+      customerId,
+      make: res.make,
+      model: res.model,
+      color: res.color,
+      licensePlate: res.license_plate,
+    });
   }
 
   const params = new URLSearchParams({ customerId });
