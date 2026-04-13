@@ -9,9 +9,9 @@ export const metadata = {
 export default async function NewJobPage({
   searchParams,
 }: {
-  searchParams: Promise<{ customerId?: string; fromQuote?: string }>;
+  searchParams: Promise<{ customerId?: string; vehicleId?: string; fromQuote?: string }>;
 }) {
-  const { customerId, fromQuote } = await searchParams;
+  const { customerId, vehicleId, fromQuote } = await searchParams;
   const presets = await getPresets();
 
   // If converting from a quote request, pre-fill the job title
@@ -38,6 +38,7 @@ export default async function NewJobPage({
       </div>
       <JobForm
         defaultCustomerId={customerId}
+        defaultVehicleId={vehicleId}
         defaultTitle={quoteTitle}
         fromQuoteId={fromQuote}
         presets={presets}

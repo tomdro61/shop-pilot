@@ -58,6 +58,7 @@ interface JobFormProps {
     vehicles?: Pick<Vehicle, "id" | "year" | "make" | "model"> | null;
   };
   defaultCustomerId?: string;
+  defaultVehicleId?: string;
   defaultTitle?: string;
   fromQuoteId?: string;
   presets?: JobPreset[];
@@ -139,7 +140,7 @@ function SectionHeader({ title, description }: { title: string; description?: st
   );
 }
 
-export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, presets }: JobFormProps) {
+export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle, fromQuoteId, presets }: JobFormProps) {
   const router = useRouter();
   const isEditing = !!job;
 
@@ -163,7 +164,7 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
     resolver: zodResolver(jobSchema),
     defaultValues: {
       customer_id: job?.customer_id || defaultCustomerId || "",
-      vehicle_id: job?.vehicle_id || undefined,
+      vehicle_id: job?.vehicle_id || defaultVehicleId || undefined,
       status: job?.status || "not_started",
       title: job?.title || defaultTitle || "",
       assigned_tech: job?.assigned_tech || undefined,
