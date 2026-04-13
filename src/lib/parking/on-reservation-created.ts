@@ -110,4 +110,18 @@ export async function onReservationCreated({
   } catch (err) {
     console.error("[onReservationCreated] SMS send error:", err);
   }
+
+  // 4. Internal notification for valet reservations
+  if (parkingType === "valet" || lot === "Boston Logan Valet") {
+    try {
+      const valetNotifyPhone = process.env.VALET_NOTIFICATION_PHONE;
+      if (valetNotifyPhone) {
+        const apbFrom = getPhoneNumber("apb");
+        const notifyBody = `New valet reservation: ${firstName} ${lastName}, drop off ${formatDate(dropOffDate)} at ${formatTime(dropOffTime)}, pick up ${formatDate(pickUpDate)} at ${formatTime(pickUpTime)}. Phone: ${phone}`;
+        await sendSMS({ to: valetNotifyPhone, body: notifyBody, from: apbFrom });
+      }
+    } catch (err) {
+      console.error("[onReservationCreated] Valet notification SMS error:", err);
+    }
+  }
 }
