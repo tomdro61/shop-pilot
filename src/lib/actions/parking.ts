@@ -68,10 +68,18 @@ export async function getParkingReservations(filters?: {
     query = query.not("services_interested", "eq", "{}");
   }
   if (filters?.search) {
-    const s = filters.search;
-    query = query.or(
-      `first_name.ilike.%${s}%,last_name.ilike.%${s}%,license_plate.ilike.%${s}%,confirmation_number.ilike.%${s}%,phone.ilike.%${s}%,make.ilike.%${s}%,model.ilike.%${s}%`
-    );
+    const s = filters.search.trim();
+    const words = s.split(/\s+/);
+    if (words.length > 1) {
+      // "brian vecchio" → first_name LIKE %brian% AND last_name LIKE %vecchio%
+      query = query
+        .ilike("first_name", `%${words[0]}%`)
+        .ilike("last_name", `%${words.slice(1).join(" ")}%`);
+    } else {
+      query = query.or(
+        `first_name.ilike.%${s}%,last_name.ilike.%${s}%,license_plate.ilike.%${s}%,confirmation_number.ilike.%${s}%,phone.ilike.%${s}%,make.ilike.%${s}%,model.ilike.%${s}%`
+      );
+    }
   }
 
   const { data, error, count } = await query;
