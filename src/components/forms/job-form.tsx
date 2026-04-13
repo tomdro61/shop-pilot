@@ -221,9 +221,17 @@ export function JobForm({ job, defaultCustomerId, defaultTitle, fromQuoteId, pre
         .limit(20);
 
       if (customerSearch) {
-        query = query.or(
-          `first_name.ilike.%${customerSearch}%,last_name.ilike.%${customerSearch}%,phone.ilike.%${customerSearch}%`
-        );
+        const words = customerSearch.trim().split(/\s+/);
+        if (words.length > 1) {
+          // "john machine" → first_name LIKE %john% AND last_name LIKE %machine%
+          query = query
+            .ilike("first_name", `%${words[0]}%`)
+            .ilike("last_name", `%${words.slice(1).join(" ")}%`);
+        } else {
+          query = query.or(
+            `first_name.ilike.%${customerSearch}%,last_name.ilike.%${customerSearch}%,phone.ilike.%${customerSearch}%`
+          );
+        }
       }
 
       const { data } = await query;
