@@ -84,7 +84,7 @@ function finalizeCategory(raw: RawCategoryAccum): CategoryMetrics {
 
 // ── Main ─────────────────────────────────────────────────────
 
-const MAX_CATEGORIES = 8;
+const MAX_CATEGORIES = 20;
 
 export async function getCategoryTrendData(
   granularity: Granularity,
