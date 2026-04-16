@@ -1,7 +1,7 @@
 import { getTechJobs, getPendingParkingDviRequests, getStandaloneInspections } from "@/lib/actions/dvi";
 import { formatVehicle, formatRONumber, formatDateShort } from "@/lib/utils/format";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
-import { ClipboardCheck, ChevronRight, Car, Calendar } from "lucide-react";
+import { ClipboardCheck, ChevronRight, Car, Calendar, Wrench } from "lucide-react";
 import Link from "next/link";
 import { StartParkingDviButton } from "@/components/dvi/start-parking-dvi-button";
 import { CreateDviDialog } from "@/components/dvi/create-dvi-dialog";
@@ -155,8 +155,8 @@ export default async function DviJobListPage({
             const dviStatus = job.dvi_status as DviStatus | null;
 
             return (
-              <Link key={job.id} href={`/dvi/${job.id}`} className="block">
-                <div className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
+              <div key={job.id} className="rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20">
+                <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
                       {vehicle ? formatVehicle(vehicle) : "No Vehicle"}
@@ -180,13 +180,28 @@ export default async function DviJobListPage({
                       </span>
                     ) : (
                       <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">
-                        Start DVI
+                        No DVI
                       </span>
                     )}
-                    <ChevronRight className="h-4 w-4 text-stone-400" />
                   </div>
                 </div>
-              </Link>
+                <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-stone-100 dark:border-stone-800">
+                  <Link
+                    href={`/dvi/${job.id}`}
+                    className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    <ClipboardCheck className="h-3 w-3" />
+                    {dviStatus ? "View DVI" : "Start DVI"}
+                  </Link>
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    className="flex items-center gap-1.5 text-xs font-bold text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:underline"
+                  >
+                    <Wrench className="h-3 w-3" />
+                    View Job
+                  </Link>
+                </div>
+              </div>
             );
           })}
         </div>

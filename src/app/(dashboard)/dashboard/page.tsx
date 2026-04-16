@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Car, DollarSign, Plus, AlertTriangle,
   UserX, TrendingUp, TrendingDown, FileQuestion,
-  User, FileText, Calendar, CheckCircle2,
+  User, FileText, Calendar, CheckCircle2, ClipboardCheck,
 } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
@@ -54,6 +54,7 @@ const getDashboardData = unstable_cache(async () => {
     newQuoteCountResult,
     unpaidJobsResult,
     pendingEstimatesResult,
+    dviReadyResult,
   ] = await Promise.all([
     // Active jobs — Shop Floor, Tech Workload, Today's Schedule
     supabase
@@ -106,6 +107,12 @@ const getDashboardData = unstable_cache(async () => {
       .select("id, sent_at, jobs(id, title, customers(first_name, last_name), vehicles(year, make, model)), estimate_line_items(total)")
       .eq("status", "sent")
       .order("sent_at", { ascending: true }),
+    // DVIs completed but not yet sent to customer
+    supabase
+      .from("dvi_inspections")
+      .select("id, completed_at, job_id, jobs(id, title, ro_number, customers(first_name, last_name), vehicles(year, make, model)), dvi_results(condition)")
+      .eq("status", "completed")
+      .order("completed_at", { ascending: true }),
   ]);
 
   const activeJobs = activeJobsResult.data || [];
@@ -166,6 +173,18 @@ const getDashboardData = unstable_cache(async () => {
     total: (e.estimate_line_items as { total: number }[])?.reduce((s, li) => s + (li.total || 0), 0) || 0,
   }));
 
+  // DVIs ready to send — count conditions, drop raw results from cache payload
+  const dvisReady = (dviReadyResult.data || []).map(dvi => {
+    const results = (dvi.dvi_results ?? []) as { condition: string | null }[];
+    const counts = { monitor: 0, attention: 0 };
+    for (const r of results) {
+      if (r.condition === "monitor") counts.monitor++;
+      else if (r.condition === "attention") counts.attention++;
+    }
+    const { dvi_results: _, ...rest } = dvi;
+    return { ...rest, ...counts };
+  });
+
   return {
     stats: {
       todayRevenue: sumJobRevenue(todayCompleted) + sumInspectionRev(inspToday),
@@ -183,6 +202,7 @@ const getDashboardData = unstable_cache(async () => {
     totalOutstanding,
     pendingEstimates,
     todayScheduled,
+    dvisReady,
     newQuoteRequests: newQuoteCountResult.count || 0,
     today,
   };
@@ -196,12 +216,12 @@ function pctChange(current: number, previous: number): number {
 export default async function DashboardPage() {
   const {
     stats, shopFloor, techWorkload, unpaidJobs, totalOutstanding,
-    pendingEstimates, todayScheduled, newQuoteRequests, today,
+    pendingEstimates, dvisReady, todayScheduled, newQuoteRequests, today,
   } = await getDashboardData();
 
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
   const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);
-  const alertCount = stats.unpaidJobCount + stats.unassignedJobs + newQuoteRequests;
+  const alertCount = stats.unpaidJobCount + stats.unassignedJobs + newQuoteRequests + dvisReady.length;
 
   return (
     <div className="p-4 lg:p-10 space-y-8 lg:space-y-10">
@@ -313,6 +333,67 @@ export default async function DashboardPage() {
               </div>
             </Link>
           )}
+          {dvisReady.length > 0 && (
+            <Link href="/dvi" className="block">
+              <div className="flex items-center gap-3 rounded-xl bg-purple-100 dark:bg-purple-950 shadow-card border-l-4 border-l-purple-500 px-5 py-3.5 transition-colors hover:bg-purple-200 dark:hover:bg-purple-900">
+                <ClipboardCheck className="h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" />
+                <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
+                  {dvisReady.length} DVI{dvisReady.length === 1 ? "" : "s"} ready to send
+                </span>
+                <span className="ml-auto hidden text-xs text-stone-500 dark:text-stone-400 sm:inline">Completed, awaiting review</span>
+              </div>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* ── DVIs Ready to Send ── */}
+      {dvisReady.length > 0 && (
+        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">DVIs Ready to Send</h3>
+          </div>
+          <div className="divide-y divide-stone-200 dark:divide-stone-800">
+            {dvisReady.map(dvi => {
+              const job = dvi.jobs as { id: string; title: string | null; ro_number: number | null; customers: { first_name: string; last_name: string } | null; vehicles: { year: number | null; make: string | null; model: string | null } | null } | null;
+              const customer = job?.customers;
+              const vehicle = job?.vehicles;
+              const days = daysBetween(dvi.completed_at?.split("T")[0] ?? null, today);
+              return (
+                <Link key={dvi.id} href={job ? `/jobs/${job.id}` : `/dvi/inspect/${dvi.id}`} className="block">
+                  <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+                        {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                      </p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+                        {vehicle ? formatVehicle(vehicle) : job?.title || "DVI"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 pl-3">
+                      {dvi.attention > 0 && (
+                        <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400">
+                          {dvi.attention} attention
+                        </span>
+                      )}
+                      {dvi.monitor > 0 && (
+                        <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+                          {dvi.monitor} monitor
+                        </span>
+                      )}
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap ${
+                        days >= 1
+                          ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
+                          : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
+                      }`}>
+                        {days}d
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 
