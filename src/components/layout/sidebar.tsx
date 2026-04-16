@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding, Receipt, FileQuestion, Search } from "lucide-react";
+import { LayoutDashboard, Inbox, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding, Receipt, FileQuestion, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -14,6 +14,7 @@ interface NavItem {
 
 const mainNav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/jobs", label: "Jobs", icon: Wrench },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/quick-pay", label: "Quick Pay", icon: CircleDollarSign },
