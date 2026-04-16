@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Wrench, PlaneLanding, CircleDollarSign, Search } from "lucide-react";
+import { LayoutDashboard, Inbox, Users, Wrench, PlaneLanding, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -14,10 +14,10 @@ interface NavItem {
 
 const allNavItems: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/jobs", label: "Jobs", icon: Wrench },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/parking", label: "Parking", icon: PlaneLanding, techVisible: true },
-  { href: "/quick-pay", label: "Pay", icon: CircleDollarSign },
   { href: "/dvi", label: "DVI", icon: Search, techVisible: true },
 ];
 
