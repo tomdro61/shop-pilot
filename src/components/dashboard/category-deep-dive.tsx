@@ -113,23 +113,25 @@ export function CategoryDeepDive({
   const groupLabelPlural = groupLabel === "Category" ? "Categories" : `${groupLabel}s`;
   const allLabel = `All ${groupLabelPlural}`;
 
+  function toggleAll() {
+    setSelected(isAllSelected ? [] : [...data.categories]);
+  }
+
   function toggleCategory(cat: string) {
-    setSelected((prev) => {
-      if (prev.includes(cat)) {
-        const next = prev.filter((c) => c !== cat);
-        return next.length === 0 ? [...data.categories] : next;
-      }
-      return [...prev, cat];
-    });
+    setSelected((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
   }
 
   const triggerLabel = isAllSelected
     ? allLabel
-    : selected.length === 1
-      ? selected[0]
-      : selected.length <= 3
-        ? selected.join(", ")
-        : `${selected.length} ${groupLabelPlural}`;
+    : selected.length === 0
+      ? `Select ${groupLabelPlural}…`
+      : selected.length === 1
+        ? selected[0]
+        : selected.length <= 3
+          ? selected.join(", ")
+          : `${selected.length} ${groupLabelPlural}`;
 
   function pushParams(params: Record<string, string>) {
     const sp = new URLSearchParams(params);
@@ -229,11 +231,11 @@ export function CategoryDeepDive({
             </PopoverTrigger>
             <PopoverContent className="w-[220px] p-1.5" align="start">
               <button
-                onClick={() => setSelected([...data.categories])}
+                onClick={toggleAll}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
               >
                 <Checkbox
-                  checked={isAllSelected ? true : "indeterminate"}
+                  checked={isAllSelected ? true : selected.length > 0 ? "indeterminate" : false}
                   tabIndex={-1}
                   className="pointer-events-none"
                 />
