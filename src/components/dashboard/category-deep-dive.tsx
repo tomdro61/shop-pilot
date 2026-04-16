@@ -19,7 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import type { Granularity } from "@/lib/utils/trend-buckets";
 import type {
@@ -92,17 +98,43 @@ export function CategoryDeepDive({
   basePath = "/reports/service-mix",
 }: CategoryDeepDiveProps) {
   const router = useRouter();
-  const [category, setCategory] = useState(initialCategory);
+  const [selected, setSelected] = useState<string[]>(() => {
+    if (initialCategory === "all") return [...data.categories];
+    const parsed = initialCategory.split(",").filter((c) => data.categories.includes(c));
+    return parsed.length > 0 ? parsed : [...data.categories];
+  });
   const [metric, setMetric] = useState<CategoryMetricKey>(initialMetric);
 
   const metricCfg = METRICS[metric];
-  const isAllCategories = category === "all";
-  const allLabel = `All ${groupLabel === "Category" ? "Categories" : `${groupLabel}s`}`;
+  const catIndexMap = new Map(data.categories.map((c, i) => [c, i]));
+  const isAllSelected = selected.length === data.categories.length;
+  const visibleCategories = selected;
+  const isSingle = visibleCategories.length === 1;
+  const groupLabelPlural = groupLabel === "Category" ? "Categories" : `${groupLabel}s`;
+  const allLabel = `All ${groupLabelPlural}`;
+
+  function toggleCategory(cat: string) {
+    setSelected((prev) => {
+      if (prev.includes(cat)) {
+        const next = prev.filter((c) => c !== cat);
+        return next.length === 0 ? [...data.categories] : next;
+      }
+      return [...prev, cat];
+    });
+  }
+
+  const triggerLabel = isAllSelected
+    ? allLabel
+    : selected.length === 1
+      ? selected[0]
+      : selected.length <= 3
+        ? selected.join(", ")
+        : `${selected.length} ${groupLabelPlural}`;
 
   function pushParams(params: Record<string, string>) {
     const sp = new URLSearchParams(params);
     sp.set("metric", metric);
-    sp.set("category", category);
+    sp.set("category", isAllSelected ? "all" : selected.join(","));
     router.push(`${basePath}?${sp.toString()}`);
   }
 
@@ -116,35 +148,39 @@ export function CategoryDeepDive({
     pushParams({ granularity: "month", year: String(y) });
   }
 
-  // ── Single category chart data ──
-  const singleChartData = !isAllCategories
+  // Use index-based keys for chart (category names have spaces/special chars that break CSS vars)
+  const catKeys = data.categories.map((_, i) => `cat${i}`);
+  const visibleCatKeys = visibleCategories.map((cat) => catKeys[catIndexMap.get(cat)!]);
+
+  // ── Single category chart data (exactly 1 selected) ──
+  const singleChartData = isSingle
     ? data.buckets.map((b) => ({
         label: b.label,
-        value: b.categories[category]?.[metric] ?? 0,
+        value: b.categories[visibleCategories[0]]?.[metric] ?? 0,
       }))
     : [];
 
-  // Use index-based keys for chart (category names have spaces/special chars that break CSS vars)
-  const catKeys = data.categories.map((_, i) => `cat${i}`);
-
-  // ── All categories chart data ──
-  const allChartData = isAllCategories
+  // ── Multi category chart data (2+ selected, including "all") ──
+  const multiChartData = !isSingle
     ? data.buckets.map((b) => {
         const row: Record<string, unknown> = { label: b.label };
-        data.categories.forEach((cat, i) => {
-          row[catKeys[i]] = b.categories[cat]?.[metric] ?? 0;
+        visibleCategories.forEach((cat) => {
+          row[catKeys[catIndexMap.get(cat)!]] = b.categories[cat]?.[metric] ?? 0;
         });
         return row;
       })
     : [];
 
   // ── Chart config ──
-  const chartConfig: ChartConfig = isAllCategories
+  const chartConfig: ChartConfig = !isSingle
     ? Object.fromEntries(
-        data.categories.map((cat, i) => [
-          catKeys[i],
-          { label: cat, color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] },
-        ])
+        visibleCategories.map((cat) => {
+          const idx = catIndexMap.get(cat)!;
+          return [
+            catKeys[idx],
+            { label: cat, color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] },
+          ];
+        })
       )
     : {
         value: {
@@ -184,19 +220,48 @@ export function CategoryDeepDive({
       {/* Controls */}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 py-3">
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{allLabel}</SelectItem>
-              {data.categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="w-[200px] justify-between text-left font-normal">
+                <span className="truncate">{triggerLabel}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[220px] p-1.5" align="start">
+              <button
+                onClick={() => setSelected([...data.categories])}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
+              >
+                <Checkbox
+                  checked={isAllSelected ? true : "indeterminate"}
+                  tabIndex={-1}
+                  className="pointer-events-none"
+                />
+                <span className="font-medium">{allLabel}</span>
+              </button>
+              <div className="my-1 border-t border-stone-200 dark:border-stone-700" />
+              <div className="max-h-[240px] overflow-y-auto">
+                {data.categories.map((cat, idx) => (
+                    <button
+                      key={cat}
+                      onClick={() => toggleCategory(cat)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
+                    >
+                      <Checkbox
+                        checked={selected.includes(cat)}
+                        tabIndex={-1}
+                        className="pointer-events-none"
+                      />
+                      <div
+                        className="h-2 w-2 rounded-full shrink-0"
+                        style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
+                      />
+                      <span className="truncate">{cat}</span>
+                    </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Select value={metric} onValueChange={(v) => setMetric(v as CategoryMetricKey)}>
             <SelectTrigger className="w-[180px]">
@@ -250,12 +315,12 @@ export function CategoryDeepDive({
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-bold">
-            {isAllCategories ? `${metricCfg.label} by ${groupLabel}` : `${category} — ${metricCfg.label}`}
+            {isSingle ? `${visibleCategories[0]} — ${metricCfg.label}` : `${metricCfg.label} by ${groupLabel}`}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[350px] w-full">
-            <BarChart data={isAllCategories ? allChartData : singleChartData}>
+            <BarChart data={isSingle ? singleChartData : multiChartData}>
               <CartesianGrid vertical={false} />
               <XAxis
                 dataKey="label"
@@ -277,7 +342,7 @@ export function CategoryDeepDive({
               <ChartTooltip
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
-                  if (!isAllCategories) {
+                  if (isSingle) {
                     const val = payload[0].value as number;
                     return (
                       <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl">
@@ -318,14 +383,14 @@ export function CategoryDeepDive({
                   );
                 }}
               />
-              {isAllCategories ? (
-                catKeys.map((key, i) => (
+              {!isSingle ? (
+                visibleCatKeys.map((key, i) => (
                   <Bar
                     key={key}
                     dataKey={key}
                     stackId="a"
                     fill={`var(--color-${key})`}
-                    radius={i === catKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                    radius={i === visibleCatKeys.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
                   />
                 ))
               ) : (
@@ -333,17 +398,20 @@ export function CategoryDeepDive({
               )}
             </BarChart>
           </ChartContainer>
-          {isAllCategories && (
+          {!isSingle && (
             <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs">
-              {data.categories.map((cat, i) => (
-                <div key={cat} className="flex items-center gap-1.5">
-                  <div
-                    className="h-2 w-2 rounded-full shrink-0"
-                    style={{ backgroundColor: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }}
-                  />
-                  <span className="text-muted-foreground">{cat}</span>
-                </div>
-              ))}
+              {visibleCategories.map((cat) => {
+                const idx = catIndexMap.get(cat)!;
+                return (
+                  <div key={cat} className="flex items-center gap-1.5">
+                    <div
+                      className="h-2 w-2 rounded-full shrink-0"
+                      style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
+                    />
+                    <span className="text-muted-foreground">{cat}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -353,20 +421,20 @@ export function CategoryDeepDive({
       <Card className="py-0 gap-0">
         <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
           <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
-            {isAllCategories ? `${metricCfg.label} by ${groupLabel}` : category} — {periodLabel}
+            {isSingle ? visibleCategories[0] : `${metricCfg.label} by ${groupLabel}`} — {periodLabel}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            {isAllCategories ? (
-              // Multi-column table: one column per category
+            {!isSingle ? (
+              // Multi-column table: one column per visible category
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
                     <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
                       Period
                     </th>
-                    {data.categories.map((cat) => (
+                    {visibleCategories.map((cat) => (
                       <th
                         key={cat}
                         className="pb-2 pr-3 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 whitespace-nowrap"
@@ -380,7 +448,7 @@ export function CategoryDeepDive({
                   {data.buckets.map((bucket) => (
                     <tr key={bucket.key}>
                       <td className="py-2 pr-4 font-medium whitespace-nowrap">{bucket.label}</td>
-                      {data.categories.map((cat) => (
+                      {visibleCategories.map((cat) => (
                         <td key={cat} className="py-2 pr-3 text-right tabular-nums">
                           {metricCfg.format(bucket.categories[cat]?.[metric] ?? 0)}
                         </td>
@@ -391,7 +459,7 @@ export function CategoryDeepDive({
                     <td className="py-2 pr-4">
                       {metricCfg.aggregate === "sum" ? "Total" : "Average"}
                     </td>
-                    {data.categories.map((cat) => (
+                    {visibleCategories.map((cat) => (
                       <td key={cat} className="py-2 pr-3 text-right tabular-nums">
                         {metricCfg.format(computeTotal(cat))}
                       </td>
@@ -417,7 +485,7 @@ export function CategoryDeepDive({
                     <tr key={bucket.key}>
                       <td className="py-2 pr-4 font-medium">{bucket.label}</td>
                       <td className="py-2 text-right tabular-nums">
-                        {metricCfg.format(bucket.categories[category]?.[metric] ?? 0)}
+                        {metricCfg.format(bucket.categories[visibleCategories[0]]?.[metric] ?? 0)}
                       </td>
                     </tr>
                   ))}
@@ -426,7 +494,7 @@ export function CategoryDeepDive({
                       {metricCfg.aggregate === "sum" ? "Total" : "Average"}
                     </td>
                     <td className="py-2 text-right tabular-nums">
-                      {metricCfg.format(computeTotal(category))}
+                      {metricCfg.format(computeTotal(visibleCategories[0]))}
                     </td>
                   </tr>
                 </tbody>
