@@ -23,6 +23,7 @@ import {
   Mail,
   Hash,
   KeyRound,
+  Plane,
 } from "lucide-react";
 import { CreateJobButton } from "@/components/parking/create-job-button";
 
@@ -215,6 +216,26 @@ export default async function ParkingDetailPage({
               pickUpDate={reservation.pick_up_date}
               pickUpTime={reservation.pick_up_time}
             />
+
+            {/* Flight Numbers */}
+            {(reservation.departing_flight || reservation.arriving_flight) && (
+              <div className="mt-4 flex flex-wrap gap-4">
+                {reservation.departing_flight && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Plane className="h-3.5 w-3.5 text-stone-400 -rotate-45" />
+                    <span className="text-stone-500 dark:text-stone-400">Departing:</span>
+                    <span className="font-bold text-stone-900 dark:text-stone-50 uppercase">{reservation.departing_flight}</span>
+                  </div>
+                )}
+                {reservation.arriving_flight && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Plane className="h-3.5 w-3.5 text-stone-400 rotate-45" />
+                    <span className="text-stone-500 dark:text-stone-400">Arriving:</span>
+                    <span className="font-bold text-stone-900 dark:text-stone-50 uppercase">{reservation.arriving_flight}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Timeline */}
             <div className="mt-6 space-y-4">
