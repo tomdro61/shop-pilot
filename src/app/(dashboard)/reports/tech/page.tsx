@@ -15,7 +15,7 @@ const VALID_METRICS = new Set([
 export default async function TechScoreboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ granularity?: string; year?: string; metric?: string; category?: string }>;
+  searchParams: Promise<{ granularity?: string; year?: string; metric?: string; category?: string; customerType?: string }>;
 }) {
   const params = await searchParams;
 
@@ -31,8 +31,9 @@ export default async function TechScoreboardPage({
     : "revenue";
 
   const tech = params.category || "all";
+  const customerType = params.customerType || "all";
 
-  const data = await getTechTrendData(granularity, year);
+  const data = await getTechTrendData(granularity, year, customerType);
 
   return (
     <CategoryDeepDive
@@ -43,6 +44,7 @@ export default async function TechScoreboardPage({
       initialYear={year}
       groupLabel="Tech"
       basePath="/reports/tech"
+      initialCustomerType={customerType}
     />
   );
 }

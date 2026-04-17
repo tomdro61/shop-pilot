@@ -18,27 +18,38 @@ export async function getReportData(params: {
   priorFrom: string | null;
   priorTo: string | null;
   isAllTime: boolean;
+  customerType?: string;
 }) {
-  const { from: start, to: end, priorFrom: priorStart, priorTo: priorEnd, isAllTime } = params;
+  const { from: start, to: end, priorFrom: priorStart, priorTo: priorEnd, isAllTime, customerType } = params;
   const supabase = await createClient();
+  const isFiltered = !!(customerType && customerType !== "all");
 
   // ONE query for current period — includes tech and line item data for all aggregations
-  const currentPromise = supabase
+  const currentSelect: string = isFiltered
+    ? "id, assigned_tech, users!jobs_assigned_tech_fkey(name), customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
+    : "id, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, unit_cost, cost, category)";
+  let currentPromise = supabase
     .from("jobs")
-    .select("id, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, unit_cost, cost, category)")
+    .select(currentSelect)
     .eq("status", "complete")
     .gte("date_finished", start)
     .lte("date_finished", end);
+  if (isFiltered) currentPromise = currentPromise.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
 
   // ONE query for prior period (count + revenue + gross profit)
-  const priorPromise = priorStart && priorEnd
+  const priorSelect: string = isFiltered
+    ? "id, customers!inner(customer_type), job_line_items(type, total, cost, quantity, category)"
+    : "id, job_line_items(type, total, cost, quantity, category)";
+  let priorQuery = priorStart && priorEnd
     ? supabase
         .from("jobs")
-        .select("id, job_line_items(type, total, cost, quantity, category)")
+        .select(priorSelect)
         .eq("status", "complete")
         .gte("date_finished", priorStart)
         .lte("date_finished", priorEnd)
-    : Promise.resolve({ data: null });
+    : null;
+  if (priorQuery && isFiltered) priorQuery = priorQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+  const priorPromise = priorQuery ?? Promise.resolve({ data: null });
 
   // Estimate close rate: estimates sent within this period
   const estimatesPromise = supabase
@@ -70,8 +81,8 @@ export async function getReportData(params: {
     priorStart && priorEnd ? getManualIncomeForRange(priorStart, priorEnd) : Promise.resolve([]),
   ]);
 
-  const currentJobs = currentResult.data || [];
-  const priorJobs = priorResult.data || [];
+  const currentJobs = (currentResult.data || []) as any[];
+  const priorJobs = (priorResult.data || []) as any[];
   const estimates = estimatesResult.data || [];
   const priorEstimates = priorEstimatesResult.data || [];
 
@@ -264,14 +275,14 @@ export async function getReportData(params: {
     }))
     .sort((a, b) => b.grossProfit - a.grossProfit);
 
-  const inspCalc = calcInspectionRevenue(inspectionTotals);
-  const inspectionCount = inspCalc.totalCount;
-  const inspectionRevenue = inspCalc.totalRevenue;
-  const inspectionCost = inspCalc.totalCost;
-  const inspectionProfit = inspCalc.totalProfit;
+  const inspCalc = isFiltered ? null : calcInspectionRevenue(inspectionTotals);
+  const inspectionCount = inspCalc?.totalCount ?? 0;
+  const inspectionRevenue = inspCalc?.totalRevenue ?? 0;
+  const inspectionCost = inspCalc?.totalCost ?? 0;
+  const inspectionProfit = inspCalc?.totalProfit ?? 0;
 
-  // Inject inspection types into category breakdown and profitability
-  if (inspCalc.stateCount > 0) {
+  // Inject inspection types into category breakdown and profitability (skip when filtering by customer type)
+  if (inspCalc && inspCalc.stateCount > 0) {
     categoryBreakdown.push({
       category: "State Inspection",
       revenue: inspCalc.stateRevenue,
@@ -290,7 +301,7 @@ export async function getReportData(params: {
       hasEstimatedCosts: false,
     });
   }
-  if (inspCalc.tncCount > 0) {
+  if (inspCalc && inspCalc.tncCount > 0) {
     categoryBreakdown.push({
       category: "TNC Inspection",
       revenue: inspCalc.tncRevenue,
@@ -311,7 +322,7 @@ export async function getReportData(params: {
   let manualProfitTotal = 0;
   const manualByCategory: Record<string, { revenue: number; cost: number }> = {};
 
-  for (const entry of manualEntries) {
+  for (const entry of (isFiltered ? [] : manualEntries)) {
     const profit = entry.amount * (entry.shop_keep_pct / 100);
     const cost = entry.amount - profit;
     manualIncomeTotal += entry.amount;
@@ -351,7 +362,7 @@ export async function getReportData(params: {
   // Prior period comparisons (data already fetched in parallel above)
   let inspectionCountPrior: number | null = null;
   let inspectionProfitPrior: number | null = null;
-  if (priorStart && priorEnd) {
+  if (priorStart && priorEnd && !isFiltered) {
     const priorInspCalc = calcInspectionRevenue(priorInspectionTotals);
     inspectionCountPrior = priorInspCalc.totalCount;
     inspectionProfitPrior = priorInspCalc.totalProfit;
@@ -587,17 +598,25 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-export async function getTaxReportData(year: number): Promise<TaxReportData> {
+export async function getTaxReportData(year: number, customerType?: string): Promise<TaxReportData> {
   const supabase = await createClient();
   const taxRate = MA_SALES_TAX_RATE;
+  const isFiltered = !!(customerType && customerType !== "all");
 
-  const [{ data: jobs }, taxManualEntries] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select("id, paid_at, date_finished, job_line_items(type, total, category)")
-      .eq("payment_status", "paid"),
-    getManualIncomeForRange(`${year}-01-01`, `${year}-12-31`),
+  const jobSelect: string = isFiltered
+    ? "id, paid_at, date_finished, customers!inner(customer_type), job_line_items(type, total, category)"
+    : "id, paid_at, date_finished, job_line_items(type, total, category)";
+  let jobQuery = supabase
+    .from("jobs")
+    .select(jobSelect)
+    .eq("payment_status", "paid");
+  if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+
+  const [jobResult, taxManualEntries] = await Promise.all([
+    jobQuery,
+    isFiltered ? Promise.resolve([]) : getManualIncomeForRange(`${year}-01-01`, `${year}-12-31`),
   ]);
+  const jobs = ((jobResult as any).data || []) as any[];
 
   // Aggregate by month
   const monthBuckets: Record<number, { totalRevenue: number; partsTotal: number }> = {};

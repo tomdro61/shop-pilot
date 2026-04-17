@@ -5,8 +5,13 @@ export const metadata = {
   title: "Accounts Receivable | ShopPilot",
 };
 
-export default async function ReceivablesPage() {
-  const data = await getReceivablesData();
+export default async function ReceivablesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ customerType?: string }>;
+}) {
+  const { customerType } = await searchParams;
+  const data = await getReceivablesData(customerType);
 
-  return <ReceivablesReport data={data} />;
+  return <ReceivablesReport data={data} initialCustomerType={customerType || "all"} />;
 }

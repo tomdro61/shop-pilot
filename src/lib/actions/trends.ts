@@ -122,21 +122,29 @@ function finalize(raw: RawBucket): TrendBucket {
 
 export async function getTrendData(
   granularity: Granularity,
-  year?: number
+  year?: number,
+  customerType?: string
 ): Promise<TrendData> {
   const supabase = await createClient();
   const today = todayET();
   const { startDate, endDate, resolvedYear } = getDateRange(granularity, today, year);
+  const isFiltered = !!(customerType && customerType !== "all");
+
+  const jobSelect: string = isFiltered
+    ? "id, date_finished, customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
+    : "id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)";
+  let jobQuery = supabase
+    .from("jobs")
+    .select(jobSelect)
+    .eq("status", "complete")
+    .gte("date_finished", startDate)
+    .lte("date_finished", endDate)
+    .limit(10000);
+  if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
 
   // Limit 10000 to override Supabase default 1000-row cap
   const [jobsResult, estimatesResult, inspectionsResult, manualEntries] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select("id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)")
-      .eq("status", "complete")
-      .gte("date_finished", startDate)
-      .lte("date_finished", endDate)
-      .limit(10000),
+    jobQuery,
     supabase
       .from("estimates")
       .select("id, status, sent_at")
@@ -144,18 +152,18 @@ export async function getTrendData(
       .gte("sent_at", startDate)
       .lte("sent_at", endDate)
       .limit(10000),
-    supabase
+    isFiltered ? Promise.resolve({ data: [] }) : supabase
       .from("daily_inspection_counts")
       .select("date, state_count, tnc_count")
       .gte("date", startDate)
       .lte("date", endDate)
       .limit(10000),
-    getManualIncomeForRange(startDate, endDate),
+    isFiltered ? Promise.resolve([]) : getManualIncomeForRange(startDate, endDate),
   ]);
 
-  const jobs = jobsResult.data || [];
+  const jobs = (jobsResult.data || []) as any[];
   const estimates = estimatesResult.data || [];
-  const inspections = inspectionsResult.data || [];
+  const inspections = (inspectionsResult as any).data || [];
 
   const bucketMap = buildTrendBuckets(granularity, startDate, endDate, resolvedYear);
 
@@ -207,17 +215,19 @@ export async function getTrendData(
     }
   }
 
-  for (const row of inspections) {
-    if (!row.date) continue;
-    const bKey = getBucketKey(row.date, granularity);
-    const bucket = bucketMap.get(bKey);
-    if (!bucket) continue;
+  if (!isFiltered) {
+    for (const row of inspections) {
+      if (!row.date) continue;
+      const bKey = getBucketKey(row.date, granularity);
+      const bucket = bucketMap.get(bKey);
+      if (!bucket) continue;
 
-    bucket.inspectionStateCount += row.state_count || 0;
-    bucket.inspectionTncCount += row.tnc_count || 0;
+      bucket.inspectionStateCount += row.state_count || 0;
+      bucket.inspectionTncCount += row.tnc_count || 0;
+    }
   }
 
-  for (const entry of manualEntries) {
+  for (const entry of (isFiltered ? [] : manualEntries)) {
     if (!entry.date) continue;
     const bKey = getBucketKey(entry.date, granularity);
     const bucket = bucketMap.get(bKey);

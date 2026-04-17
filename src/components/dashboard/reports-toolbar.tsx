@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { CustomerTypePills } from "@/components/dashboard/customer-type-pills";
 
 const presets = [
   { key: "this_week", label: "This Week" },
@@ -32,9 +33,14 @@ export function ReportsToolbar({ basePath = "/reports/revenue", showExport = fal
   );
   const [popoverOpen, setPopoverOpen] = useState(false);
 
+  const customerType = searchParams.get("customerType") || "all";
+
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
       const params = new URLSearchParams();
+      // Preserve customerType across navigation
+      const ct = searchParams.get("customerType");
+      if (ct && ct !== "all") params.set("customerType", ct);
       for (const [key, value] of Object.entries(updates)) {
         if (value) {
           params.set(key, value);
@@ -42,8 +48,18 @@ export function ReportsToolbar({ basePath = "/reports/revenue", showExport = fal
       }
       router.push(`${basePath}?${params.toString()}`);
     },
-    [router, basePath]
+    [router, basePath, searchParams]
   );
+
+  function handleCustomerType(type: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (type && type !== "all") {
+      params.set("customerType", type);
+    } else {
+      params.delete("customerType");
+    }
+    router.push(`${basePath}?${params.toString()}`);
+  }
 
   function handlePreset(key: string) {
     updateParams({ range: key });
@@ -120,6 +136,10 @@ export function ReportsToolbar({ basePath = "/reports/revenue", showExport = fal
           Export CSV
         </Button>
       )}
+
+      <div className="ml-auto">
+        <CustomerTypePills value={customerType} onChange={handleCustomerType} />
+      </div>
     </div>
   );
 }

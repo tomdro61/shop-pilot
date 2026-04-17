@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { TaxYearPicker } from "@/components/dashboard/tax-year-picker";
+import { CustomerTypeNav } from "@/components/dashboard/customer-type-nav";
 import { nowET } from "@/lib/utils";
 
 export const metadata = {
@@ -12,12 +13,12 @@ export const metadata = {
 export default async function TaxReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string }>;
+  searchParams: Promise<{ year?: string; customerType?: string }>;
 }) {
-  const { year: yearParam } = await searchParams;
+  const { year: yearParam, customerType } = await searchParams;
   const currentYear = new Date().getFullYear();
   const year = yearParam ? parseInt(yearParam, 10) : currentYear;
-  const data = await getTaxReportData(year);
+  const data = await getTaxReportData(year, customerType);
 
   const taxPct = (data.taxRate * 100).toFixed(2);
 
@@ -31,7 +32,10 @@ export default async function TaxReportPage({
         <p className="text-sm text-muted-foreground">
           Monthly taxable sales and MA sales tax collected ({taxPct}%)
         </p>
-        <TaxYearPicker currentYear={year} />
+        <div className="flex items-center gap-3">
+          <CustomerTypeNav />
+          <TaxYearPicker currentYear={year} />
+        </div>
       </div>
 
       {/* KPI Cards */}

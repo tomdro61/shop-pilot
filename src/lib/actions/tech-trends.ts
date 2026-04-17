@@ -40,19 +40,27 @@ function finalize(raw: RawAccum): CategoryMetrics {
 
 export async function getTechTrendData(
   granularity: Granularity,
-  year?: number
+  year?: number,
+  customerType?: string
 ): Promise<CategoryTrendData> {
   const supabase = await createClient();
   const today = todayET();
   const { startDate, endDate, resolvedYear } = getDateRange(granularity, today, year);
+  const isFiltered = !!(customerType && customerType !== "all");
 
-  const { data: jobs } = await supabase
+  const jobSelect: string = isFiltered
+    ? "id, date_finished, assigned_tech, users!jobs_assigned_tech_fkey(name), customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
+    : "id, date_finished, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, unit_cost, cost, category)";
+  let jobQuery = supabase
     .from("jobs")
-    .select("id, date_finished, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, unit_cost, cost, category)")
+    .select(jobSelect)
     .eq("status", "complete")
     .gte("date_finished", startDate)
     .lte("date_finished", endDate)
     .limit(10000);
+  if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+
+  const { data: jobs } = await jobQuery as { data: any[] | null };
 
   const bucketKeys = buildBucketKeys(granularity, startDate, endDate, resolvedYear);
   const rawBuckets = new Map<string, { key: string; label: string; techs: Record<string, RawAccum> }>();

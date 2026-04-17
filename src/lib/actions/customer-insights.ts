@@ -99,31 +99,39 @@ export async function getCustomerKpis(
 
 export async function getCustomerInsightsData(
   granularity: Granularity,
-  year?: number
+  year?: number,
+  customerType?: string
 ): Promise<CustomerInsightsData> {
   const supabase = await createClient();
   const today = todayET();
   const { startDate, endDate, resolvedYear } = getDateRange(granularity, today, year);
+  const isFiltered = !!(customerType && customerType !== "all");
 
-  // 2 parallel queries: period jobs (with details) + all-time jobs (for first-visit map)
+  const periodSelect: string = isFiltered
+    ? "id, customer_id, date_finished, customers!inner(id, first_name, last_name, customer_type), job_line_items(total, category)"
+    : "id, customer_id, date_finished, customers(id, first_name, last_name), job_line_items(total, category)";
+  let periodQuery = supabase
+    .from("jobs")
+    .select(periodSelect)
+    .eq("status", "complete")
+    .gte("date_finished", startDate)
+    .lte("date_finished", endDate)
+    .limit(10000);
+  if (isFiltered) periodQuery = periodQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+
+  // All-time query is NOT filtered — needed to correctly identify new vs returning
   const [periodResult, allTimeResult, manualEntries] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select("id, customer_id, date_finished, customers(id, first_name, last_name), job_line_items(total, category)")
-      .eq("status", "complete")
-      .gte("date_finished", startDate)
-      .lte("date_finished", endDate)
-      .limit(10000),
+    periodQuery,
     supabase
       .from("jobs")
       .select("customer_id, date_finished")
       .eq("status", "complete")
       .order("date_finished", { ascending: true })
       .limit(50000),
-    getManualIncomeForRange(startDate, endDate),
+    isFiltered ? Promise.resolve([]) : getManualIncomeForRange(startDate, endDate),
   ]);
 
-  const periodJobs = periodResult.data || [];
+  const periodJobs = (periodResult.data || []) as any[];
   const allTimeJobs = allTimeResult.data || [];
 
   // Build first-visit map: customer_id → earliest date_finished

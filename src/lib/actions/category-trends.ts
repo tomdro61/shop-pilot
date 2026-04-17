@@ -88,31 +88,39 @@ const MAX_CATEGORIES = 20;
 
 export async function getCategoryTrendData(
   granularity: Granularity,
-  year?: number
+  year?: number,
+  customerType?: string
 ): Promise<CategoryTrendData> {
   const supabase = await createClient();
   const today = todayET();
   const { startDate, endDate, resolvedYear } = getDateRange(granularity, today, year);
+  const isFiltered = !!(customerType && customerType !== "all");
+
+  const jobSelect: string = isFiltered
+    ? "id, date_finished, customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
+    : "id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)";
+  let jobQuery = supabase
+    .from("jobs")
+    .select(jobSelect)
+    .eq("status", "complete")
+    .gte("date_finished", startDate)
+    .lte("date_finished", endDate)
+    .limit(10000);
+  if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
 
   const [jobsResult, inspectionsResult, manualEntries] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select("id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)")
-      .eq("status", "complete")
-      .gte("date_finished", startDate)
-      .lte("date_finished", endDate)
-      .limit(10000),
-    supabase
+    jobQuery,
+    isFiltered ? Promise.resolve({ data: [] }) : supabase
       .from("daily_inspection_counts")
       .select("date, state_count, tnc_count")
       .gte("date", startDate)
       .lte("date", endDate)
       .limit(10000),
-    getManualIncomeForRange(startDate, endDate),
+    isFiltered ? Promise.resolve([]) : getManualIncomeForRange(startDate, endDate),
   ]);
 
-  const jobs = jobsResult.data || [];
-  const inspections = inspectionsResult.data || [];
+  const jobs = (jobsResult.data || []) as any[];
+  const inspections = (inspectionsResult as any).data || [];
 
   // Initialize buckets — each bucket has a Record<string, RawCategoryAccum>
   const bucketKeys = buildBucketKeys(granularity, startDate, endDate, resolvedYear);
@@ -171,8 +179,8 @@ export async function getCategoryTrendData(
     }
   }
 
-  // Aggregate inspections as categories
-  for (const row of inspections) {
+  // Aggregate inspections as categories (skip when filtering by customer type)
+  for (const row of (isFiltered ? [] : inspections)) {
     if (!row.date) continue;
     const bKey = getBucketKey(row.date, granularity);
     const bucket = rawBuckets.get(bKey);

@@ -21,6 +21,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import type { Granularity } from "@/lib/utils/trend-buckets";
 import type { MetricKey, TrendData } from "@/lib/actions/trends";
+import { CustomerTypePills } from "@/components/dashboard/customer-type-pills";
 
 // ── Metric config ────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ interface TrendsExplorerProps {
   initialMetric: MetricKey;
   initialGranularity: Granularity;
   initialYear: number;
+  initialCustomerType?: string;
 }
 
 export function TrendsExplorer({
@@ -80,6 +82,7 @@ export function TrendsExplorer({
   initialMetric,
   initialGranularity,
   initialYear,
+  initialCustomerType = "all",
 }: TrendsExplorerProps) {
   const router = useRouter();
   const [metric, setMetric] = useState<MetricKey>(initialMetric);
@@ -89,6 +92,15 @@ export function TrendsExplorer({
   function pushParams(params: Record<string, string>) {
     const sp = new URLSearchParams(params);
     sp.set("metric", metric);
+    if (initialCustomerType !== "all") sp.set("customerType", initialCustomerType);
+    router.push(`/reports/trends?${sp.toString()}`);
+  }
+
+  function setCustomerType(type: string) {
+    const sp = new URLSearchParams({ granularity: initialGranularity });
+    if (initialGranularity === "month") sp.set("year", String(initialYear));
+    sp.set("metric", metric);
+    if (type !== "all") sp.set("customerType", type);
     router.push(`/reports/trends?${sp.toString()}`);
   }
 
@@ -191,6 +203,10 @@ export function TrendsExplorer({
               </Button>
             </div>
           )}
+
+          <div className="ml-auto">
+            <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
+          </div>
         </CardContent>
       </Card>
 

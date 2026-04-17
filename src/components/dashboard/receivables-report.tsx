@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,21 +9,26 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { formatCurrency } from "@/lib/utils/format";
 import { formatRONumber } from "@/lib/utils/format";
 import type { ReceivablesData } from "@/lib/actions/receivables";
+import { CustomerTypePills } from "@/components/dashboard/customer-type-pills";
 
-type CustomerTypeFilter = "all" | "fleet" | "retail";
 type PaymentFilter = "all" | "unpaid" | "invoiced";
 
 interface ReceivablesReportProps {
   data: ReceivablesData;
+  initialCustomerType?: string;
 }
 
-export function ReceivablesReport({ data }: ReceivablesReportProps) {
-  const [customerType, setCustomerType] = useState<CustomerTypeFilter>("all");
+export function ReceivablesReport({ data, initialCustomerType = "all" }: ReceivablesReportProps) {
+  const router = useRouter();
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
 
+  function setCustomerType(type: string) {
+    const params = new URLSearchParams();
+    if (type !== "all") params.set("customerType", type);
+    router.push(`/reports/receivables?${params.toString()}`);
+  }
+
   const filteredJobs = data.jobs.filter((job) => {
-    if (customerType === "fleet" && job.customerType !== "fleet") return false;
-    if (customerType === "retail" && job.customerType === "fleet") return false;
     if (paymentFilter !== "all" && job.paymentStatus !== paymentFilter) return false;
     return true;
   });
@@ -59,18 +65,7 @@ export function ReceivablesReport({ data }: ReceivablesReportProps) {
       {/* Filters */}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-3 py-3">
-          <div className="flex gap-1">
-            {(["all", "fleet", "retail"] as CustomerTypeFilter[]).map((t) => (
-              <Button
-                key={t}
-                variant={customerType === t ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCustomerType(t)}
-              >
-                {t === "all" ? "All" : t === "fleet" ? "Fleet" : "Retail"}
-              </Button>
-            ))}
-          </div>
+          <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
           <div className="flex gap-1">
             {(["all", "unpaid", "invoiced"] as PaymentFilter[]).map((p) => (
               <Button

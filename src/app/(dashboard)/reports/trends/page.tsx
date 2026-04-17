@@ -17,7 +17,7 @@ const VALID_METRICS = new Set([
 export default async function TrendsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ granularity?: string; year?: string; metric?: string }>;
+  searchParams: Promise<{ granularity?: string; year?: string; metric?: string; customerType?: string }>;
 }) {
   const params = await searchParams;
 
@@ -32,7 +32,8 @@ export default async function TrendsPage({
     ? (params.metric as MetricKey)
     : "revenue";
 
-  const data = await getTrendData(granularity, year);
+  const customerType = params.customerType || "all";
+  const data = await getTrendData(granularity, year, customerType);
 
   return (
     <TrendsExplorer
@@ -40,6 +41,7 @@ export default async function TrendsPage({
       initialMetric={metric}
       initialGranularity={granularity}
       initialYear={year}
+      initialCustomerType={customerType}
     />
   );
 }

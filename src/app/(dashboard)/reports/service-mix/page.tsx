@@ -15,7 +15,7 @@ const VALID_METRICS = new Set([
 export default async function ServiceMixPage({
   searchParams,
 }: {
-  searchParams: Promise<{ granularity?: string; year?: string; metric?: string; category?: string }>;
+  searchParams: Promise<{ granularity?: string; year?: string; metric?: string; category?: string; customerType?: string }>;
 }) {
   const params = await searchParams;
 
@@ -31,8 +31,9 @@ export default async function ServiceMixPage({
     : "revenue";
 
   const category = params.category || "all";
+  const customerType = params.customerType || "all";
 
-  const data = await getCategoryTrendData(granularity, year);
+  const data = await getCategoryTrendData(granularity, year, customerType);
 
   return (
     <CategoryDeepDive
@@ -41,6 +42,7 @@ export default async function ServiceMixPage({
       initialMetric={metric}
       initialGranularity={granularity}
       initialYear={year}
+      initialCustomerType={customerType}
     />
   );
 }

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { CustomerTypePills } from "@/components/dashboard/customer-type-pills";
 import { formatCurrency } from "@/lib/utils/format";
 import type { Granularity } from "@/lib/utils/trend-buckets";
 import type {
@@ -86,6 +87,7 @@ interface CategoryDeepDiveProps {
   initialYear: number;
   groupLabel?: string;
   basePath?: string;
+  initialCustomerType?: string;
 }
 
 export function CategoryDeepDive({
@@ -96,6 +98,7 @@ export function CategoryDeepDive({
   initialYear,
   groupLabel = "Category",
   basePath = "/reports/service-mix",
+  initialCustomerType = "all",
 }: CategoryDeepDiveProps) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(() => {
@@ -137,6 +140,16 @@ export function CategoryDeepDive({
     const sp = new URLSearchParams(params);
     sp.set("metric", metric);
     sp.set("category", isAllSelected ? "all" : selected.join(","));
+    if (initialCustomerType !== "all") sp.set("customerType", initialCustomerType);
+    router.push(`${basePath}?${sp.toString()}`);
+  }
+
+  function setCustomerType(type: string) {
+    const sp = new URLSearchParams({ granularity: initialGranularity });
+    if (initialGranularity === "month") sp.set("year", String(initialYear));
+    sp.set("metric", metric);
+    sp.set("category", isAllSelected ? "all" : selected.join(","));
+    if (type !== "all") sp.set("customerType", type);
     router.push(`${basePath}?${sp.toString()}`);
   }
 
@@ -310,6 +323,10 @@ export function CategoryDeepDive({
               </Button>
             </div>
           )}
+
+          <div className="ml-auto">
+            <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
+          </div>
         </CardContent>
       </Card>
 

@@ -14,9 +14,9 @@ export const metadata = {
 export default async function RevenueReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; customerType?: string }>;
 }) {
-  const { range, from, to } = await searchParams;
+  const { range, from, to, customerType } = await searchParams;
   const resolved = resolveDateRange(range, from, to);
   const data = await getReportData({
     from: resolved.from,
@@ -24,6 +24,7 @@ export default async function RevenueReportPage({
     priorFrom: resolved.priorFrom,
     priorTo: resolved.priorTo,
     isAllTime: resolved.isAllTime,
+    customerType,
   });
 
   const { profitability, breakdown, inspectionCount, inspectionRevenue, estimateCloseRate } = data;

@@ -73,18 +73,25 @@ export async function getReceivablesSummary(): Promise<{ totalOutstanding: numbe
 
 // ── Main ─────────────────────────────────────────────────────
 
-export async function getReceivablesData(): Promise<ReceivablesData> {
+export async function getReceivablesData(customerType?: string): Promise<ReceivablesData> {
   const supabase = await createClient();
   const today = todayET();
   const now = parseISO(today);
+  const isFiltered = !!(customerType && customerType !== "all");
 
-  const { data } = await supabase
+  const jobSelect: string = isFiltered
+    ? "id, title, date_finished, payment_status, ro_number, customer_id, customers!inner(id, first_name, last_name, customer_type, fleet_account), job_line_items(total, category)"
+    : "id, title, date_finished, payment_status, ro_number, customer_id, customers(id, first_name, last_name, customer_type, fleet_account), job_line_items(total, category)";
+  let query = supabase
     .from("jobs")
-    .select("id, title, date_finished, payment_status, ro_number, customer_id, customers(id, first_name, last_name, customer_type, fleet_account), job_line_items(total, category)")
+    .select(jobSelect)
     .eq("status", "complete")
     .neq("payment_status", "paid")
     .neq("payment_status", "waived")
     .limit(10000);
+  if (isFiltered) query = query.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+
+  const { data } = await query as { data: any[] | null };
 
   const jobs: ReceivableJob[] = [];
   let totalOutstanding = 0;

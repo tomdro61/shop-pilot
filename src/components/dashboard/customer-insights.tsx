@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import type { Granularity } from "@/lib/utils/trend-buckets";
 import type { CustomerInsightsData } from "@/lib/actions/customer-insights";
+import { CustomerTypePills } from "@/components/dashboard/customer-type-pills";
 
 const GRANULARITIES: { value: Granularity; label: string }[] = [
   { value: "day", label: "Day" },
@@ -31,17 +32,27 @@ interface CustomerInsightsProps {
   data: CustomerInsightsData;
   initialGranularity: Granularity;
   initialYear: number;
+  initialCustomerType?: string;
 }
 
 export function CustomerInsights({
   data,
   initialGranularity,
   initialYear,
+  initialCustomerType = "all",
 }: CustomerInsightsProps) {
   const router = useRouter();
 
   function pushParams(params: Record<string, string>) {
     const sp = new URLSearchParams(params);
+    if (initialCustomerType !== "all") sp.set("customerType", initialCustomerType);
+    router.push(`/reports/customers?${sp.toString()}`);
+  }
+
+  function setCustomerType(type: string) {
+    const sp = new URLSearchParams({ granularity: initialGranularity });
+    if (initialGranularity === "month") sp.set("year", String(initialYear));
+    if (type !== "all") sp.set("customerType", type);
     router.push(`/reports/customers?${sp.toString()}`);
   }
 
@@ -104,6 +115,10 @@ export function CustomerInsights({
               </Button>
             </div>
           )}
+
+          <div className="ml-auto">
+            <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
+          </div>
         </CardContent>
       </Card>
 
