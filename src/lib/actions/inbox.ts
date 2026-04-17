@@ -156,11 +156,12 @@ export async function getInboxData(): Promise<InboxData> {
       .not("services_interested", "eq", "{}")
       .in("status", ["reserved", "checked_in"])
       .order("drop_off_date", { ascending: true }),
-    // Parking specials not sent
+    // Parking specials not sent — Broadway Motors only
     supabase
       .from("parking_reservations")
       .select("id, first_name, last_name, make, model, lot, phone, drop_off_date, pick_up_date")
       .eq("status", "checked_in")
+      .eq("lot", "Broadway Motors")
       .is("specials_sent_at", null)
       .order("drop_off_date", { ascending: true }),
   ]);
