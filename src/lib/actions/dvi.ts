@@ -110,6 +110,27 @@ export async function startInspection(jobId: string) {
     .eq("id", jobId)
     .single();
 
+  // Check if customer has an active parking reservation requesting a DVI — link if so
+  let parkingReservationId: string | null = null;
+  if (job?.customer_id) {
+    const { data: reservations } = await supabase
+      .from("parking_reservations")
+      .select("id, services_interested, services_completed")
+      .eq("customer_id", job.customer_id)
+      .in("status", ["reserved", "checked_in"])
+      .order("drop_off_date", { ascending: false })
+      .limit(1);
+
+    const reservation = reservations?.[0];
+    if (
+      reservation &&
+      (reservation.services_interested as string[] | null)?.includes(DVI_SERVICE) &&
+      !(reservation.services_completed as string[] | null)?.includes(DVI_SERVICE)
+    ) {
+      parkingReservationId = reservation.id;
+    }
+  }
+
   // Create the inspection
   const { data: inspection, error: insErr } = await supabase
     .from("dvi_inspections")
@@ -117,6 +138,7 @@ export async function startInspection(jobId: string) {
       job_id: jobId,
       vehicle_id: job?.vehicle_id ?? null,
       customer_id: job?.customer_id ?? null,
+      parking_reservation_id: parkingReservationId,
       template_id: template.id,
       tech_id: user.id,
     })
@@ -144,6 +166,18 @@ export async function startStandaloneInspection(params: {
   if (!template) return { error: "No default inspection template found" };
 
   const supabase = await createClient();
+
+  // Prevent duplicate DVIs for the same customer
+  const { data: existing } = await supabase
+    .from("dvi_inspections")
+    .select("id")
+    .eq("customer_id", params.customerId)
+    .in("status", ["in_progress", "completed"])
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    return { error: "A DVI already exists for this customer" };
+  }
 
   const { data: inspection, error: insErr } = await supabase
     .from("dvi_inspections")
@@ -849,10 +883,36 @@ export async function getPendingParkingDviRequests() {
     .in("status", ["reserved", "checked_in"])
     .order("drop_off_date", { ascending: true });
 
-  // Filter out already-completed DVIs (services_completed contains "dvi_inspection")
-  return (data ?? []).filter(
+  // Filter out already-completed DVIs
+  const pending = (data ?? []).filter(
     (r) => !r.services_completed?.includes(DVI_SERVICE)
   );
+
+  if (pending.length === 0) return [];
+
+  // Also filter out reservations that already have a DVI in progress
+  // (handles case where DVI was started from a job, not from the parking request)
+  const reservationIds = pending.map((r) => r.id);
+  const customerIds = [...new Set(pending.map((r) => r.customer_id).filter(Boolean))] as string[];
+  if (customerIds.length > 0) {
+    const { data: existingDvis } = await supabase
+      .from("dvi_inspections")
+      .select("customer_id, parking_reservation_id")
+      .in("status", ["in_progress", "completed"])
+      .or(`parking_reservation_id.in.(${reservationIds.join(",")}),customer_id.in.(${customerIds.join(",")})`);
+
+    // Build sets for both reservation-level and customer-level matches
+    const reservationsWithDvi = new Set((existingDvis ?? []).filter((d) => d.parking_reservation_id).map((d) => d.parking_reservation_id));
+    const customersWithDvi = new Set((existingDvis ?? []).filter((d) => !d.parking_reservation_id).map((d) => d.customer_id));
+
+    return pending.filter((r) => {
+      if (reservationsWithDvi.has(r.id)) return false;
+      if (r.customer_id && customersWithDvi.has(r.customer_id)) return false;
+      return true;
+    });
+  }
+
+  return pending;
 }
 
 export async function getPendingDviRequestCount(): Promise<number> {
@@ -881,6 +941,18 @@ export async function startParkingDvi(reservationId: string) {
 
   if (resErr || !reservation) return { error: "Reservation not found" };
   if (!reservation.customer_id) return { error: "No customer linked to this reservation" };
+
+  // Check if a DVI already exists for this reservation or customer
+  const { data: existingDvi } = await supabase
+    .from("dvi_inspections")
+    .select("id")
+    .or(`parking_reservation_id.eq.${reservationId},customer_id.eq.${reservation.customer_id}`)
+    .in("status", ["in_progress", "completed"])
+    .limit(1);
+
+  if (existingDvi && existingDvi.length > 0) {
+    return { error: "A DVI already exists for this customer" };
+  }
 
   const vehicleId = await findOrCreateParkingVehicle({
     customerId: reservation.customer_id,
