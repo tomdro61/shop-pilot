@@ -313,6 +313,7 @@ export function InboxList({ data, activeTab }: { data: InboxData; activeTab: str
       </div>
 
       {/* Sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {showPayments && (
         <Section title="Unpaid Jobs" icon={DollarSign} count={data.unpaidJobs.length}>
           {data.unpaidJobs.map((job) => (
@@ -359,6 +360,7 @@ export function InboxList({ data, activeTab }: { data: InboxData; activeTab: str
           </Section>
         </>
       )}
+      </div>
     </div>
   );
 }
