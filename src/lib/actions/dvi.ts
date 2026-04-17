@@ -954,6 +954,20 @@ export async function startParkingDvi(reservationId: string) {
     return { error: "A DVI already exists for this customer" };
   }
 
+  // Check if customer already has an active job — link DVI to it instead of standalone
+  const { data: existingJobs } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("customer_id", reservation.customer_id)
+    .in("status", ["not_started", "in_progress", "waiting_for_parts"])
+    .order("date_received", { ascending: false })
+    .limit(1);
+
+  if (existingJobs && existingJobs.length > 0) {
+    // Start DVI from the job — this also links to the parking reservation
+    return startInspection(existingJobs[0].id);
+  }
+
   const vehicleId = await findOrCreateParkingVehicle({
     customerId: reservation.customer_id,
     make: reservation.make,
@@ -964,7 +978,7 @@ export async function startParkingDvi(reservationId: string) {
 
   if (!vehicleId) return { error: "Failed to create vehicle record" };
 
-  // Start standalone inspection
+  // No active job — start standalone inspection
   return startStandaloneInspection({
     vehicleId,
     customerId: reservation.customer_id,
