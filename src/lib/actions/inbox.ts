@@ -35,6 +35,8 @@ export interface InboxDvi {
   id: string;
   completed_at: string | null;
   job_id: string | null;
+  customers: CustomerJoin | null;
+  vehicles: VehicleJoin | null;
   jobs: JobJoin | null;
   monitor: number;
   attention: number;
@@ -131,10 +133,10 @@ export async function getInboxData(): Promise<InboxData> {
       .neq("payment_status", "paid")
       .neq("payment_status", "waived")
       .order("date_finished", { ascending: true }),
-    // DVIs completed but not sent
+    // DVIs completed but not sent (typed as string to avoid FK ambiguity with customers join)
     supabase
       .from("dvi_inspections")
-      .select("id, completed_at, job_id, jobs(id, title, ro_number, customers(first_name, last_name), vehicles(year, make, model)), dvi_results(condition)")
+      .select("id, completed_at, job_id, customers!dvi_inspections_customer_id_fkey(first_name, last_name), vehicles!dvi_inspections_vehicle_id_fkey(year, make, model), jobs(id, title, ro_number, customers(first_name, last_name), vehicles(year, make, model)), dvi_results(condition)" as string)
       .eq("status", "completed")
       .order("completed_at", { ascending: true }),
     // Estimates sent, awaiting approval
@@ -177,7 +179,7 @@ export async function getInboxData(): Promise<InboxData> {
   }));
 
   // Process DVIs — count conditions, strip raw results
-  const dvisReady: InboxDvi[] = (dviResult.data || []).map((dvi) => {
+  const dvisReady: InboxDvi[] = ((dviResult.data || []) as any[]).map((dvi: any) => {
     const results = (dvi.dvi_results ?? []) as { condition: string | null }[];
     const counts = { monitor: 0, attention: 0 };
     for (const r of results) {
@@ -188,6 +190,8 @@ export async function getInboxData(): Promise<InboxData> {
       id: dvi.id,
       completed_at: dvi.completed_at,
       job_id: dvi.job_id,
+      customers: dvi.customers as CustomerJoin | null,
+      vehicles: dvi.vehicles as VehicleJoin | null,
       jobs: dvi.jobs as JobJoin | null,
       ...counts,
     };

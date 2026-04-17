@@ -942,26 +942,26 @@ export async function startParkingDvi(reservationId: string) {
   if (resErr || !reservation) return { error: "Reservation not found" };
   if (!reservation.customer_id) return { error: "No customer linked to this reservation" };
 
-  // Check if a DVI already exists for this reservation or customer
-  const { data: existingDvi } = await supabase
-    .from("dvi_inspections")
-    .select("id")
-    .or(`parking_reservation_id.eq.${reservationId},customer_id.eq.${reservation.customer_id}`)
-    .in("status", ["in_progress", "completed"])
-    .limit(1);
+  // Check for existing DVI and active job in parallel
+  const [{ data: existingDvi }, { data: existingJobs }] = await Promise.all([
+    supabase
+      .from("dvi_inspections")
+      .select("id")
+      .or(`parking_reservation_id.eq.${reservationId},customer_id.eq.${reservation.customer_id}`)
+      .in("status", ["in_progress", "completed"])
+      .limit(1),
+    supabase
+      .from("jobs")
+      .select("id")
+      .eq("customer_id", reservation.customer_id)
+      .in("status", ["not_started", "in_progress", "waiting_for_parts"])
+      .order("date_received", { ascending: false })
+      .limit(1),
+  ]);
 
   if (existingDvi && existingDvi.length > 0) {
     return { error: "A DVI already exists for this customer" };
   }
-
-  // Check if customer already has an active job — link DVI to it instead of standalone
-  const { data: existingJobs } = await supabase
-    .from("jobs")
-    .select("id")
-    .eq("customer_id", reservation.customer_id)
-    .in("status", ["not_started", "in_progress", "waiting_for_parts"])
-    .order("date_received", { ascending: false })
-    .limit(1);
 
   if (existingJobs && existingJobs.length > 0) {
     // Start DVI from the job — this also links to the parking reservation

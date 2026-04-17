@@ -124,8 +124,8 @@ function UnpaidJobRow({ job, today }: { job: InboxUnpaidJob; today: string }) {
 
 function DviReadyRow({ dvi, today }: { dvi: InboxDvi; today: string }) {
   const job = dvi.jobs;
-  const customer = job?.customers;
-  const vehicle = job?.vehicles;
+  const customer = job?.customers || dvi.customers;
+  const vehicle = job?.vehicles || dvi.vehicles;
   const days = daysBetween(dvi.completed_at?.split("T")[0] ?? null, today);
   const href = job ? `/jobs/${job.id}` : `/dvi/inspect/${dvi.id}`;
   return (
