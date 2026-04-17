@@ -7,7 +7,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatVehicle, formatCurrency } from "@/lib/utils/format";
+import { formatVehicle, formatCurrency, formatDateShort } from "@/lib/utils/format";
 import { PARKING_SERVICE_LABELS } from "@/lib/constants";
 import type {
   InboxData,
@@ -217,7 +217,7 @@ function ParkingLeadRow({ lead }: { lead: InboxParkingLead }) {
             {lead.first_name} {lead.last_name}
           </p>
           <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-            {[lead.make, lead.model].filter(Boolean).join(" ") || "Vehicle"} · {lead.lot}
+            {[lead.make, lead.model].filter(Boolean).join(" ") || "Vehicle"} · {lead.lot} · {formatDateShort(lead.drop_off_date)} – {formatDateShort(lead.pick_up_date)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 pl-3 flex-wrap justify-end">
