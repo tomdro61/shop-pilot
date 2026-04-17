@@ -27,7 +27,7 @@ export async function getReportData(params: {
   // ONE query for current period — includes tech and line item data for all aggregations
   const currentSelect: string = isFiltered
     ? "id, assigned_tech, users!jobs_assigned_tech_fkey(name), customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
-    : "id, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, unit_cost, cost, category)";
+    : "id, assigned_tech, users!jobs_assigned_tech_fkey(name), customers(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)";
   let currentPromise = supabase
     .from("jobs")
     .select(currentSelect)
@@ -145,10 +145,14 @@ export async function getReportData(params: {
   const techCounts: Record<string, number> = {};
   const techRevenue: Record<string, number> = {};
   const techPartsCost: Record<string, number> = {};
+  // Jobs by customer type
+  const custTypeCounts: Record<string, number> = {};
+  const custTypeRevenue: Record<string, number> = {};
 
   currentJobs.forEach((job) => {
     const user = job.users as { name: string } | null;
     const techName = user?.name || "Unassigned";
+    const custType = (job.customers as { customer_type: string } | null)?.customer_type || "retail";
     const lineItems = getLineItems(job).filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""));
     const jobTotal = lineItems.reduce((s, li) => s + (li.total || 0), 0);
 
@@ -167,6 +171,10 @@ export async function getReportData(params: {
     techCounts[techName] = (techCounts[techName] || 0) + 1;
     techRevenue[techName] = (techRevenue[techName] || 0) + jobTotal;
     if (!techPartsCost[techName]) techPartsCost[techName] = 0;
+
+    // Customer type counts + revenue
+    custTypeCounts[custType] = (custTypeCounts[custType] || 0) + 1;
+    custTypeRevenue[custType] = (custTypeRevenue[custType] || 0) + jobTotal;
 
     // Revenue + profitability use line-item-level category for accurate multi-service splits
     lineItems.forEach((li) => {
@@ -262,6 +270,15 @@ export async function getReportData(params: {
       name,
       revenue,
       jobCount: techCounts[name] || 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  // Customer type breakdown
+  const customerTypeBreakdown = Object.entries(custTypeRevenue)
+    .map(([label, revenue]) => ({
+      label: label.charAt(0).toUpperCase() + label.slice(1),
+      revenue,
+      jobCount: custTypeCounts[label] || 0,
     }))
     .sort((a, b) => b.revenue - a.revenue);
 
@@ -404,6 +421,7 @@ export async function getReportData(params: {
     revenueByTech,
     categoryBreakdown,
     techBreakdown,
+    customerTypeBreakdown,
     techProfitBreakdown,
     estimateCloseRate: { rate: estimateCloseRate, approved: estimatesApproved, sent: estimatesSent },
     priorEstimateCloseRate: hasPrior ? { rate: priorEstimateCloseRate } : null,

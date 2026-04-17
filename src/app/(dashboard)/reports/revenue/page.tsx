@@ -118,6 +118,10 @@ export default async function RevenueReportPage({
       {/* Horizontal Bar Charts */}
       <div className="space-y-6">
         <HorizontalBarChart
+          title={`Revenue by Customer Type (${resolved.label})`}
+          data={data.customerTypeBreakdown}
+        />
+        <HorizontalBarChart
           title={`Revenue by Category (${resolved.label})`}
           data={categoryChartData}
         />
