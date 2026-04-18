@@ -230,8 +230,15 @@ export async function getCategoryTrendData(
 
   if (sortedCats.length > MAX_CATEGORIES) {
     categories = sortedCats.slice(0, MAX_CATEGORIES).map(([cat]) => cat);
-    categories.push("Other");
     rollIntoOther = new Set(sortedCats.slice(MAX_CATEGORIES).map(([cat]) => cat));
+    // If a real "Other" category is already in the top N, fold its values into
+    // the rollup so we don't end up with two "Other" entries in the chart and
+    // the real data isn't overwritten by the rollup total.
+    if (categories.includes("Other")) {
+      categories = categories.filter((c) => c !== "Other");
+      rollIntoOther.add("Other");
+    }
+    categories.push("Other");
   } else {
     categories = sortedCats.map(([cat]) => cat);
   }
