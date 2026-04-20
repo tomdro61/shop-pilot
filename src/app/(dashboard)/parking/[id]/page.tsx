@@ -15,6 +15,7 @@ import { ParkingNotesForm } from "@/components/parking/parking-notes-form";
 import { ParkingDatesForm } from "@/components/parking/parking-dates-form";
 import { ParkingServicesForm } from "@/components/parking/parking-services-form";
 import { ParkingVehicleForm } from "@/components/parking/parking-vehicle-form";
+import { ParkingValetForm } from "@/components/parking/parking-valet-form";
 import { ParkingInvoiceSection } from "@/components/parking/parking-invoice-section";
 import {
   ArrowLeft,
@@ -235,6 +236,15 @@ export default async function ParkingDetailPage({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Valet Assignments — only for valet reservations */}
+            {reservation.parking_type === "valet" && (
+              <ParkingValetForm
+                id={reservation.id}
+                arrivalValet={reservation.arrival_valet}
+                departureValet={reservation.departure_valet}
+              />
             )}
 
             {/* Timeline */}

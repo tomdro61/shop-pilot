@@ -305,6 +305,8 @@ export async function updateReservation(
     model?: string;
     license_plate?: string;
     color?: string | null;
+    arrival_valet?: string | null;
+    departure_valet?: string | null;
   }
 ) {
   const supabase = await createClient();

@@ -838,6 +838,7 @@ export type Database = {
       }
       parking_reservations: {
         Row: {
+          arrival_valet: string | null
           arriving_flight: string | null
           checked_in_at: string | null
           checked_out_at: string | null
@@ -846,6 +847,7 @@ export type Database = {
           created_at: string
           customer_id: string | null
           departing_flight: string | null
+          departure_valet: string | null
           drop_off_date: string
           drop_off_time: string
           email: string
@@ -871,6 +873,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          arrival_valet?: string | null
           arriving_flight?: string | null
           checked_in_at?: string | null
           checked_out_at?: string | null
@@ -879,6 +882,7 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           departing_flight?: string | null
+          departure_valet?: string | null
           drop_off_date: string
           drop_off_time: string
           email: string
@@ -904,6 +908,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          arrival_valet?: string | null
           arriving_flight?: string | null
           checked_in_at?: string | null
           checked_out_at?: string | null
@@ -912,6 +917,7 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           departing_flight?: string | null
+          departure_valet?: string | null
           drop_off_date?: string
           drop_off_time?: string
           email?: string
