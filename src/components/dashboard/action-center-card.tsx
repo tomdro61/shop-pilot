@@ -89,7 +89,7 @@ export function ActionCenterCard({
   if (total === 0) {
     return (
       <div className="bg-card rounded-lg shadow-card overflow-hidden">
-        <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
+        <div className="bg-sidebar px-5 py-3">
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Action Center</h3>
         </div>
         <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -102,7 +102,7 @@ export function ActionCenterCard({
 
   return (
     <div className="bg-card rounded-lg shadow-card overflow-hidden">
-      <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
+      <div className="flex items-center justify-between bg-sidebar px-5 py-3">
         <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Action Center</h3>
         <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-stone-600 text-stone-100">
           {total}

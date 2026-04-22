@@ -184,7 +184,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         ) : (
           <Card className="py-0 gap-0">
             <CardContent className="p-0">
-              <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100">
+              <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest bg-sidebar text-stone-100">
                 {jobs.length} jobs
               </div>
               <div className="space-y-1 p-2">
@@ -202,7 +202,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-stone-800 dark:bg-stone-900 hover:bg-stone-800 dark:hover:bg-stone-900">
+                  <TableRow key={headerGroup.id} className="bg-sidebar hover:bg-stone-800 dark:hover:bg-stone-900">
                     {headerGroup.headers.map((header) => (
                       <TableHead key={header.id} className="text-[10px] font-black uppercase tracking-[0.1em] text-stone-100">
                         {header.isPlaceholder

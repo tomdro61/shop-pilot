@@ -27,7 +27,7 @@ export function CategorySection({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between px-4 py-3 bg-stone-800 dark:bg-stone-900 rounded-t-xl active:bg-stone-700 dark:active:bg-stone-800 transition-colors"
+        className="flex w-full items-center justify-between px-4 py-3 bg-sidebar rounded-t-xl active:bg-stone-700 dark:active:bg-stone-800 transition-colors"
       >
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-bold text-stone-100">

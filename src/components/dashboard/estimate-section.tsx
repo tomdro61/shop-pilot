@@ -59,7 +59,7 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
 
   return (
     <Card className="py-0 gap-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-stone-800 dark:bg-stone-900 px-5 py-3">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-sidebar px-5 py-3">
         <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-100">
           <ClipboardList className="h-3.5 w-3.5" />
           Estimate

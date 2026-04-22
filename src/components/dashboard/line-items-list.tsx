@@ -72,7 +72,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
   return (
     <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-6 py-3 bg-stone-800 dark:bg-stone-900">
+      <div className="flex items-center justify-between px-6 py-3 bg-sidebar">
         <h3 className="text-xs font-bold uppercase tracking-widest text-stone-100">Line Items</h3>
         <Button size="sm" className="rounded-md" onClick={() => setAddSheetOpen(true)}>
           <Plus className="mr-2 h-3.5 w-3.5" />
