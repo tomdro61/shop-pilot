@@ -20,7 +20,8 @@ interface JobsToolbarProps {
   jobCount: number;
 }
 
-const pillTrigger = "rounded-md border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-[11px] font-bold uppercase tracking-widest text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-none";
+const filterTrigger =
+  "bg-card border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 shadow-none";
 
 export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   const router = useRouter();
@@ -58,25 +59,22 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   }, [search, updateParams]);
 
   return (
-    <div className="space-y-2.5">
-      {/* Search bar — full width */}
+    <div className="space-y-2">
+      {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400 dark:text-stone-500" />
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400 dark:text-stone-500" />
         <Input
           placeholder="Search jobs..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 h-9"
+          className="h-8 pl-8 text-sm"
         />
       </div>
 
-      {/* Filters row */}
+      {/* Filters + views + new job */}
       <div className="flex flex-wrap items-center gap-2">
-        <Select
-          value={status}
-          onValueChange={(val) => updateParams({ status: val })}
-        >
-          <SelectTrigger className={`w-[160px] ${pillTrigger}`}>
+        <Select value={status} onValueChange={(val) => updateParams({ status: val })}>
+          <SelectTrigger size="sm" className={`w-[140px] ${filterTrigger}`}>
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -88,11 +86,8 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           </SelectContent>
         </Select>
 
-        <Select
-          value={paymentStatus}
-          onValueChange={(val) => updateParams({ payment_status: val })}
-        >
-          <SelectTrigger className={`w-[160px] ${pillTrigger}`}>
+        <Select value={paymentStatus} onValueChange={(val) => updateParams({ payment_status: val })}>
+          <SelectTrigger size="sm" className={`w-[140px] ${filterTrigger}`}>
             <SelectValue placeholder="All Payments" />
           </SelectTrigger>
           <SelectContent>
@@ -104,11 +99,8 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           </SelectContent>
         </Select>
 
-        <Select
-          value={category}
-          onValueChange={(val) => updateParams({ category: val })}
-        >
-          <SelectTrigger className={`w-[160px] ${pillTrigger}`}>
+        <Select value={category} onValueChange={(val) => updateParams({ category: val })}>
+          <SelectTrigger size="sm" className={`w-[140px] ${filterTrigger}`}>
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
@@ -121,12 +113,9 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           </SelectContent>
         </Select>
 
-        <Select
-          value={range}
-          onValueChange={(val) => updateParams({ range: val })}
-        >
-          <SelectTrigger className={`w-[160px] ${pillTrigger}`}>
-            <Calendar className="h-3.5 w-3.5 mr-1 shrink-0" />
+        <Select value={range} onValueChange={(val) => updateParams({ range: val })}>
+          <SelectTrigger size="sm" className={`w-[140px] ${filterTrigger}`}>
+            <Calendar className="h-3.5 w-3.5 mr-1 shrink-0 text-stone-400" />
             <SelectValue placeholder="All Time" />
           </SelectTrigger>
           <SelectContent>
@@ -138,31 +127,26 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           </SelectContent>
         </Select>
 
-        <Tabs
-          value={view}
-          onValueChange={(val) => updateParams({ view: val })}
-        >
-          <TabsList className="rounded-md">
-            <TabsTrigger value="list" className="rounded-md">
-              <List className="h-4 w-4" />
+        <Tabs value={view} onValueChange={(val) => updateParams({ view: val })}>
+          <TabsList className="h-8 p-0.5 bg-stone-100 dark:bg-stone-800">
+            <TabsTrigger value="list" className="h-7 px-2">
+              <List className="h-3.5 w-3.5" />
             </TabsTrigger>
-            <TabsTrigger value="board" className="rounded-md">
-              <Columns3 className="h-4 w-4" />
+            <TabsTrigger value="board" className="h-7 px-2">
+              <Columns3 className="h-3.5 w-3.5" />
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="rounded-md">
-              <CalendarDays className="h-4 w-4" />
+            <TabsTrigger value="calendar" className="h-7 px-2">
+              <CalendarDays className="h-3.5 w-3.5" />
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div className="ml-auto">
-          <Link href="/jobs/new">
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New Job</span>
-            </Button>
-          </Link>
-        </div>
+        <Link href="/jobs/new" className="ml-auto">
+          <Button size="sm" className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">New Job</span>
+          </Button>
+        </Link>
       </div>
     </div>
   );
