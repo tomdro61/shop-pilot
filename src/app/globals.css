@@ -54,7 +54,7 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.955 0.002 260);
   --foreground: oklch(0.17 0.005 75);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.17 0.005 75);
@@ -136,7 +136,7 @@
   html {
     height: 100%;
     height: -webkit-fill-available;
-    background-color: white;
+    background-color: oklch(0.955 0.002 260);
   }
   html.dark {
     background-color: #1c1917;

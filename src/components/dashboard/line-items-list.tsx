@@ -113,7 +113,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
             return (
               <div key={catName}>
                 {/* Category header */}
-                <div className="flex items-center justify-between px-4 py-1.5 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-300 dark:border-stone-800">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-stone-200 dark:border-stone-800">
                   <h4 className={SECTION_LABEL}>{catName}</h4>
                   <span className="font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
                     {formatCurrency(catTotal)}
@@ -196,7 +196,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
           })}
 
           {/* Totals */}
-          <div className="px-4 py-3 bg-stone-100 dark:bg-stone-900/40">
+          <div className="px-4 py-3 border-t border-stone-300 dark:border-stone-800">
             <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-xs">
               {totals.laborTotal > 0 && (
                 <>
