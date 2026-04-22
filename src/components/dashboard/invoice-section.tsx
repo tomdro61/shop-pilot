@@ -74,7 +74,7 @@ export function InvoiceSection({
   return (
     <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200 dark:border-stone-800">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
         <h3 className={`flex items-center gap-1.5 ${SECTION_LABEL}`}>
           <FileText className="h-3 w-3" />
           Invoice

@@ -46,7 +46,7 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
   return (
     <>
       <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200 dark:border-stone-800">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
           <h3 className={SECTION_LABEL}>Vehicles ({vehicles.length})</h3>
           <Button size="sm" onClick={() => setAddOpen(true)}>
             Add Vehicle

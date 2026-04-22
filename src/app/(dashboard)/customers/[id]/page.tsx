@@ -162,7 +162,7 @@ export default async function CustomerDetailPage({
 
       {/* Jobs */}
       <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200 dark:border-stone-800">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
           <h3 className={SECTION_LABEL}>Jobs ({jobs.length})</h3>
           <Link href={`/jobs/new?customerId=${id}`}>
             <Button size="sm">
@@ -216,7 +216,7 @@ export default async function CustomerDetailPage({
       {/* Parking History */}
       {parkingReservations.length > 0 && (
         <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-stone-200 dark:border-stone-800">
+          <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
             <h3 className={SECTION_LABEL}>Parking History ({parkingReservations.length})</h3>
           </div>
           <div>
