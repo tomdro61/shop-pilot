@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { CreateJobButton } from "@/components/parking/create-job-button";
 import { CustomerLink } from "@/components/ui/customer-link";
+import { formatCustomerName } from "@/lib/utils/format";
 
 export async function generateMetadata({
   params,
@@ -175,10 +176,10 @@ export default async function ParkingDetailPage({
               <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50 mb-3">
                 {reservation.customer_id ? (
                   <CustomerLink customerId={reservation.customer_id}>
-                    {reservation.first_name} {reservation.last_name}
+                    {formatCustomerName(reservation)}
                   </CustomerLink>
                 ) : (
-                  <>{reservation.first_name} {reservation.last_name}</>
+                  <>{formatCustomerName(reservation)}</>
                 )}
               </h2>
               <div className="space-y-1.5 text-sm text-stone-500 dark:text-stone-400">

@@ -8,7 +8,7 @@ import {
   FileText, Calendar, CheckCircle2,
 } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
-import { formatVehicle, formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
+import { formatVehicle, formatCurrency, formatCurrencyWhole, formatCustomerName } from "@/lib/utils/format";
 import { todayET } from "@/lib/utils";
 import { sumJobRevenue } from "@/lib/utils/revenue";
 import { resolveDateRange } from "@/lib/utils/date-range";
@@ -387,7 +387,7 @@ export default async function DashboardPage() {
                           <span className="text-stone-500 dark:text-stone-400 truncate">
                             {customer ? (
                               <CustomerLink customerId={customer.id} stopPropagation>
-                                {customer.first_name} {customer.last_name}
+                                {formatCustomerName(customer)}
                               </CustomerLink>
                             ) : "Unknown"}
                               {vehicle ? ` \u00b7 ${formatVehicle(vehicle)}` : ""}
@@ -434,7 +434,7 @@ export default async function DashboardPage() {
                         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                           {customer ? (
                             <CustomerLink customerId={customer.id} stopPropagation>
-                              {customer.first_name} {customer.last_name}
+                              {formatCustomerName(customer)}
                             </CustomerLink>
                           ) : "Unknown"}
                         </p>
@@ -486,7 +486,7 @@ export default async function DashboardPage() {
                       <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                         {customer ? (
                           <CustomerLink customerId={customer.id} stopPropagation>
-                            {customer.first_name} {customer.last_name}
+                            {formatCustomerName(customer)}
                           </CustomerLink>
                         ) : "Unknown"}
                       </p>
@@ -536,7 +536,7 @@ export default async function DashboardPage() {
                       <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate leading-tight">
                         {customer ? (
                           <CustomerLink customerId={customer.id} stopPropagation>
-                            {customer.first_name} {customer.last_name}
+                            {formatCustomerName(customer)}
                           </CustomerLink>
                         ) : "Unknown"}
                       </p>
@@ -617,7 +617,7 @@ function ShopFloorColumn({
                   <h4 className="font-bold text-stone-900 dark:text-stone-50">
                     {customer ? (
                       <CustomerLink customerId={customer.id} stopPropagation>
-                        {customer.first_name} {customer.last_name}
+                        {formatCustomerName(customer)}
                       </CustomerLink>
                     ) : "Unknown"}
                   </h4>

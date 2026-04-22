@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, PARKING_SERVICE_LABELS } from "@/lib/constants";
+import { formatCustomerName } from "@/lib/utils/format";
 import { CustomerLink } from "@/components/ui/customer-link";
 import { Car, Clock, KeyRound } from "lucide-react";
 import type { ParkingReservation } from "@/types";
@@ -42,7 +43,7 @@ export function ParkingReservationCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
               <CustomerLink customerId={reservation.customer_id} stopPropagation>
-                {reservation.first_name} {reservation.last_name}
+                {formatCustomerName(reservation)}
               </CustomerLink>
             </span>
             <Badge
@@ -148,7 +149,7 @@ export function ParkingReservationCardCompact({
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
             <CustomerLink customerId={reservation.customer_id} stopPropagation>
-              {reservation.first_name} {reservation.last_name}
+              {formatCustomerName(reservation)}
             </CustomerLink>
           </p>
           {reservation.parking_type === "shuttle" && (

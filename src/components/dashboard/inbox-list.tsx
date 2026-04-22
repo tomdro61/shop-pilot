@@ -7,7 +7,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatVehicle, formatCurrency, formatDateShort } from "@/lib/utils/format";
+import { formatVehicle, formatCurrency, formatCustomerName, formatDateShort } from "@/lib/utils/format";
 import { PARKING_SERVICE_LABELS } from "@/lib/constants";
 import { CustomerLink } from "@/components/ui/customer-link";
 import type {
@@ -111,7 +111,7 @@ function UnpaidJobRow({ job, today }: { job: InboxUnpaidJob; today: string }) {
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
           {customer ? (
             <CustomerLink customerId={customer.id} stopPropagation>
-              {customer.first_name} {customer.last_name}
+              {formatCustomerName(customer)}
             </CustomerLink>
           ) : "Unknown"}
         </p>
@@ -145,7 +145,7 @@ function DviReadyRow({ dvi, today }: { dvi: InboxDvi; today: string }) {
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
           {customer ? (
             <CustomerLink customerId={customer.id} stopPropagation>
-              {customer.first_name} {customer.last_name}
+              {formatCustomerName(customer)}
             </CustomerLink>
           ) : "Unknown"}
         </p>
@@ -186,7 +186,7 @@ function EstimateRow({ estimate, today }: { estimate: InboxEstimate; today: stri
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
           {customer ? (
             <CustomerLink customerId={customer.id} stopPropagation>
-              {customer.first_name} {customer.last_name}
+              {formatCustomerName(customer)}
             </CustomerLink>
           ) : "Unknown"}
         </p>
@@ -212,7 +212,7 @@ function QuoteRequestRow({ quote, today }: { quote: InboxQuote; today: string })
       <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
         <div className="min-w-0">
           <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
-            {quote.first_name} {quote.last_name}
+            {formatCustomerName(quote)}
           </p>
           <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
             {vehicle || "No vehicle"}{quote.services.length > 0 ? ` · ${quote.services.join(", ")}` : ""}
@@ -238,7 +238,7 @@ function ParkingLeadRow({ lead }: { lead: InboxParkingLead }) {
       <div className="min-w-0">
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
           <CustomerLink customerId={lead.customer_id} stopPropagation>
-            {lead.first_name} {lead.last_name}
+            {formatCustomerName(lead)}
           </CustomerLink>
         </p>
         <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
@@ -266,7 +266,7 @@ function ParkingSpecialsRow({ reservation }: { reservation: InboxParkingSpecials
       <div className="min-w-0">
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
           <CustomerLink customerId={reservation.customer_id} stopPropagation>
-            {reservation.first_name} {reservation.last_name}
+            {formatCustomerName(reservation)}
           </CustomerLink>
         </p>
         <p className="text-xs text-stone-500 dark:text-stone-400 truncate">

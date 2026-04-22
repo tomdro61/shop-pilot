@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { PARKING_SERVICE_LABELS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS } from "@/lib/constants";
+import { formatCustomerName } from "@/lib/utils/format";
 import { CustomerLink } from "@/components/ui/customer-link";
 import { Phone, Mail, Car, Calendar, Check } from "lucide-react";
 import type { ParkingReservation } from "@/types";
@@ -63,7 +64,7 @@ export function ParkingServiceLeads({
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
                         <CustomerLink customerId={r.customer_id} stopPropagation>
-                          {r.first_name} {r.last_name}
+                          {formatCustomerName(r)}
                         </CustomerLink>
                       </span>
                         <Badge

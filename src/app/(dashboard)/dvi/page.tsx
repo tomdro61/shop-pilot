@@ -1,5 +1,5 @@
 import { getTechJobs, getPendingParkingDviRequests, getStandaloneInspections } from "@/lib/actions/dvi";
-import { formatVehicle, formatRONumber, formatDateShort } from "@/lib/utils/format";
+import { formatVehicle, formatRONumber, formatDateShort, formatCustomerName } from "@/lib/utils/format";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
 import { ClipboardCheck, ChevronRight, Car, Calendar, Wrench } from "lucide-react";
 import Link from "next/link";
@@ -54,7 +54,7 @@ export default async function DviJobListPage({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
                     <CustomerLink customerId={req.customer_id}>
-                      {req.first_name} {req.last_name}
+                      {formatCustomerName(req)}
                     </CustomerLink>
                   </p>
                   <div className="flex items-center gap-3 mt-0.5">
@@ -101,7 +101,7 @@ export default async function DviJobListPage({
                       {insp.customer && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           <CustomerLink customerId={insp.customer.id} stopPropagation>
-                            {insp.customer.first_name} {insp.customer.last_name}
+                            {formatCustomerName(insp.customer)}
                           </CustomerLink>
                         </p>
                       )}
@@ -172,7 +172,7 @@ export default async function DviJobListPage({
                     {job.customers && (
                       <p className="text-xs text-muted-foreground mt-0.5">
                         <CustomerLink customerId={job.customers.id}>
-                          {job.customers.first_name} {job.customers.last_name}
+                          {formatCustomerName(job.customers)}
                         </CustomerLink>
                       </p>
                     )}
