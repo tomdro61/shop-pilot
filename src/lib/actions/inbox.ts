@@ -6,6 +6,7 @@ import { todayET } from "@/lib/utils";
 // ── Types ───────────────────────────────────────────────
 
 interface CustomerJoin {
+  id: string;
   first_name: string;
   last_name: string;
 }
@@ -65,6 +66,7 @@ export interface InboxQuote {
 
 export interface InboxParkingLead {
   id: string;
+  customer_id: string | null;
   first_name: string;
   last_name: string;
   make: string | null;
@@ -80,6 +82,7 @@ export interface InboxParkingLead {
 
 export interface InboxParkingSpecials {
   id: string;
+  customer_id: string | null;
   first_name: string;
   last_name: string;
   make: string | null;
@@ -128,7 +131,7 @@ export async function getInboxData(): Promise<InboxData> {
     // Unpaid completed jobs
     supabase
       .from("jobs")
-      .select("id, title, date_finished, customers(first_name, last_name), vehicles(year, make, model), job_line_items(total)")
+      .select("id, title, date_finished, customers(id, first_name, last_name), vehicles(year, make, model), job_line_items(total)")
       .eq("status", "complete")
       .neq("payment_status", "paid")
       .neq("payment_status", "waived")
@@ -136,13 +139,13 @@ export async function getInboxData(): Promise<InboxData> {
     // DVIs completed but not sent (typed as string to avoid FK ambiguity with customers join)
     supabase
       .from("dvi_inspections")
-      .select("id, completed_at, job_id, customers!dvi_inspections_customer_id_fkey(first_name, last_name), vehicles!dvi_inspections_vehicle_id_fkey(year, make, model), jobs(id, title, ro_number, customers(first_name, last_name), vehicles(year, make, model)), dvi_results(condition)" as string)
+      .select("id, completed_at, job_id, customers!dvi_inspections_customer_id_fkey(id, first_name, last_name), vehicles!dvi_inspections_vehicle_id_fkey(year, make, model), jobs(id, title, ro_number, customers(id, first_name, last_name), vehicles(year, make, model)), dvi_results(condition)" as string)
       .eq("status", "completed")
       .order("completed_at", { ascending: true }),
     // Estimates sent, awaiting approval
     supabase
       .from("estimates")
-      .select("id, sent_at, jobs(id, title, ro_number, customers(first_name, last_name), vehicles(year, make, model)), estimate_line_items(total)")
+      .select("id, sent_at, jobs(id, title, ro_number, customers(id, first_name, last_name), vehicles(year, make, model)), estimate_line_items(total)")
       .eq("status", "sent")
       .order("sent_at", { ascending: true }),
     // New quote requests
@@ -154,14 +157,14 @@ export async function getInboxData(): Promise<InboxData> {
     // Parking service leads
     supabase
       .from("parking_reservations")
-      .select("id, first_name, last_name, make, model, color, lot, services_interested, services_completed, drop_off_date, pick_up_date, status")
+      .select("id, customer_id, first_name, last_name, make, model, color, lot, services_interested, services_completed, drop_off_date, pick_up_date, status")
       .not("services_interested", "eq", "{}")
       .in("status", ["reserved", "checked_in"])
       .order("drop_off_date", { ascending: true }),
     // Parking specials not sent — Broadway Motors only
     supabase
       .from("parking_reservations")
-      .select("id, first_name, last_name, make, model, lot, phone, drop_off_date, pick_up_date")
+      .select("id, customer_id, first_name, last_name, make, model, lot, phone, drop_off_date, pick_up_date")
       .eq("status", "checked_in")
       .eq("lot", "Broadway Motors")
       .is("specials_sent_at", null)

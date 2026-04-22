@@ -19,6 +19,7 @@ import {
 } from "@/lib/utils/format";
 import { ArrowUpDown } from "lucide-react";
 import { StatusSelect } from "./status-select";
+import { CustomerLink } from "@/components/ui/customer-link";
 import type { JobStatus } from "@/types";
 
 const STATUS_BORDER: Record<JobStatus, string> = {
@@ -96,9 +97,13 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         header: ({ column }) => <SortHeader column={column}>Customer</SortHeader>,
         cell: ({ row }) =>
           row.original.customers ? (
-            <span className="text-sm font-medium text-stone-900 dark:text-stone-50">
+            <CustomerLink
+              customerId={row.original.customers.id}
+              stopPropagation
+              className="text-sm font-medium text-stone-900 dark:text-stone-50"
+            >
               {formatCustomerName(row.original.customers)}
-            </span>
+            </CustomerLink>
           ) : (
             <span className="text-sm text-stone-400">—</span>
           ),
@@ -245,7 +250,11 @@ export function JobsListView({ jobs }: JobsListViewProps) {
               <div className="mt-1.5 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
-                    {c ? formatCustomerName(c) : "—"}
+                    {c ? (
+                      <CustomerLink customerId={c.id} stopPropagation>
+                        {formatCustomerName(c)}
+                      </CustomerLink>
+                    ) : "—"}
                   </div>
                   <div className="text-xs text-stone-500 dark:text-stone-400 truncate">
                     {job.vehicles ? formatVehicle(job.vehicles) : ""}{job.title ? ` · ${job.title}` : ""}

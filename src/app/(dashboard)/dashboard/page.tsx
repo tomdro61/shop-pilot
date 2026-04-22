@@ -13,6 +13,8 @@ import { todayET } from "@/lib/utils";
 import { sumJobRevenue } from "@/lib/utils/revenue";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { ActionCenterCard } from "@/components/dashboard/action-center-card";
+import { CustomerLink } from "@/components/ui/customer-link";
+import { ClickableRow } from "@/components/ui/clickable-row";
 
 export const metadata = {
   title: "Dashboard | ShopPilot",
@@ -61,7 +63,7 @@ const getDashboardData = unstable_cache(async () => {
     // Active jobs — Shop Floor, Tech Workload, Today's Schedule
     supabase
       .from("jobs")
-      .select("id, status, title, assigned_tech, date_received, users!jobs_assigned_tech_fkey(name), customers(first_name, last_name), vehicles(year, make, model)")
+      .select("id, status, title, assigned_tech, date_received, users!jobs_assigned_tech_fkey(name), customers(id, first_name, last_name), vehicles(year, make, model)")
       .in("status", ["not_started", "in_progress", "waiting_for_parts"]),
     // Month completed — revenue
     supabase
@@ -98,7 +100,7 @@ const getDashboardData = unstable_cache(async () => {
     // Unpaid completed jobs
     supabase
       .from("jobs")
-      .select("id, title, date_finished, customers(first_name, last_name), vehicles(year, make, model), job_line_items(total)")
+      .select("id, title, date_finished, customers(id, first_name, last_name), vehicles(year, make, model), job_line_items(total)")
       .eq("status", "complete")
       .neq("payment_status", "paid")
       .neq("payment_status", "waived")
@@ -106,13 +108,13 @@ const getDashboardData = unstable_cache(async () => {
     // Pending estimates (sent, not approved)
     supabase
       .from("estimates")
-      .select("id, sent_at, jobs(id, title, customers(first_name, last_name), vehicles(year, make, model)), estimate_line_items(total)")
+      .select("id, sent_at, jobs(id, title, customers(id, first_name, last_name), vehicles(year, make, model)), estimate_line_items(total)")
       .eq("status", "sent")
       .order("sent_at", { ascending: true }),
     // DVIs completed but not yet sent to customer
     supabase
       .from("dvi_inspections")
-      .select("id, completed_at, job_id, jobs(id, title, ro_number, customers(first_name, last_name), vehicles(year, make, model)), dvi_results(condition)")
+      .select("id, completed_at, job_id, jobs(id, title, ro_number, customers(id, first_name, last_name), vehicles(year, make, model)), dvi_results(condition)")
       .eq("status", "completed")
       .order("completed_at", { ascending: true }),
     // Parking service lead count
@@ -378,18 +380,20 @@ export default async function DashboardPage() {
                   </div>
                   <div className="space-y-1.5 pl-11">
                     {tech.jobs.map(job => {
-                      const customer = job.customers as { first_name: string; last_name: string } | null;
+                      const customer = job.customers as { id: string; first_name: string; last_name: string } | null;
                       const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
                       return (
-                        <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                          <div className="flex items-center justify-between py-1 text-sm hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                            <span className="text-stone-500 dark:text-stone-400 truncate">
-                              {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
+                        <ClickableRow key={job.id} href={`/jobs/${job.id}`} className="flex items-center justify-between py-1 text-sm transition-colors">
+                          <span className="text-stone-500 dark:text-stone-400 truncate">
+                            {customer ? (
+                              <CustomerLink customerId={customer.id} stopPropagation>
+                                {customer.first_name} {customer.last_name}
+                              </CustomerLink>
+                            ) : "Unknown"}
                               {vehicle ? ` \u00b7 ${formatVehicle(vehicle)}` : ""}
-                            </span>
-                            <StatusBadge status={job.status} />
-                          </div>
-                        </Link>
+                          </span>
+                          <StatusBadge status={job.status} />
+                        </ClickableRow>
                       );
                     })}
                   </div>
@@ -421,30 +425,32 @@ export default async function DashboardPage() {
               </div>
               <div className="divide-y divide-stone-200 dark:divide-stone-800">
                 {unpaidJobs.map(job => {
-                  const customer = job.customers as { first_name: string; last_name: string } | null;
+                  const customer = job.customers as { id: string; first_name: string; last_name: string } | null;
                   const days = daysBetween(job.date_finished, today);
                   const aging = days >= 3;
                   return (
-                    <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
-                            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                          </p>
-                          <p className="text-xs text-stone-500 dark:text-stone-400">{job.title || "Job"}</p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2.5 pl-3">
-                          <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">{formatCurrency(job.total)}</span>
-                          <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap ${
-                            aging
-                              ? "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400"
-                              : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
-                          }`}>
-                            {days}d
-                          </span>
-                        </div>
+                    <ClickableRow key={job.id} href={`/jobs/${job.id}`} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+                          {customer ? (
+                            <CustomerLink customerId={customer.id} stopPropagation>
+                              {customer.first_name} {customer.last_name}
+                            </CustomerLink>
+                          ) : "Unknown"}
+                        </p>
+                        <p className="text-xs text-stone-500 dark:text-stone-400">{job.title || "Job"}</p>
                       </div>
-                    </Link>
+                      <div className="flex shrink-0 items-center gap-2.5 pl-3">
+                        <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">{formatCurrency(job.total)}</span>
+                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap ${
+                          aging
+                            ? "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400"
+                            : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
+                        }`}>
+                          {days}d
+                        </span>
+                      </div>
+                    </ClickableRow>
                   );
                 })}
               </div>
@@ -469,34 +475,36 @@ export default async function DashboardPage() {
           ) : (
             <div className="divide-y divide-stone-200 dark:divide-stone-800">
               {pendingEstimates.map(est => {
-                const job = est.jobs as { id: string; title: string | null; customers: { first_name: string; last_name: string } | null; vehicles: { year: number | null; make: string | null; model: string | null } | null } | null;
+                const job = est.jobs as { id: string; title: string | null; customers: { id: string; first_name: string; last_name: string } | null; vehicles: { year: number | null; make: string | null; model: string | null } | null } | null;
                 const customer = job?.customers;
                 const vehicle = job?.vehicles;
                 const sentDate = est.sent_at ? est.sent_at.split("T")[0] : null;
                 const days = daysBetween(sentDate, today);
                 return (
-                  <Link key={est.id} href={job ? `/jobs/${job.id}` : "#"} className="block">
-                    <div className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
-                          {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                        </p>
-                        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-                          {vehicle ? formatVehicle(vehicle) : job?.title || "Estimate"}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2.5 pl-3">
-                        <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">{formatCurrency(est.total)}</span>
-                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap ${
-                          days >= 3
-                            ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
-                            : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
-                        }`}>
-                          {days}d
-                        </span>
-                      </div>
+                  <ClickableRow key={est.id} href={job ? `/jobs/${job.id}` : "#"} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+                        {customer ? (
+                          <CustomerLink customerId={customer.id} stopPropagation>
+                            {customer.first_name} {customer.last_name}
+                          </CustomerLink>
+                        ) : "Unknown"}
+                      </p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+                        {vehicle ? formatVehicle(vehicle) : job?.title || "Estimate"}
+                      </p>
                     </div>
-                  </Link>
+                    <div className="flex shrink-0 items-center gap-2.5 pl-3">
+                      <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">{formatCurrency(est.total)}</span>
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap ${
+                        days >= 3
+                          ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
+                          : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
+                      }`}>
+                        {days}d
+                      </span>
+                    </div>
+                  </ClickableRow>
                 );
               })}
             </div>
@@ -519,22 +527,24 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-3 p-5 lg:p-6">
               {todayScheduled.map(job => {
-                const customer = job.customers as { first_name: string; last_name: string } | null;
+                const customer = job.customers as { id: string; first_name: string; last_name: string } | null;
                 const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
                 return (
-                  <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                    <div className="flex items-center gap-4 p-3.5 rounded-lg bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                      <Car className="h-4 w-4 shrink-0 text-stone-400 dark:text-stone-500" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate leading-tight">
-                          {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                        </p>
+                  <ClickableRow key={job.id} href={`/jobs/${job.id}`} className="flex items-center gap-4 p-3.5 rounded-lg bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                    <Car className="h-4 w-4 shrink-0 text-stone-400 dark:text-stone-500" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate leading-tight">
+                        {customer ? (
+                          <CustomerLink customerId={customer.id} stopPropagation>
+                            {customer.first_name} {customer.last_name}
+                          </CustomerLink>
+                        ) : "Unknown"}
+                      </p>
                         <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
                           {vehicle ? formatVehicle(vehicle) : ""}{job.title ? ` \u00b7 ${job.title}` : ""}
                         </p>
                       </div>
-                    </div>
-                  </Link>
+                  </ClickableRow>
                 );
               })}
             </div>
@@ -598,16 +608,19 @@ function ShopFloorColumn({
       ) : (
         <div className="space-y-3">
           {jobs.map(job => {
-            const customer = job.customers as { first_name: string; last_name: string } | null;
+            const customer = job.customers as { id: string; first_name: string; last_name: string } | null;
             const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
             const days = daysBetween(job.date_received, today);
             return (
-              <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                <div className={`bg-card p-5 rounded-lg border-l-4 ${config.border} shadow-card hover:shadow-md transition-shadow`}>
-                  <div className="flex justify-between items-start mb-1.5">
-                    <h4 className="font-bold text-stone-900 dark:text-stone-50">
-                      {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-                    </h4>
+              <ClickableRow key={job.id} href={`/jobs/${job.id}`} className={`block bg-card p-5 rounded-lg border-l-4 ${config.border} shadow-card hover:shadow-md transition-shadow`}>
+                <div className="flex justify-between items-start mb-1.5">
+                  <h4 className="font-bold text-stone-900 dark:text-stone-50">
+                    {customer ? (
+                      <CustomerLink customerId={customer.id} stopPropagation>
+                        {customer.first_name} {customer.last_name}
+                      </CustomerLink>
+                    ) : "Unknown"}
+                  </h4>
                     <span className={`shrink-0 ml-2 text-[10px] font-black ${config.badge} px-2 py-1 rounded-md uppercase whitespace-nowrap`}>
                       {status === "not_started" ? "queue" : `${days} ${days === 1 ? "day" : "days"}`}
                     </span>
@@ -616,8 +629,7 @@ function ShopFloorColumn({
                     {vehicle ? formatVehicle(vehicle) : "No vehicle"}
                     {job.title ? ` \u00b7 ${job.title}` : ""}
                   </p>
-                </div>
-              </Link>
+              </ClickableRow>
             );
           })}
         </div>

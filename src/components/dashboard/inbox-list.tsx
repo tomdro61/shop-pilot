@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatVehicle, formatCurrency, formatDateShort } from "@/lib/utils/format";
 import { PARKING_SERVICE_LABELS } from "@/lib/constants";
+import { CustomerLink } from "@/components/ui/customer-link";
 import type {
   InboxData,
   InboxUnpaidJob,
@@ -97,90 +98,109 @@ function Section({
 // ── Item rows ───────────────────────────────────────────
 
 function UnpaidJobRow({ job, today }: { job: InboxUnpaidJob; today: string }) {
+  const router = useRouter();
   const customer = job.customers;
   const vehicle = job.vehicles;
   const days = daysBetween(job.date_finished, today);
   return (
-    <Link href={`/jobs/${job.id}`} className="block">
-      <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-        <div className="min-w-0">
-          <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
-            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-          </p>
-          <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-            {vehicle ? formatVehicle(vehicle) : ""}{job.title ? ` · ${job.title}` : ""}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2.5 pl-3">
-          <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">
-            {formatCurrency(job.total)}
-          </span>
-          <DaysBadge days={days} />
-        </div>
+    <div
+      onClick={() => router.push(`/jobs/${job.id}`)}
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+          {customer ? (
+            <CustomerLink customerId={customer.id} stopPropagation>
+              {customer.first_name} {customer.last_name}
+            </CustomerLink>
+          ) : "Unknown"}
+        </p>
+        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+          {vehicle ? formatVehicle(vehicle) : ""}{job.title ? ` · ${job.title}` : ""}
+        </p>
       </div>
-    </Link>
+      <div className="flex shrink-0 items-center gap-2.5 pl-3">
+        <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">
+          {formatCurrency(job.total)}
+        </span>
+        <DaysBadge days={days} />
+      </div>
+    </div>
   );
 }
 
 function DviReadyRow({ dvi, today }: { dvi: InboxDvi; today: string }) {
+  const router = useRouter();
   const job = dvi.jobs;
   const customer = job?.customers || dvi.customers;
   const vehicle = job?.vehicles || dvi.vehicles;
   const days = daysBetween(dvi.completed_at?.split("T")[0] ?? null, today);
   const href = job ? `/jobs/${job.id}` : `/dvi/inspect/${dvi.id}`;
   return (
-    <Link href={href} className="block">
-      <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-        <div className="min-w-0">
-          <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
-            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-          </p>
-          <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-            {vehicle ? formatVehicle(vehicle) : job?.title || "DVI"}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 pl-3">
-          {dvi.attention > 0 && (
-            <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400">
-              {dvi.attention} attn
-            </span>
-          )}
-          {dvi.monitor > 0 && (
-            <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
-              {dvi.monitor} mon
-            </span>
-          )}
-          <DaysBadge days={days} warnAt={1} />
-        </div>
+    <div
+      onClick={() => router.push(href)}
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+          {customer ? (
+            <CustomerLink customerId={customer.id} stopPropagation>
+              {customer.first_name} {customer.last_name}
+            </CustomerLink>
+          ) : "Unknown"}
+        </p>
+        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+          {vehicle ? formatVehicle(vehicle) : job?.title || "DVI"}
+        </p>
       </div>
-    </Link>
+      <div className="flex shrink-0 items-center gap-2 pl-3">
+        {dvi.attention > 0 && (
+          <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400">
+            {dvi.attention} attn
+          </span>
+        )}
+        {dvi.monitor > 0 && (
+          <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+            {dvi.monitor} mon
+          </span>
+        )}
+        <DaysBadge days={days} warnAt={1} />
+      </div>
+    </div>
   );
 }
 
 function EstimateRow({ estimate, today }: { estimate: InboxEstimate; today: string }) {
+  const router = useRouter();
   const job = estimate.jobs;
   const customer = job?.customers;
   const vehicle = job?.vehicles;
   const days = daysBetween(estimate.sent_at?.split("T")[0] ?? null, today);
+  const href = job ? `/jobs/${job.id}` : "#";
   return (
-    <Link href={job ? `/jobs/${job.id}` : "#"} className="block">
-      <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-        <div className="min-w-0">
-          <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
-            {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
-          </p>
-          <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-            {vehicle ? formatVehicle(vehicle) : job?.title || "Estimate"}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2.5 pl-3">
-          <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">
-            {formatCurrency(estimate.total)}
-          </span>
-          <DaysBadge days={days} />
-        </div>
+    <div
+      onClick={() => router.push(href)}
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+          {customer ? (
+            <CustomerLink customerId={customer.id} stopPropagation>
+              {customer.first_name} {customer.last_name}
+            </CustomerLink>
+          ) : "Unknown"}
+        </p>
+        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+          {vehicle ? formatVehicle(vehicle) : job?.title || "Estimate"}
+        </p>
       </div>
-    </Link>
+      <div className="flex shrink-0 items-center gap-2.5 pl-3">
+        <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">
+          {formatCurrency(estimate.total)}
+        </span>
+        <DaysBadge days={days} />
+      </div>
+    </div>
   );
 }
 
@@ -207,50 +227,58 @@ function QuoteRequestRow({ quote, today }: { quote: InboxQuote; today: string })
 }
 
 function ParkingLeadRow({ lead }: { lead: InboxParkingLead }) {
+  const router = useRouter();
   const completed = new Set(lead.services_completed || []);
   const pending = lead.services_interested.filter((s) => !completed.has(s));
   return (
-    <Link href={`/parking/${lead.id}`} className="block">
-      <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-        <div className="min-w-0">
-          <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+    <div
+      onClick={() => router.push(`/parking/${lead.id}`)}
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+          <CustomerLink customerId={lead.customer_id} stopPropagation>
             {lead.first_name} {lead.last_name}
-          </p>
-          <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-            {[lead.make, lead.model].filter(Boolean).join(" ") || "Vehicle"} · {lead.lot} · {formatDateShort(lead.drop_off_date)} – {formatDateShort(lead.pick_up_date)}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5 pl-3 flex-wrap justify-end">
-          {pending.map((s) => (
-            <span key={s} className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
-              {PARKING_SERVICE_LABELS[s] || s}
-            </span>
-          ))}
-        </div>
+          </CustomerLink>
+        </p>
+        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+          {[lead.make, lead.model].filter(Boolean).join(" ") || "Vehicle"} · {lead.lot} · {formatDateShort(lead.drop_off_date)} – {formatDateShort(lead.pick_up_date)}
+        </p>
       </div>
-    </Link>
+      <div className="flex shrink-0 items-center gap-1.5 pl-3 flex-wrap justify-end">
+        {pending.map((s) => (
+          <span key={s} className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+            {PARKING_SERVICE_LABELS[s] || s}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
 function ParkingSpecialsRow({ reservation }: { reservation: InboxParkingSpecials }) {
+  const router = useRouter();
   return (
-    <Link href={`/parking/${reservation.id}`} className="block">
-      <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-        <div className="min-w-0">
-          <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+    <div
+      onClick={() => router.push(`/parking/${reservation.id}`)}
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+          <CustomerLink customerId={reservation.customer_id} stopPropagation>
             {reservation.first_name} {reservation.last_name}
-          </p>
-          <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-            {[reservation.make, reservation.model].filter(Boolean).join(" ") || "Vehicle"} · {reservation.lot}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 pl-3">
-          <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
-            Specials not sent
-          </span>
-        </div>
+          </CustomerLink>
+        </p>
+        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+          {[reservation.make, reservation.model].filter(Boolean).join(" ") || "Vehicle"} · {reservation.lot}
+        </p>
       </div>
-    </Link>
+      <div className="flex shrink-0 items-center gap-2 pl-3">
+        <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+          Specials not sent
+        </span>
+      </div>
+    </div>
   );
 }
 

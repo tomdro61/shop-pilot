@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusSelect } from "./status-select";
+import { CustomerLink } from "@/components/ui/customer-link";
 import { formatCustomerName, formatVehicle, formatRONumber, formatDate } from "@/lib/utils/format";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
 import type { JobStatus, DviStatus } from "@/types";
@@ -25,55 +26,60 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, showStatus = true }: JobCardProps) {
+  const router = useRouter();
+
   return (
-    <Card className="transition-colors hover:bg-stone-50 dark:hover:bg-stone-800">
+    <Card
+      className="transition-colors hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer"
+      onClick={() => router.push(`/jobs/${job.id}`)}
+    >
       <CardContent className="p-3.5">
         <div className="flex items-start justify-between gap-2">
-          <Link href={`/jobs/${job.id}`} className="min-w-0 flex-1">
-            <div>
-              {job.customers && (
-                <p className="text-sm font-medium leading-tight">
+          <div className="min-w-0 flex-1">
+            {job.customers && (
+              <p className="text-sm font-medium leading-tight">
+                <CustomerLink customerId={job.customers.id} stopPropagation>
                   {formatCustomerName(job.customers)}
-                </p>
+                </CustomerLink>
+              </p>
+            )}
+            {job.vehicles && (
+              <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+                {formatVehicle(job.vehicles)}
+              </p>
+            )}
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-stone-500 dark:text-stone-400">
+              {job.ro_number && (
+                <span>{formatRONumber(job.ro_number)}</span>
               )}
-              {job.vehicles && (
-                <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-                  {formatVehicle(job.vehicles)}
-                </p>
+              {job.title && (
+                <>
+                  {job.ro_number && <span className="text-border">·</span>}
+                  <span>{job.title}</span>
+                </>
               )}
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-stone-500 dark:text-stone-400">
-                {job.ro_number && (
-                  <span>{formatRONumber(job.ro_number)}</span>
-                )}
-                {job.title && (
-                  <>
-                    {job.ro_number && <span className="text-border">·</span>}
-                    <span>{job.title}</span>
-                  </>
-                )}
-                {job.users && (
+              {job.users && (
+                <>
+                  <span className="text-border">·</span>
+                  <span>{job.users.name}</span>
+                </>
+              )}
+              <span className="text-border">·</span>
+              <span className="tabular-nums">{formatDate(job.date_received)}</span>
+              {job.dvi_inspections?.[0] && (() => {
+                const dviStatus = job.dvi_inspections[0].status as DviStatus;
+                const colors = DVI_STATUS_COLORS[dviStatus];
+                return (
                   <>
                     <span className="text-border">·</span>
-                    <span>{job.users.name}</span>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase ${colors?.bg} ${colors?.text}`}>
+                      DVI {DVI_STATUS_LABELS[dviStatus]}
+                    </span>
                   </>
-                )}
-                <span className="text-border">·</span>
-                <span className="tabular-nums">{formatDate(job.date_received)}</span>
-                {job.dvi_inspections?.[0] && (() => {
-                  const dviStatus = job.dvi_inspections[0].status as DviStatus;
-                  const colors = DVI_STATUS_COLORS[dviStatus];
-                  return (
-                    <>
-                      <span className="text-border">·</span>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase ${colors?.bg} ${colors?.text}`}>
-                        DVI {DVI_STATUS_LABELS[dviStatus]}
-                      </span>
-                    </>
-                  );
-                })()}
-              </div>
+                );
+              })()}
             </div>
-          </Link>
+          </div>
           {showStatus && (
             <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
               <StatusSelect
