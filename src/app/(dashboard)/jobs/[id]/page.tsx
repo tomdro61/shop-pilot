@@ -16,6 +16,7 @@ import { DviSection } from "@/components/dashboard/dvi-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
+import { JobProgressStepper } from "@/components/dashboard/job-progress-stepper";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
@@ -210,6 +211,13 @@ export default async function JobDetailPage({
             </div>
           )}
         </div>
+
+        {/* Progress stepper */}
+        <JobProgressStepper
+          currentStatus={job.status as JobStatus}
+          dateReceived={job.date_received}
+          dateFinished={job.date_finished}
+        />
 
         {/* Line Items — primary work area */}
         <div>
