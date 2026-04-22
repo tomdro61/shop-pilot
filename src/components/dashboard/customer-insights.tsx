@@ -218,7 +218,7 @@ export function CustomerInsights({
 
       {/* Top Customers Table */}
       <Card className="py-0 gap-0">
-        <CardHeader className="bg-sidebar px-5 py-3">
+        <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
           <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
             Top Customers — {periodLabel}
           </CardTitle>

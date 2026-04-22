@@ -353,7 +353,7 @@ export default async function DashboardPage() {
 
         {/* Tech Workload */}
         <div className="bg-card rounded-lg shadow-card overflow-hidden">
-          <div className="bg-sidebar px-5 py-3">
+          <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Tech Workload</h3>
           </div>
           {techWorkload.length === 0 ? (
@@ -401,7 +401,7 @@ export default async function DashboardPage() {
 
         {/* Unpaid / Outstanding */}
         <div className="bg-card rounded-lg shadow-card overflow-hidden">
-          <div className="bg-sidebar px-5 py-3">
+          <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Unpaid / Outstanding</h3>
           </div>
           {unpaidJobs.length === 0 ? (
@@ -458,7 +458,7 @@ export default async function DashboardPage() {
 
         {/* Pending Estimates */}
         <div className="bg-card rounded-lg shadow-card overflow-hidden">
-          <div className="bg-sidebar px-5 py-3">
+          <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Pending Estimates</h3>
           </div>
           {pendingEstimates.length === 0 ? (
@@ -505,7 +505,7 @@ export default async function DashboardPage() {
 
         {/* Today's Schedule */}
         <div className="bg-card rounded-lg shadow-card overflow-hidden">
-          <div className="flex items-center justify-between bg-sidebar px-5 py-3">
+          <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Today&apos;s Schedule</h3>
             <Link href="/jobs/new" className="w-7 h-7 flex items-center justify-center bg-stone-600 text-white rounded-full hover:bg-stone-500 transition-colors">
               <Plus className="h-3.5 w-3.5" />

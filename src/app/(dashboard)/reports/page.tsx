@@ -137,7 +137,7 @@ export default async function ReportsOverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Top Categories */}
         <Card className="py-0 gap-0">
-          <CardHeader className="bg-sidebar px-5 py-3">
+          <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
               Top Categories (This Month)
             </CardTitle>
@@ -176,7 +176,7 @@ export default async function ReportsOverviewPage() {
 
         {/* Tech Summary */}
         <Card className="py-0 gap-0">
-          <CardHeader className="bg-sidebar px-5 py-3">
+          <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
               Tech Summary (This Month)
             </CardTitle>

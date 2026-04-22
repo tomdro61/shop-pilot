@@ -88,7 +88,7 @@ export default async function JobDetailPage({
 
       {/* ── Job Header Card ── */}
       <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden mb-8 animate-in-up">
-        <div className="flex items-center justify-between bg-sidebar px-5 py-3">
+        <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
           <div className="flex items-center gap-2 min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Job</p>
             {job.ro_number && (
@@ -134,7 +134,7 @@ export default async function JobDetailPage({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-8 animate-in-up stagger-2">
         {customer && (
           <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
-            <div className="flex items-center justify-between bg-sidebar px-5 py-3">
+            <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
               <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Customer</p>
               <Link href={`/customers/${customer.id}`} className="text-stone-300 hover:text-white transition-colors">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
@@ -167,7 +167,7 @@ export default async function JobDetailPage({
 
         {vehicle && (
           <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
-            <div className="flex items-center justify-between bg-sidebar px-5 py-3">
+            <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
               <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Vehicle</p>
               <Car className="h-4 w-4 text-stone-300" />
             </div>
@@ -191,7 +191,7 @@ export default async function JobDetailPage({
       {/* ── Notes ── */}
       {job.notes && (
         <div className="bg-card rounded-lg shadow-card overflow-hidden mb-8 animate-in-up stagger-2">
-          <div className="flex items-center gap-2 bg-sidebar px-5 py-3">
+          <div className="flex items-center gap-2 bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <StickyNote className="h-3.5 w-3.5 text-stone-300" />
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Primary Complaint / Notes</p>
           </div>

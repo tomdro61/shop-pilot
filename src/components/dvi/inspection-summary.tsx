@@ -61,7 +61,7 @@ export function InspectionSummary({ results, showRecommendations }: InspectionSu
       {/* Categories */}
       {categories.map((cat) => (
         <div key={cat.name} className="rounded-lg bg-card shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
-          <div className="px-4 py-2.5 bg-sidebar">
+          <div className="px-4 py-2.5 bg-stone-800 dark:bg-stone-900">
             <h4 className="text-xs font-bold uppercase tracking-wider text-stone-100">
               {cat.name}
             </h4>
