@@ -30,6 +30,13 @@ const STATUS_DOT: Record<PaymentStatus, string> = {
   waived: "bg-stone-400",
 };
 
+const STATUS_PILL: Record<PaymentStatus, string> = {
+  unpaid: "bg-red-500/15 text-red-200",
+  invoiced: "bg-amber-500/15 text-amber-200",
+  paid: "bg-emerald-500/15 text-emerald-200",
+  waived: "bg-slate-500/20 text-slate-300",
+};
+
 interface JobPaymentFooterProps {
   jobId: string;
   jobStatus: JobStatus;
@@ -65,39 +72,61 @@ export function JobPaymentFooter({
     }
   }
 
+  const isSettled = paymentStatus === "paid" || paymentStatus === "waived";
+  const balanceDue = isSettled ? 0 : grandTotal;
+
   return (
-    <div className="fixed bottom-14 lg:sticky lg:bottom-0 left-0 right-0 z-20 bg-[#0F172A] text-white">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4 lg:px-6">
-        <div className="flex items-baseline gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+    <div className="fixed bottom-14 lg:sticky lg:bottom-0 left-0 right-0 z-20 bg-[#0F172A] text-white border-t border-slate-900">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-stretch gap-y-3 px-4 py-3 lg:py-4 lg:px-6">
+
+        <div className="flex flex-col justify-center pr-4 lg:pr-6">
+          <span className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-slate-400">
             Grand Total
           </span>
-          <span className="font-mono tabular-nums text-2xl lg:text-3xl font-semibold text-white">
+          <span className="font-mono tabular-nums text-[28px] lg:text-[34px] font-bold text-white leading-none mt-1.5 -tracking-[0.01em]">
             {formatCurrency(grandTotal)}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-100`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[paymentStatus] ?? "bg-slate-400"}`} />
-            {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
+        <div className="hidden lg:flex flex-col justify-center px-6 border-l border-slate-800">
+          <span className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Balance Due
           </span>
-          {paymentMethod && (
-            <span className="text-xs text-slate-400">
-              via {PAYMENT_METHOD_LABELS[paymentMethod]}
+          <span className={`font-mono tabular-nums text-base font-semibold leading-none mt-2 ${balanceDue > 0 ? "text-white" : "text-slate-500"}`}>
+            {formatCurrency(balanceDue)}
+          </span>
+        </div>
+
+        <div className="flex flex-col justify-center pl-4 lg:px-6 lg:border-l lg:border-slate-800">
+          <span className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Payment
+          </span>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium ${STATUS_PILL[paymentStatus] ?? "bg-slate-800 text-slate-200"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[paymentStatus] ?? "bg-slate-400"}`} />
+              {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
             </span>
-          )}
+            {paymentMethod && (
+              <span className="text-[11px] text-slate-400">
+                via {PAYMENT_METHOD_LABELS[paymentMethod]}
+              </span>
+            )}
+          </div>
         </div>
 
         {showMarkAsPaid && (
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 self-center w-full justify-end lg:w-auto">
             <TerminalPayButton
               jobId={jobId}
               amountCents={Math.round(grandTotal * 100)}
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" disabled={loading}>
+                <Button
+                  size="sm"
+                  disabled={loading}
+                  className="bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white shadow-none"
+                >
                   {loading ? "Recording..." : "Mark as Paid"}
                   <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
                 </Button>
