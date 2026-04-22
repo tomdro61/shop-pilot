@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useReactTable,
@@ -19,7 +18,7 @@ import {
   formatRONumber,
 } from "@/lib/utils/format";
 import { ArrowUpDown } from "lucide-react";
-import { JOB_STATUS_LABELS } from "@/lib/constants";
+import { StatusSelect } from "./status-select";
 import type { JobStatus } from "@/types";
 
 const STATUS_BORDER: Record<JobStatus, string> = {
@@ -27,13 +26,6 @@ const STATUS_BORDER: Record<JobStatus, string> = {
   waiting_for_parts: "border-l-amber-500",
   in_progress: "border-l-blue-500",
   complete: "border-l-emerald-500",
-};
-
-const STATUS_TEXT: Record<JobStatus, string> = {
-  not_started: "text-stone-500 dark:text-stone-400",
-  waiting_for_parts: "text-amber-700 dark:text-amber-400",
-  in_progress: "text-blue-700 dark:text-blue-400",
-  complete: "text-emerald-700 dark:text-emerald-400",
 };
 
 type JobRow = {
@@ -87,6 +79,18 @@ export function JobsListView({ jobs }: JobsListViewProps) {
   const columns = useMemo<ColumnDef<JobRow>[]>(
     () => [
       {
+        accessorKey: "status",
+        header: () => <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Status</span>,
+        cell: ({ row }) => (
+          <div onClick={(e) => e.stopPropagation()}>
+            <StatusSelect
+              jobId={row.original.id}
+              currentStatus={row.original.status as JobStatus}
+            />
+          </div>
+        ),
+      },
+      {
         id: "ro",
         accessorFn: (row) => row.ro_number ?? 0,
         header: ({ column }) => <SortHeader column={column}>RO#</SortHeader>,
@@ -95,18 +99,6 @@ export function JobsListView({ jobs }: JobsListViewProps) {
             {row.original.ro_number ? formatRONumber(row.original.ro_number) : "—"}
           </span>
         ),
-      },
-      {
-        accessorKey: "status",
-        header: () => <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Status</span>,
-        cell: ({ row }) => {
-          const s = row.original.status as JobStatus;
-          return (
-            <span className={`text-xs font-medium ${STATUS_TEXT[s]}`}>
-              {JOB_STATUS_LABELS[s]}
-            </span>
-          );
-        },
       },
       {
         id: "customer",
@@ -247,18 +239,20 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           const c = job.customers;
           const t = totalForJob(job);
           return (
-            <Link
+            <div
               key={job.id}
-              href={`/jobs/${job.id}`}
-              className={`block px-3 py-2.5 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors`}
+              onClick={() => router.push(`/jobs/${job.id}`)}
+              className={`cursor-pointer px-3 py-2.5 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className={`text-xs font-medium ${STATUS_TEXT[s]}`}>{JOB_STATUS_LABELS[s]}</span>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <StatusSelect jobId={job.id} currentStatus={s} />
+                </div>
                 <span className="font-mono text-[11px] text-stone-400 tabular-nums">
                   {job.ro_number ? formatRONumber(job.ro_number) : ""}
                 </span>
               </div>
-              <div className="mt-1 flex items-start justify-between gap-3">
+              <div className="mt-1.5 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
                     {c ? formatCustomerName(c) : "—"}
@@ -278,7 +272,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>

@@ -20,9 +20,19 @@ interface StatusSelectProps {
 const STATUS_DOT_COLORS: Record<string, string> = {
   not_started: "bg-red-500",
   waiting_for_parts: "bg-amber-500",
-  in_progress: "bg-blue-500 animate-pulse",
+  in_progress: "bg-blue-500",
   complete: "bg-green-500",
 };
+
+function StatusChip({ status }: { status: JobStatus }) {
+  const colors = JOB_STATUS_COLORS[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium ${colors.bg} ${colors.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLORS[status] || "bg-stone-400"}`} />
+      {JOB_STATUS_LABELS[status]}
+    </span>
+  );
+}
 
 export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
   async function handleChange(newStatus: string) {
@@ -34,30 +44,19 @@ export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
     }
   }
 
-  const colors = JOB_STATUS_COLORS[currentStatus];
-
   return (
     <Select value={currentStatus} onValueChange={handleChange}>
-      <SelectTrigger className="w-auto border-0 bg-transparent p-0 h-auto shadow-none focus:ring-0">
+      <SelectTrigger className="w-auto border-0 bg-transparent p-0 h-auto shadow-none focus:ring-0 gap-1">
         <SelectValue>
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${colors.bg} ${colors.text}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLORS[currentStatus] || "bg-stone-400"}`} />
-            {JOB_STATUS_LABELS[currentStatus]}
-          </span>
+          <StatusChip status={currentStatus} />
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {JOB_STATUS_ORDER.map((status) => {
-          const statusColors = JOB_STATUS_COLORS[status];
-          return (
-            <SelectItem key={status} value={status}>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${statusColors.bg} ${statusColors.text}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLORS[status] || "bg-stone-400"}`} />
-                {JOB_STATUS_LABELS[status]}
-              </span>
-            </SelectItem>
-          );
-        })}
+        {JOB_STATUS_ORDER.map((status) => (
+          <SelectItem key={status} value={status}>
+            <StatusChip status={status} />
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
