@@ -39,8 +39,8 @@ export function Sidebar({ badgeCounts, userRole }: { badgeCounts?: Record<string
   const visibleSecondary = isTech ? [] : secondaryNav;
 
   return (
-    <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:border-r lg:border-stone-800 lg:bg-stone-900">
-      <div className="flex h-16 items-center border-b border-stone-800 px-6">
+    <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:border-r lg:border-sidebar-border lg:bg-sidebar">
+      <div className="flex h-16 items-center border-b border-sidebar-border px-6">
         <Link href={isTech ? "/dvi" : "/dashboard"} className="flex items-center gap-2.5">
           <Wrench className="h-5 w-5 text-blue-500" />
           <div className="flex flex-col">
@@ -59,7 +59,7 @@ export function Sidebar({ badgeCounts, userRole }: { badgeCounts?: Record<string
 
         {visibleSecondary.length > 0 && (
           <>
-            <div className="my-3 h-px bg-stone-800" />
+            <div className="my-3 h-px bg-sidebar-border" />
             <div className="space-y-0.5">
               {visibleSecondary.map((item) => (
                 <NavItemLink key={item.href} item={item} pathname={pathname} />
@@ -94,7 +94,7 @@ function NavItemLink({
         "group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
         isActive
           ? "bg-blue-600 text-white font-semibold"
-          : "text-stone-400 hover:bg-stone-800 hover:text-stone-100"
+          : "text-stone-400 hover:bg-sidebar-accent hover:text-stone-100"
       )}
     >
       <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-white" : "text-stone-500")} />
