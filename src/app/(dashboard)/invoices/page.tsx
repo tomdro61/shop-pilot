@@ -64,6 +64,7 @@ export default async function InvoicesPage({
                   } | null;
                   const parking = invoice.parking_reservations as {
                     id: string;
+                    customer_id: string | null;
                     first_name: string;
                     last_name: string;
                     lot: string;
@@ -77,7 +78,11 @@ export default async function InvoicesPage({
                     : parking
                       ? `${parking.first_name} ${parking.last_name}`
                       : null;
-                  const customerLink = customer ? `/customers/${customer.id}` : null;
+                  const customerLink = customer
+                    ? `/customers/${customer.id}`
+                    : parking?.customer_id
+                      ? `/customers/${parking.customer_id}`
+                      : null;
                   const initials = customerName
                     ? customerName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
                     : "??";

@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, PARKING_SERVICE_LABELS } from "@/lib/constants";
+import { CustomerLink } from "@/components/ui/customer-link";
 import { Car, Clock, KeyRound } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
@@ -28,18 +29,21 @@ export function ParkingReservationCard({
   reservation: ParkingReservation;
   showActions?: React.ReactNode;
 }) {
+  const router = useRouter();
   const statusColors = PARKING_STATUS_COLORS[reservation.status];
 
   return (
-    <Link
-      href={`/parking/${reservation.id}`}
-      className="block bg-card rounded-lg shadow-card p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+    <div
+      onClick={() => router.push(`/parking/${reservation.id}`)}
+      className="cursor-pointer bg-card rounded-lg shadow-card p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
-              {reservation.first_name} {reservation.last_name}
+              <CustomerLink customerId={reservation.customer_id} stopPropagation>
+                {reservation.first_name} {reservation.last_name}
+              </CustomerLink>
             </span>
             <Badge
               variant="secondary"
@@ -96,13 +100,13 @@ export function ParkingReservationCard({
         {showActions && (
           <div
             className="shrink-0"
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => e.stopPropagation()}
           >
             {showActions}
           </div>
         )}
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -117,6 +121,7 @@ export function ParkingReservationCardCompact({
   variant?: "arrival" | "pickup" | "pickup-tomorrow" | "parked" | "checked-out";
   lockBoxCodes?: Record<number, string>;
 }) {
+  const router = useRouter();
   const variantStyles: Record<string, string> = {
     arrival: "border-l-blue-400 dark:border-l-blue-500 border-blue-200 dark:border-blue-800 bg-blue-100 dark:bg-blue-950/50",
     pickup: "border-l-amber-400 dark:border-l-amber-500 border-amber-200 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/50",
@@ -136,10 +141,15 @@ export function ParkingReservationCardCompact({
 
   return (
     <div className={`flex items-center justify-between gap-3 rounded-lg border border-l-4 px-4 py-3 ${variantStyles[variant]}`}>
-      <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
+      <div
+        onClick={() => router.push(`/parking/${reservation.id}`)}
+        className="cursor-pointer min-w-0 flex-1"
+      >
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
-            {reservation.first_name} {reservation.last_name}
+            <CustomerLink customerId={reservation.customer_id} stopPropagation>
+              {reservation.first_name} {reservation.last_name}
+            </CustomerLink>
           </p>
           {reservation.parking_type === "shuttle" && (
             <Badge
@@ -193,8 +203,8 @@ export function ParkingReservationCardCompact({
             </div>
           )}
         </div>
-      </Link>
-      {showActions && <div className="shrink-0">{showActions}</div>}
+      </div>
+      {showActions && <div className="shrink-0" onClick={(e) => e.stopPropagation()}>{showActions}</div>}
     </div>
   );
 }

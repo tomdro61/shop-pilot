@@ -245,7 +245,7 @@ export async function getInvoices(status?: string, search?: string) {
   let query = supabase
     .from("invoices")
     .select(
-      "id, job_id, parking_reservation_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, created_at, jobs(id, title, customers(id, first_name, last_name), vehicles(year, make, model)), parking_reservations(id, first_name, last_name, lot)"
+      "id, job_id, parking_reservation_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, created_at, jobs(id, title, customers(id, first_name, last_name), vehicles(year, make, model)), parking_reservations(id, customer_id, first_name, last_name, lot)"
     )
     .order("created_at", { ascending: false });
 

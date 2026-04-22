@@ -5,6 +5,8 @@ import { ClipboardCheck, ChevronRight, Car, Calendar, Wrench } from "lucide-reac
 import Link from "next/link";
 import { StartParkingDviButton } from "@/components/dvi/start-parking-dvi-button";
 import { CreateDviDialog } from "@/components/dvi/create-dvi-dialog";
+import { CustomerLink } from "@/components/ui/customer-link";
+import { ClickableRow } from "@/components/ui/clickable-row";
 import type { DviStatus } from "@/types";
 
 export const metadata = { title: "DVI | ShopPilot" };
@@ -51,7 +53,9 @@ export default async function DviJobListPage({
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
-                    {req.first_name} {req.last_name}
+                    <CustomerLink customerId={req.customer_id}>
+                      {req.first_name} {req.last_name}
+                    </CustomerLink>
                   </p>
                   <div className="flex items-center gap-3 mt-0.5">
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -87,30 +91,30 @@ export default async function DviJobListPage({
               {standaloneInspections.map((insp) => {
                 const dviStatus = insp.status as DviStatus;
                 return (
-                  <Link key={insp.id} href={`/dvi/inspect/${insp.id}`} className="block">
-                    <div className="flex items-center justify-between rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
-                          {insp.vehicle
-                            ? formatVehicle(insp.vehicle)
-                            : "Vehicle"}
-                        </p>
-                        {insp.customer && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                  <ClickableRow key={insp.id} href={`/dvi/inspect/${insp.id}`} className="flex items-center justify-between rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
+                        {insp.vehicle
+                          ? formatVehicle(insp.vehicle)
+                          : "Vehicle"}
+                      </p>
+                      {insp.customer && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          <CustomerLink customerId={insp.customer.id} stopPropagation>
                             {insp.customer.first_name} {insp.customer.last_name}
-                          </p>
-                        )}
-                      </div>
-                      <div className="ml-3 flex items-center gap-2 shrink-0">
-                        <span
-                          className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
-                        >
-                          {DVI_STATUS_LABELS[dviStatus]}
-                        </span>
-                        <ChevronRight className="h-4 w-4 text-stone-400" />
-                      </div>
+                          </CustomerLink>
+                        </p>
+                      )}
                     </div>
-                  </Link>
+                    <div className="ml-3 flex items-center gap-2 shrink-0">
+                      <span
+                        className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
+                      >
+                        {DVI_STATUS_LABELS[dviStatus]}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-stone-400" />
+                    </div>
+                  </ClickableRow>
                 );
               })}
             </div>
@@ -167,7 +171,9 @@ export default async function DviJobListPage({
                     </p>
                     {job.customers && (
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {job.customers.first_name} {job.customers.last_name}
+                        <CustomerLink customerId={job.customers.id}>
+                          {job.customers.first_name} {job.customers.last_name}
+                        </CustomerLink>
                       </p>
                     )}
                   </div>
