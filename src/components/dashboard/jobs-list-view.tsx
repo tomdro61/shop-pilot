@@ -91,16 +91,6 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         ),
       },
       {
-        id: "ro",
-        accessorFn: (row) => row.ro_number ?? 0,
-        header: ({ column }) => <SortHeader column={column}>RO#</SortHeader>,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-stone-500 dark:text-stone-400 tabular-nums">
-            {row.original.ro_number ? formatRONumber(row.original.ro_number) : "—"}
-          </span>
-        ),
-      },
-      {
         id: "customer",
         accessorFn: (row) => (row.customers ? `${row.customers.last_name}, ${row.customers.first_name}` : ""),
         header: ({ column }) => <SortHeader column={column}>Customer</SortHeader>,
