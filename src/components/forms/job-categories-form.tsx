@@ -130,7 +130,7 @@ export function JobCategoriesForm({ categories: initial }: JobCategoriesFormProp
             {categories.map((cat, index) => (
               <div
                 key={`${index}-${cat}`}
-                className="flex items-center gap-2 px-4 py-2.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                className="flex items-center gap-2 px-4 py-2.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50"
               >
                 <GripVertical className="h-4 w-4 shrink-0 text-stone-300 dark:text-stone-600" />
 

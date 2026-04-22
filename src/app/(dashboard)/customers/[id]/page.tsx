@@ -89,9 +89,9 @@ export default async function CustomerDetailPage({
       </div>
 
       {/* Customer profile card */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
+      <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
         {/* Identity strip */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex-wrap">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-300 dark:border-stone-800 flex-wrap">
           <h1 className="text-base lg:text-lg font-semibold text-stone-900 dark:text-stone-50 min-w-0">
             {formatCustomerName(customer)}
           </h1>
@@ -108,7 +108,7 @@ export default async function CustomerDetailPage({
         </div>
 
         {/* Contact info grid */}
-        <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-10 px-4 py-4 ${customer.notes ? "border-b border-stone-200 dark:border-stone-800" : ""}`}>
+        <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-10 px-4 py-4 ${customer.notes ? "border-b border-stone-300 dark:border-stone-800" : ""}`}>
           <div>
             <div className={`${SECTION_LABEL} mb-1.5`}>Phone</div>
             {customer.phone ? (
@@ -187,7 +187,7 @@ export default async function CustomerDetailPage({
                 <Link
                   key={job.id}
                   href={`/jobs/${job.id}`}
-                  className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
+                  className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-100 dark:hover:bg-stone-800/40"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
@@ -220,7 +220,7 @@ export default async function CustomerDetailPage({
                 <Link
                   key={res.id}
                   href={`/parking/${res.id}`}
-                  className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
+                  className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-100 dark:hover:bg-stone-800/40"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">

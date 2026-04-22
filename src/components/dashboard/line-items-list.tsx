@@ -96,7 +96,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
             return (
               <div key={catName}>
                 {/* Category header */}
-                <div className="flex items-center justify-between px-4 py-1.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
+                <div className="flex items-center justify-between px-4 py-1.5 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-300 dark:border-stone-800">
                   <h4 className={SECTION_LABEL}>{catName}</h4>
                   <span className="font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
                     {formatCurrency(catTotal)}
@@ -179,7 +179,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
           })}
 
           {/* Totals */}
-          <div className="px-4 py-3 bg-stone-50 dark:bg-stone-900/40">
+          <div className="px-4 py-3 bg-stone-100 dark:bg-stone-900/40">
             <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-xs">
               {totals.laborTotal > 0 && (
                 <>
@@ -224,7 +224,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
                 </>
               )}
             </dl>
-            <div className="mt-2 pt-2 border-t border-stone-200 dark:border-stone-700 flex items-baseline justify-between">
+            <div className="mt-2 pt-2 border-t border-stone-300 dark:border-stone-700 flex items-baseline justify-between">
               <span className={SECTION_LABEL}>Total</span>
               <span className="font-mono tabular-nums text-base font-semibold text-stone-900 dark:text-stone-50">
                 {formatCurrency(totals.grandTotal)}
@@ -299,7 +299,7 @@ function AddItemSheet({
         </SheetHeader>
 
         {/* Tabs */}
-        <div className="mt-3 flex gap-1 mb-4 border-b border-stone-200 dark:border-stone-800">
+        <div className="mt-3 flex gap-1 mb-4 border-b border-stone-300 dark:border-stone-800">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -370,7 +370,7 @@ function PresetsTab({
           className="pl-9"
         />
       </div>
-      <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
+      <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-stone-300 dark:border-stone-700">
         {filtered.length === 0 ? (
           <p className="py-4 text-center text-sm text-stone-500 dark:text-stone-400">No presets match</p>
         ) : (
@@ -385,7 +385,7 @@ function PresetsTab({
                 key={preset.id}
                 type="button"
                 onClick={() => handleSelect(preset)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{preset.name}</p>
@@ -502,14 +502,14 @@ function CatalogTab({
           categoryNames.map((catName) => (
             <div key={catName} className="mb-3">
               <p className={`${SECTION_LABEL} mb-1 px-1`}>{catName}</p>
-              <div className="rounded-lg border border-stone-200 dark:border-stone-700">
+              <div className="rounded-lg border border-stone-300 dark:border-stone-700">
                 {grouped[catName].map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     disabled={adding === item.id}
                     onClick={() => handleAdd(item)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0 disabled:opacity-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0 disabled:opacity-50"
                   >
                     <div
                       className={cn(

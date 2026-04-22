@@ -133,7 +133,7 @@ function MessageBlock({ message }: { message: string }) {
   }, [message]);
 
   return (
-    <div className="mb-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 px-4 py-3">
+    <div className="mb-4 rounded-lg bg-stone-100 dark:bg-stone-800/50 px-4 py-3">
       <p
         ref={textRef}
         className={cn(
@@ -223,7 +223,7 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
           </div>
         </div>
         <Select value={status} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-auto h-8 text-xs border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 shadow-none gap-1.5 px-3">
+          <SelectTrigger className="w-auto h-8 text-xs border-stone-300 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 shadow-none gap-1.5 px-3">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

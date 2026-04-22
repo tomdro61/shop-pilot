@@ -92,7 +92,7 @@ function PresetSearchPicker({
           className="pl-9"
         />
       </div>
-      <div className="max-h-48 overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
+      <div className="max-h-48 overflow-y-auto rounded-lg border border-stone-300 dark:border-stone-700">
         {filtered.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
             No presets match
@@ -109,7 +109,7 @@ function PresetSearchPicker({
                 key={preset.id}
                 type="button"
                 onClick={() => onSelect(preset)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold truncate">{preset.name}</p>
@@ -607,12 +607,12 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                       className="pl-9"
                     />
                     {catalogDropdownOpen && catalogResults.length > 0 && (
-                      <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+                      <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-300 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
                         {catalogResults.map((item) => (
                           <button
                             key={item.id}
                             type="button"
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
                             onClick={() => addCatalogSelection(item)}
                           >
                             <div
@@ -639,7 +639,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                       {selectedCatalogItems.map((sel, idx) => (
                         <div
                           key={sel.item.id}
-                          className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
+                          className="flex items-center gap-2 rounded-lg border border-stone-300 dark:border-stone-700 px-3 py-2"
                         >
                           <div
                             className={cn(

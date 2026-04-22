@@ -30,7 +30,7 @@ export function BottomNav({ userRole }: { userRole?: string }) {
     : allNavItems.filter((item) => item.href !== "/dvi"); // managers see original 5 items on mobile
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-300 dark:border-stone-800 bg-white dark:bg-stone-900 lg:hidden">
       <div className="flex h-14 items-center justify-around">
         {navItems.map((item) => {
           const isActive =

@@ -252,7 +252,7 @@ export function ParkingInvoiceSection({
               return (
                 <div
                   key={inv.id}
-                  className="flex items-center justify-between rounded-lg border border-stone-200 dark:border-stone-800 px-3 py-2"
+                  className="flex items-center justify-between rounded-lg border border-stone-300 dark:border-stone-800 px-3 py-2"
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">

@@ -68,7 +68,7 @@ export function PresetList({ presets, categories }: PresetListProps) {
                 return (
                   <div
                     key={preset.id}
-                    className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                    className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">

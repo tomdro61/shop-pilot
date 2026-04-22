@@ -31,7 +31,7 @@ function TypeChip({ type }: { type: string | null }) {
 export function CustomerList({ customers, totalCount }: CustomerListProps) {
   if (customers.length === 0) {
     return (
-      <div className="border border-stone-200 dark:border-stone-800 bg-card py-12 text-center">
+      <div className="border border-stone-300 dark:border-stone-800 bg-card py-12 text-center">
         <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No customers found</p>
         <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your search or add a new customer</p>
       </div>
@@ -41,10 +41,10 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
   return (
     <>
       {/* Desktop: dense table */}
-      <div className="hidden lg:block border border-stone-200 dark:border-stone-800 bg-card">
+      <div className="hidden lg:block border border-stone-300 dark:border-stone-800 bg-card">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/40">
+            <tr className="border-b border-stone-300 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
               <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Name</th>
               <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Email</th>
               <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Phone</th>
@@ -55,7 +55,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
             {customers.map((customer) => (
               <tr
                 key={customer.id}
-                className="border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
+                className="border-b border-stone-300 dark:border-stone-800 last:border-b-0 hover:bg-stone-100 dark:hover:bg-stone-800/40"
               >
                 <td className="px-3 py-2">
                   <Link href={`/customers/${customer.id}`} className="text-sm font-medium text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 block">
@@ -78,15 +78,15 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
       </div>
 
       {/* Mobile: dense stacked rows */}
-      <div className="lg:hidden border border-stone-200 dark:border-stone-800 bg-card divide-y divide-stone-200 dark:divide-stone-800">
-        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-900/40">
+      <div className="lg:hidden border border-stone-300 dark:border-stone-800 bg-card divide-y divide-stone-200 dark:divide-stone-800">
+        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-900/40">
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
         {customers.map((customer) => (
           <Link
             key={customer.id}
             href={`/customers/${customer.id}`}
-            className="block px-3 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
+            className="block px-3 py-2.5 hover:bg-stone-100 dark:hover:bg-stone-800/40 transition-colors"
           >
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">

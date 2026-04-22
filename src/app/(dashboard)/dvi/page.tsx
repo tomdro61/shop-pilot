@@ -91,7 +91,7 @@ export default async function DviJobListPage({
               {standaloneInspections.map((insp) => {
                 const dviStatus = insp.status as DviStatus;
                 return (
-                  <ClickableRow key={insp.id} href={`/dvi/inspect/${insp.id}`} className="flex items-center justify-between rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
+                  <ClickableRow key={insp.id} href={`/dvi/inspect/${insp.id}`} className="flex items-center justify-between rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-100 dark:active:bg-stone-800 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
                         {insp.vehicle

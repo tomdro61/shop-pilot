@@ -36,7 +36,7 @@ export function ParkingReservationCard({
   return (
     <div
       onClick={() => router.push(`/parking/${reservation.id}`)}
-      className="cursor-pointer bg-card rounded-lg shadow-card p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+      className="cursor-pointer bg-card rounded-lg shadow-card p-4 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -128,7 +128,7 @@ export function ParkingReservationCardCompact({
     pickup: "border-l-amber-400 dark:border-l-amber-500 border-amber-200 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/50",
     "pickup-tomorrow": "border-l-orange-400 dark:border-l-orange-500 border-orange-200 dark:border-orange-800 bg-orange-100 dark:bg-orange-950/50",
     "checked-out": "border-l-green-400 dark:border-l-green-500 border-green-200 dark:border-green-800 bg-green-100 dark:bg-green-950/50",
-    parked: "border-l-stone-300 dark:border-l-stone-600 border-stone-200 dark:border-stone-700 bg-card",
+    parked: "border-l-stone-300 dark:border-l-stone-600 border-stone-300 dark:border-stone-700 bg-card",
   };
 
   const isPickup = variant === "pickup" || variant === "pickup-tomorrow" || variant === "checked-out";

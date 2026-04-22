@@ -50,7 +50,7 @@ export default function SettingsPage() {
       <div className="space-y-2">
         {settingsItems.map((item) => (
           <Link key={item.href} href={item.href} className="block">
-            <Card className="transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+            <Card className="transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
               <CardContent className="flex items-center gap-4 py-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950">
                   <item.icon className="h-5 w-5 text-blue-600 dark:text-blue-500" />

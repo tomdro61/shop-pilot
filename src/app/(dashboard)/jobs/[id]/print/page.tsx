@@ -195,7 +195,7 @@ export default async function PrintRepairOrderPage({
                 </tr>
               )}
               {items.map((li) => (
-                <tr key={li.id} className="border-b border-stone-200">
+                <tr key={li.id} className="border-b border-stone-300">
                   <td className="py-1.5">
                     {li.description}
                     {li.part_number && (

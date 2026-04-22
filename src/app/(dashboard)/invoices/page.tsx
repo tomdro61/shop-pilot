@@ -88,7 +88,7 @@ export default async function InvoicesPage({
                     : "??";
 
                   return (
-                    <tr key={invoice.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors">
+                    <tr key={invoice.id} className="hover:bg-stone-100 dark:hover:bg-stone-800/50 transition-colors">
                       <td className="px-5 py-4">
                         {customerName ? (
                           <div className="flex items-center gap-3">
@@ -191,7 +191,7 @@ export default async function InvoicesPage({
                 <Link
                   key={invoice.id}
                   href={href}
-                  className="block bg-card rounded-lg shadow-card p-4 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
+                  className="block bg-card rounded-lg shadow-card p-4 hover:bg-stone-100 dark:hover:bg-stone-800/50 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-stone-900 dark:text-stone-50">

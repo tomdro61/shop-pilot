@@ -115,7 +115,7 @@ export function ActionCenterCard({
           const context = contextMap[cat.key];
           return (
             <Link key={cat.key} href={`/inbox?tab=${cat.key}`} className="block">
-              <div className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+              <div className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
                 <Icon className={`h-4 w-4 shrink-0 ${cat.iconColor}`} />
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-bold text-stone-900 dark:text-stone-50">{cat.label}</span>
@@ -132,7 +132,7 @@ export function ActionCenterCard({
           );
         })}
       </div>
-      <div className="border-t border-stone-200 dark:border-stone-800 px-5 py-3 text-center">
+      <div className="border-t border-stone-300 dark:border-stone-800 px-5 py-3 text-center">
         <Link href="/inbox" className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline">
           View All in Inbox &rarr;
         </Link>

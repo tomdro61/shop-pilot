@@ -48,7 +48,7 @@ export function TeamList({ members }: TeamListProps) {
           ) : (
             <div className="space-y-1">
               {members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                <div key={member.id} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-xs font-bold text-blue-700 dark:text-blue-400">
                       {member.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}

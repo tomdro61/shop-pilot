@@ -26,7 +26,7 @@ export function ReportsNav() {
 
   return (
     <div className="mb-6 -mx-4 px-4 overflow-x-auto lg:mx-0 lg:px-0">
-      <div className="flex gap-1 border-b border-stone-200 dark:border-stone-800 min-w-max">
+      <div className="flex gap-1 border-b border-stone-300 dark:border-stone-800 min-w-max">
         {TABS.map((tab) => (
           <Link
             key={tab.href}

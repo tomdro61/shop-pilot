@@ -95,7 +95,7 @@ export function ReceivablesReport({ data, initialCustomerType = "all" }: Receiva
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
+                <tr className="border-b border-stone-300 dark:border-stone-800 text-left">
                   <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Customer</th>
                   <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Job</th>
                   <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">RO #</th>
@@ -113,7 +113,7 @@ export function ReceivablesReport({ data, initialCustomerType = "all" }: Receiva
                   </tr>
                 ) : (
                   filteredJobs.map((job) => (
-                    <tr key={job.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <tr key={job.id} className="hover:bg-stone-100 dark:hover:bg-stone-800/50">
                       <td className="py-2 pr-4 font-medium">
                         <Link href={`/customers/${job.customerId}`} className="text-blue-600 hover:underline dark:text-blue-400">
                           {job.customerName}
@@ -163,7 +163,7 @@ export function ReceivablesReport({ data, initialCustomerType = "all" }: Receiva
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
+                  <tr className="border-b border-stone-300 dark:border-stone-800 text-left">
                     <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Account</th>
                     <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">0–30 Days</th>
                     <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">31–60 Days</th>

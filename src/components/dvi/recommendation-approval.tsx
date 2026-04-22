@@ -97,7 +97,7 @@ export function RecommendationApproval({
               className={`flex items-start gap-3 rounded-lg border-2 p-3 cursor-pointer transition-colors ${
                 isSelected
                   ? "border-blue-600 bg-blue-50/50 dark:bg-blue-950/20"
-                  : "border-stone-200 dark:border-stone-700"
+                  : "border-stone-300 dark:border-stone-700"
               }`}
             >
               <input
@@ -130,7 +130,7 @@ export function RecommendationApproval({
       </div>
 
       {/* Total + approve button */}
-      <div className="mt-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-4">
+      <div className="mt-4 rounded-lg bg-stone-100 dark:bg-stone-800/50 p-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-muted-foreground">
             {selected.size} service{selected.size !== 1 ? "s" : ""} selected

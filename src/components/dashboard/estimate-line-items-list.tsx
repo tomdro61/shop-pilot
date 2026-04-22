@@ -84,7 +84,7 @@ export function EstimateLineItemsList({
                     {items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 rounded-lg bg-stone-50 dark:bg-stone-950 px-4 py-3"
+                        className="flex items-center gap-3 rounded-lg bg-stone-100 dark:bg-stone-950 px-4 py-3"
                       >
                         <div className={`w-1 h-8 shrink-0 rounded-full ${item.type === "labor" ? "bg-blue-400" : "bg-amber-400"}`} />
                         <div className="min-w-0 flex-1">
@@ -127,7 +127,7 @@ export function EstimateLineItemsList({
                 );
               });
             })()}
-            <div className="border-t border-stone-200 dark:border-stone-800 pt-3 space-y-1">
+            <div className="border-t border-stone-300 dark:border-stone-800 pt-3 space-y-1">
               <div className="flex justify-end gap-6 text-sm text-stone-500 dark:text-stone-400">
                 {totals.laborTotal > 0 && <span>Labor: {formatCurrency(totals.laborTotal)}</span>}
                 {totals.partsTotal > 0 && <span>Parts: {formatCurrency(totals.partsTotal)}</span>}

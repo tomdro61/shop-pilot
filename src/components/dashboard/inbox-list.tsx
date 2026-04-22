@@ -105,7 +105,7 @@ function UnpaidJobRow({ job, today }: { job: InboxUnpaidJob; today: string }) {
   return (
     <div
       onClick={() => router.push(`/jobs/${job.id}`)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
     >
       <div className="min-w-0">
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
@@ -139,7 +139,7 @@ function DviReadyRow({ dvi, today }: { dvi: InboxDvi; today: string }) {
   return (
     <div
       onClick={() => router.push(href)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
     >
       <div className="min-w-0">
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
@@ -180,7 +180,7 @@ function EstimateRow({ estimate, today }: { estimate: InboxEstimate; today: stri
   return (
     <div
       onClick={() => router.push(href)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
     >
       <div className="min-w-0">
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
@@ -209,7 +209,7 @@ function QuoteRequestRow({ quote, today }: { quote: InboxQuote; today: string })
   const days = daysBetween(quote.created_at.split("T")[0], today);
   return (
     <Link href="/quote-requests?status=new" className="block">
-      <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+      <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
         <div className="min-w-0">
           <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
             {formatCustomerName(quote)}
@@ -233,7 +233,7 @@ function ParkingLeadRow({ lead }: { lead: InboxParkingLead }) {
   return (
     <div
       onClick={() => router.push(`/parking/${lead.id}`)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
     >
       <div className="min-w-0">
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
@@ -261,7 +261,7 @@ function ParkingSpecialsRow({ reservation }: { reservation: InboxParkingSpecials
   return (
     <div
       onClick={() => router.push(`/parking/${reservation.id}`)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 cursor-pointer"
+      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
     >
       <div className="min-w-0">
         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">

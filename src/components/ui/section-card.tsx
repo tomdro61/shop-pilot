@@ -18,7 +18,7 @@ interface SectionCardProps {
 /**
  * Flat-light-card container with a tinted header bar.
  * Use anywhere you need a labeled section — list containers, form sections, status panels.
- * The header uses the same visual treatment as table column headers (bg-stone-50 + small uppercase label).
+ * The header uses the same visual treatment as table column headers (bg-stone-100 + small uppercase label).
  */
 export function SectionCard({
   title,
@@ -28,8 +28,8 @@ export function SectionCard({
   className = "",
 }: SectionCardProps) {
   return (
-    <div className={`bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden ${className}`}>
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
+    <div className={`bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden ${className}`}>
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-300 dark:border-stone-800">
         <div className="min-w-0">
           <h3 className={`flex items-center gap-1.5 ${SECTION_LABEL}`}>
             {title}

@@ -145,7 +145,7 @@ export default async function ReportsOverviewPage() {
           <CardContent>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
+                <tr className="border-b border-stone-300 dark:border-stone-800 text-left">
                   <th className="pb-2 pr-4 pt-3 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Category</th>
                   <th className="pb-2 pr-4 pt-3 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
                   <th className="pb-2 pt-3 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Margin</th>
@@ -156,7 +156,7 @@ export default async function ReportsOverviewPage() {
                   <tr><td colSpan={3} className="py-4 text-center text-muted-foreground">No data</td></tr>
                 ) : (
                   topCategories.map((cat) => (
-                    <tr key={cat.category} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <tr key={cat.category} className="hover:bg-stone-100 dark:hover:bg-stone-800/50">
                       <td className="py-1.5 pr-4">
                         <Link href={`/reports/service-mix?category=${encodeURIComponent(cat.category)}&granularity=month`} className="text-blue-600 hover:underline dark:text-blue-400 text-sm font-medium">
                           {cat.category}
@@ -184,7 +184,7 @@ export default async function ReportsOverviewPage() {
           <CardContent>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
+                <tr className="border-b border-stone-300 dark:border-stone-800 text-left">
                   <th className="pb-2 pr-4 pt-3 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Tech</th>
                   <th className="pb-2 pr-4 pt-3 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
                   <th className="pb-2 pt-3 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Jobs</th>
@@ -195,7 +195,7 @@ export default async function ReportsOverviewPage() {
                   <tr><td colSpan={3} className="py-4 text-center text-muted-foreground">No data</td></tr>
                 ) : (
                   techSummary.map((tech) => (
-                    <tr key={tech.name} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <tr key={tech.name} className="hover:bg-stone-100 dark:hover:bg-stone-800/50">
                       <td className="py-1.5 pr-4">
                         <Link href={`/reports/tech?category=${encodeURIComponent(tech.name)}&granularity=month`} className="text-blue-600 hover:underline dark:text-blue-400 text-sm font-medium">
                           {tech.name}

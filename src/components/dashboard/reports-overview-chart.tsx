@@ -22,7 +22,7 @@ interface ReportsOverviewChartProps {
 
 export function ReportsOverviewChart({ data }: ReportsOverviewChartProps) {
   return (
-    <Card className="transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+    <Card className="transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
       <CardHeader className="pb-1">
         <CardTitle className="text-sm font-bold">Revenue — Last 6 Months</CardTitle>
       </CardHeader>

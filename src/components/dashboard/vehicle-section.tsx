@@ -66,7 +66,7 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
                   className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0"
                 >
                   {/* Vehicle row */}
-                  <div className="group flex items-start justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                  <div className="group flex items-start justify-between gap-3 px-4 py-2.5 hover:bg-stone-100 dark:hover:bg-stone-800/40">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-stone-900 dark:text-stone-50">
                         {formatVehicle(vehicle)}

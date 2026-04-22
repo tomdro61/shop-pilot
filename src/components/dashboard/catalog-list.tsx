@@ -126,7 +126,7 @@ export function CatalogList({ items, categories }: CatalogListProps) {
                     {grouped[catName].map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                        className="flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50"
                       >
                         {/* Type color bar */}
                         <div

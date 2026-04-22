@@ -30,7 +30,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
 
   return (
     <Card
-      className="transition-colors hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer"
+      className="transition-colors hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
       onClick={() => router.push(`/jobs/${job.id}`)}
     >
       <CardContent className="p-3.5">

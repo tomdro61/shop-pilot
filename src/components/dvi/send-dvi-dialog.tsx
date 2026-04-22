@@ -125,7 +125,7 @@ export function SendDviDialog({
             onChange={(e) => setCustomerNote(e.target.value)}
             placeholder="e.g. Everything looks great, just keep an eye on those front brakes over the next few months."
             rows={3}
-            className="mt-1.5 w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-stone-700 dark:bg-stone-900"
+            className="mt-1.5 w-full rounded-lg border border-stone-300 bg-stone-100 px-3 py-2 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:border-stone-700 dark:bg-stone-900"
           />
         </div>
 
@@ -137,7 +137,7 @@ export function SendDviDialog({
             className={`flex-1 rounded-lg border-2 p-3 text-left transition-colors ${
               mode === "informational"
                 ? "border-blue-600 bg-blue-50 dark:bg-blue-950"
-                : "border-stone-200 dark:border-stone-700"
+                : "border-stone-300 dark:border-stone-700"
             }`}
           >
             <p className="text-sm font-bold text-stone-900 dark:text-stone-50">Informational</p>
@@ -151,7 +151,7 @@ export function SendDviDialog({
             className={`flex-1 rounded-lg border-2 p-3 text-left transition-colors ${
               mode === "recommendations"
                 ? "border-blue-600 bg-blue-50 dark:bg-blue-950"
-                : "border-stone-200 dark:border-stone-700"
+                : "border-stone-300 dark:border-stone-700"
             }`}
           >
             <p className="text-sm font-bold text-stone-900 dark:text-stone-50">Recommendations</p>
@@ -180,7 +180,7 @@ export function SendDviDialog({
                     : null;
 
                   return (
-                    <div key={item.id} className="rounded-lg border border-stone-200 dark:border-stone-700 p-3">
+                    <div key={item.id} className="rounded-lg border border-stone-300 dark:border-stone-700 p-3">
                       <label className="flex items-start gap-3 cursor-pointer">
                         <input
                           type="checkbox"

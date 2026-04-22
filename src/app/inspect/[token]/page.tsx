@@ -128,7 +128,7 @@ export default async function CustomerDviPage({
       {isRecommendations && recommendedResults.length > 0 && (
         <div className="mt-8">
           {isJobClosed ? (
-            <div className="rounded-lg bg-stone-50 dark:bg-stone-800/50 p-5 border-l-4 border-stone-400 text-center">
+            <div className="rounded-lg bg-stone-100 dark:bg-stone-800/50 p-5 border-l-4 border-stone-400 text-center">
               <CheckCircle className="mx-auto mb-2 h-8 w-8 text-stone-400" />
               <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">
                 This vehicle has already been serviced.
@@ -151,7 +151,7 @@ export default async function CustomerDviPage({
       )}
 
       {/* Footer */}
-      <div className="mt-8 pt-6 border-t border-stone-200 dark:border-stone-800 text-center">
+      <div className="mt-8 pt-6 border-t border-stone-300 dark:border-stone-800 text-center">
         <p className="text-xs text-muted-foreground">
           Questions about this report?
         </p>

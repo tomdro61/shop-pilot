@@ -91,10 +91,10 @@ export default async function JobDetailPage({
         </div>
 
         {/* Job info card — light container, internal sections separated by borders */}
-        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
+        <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
 
           {/* Identity strip: RO + status + title */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex-wrap">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-300 dark:border-stone-800 flex-wrap">
             {job.ro_number && (
               <span className="font-mono text-xs text-stone-400 dark:text-stone-500 tabular-nums shrink-0">
                 {formatRONumber(job.ro_number)}
@@ -109,7 +109,7 @@ export default async function JobDetailPage({
           </div>
 
           {/* Info grid: customer · vehicle · details */}
-          <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-10 px-4 py-4 ${job.notes ? "border-b border-stone-200 dark:border-stone-800" : ""}`}>
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-10 px-4 py-4 ${job.notes ? "border-b border-stone-300 dark:border-stone-800" : ""}`}>
           {/* Customer */}
           <div>
             <div className={`${SECTION_LABEL} mb-1.5`}>Customer</div>

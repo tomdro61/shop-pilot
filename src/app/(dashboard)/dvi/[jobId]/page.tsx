@@ -89,7 +89,7 @@ export default async function DviJobDetailPage({
 
       {/* Notes */}
       {job.notes && (
-        <div className="mb-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-4 border-l-4 border-blue-600 dark:border-blue-500">
+        <div className="mb-4 rounded-lg bg-stone-100 dark:bg-stone-800/50 p-4 border-l-4 border-blue-600 dark:border-blue-500">
           <div className="flex items-center gap-2 mb-1">
             <StickyNote className="h-3.5 w-3.5 text-stone-400" />
             <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">

@@ -71,7 +71,7 @@ function QuickPayPresetPicker({
             className="pl-9"
           />
           {dropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+            <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-300 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
               {filtered.length === 0 ? (
                 <p className="py-3 text-center text-sm text-muted-foreground">No presets match</p>
               ) : (
@@ -79,7 +79,7 @@ function QuickPayPresetPicker({
                   <button
                     key={preset.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
                     onClick={() => {
                       onSelect(preset);
                       setSearch("");

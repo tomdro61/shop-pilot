@@ -429,7 +429,7 @@ export default async function DashboardPage() {
                   const days = daysBetween(job.date_finished, today);
                   const aging = days >= 3;
                   return (
-                    <ClickableRow key={job.id} href={`/jobs/${job.id}`} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <ClickableRow key={job.id} href={`/jobs/${job.id}`} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
                       <div className="min-w-0">
                         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                           {customer ? (
@@ -481,7 +481,7 @@ export default async function DashboardPage() {
                 const sentDate = est.sent_at ? est.sent_at.split("T")[0] : null;
                 const days = daysBetween(sentDate, today);
                 return (
-                  <ClickableRow key={est.id} href={job ? `/jobs/${job.id}` : "#"} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                  <ClickableRow key={est.id} href={job ? `/jobs/${job.id}` : "#"} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
                     <div className="min-w-0">
                       <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                         {customer ? (
@@ -530,7 +530,7 @@ export default async function DashboardPage() {
                 const customer = job.customers as { id: string; first_name: string; last_name: string } | null;
                 const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
                 return (
-                  <ClickableRow key={job.id} href={`/jobs/${job.id}`} className="flex items-center gap-4 p-3.5 rounded-lg bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                  <ClickableRow key={job.id} href={`/jobs/${job.id}`} className="flex items-center gap-4 p-3.5 rounded-lg bg-stone-100 dark:bg-stone-800/50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                     <Car className="h-4 w-4 shrink-0 text-stone-400 dark:text-stone-500" />
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate leading-tight">
@@ -602,7 +602,7 @@ function ShopFloorColumn({
         </span>
       </div>
       {jobs.length === 0 ? (
-        <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-lg py-8 flex items-center justify-center">
+        <div className="border-2 border-dashed border-stone-300 dark:border-stone-700 rounded-lg py-8 flex items-center justify-center">
           <p className="text-xs text-stone-400 dark:text-stone-500">None</p>
         </div>
       ) : (

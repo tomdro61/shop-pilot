@@ -31,7 +31,7 @@ export default function DashboardLoading() {
               <Skeleton className="h-3.5 w-28 ml-1" />
               <div className="space-y-3">
                 {Array.from({ length: col === 1 ? 1 : 2 }).map((_, j) => (
-                  <div key={j} className="bg-card p-5 rounded-lg shadow-card border-l-4 border-stone-200 dark:border-stone-700">
+                  <div key={j} className="bg-card p-5 rounded-lg shadow-card border-l-4 border-stone-300 dark:border-stone-700">
                     <div className="flex justify-between items-start mb-2">
                       <Skeleton className="h-4 w-28" />
                       <Skeleton className="h-5 w-14 rounded-md" />

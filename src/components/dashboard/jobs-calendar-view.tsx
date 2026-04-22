@@ -118,12 +118,12 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
             {headerLabel}
           </h3>
-          <div className="flex rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden text-xs">
+          <div className="flex rounded-lg border border-stone-300 dark:border-stone-700 overflow-hidden text-xs">
             <button
               className={`px-2.5 py-1 transition-colors ${
                 mode === "month"
                   ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
-                  : "bg-white text-stone-600 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
+                  : "bg-white text-stone-600 hover:bg-stone-100 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
               }`}
               onClick={() => setMode("month")}
             >
@@ -133,7 +133,7 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
               className={`px-2.5 py-1 transition-colors ${
                 mode === "week"
                   ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
-                  : "bg-white text-stone-600 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
+                  : "bg-white text-stone-600 hover:bg-stone-100 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
               }`}
               onClick={() => setMode("week")}
             >
@@ -153,12 +153,12 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 border-l border-t border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
+      <div className="grid grid-cols-7 border-l border-t border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
         {/* Weekday headers */}
         {WEEKDAYS.map((day) => (
           <div
             key={day}
-            className="border-b border-r border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900 px-1 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400"
+            className="border-b border-r border-stone-300 dark:border-stone-800 bg-stone-100 dark:bg-stone-900 px-1 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400"
           >
             {day}
           </div>
@@ -176,11 +176,11 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
           return (
             <div
               key={dateKey}
-              className={`border-b border-r border-stone-200 dark:border-stone-800 p-1 ${
+              className={`border-b border-r border-stone-300 dark:border-stone-800 p-1 ${
                 mode === "week" ? "min-h-[160px]" : "min-h-[80px] sm:min-h-[100px]"
               } ${
                 !inMonth
-                  ? "bg-stone-50/50 dark:bg-stone-950/50"
+                  ? "bg-stone-100/50 dark:bg-stone-950/50"
                   : "bg-white dark:bg-stone-950"
               }`}
             >
