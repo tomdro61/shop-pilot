@@ -131,10 +131,10 @@ function PresetSearchPicker({
 
 function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="mb-5">
-      <h3 className="text-xs font-bold uppercase tracking-[0.05rem] text-blue-600 dark:text-blue-400">{title}</h3>
+    <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{title}</h3>
       {description && (
-        <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">{description}</p>
+        <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">{description}</p>
       )}
     </div>
   );
@@ -389,12 +389,12 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 
         {/* ── Customer & Vehicle ── */}
-        <Card>
-          <CardContent className="p-6 lg:p-8">
-            <SectionHeader
-              title="Customer & Vehicle"
-              description="Who's the job for?"
-            />
+        <Card className="py-0 gap-0 shadow-none border border-stone-200 dark:border-stone-800">
+          <SectionHeader
+            title="Customer & Vehicle"
+            description="Who's the job for?"
+          />
+          <CardContent className="p-4">
 
             <div className="space-y-4">
               {/* Customer — full width, prominent */}
@@ -523,12 +523,12 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
         </Card>
 
         {/* ── Job Details ── */}
-        <Card>
-          <CardContent className="p-6 lg:p-8">
-            <SectionHeader
-              title="Job Details"
-              description="Title, status, and assignment"
-            />
+        <Card className="py-0 gap-0 shadow-none border border-stone-200 dark:border-stone-800">
+          <SectionHeader
+            title="Job Details"
+            description="Title, status, and assignment"
+          />
+          <CardContent className="p-4">
 
             <div className="space-y-4">
               {/* Title — full width */}
@@ -819,12 +819,12 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
         </Card>
 
         {/* ── Section 3: Payment & Notes ── */}
-        <Card>
-          <CardContent className="p-6 lg:p-8">
-            <SectionHeader
-              title="Payment & Notes"
-              description="Billing info and additional details"
-            />
+        <Card className="py-0 gap-0 shadow-none border border-stone-200 dark:border-stone-800">
+          <SectionHeader
+            title="Payment & Notes"
+            description="Billing info and additional details"
+          />
+          <CardContent className="p-4">
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Payment Status — half */}
@@ -926,16 +926,16 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
         </Card>
 
         {/* ── Actions ── */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center justify-end gap-2 pt-2">
           <Button
             type="button"
             variant="outline"
-            className="rounded-md px-8"
+            size="sm"
             onClick={() => router.back()}
           >
             Cancel
           </Button>
-          <Button type="submit" className="rounded-md px-8" disabled={form.formState.isSubmitting}>
+          <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting
               ? "Saving..."
               : isEditing
