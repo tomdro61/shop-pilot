@@ -67,7 +67,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           placeholder="Search jobs..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-8 pl-8 text-sm"
+          className="h-8 pl-8 text-sm bg-card"
         />
       </div>
 
