@@ -32,7 +32,7 @@ function KPICard({
     <Card>
       <CardContent className="flex items-center gap-3 p-4">
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${accent || "bg-stone-100 dark:bg-stone-800"}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${accent || "bg-stone-100 dark:bg-stone-800"}`}
         >
           <Icon className="h-5 w-5" />
         </div>
@@ -59,7 +59,7 @@ function SectionHeader({
       <h2 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
         {title}
       </h2>
-      <span className="rounded-full bg-stone-100 dark:bg-stone-800 px-2 py-0.5 text-xs text-stone-500 dark:text-stone-400">
+      <span className="rounded-md bg-stone-100 dark:bg-stone-800 px-2 py-0.5 text-xs text-stone-500 dark:text-stone-400">
         {count}
       </span>
     </div>

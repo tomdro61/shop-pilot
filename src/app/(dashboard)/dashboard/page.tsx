@@ -254,19 +254,19 @@ export default async function DashboardPage() {
 
       {/* ── Revenue Metrics ── */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+        <div className="bg-card p-5 lg:p-6 rounded-lg shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">Today&apos;s Revenue</p>
           <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {formatCurrencyWhole(stats.todayRevenue)}
           </h3>
         </div>
 
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card overflow-hidden">
+        <div className="bg-card p-5 lg:p-6 rounded-lg shadow-card overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Week</p>
           <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {formatCurrencyWhole(stats.weeklyRevenue)}
           </h3>
-          <span className={`mt-1.5 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+          <span className={`mt-1.5 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md ${
             weekChange >= 0
               ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
               : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
@@ -280,12 +280,12 @@ export default async function DashboardPage() {
           </span>
         </div>
 
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card overflow-hidden">
+        <div className="bg-card p-5 lg:p-6 rounded-lg shadow-card overflow-hidden">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">This Month</p>
           <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {formatCurrencyWhole(stats.monthlyRevenue)}
           </h3>
-          <span className={`mt-1.5 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+          <span className={`mt-1.5 inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md ${
             monthChange >= 0
               ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400"
               : "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
@@ -299,7 +299,7 @@ export default async function DashboardPage() {
           </span>
         </div>
 
-        <div className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+        <div className="bg-card p-5 lg:p-6 rounded-lg shadow-card">
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 mb-2">Avg Ticket</p>
           <h3 className="text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
             {formatCurrencyWhole(stats.avgTicketWeek)}
@@ -321,7 +321,7 @@ export default async function DashboardPage() {
       {/* ── Unassigned Jobs Alert ── */}
       {stats.unassignedJobs > 0 && (
         <Link href="/jobs?status=not_started" className="block">
-          <div className="flex items-center gap-3 rounded-xl bg-amber-100 dark:bg-amber-950 shadow-card border-l-4 border-l-amber-500 px-5 py-3.5 transition-colors hover:bg-amber-200 dark:hover:bg-amber-900">
+          <div className="flex items-center gap-3 rounded-lg bg-amber-100 dark:bg-amber-950 shadow-card border-l-4 border-l-amber-500 px-5 py-3.5 transition-colors hover:bg-amber-200 dark:hover:bg-amber-900">
             <UserX className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
               {stats.unassignedJobs} unassigned {stats.unassignedJobs === 1 ? "job" : "jobs"}
@@ -352,7 +352,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
         {/* Tech Workload */}
-        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+        <div className="bg-card rounded-lg shadow-card overflow-hidden">
           <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Tech Workload</h3>
           </div>
@@ -400,7 +400,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Unpaid / Outstanding */}
-        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+        <div className="bg-card rounded-lg shadow-card overflow-hidden">
           <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Unpaid / Outstanding</h3>
           </div>
@@ -426,7 +426,7 @@ export default async function DashboardPage() {
                   const aging = days >= 3;
                   return (
                     <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                      <div className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                         <div className="min-w-0">
                           <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                             {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
@@ -435,7 +435,7 @@ export default async function DashboardPage() {
                         </div>
                         <div className="flex shrink-0 items-center gap-2.5 pl-3">
                           <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">{formatCurrency(job.total)}</span>
-                          <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap ${
+                          <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap ${
                             aging
                               ? "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400"
                               : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
@@ -457,7 +457,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
         {/* Pending Estimates */}
-        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+        <div className="bg-card rounded-lg shadow-card overflow-hidden">
           <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Pending Estimates</h3>
           </div>
@@ -476,7 +476,7 @@ export default async function DashboardPage() {
                 const days = daysBetween(sentDate, today);
                 return (
                   <Link key={est.id} href={job ? `/jobs/${job.id}` : "#"} className="block">
-                    <div className="flex items-center justify-between rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <div className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                       <div className="min-w-0">
                         <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
                           {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
@@ -487,7 +487,7 @@ export default async function DashboardPage() {
                       </div>
                       <div className="flex shrink-0 items-center gap-2.5 pl-3">
                         <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">{formatCurrency(est.total)}</span>
-                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap ${
+                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap ${
                           days >= 3
                             ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
                             : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
@@ -504,7 +504,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Today's Schedule */}
-        <div className="bg-card rounded-xl shadow-card overflow-hidden">
+        <div className="bg-card rounded-lg shadow-card overflow-hidden">
           <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Today&apos;s Schedule</h3>
             <Link href="/jobs/new" className="w-7 h-7 flex items-center justify-center bg-stone-600 text-white rounded-full hover:bg-stone-500 transition-colors">
@@ -523,7 +523,7 @@ export default async function DashboardPage() {
                 const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
                 return (
                   <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                    <div className="flex items-center gap-4 p-3.5 rounded-xl bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+                    <div className="flex items-center gap-4 p-3.5 rounded-lg bg-stone-50 dark:bg-stone-800/50 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
                       <Car className="h-4 w-4 shrink-0 text-stone-400 dark:text-stone-500" />
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate leading-tight">
@@ -592,7 +592,7 @@ function ShopFloorColumn({
         </span>
       </div>
       {jobs.length === 0 ? (
-        <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl py-8 flex items-center justify-center">
+        <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-lg py-8 flex items-center justify-center">
           <p className="text-xs text-stone-400 dark:text-stone-500">None</p>
         </div>
       ) : (
@@ -603,12 +603,12 @@ function ShopFloorColumn({
             const days = daysBetween(job.date_received, today);
             return (
               <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                <div className={`bg-card p-5 rounded-xl border-l-4 ${config.border} shadow-card hover:shadow-md transition-shadow`}>
+                <div className={`bg-card p-5 rounded-lg border-l-4 ${config.border} shadow-card hover:shadow-md transition-shadow`}>
                   <div className="flex justify-between items-start mb-1.5">
                     <h4 className="font-bold text-stone-900 dark:text-stone-50">
                       {customer ? `${customer.first_name} ${customer.last_name}` : "Unknown"}
                     </h4>
-                    <span className={`shrink-0 ml-2 text-[10px] font-black ${config.badge} px-2 py-1 rounded-full uppercase whitespace-nowrap`}>
+                    <span className={`shrink-0 ml-2 text-[10px] font-black ${config.badge} px-2 py-1 rounded-md uppercase whitespace-nowrap`}>
                       {status === "not_started" ? "queue" : `${days} ${days === 1 ? "day" : "days"}`}
                     </span>
                   </div>
@@ -634,5 +634,5 @@ function StatusBadge({ status }: { status: string }) {
     not_started: { label: "Queue", classes: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400" },
   };
   const { label, classes } = config[status] || { label: status, classes: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400" };
-  return <span className={`shrink-0 ml-2 text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap ${classes}`}>{label}</span>;
+  return <span className={`shrink-0 ml-2 text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap ${classes}`}>{label}</span>;
 }

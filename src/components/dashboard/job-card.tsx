@@ -65,7 +65,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
                   return (
                     <>
                       <span className="text-border">·</span>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ${colors?.bg} ${colors?.text}`}>
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase ${colors?.bg} ${colors?.text}`}>
                         DVI {DVI_STATUS_LABELS[dviStatus]}
                       </span>
                     </>

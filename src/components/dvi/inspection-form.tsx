@@ -203,7 +203,7 @@ export function InspectionForm({
           <button
             type="button"
             onClick={() => router.push(resolvedBackUrl)}
-            className="flex items-center gap-1.5 rounded-full bg-stone-100 dark:bg-stone-800 px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-stone-300 active:scale-95 transition-transform"
+            className="flex items-center gap-1.5 rounded-md bg-stone-100 dark:bg-stone-800 px-3 py-1.5 text-sm font-medium text-stone-700 dark:text-stone-300 active:scale-95 transition-transform"
           >
             <ArrowLeft className="h-4 w-4" />
             Back

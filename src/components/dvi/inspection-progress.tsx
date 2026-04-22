@@ -31,7 +31,7 @@ export function InspectionProgress({ rated, total, onJumpToNext, hasUnrated }: I
         <button
           type="button"
           onClick={onJumpToNext}
-          className="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95 transition-transform shrink-0"
+          className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white active:scale-95 transition-transform shrink-0"
         >
           <ChevronDown className="h-3 w-3" />
           Next

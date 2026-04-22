@@ -166,7 +166,7 @@ export default async function ParkingDetailPage({
         <div className="space-y-6">
           {/* Customer & Vehicle */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-card rounded-xl shadow-card overflow-hidden">
+            <div className="bg-card rounded-lg shadow-card overflow-hidden">
               <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
                 <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Customer</p>
               </div>
@@ -186,7 +186,7 @@ export default async function ParkingDetailPage({
               </div>
               </div>
             </div>
-            <div className="bg-card rounded-xl shadow-card overflow-hidden">
+            <div className="bg-card rounded-lg shadow-card overflow-hidden">
               <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
                 <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Vehicle</p>
               </div>
@@ -203,7 +203,7 @@ export default async function ParkingDetailPage({
           </div>
 
           {/* Trip Dates + Timeline */}
-          <div className="bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="bg-card rounded-lg shadow-card overflow-hidden">
             <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">
                 Trip Dates
@@ -281,7 +281,7 @@ export default async function ParkingDetailPage({
 
           {/* Key Pickup — only when checked out */}
           {reservation.status === "checked_out" && (
-            <div className="bg-card rounded-xl shadow-card overflow-hidden">
+            <div className="bg-card rounded-lg shadow-card overflow-hidden">
               <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
                 <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Key Pickup</p>
               </div>
@@ -316,7 +316,7 @@ export default async function ParkingDetailPage({
           )}
 
           {/* Service Interests */}
-          <div className="bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="bg-card rounded-lg shadow-card overflow-hidden">
             <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Service Interests</p>
             </div>
@@ -341,7 +341,7 @@ export default async function ParkingDetailPage({
           />
 
           {/* Staff Notes */}
-          <div className="bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="bg-card rounded-lg shadow-card overflow-hidden">
             <div className="px-6 py-2.5 bg-stone-800 dark:bg-stone-900">
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-100">Staff Notes</p>
             </div>

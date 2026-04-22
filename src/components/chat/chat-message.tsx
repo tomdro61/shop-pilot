@@ -23,7 +23,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
     >
       <div
         className={cn(
-          "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+          "max-w-[85%] rounded-lg px-4 py-2.5 text-sm leading-relaxed",
           isUser
             ? "rounded-br-md bg-primary text-primary-foreground"
             : "rounded-bl-md bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-800 text-foreground"
@@ -36,7 +36,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
               <span
                 key={`${tc.name}-${i}`}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs",
+                  "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs",
                   tc.status === "running"
                     ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200"
                     : tc.status === "error"

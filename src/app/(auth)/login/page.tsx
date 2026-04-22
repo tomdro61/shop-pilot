@@ -32,7 +32,7 @@ export default function LoginPage() {
   return (
     <Card className="w-full max-w-sm animate-in-up">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary shadow-[var(--glow-md)]">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-primary shadow-[var(--glow-md)]">
           <Wrench className="h-6 w-6 text-primary-foreground" />
         </div>
         <CardTitle className="text-xl font-semibold tracking-tight">ShopPilot</CardTitle>

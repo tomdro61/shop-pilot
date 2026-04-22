@@ -31,7 +31,7 @@ function daysBetween(from: string | null, today: string): number {
 function DaysBadge({ days, warnAt = 3 }: { days: number; warnAt?: number }) {
   return (
     <span className={cn(
-      "text-[10px] font-black px-2 py-1 rounded-full uppercase whitespace-nowrap",
+      "text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap",
       days >= warnAt
         ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
         : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
@@ -79,11 +79,11 @@ function Section({
 }) {
   if (count === 0) return null;
   return (
-    <div className="bg-card rounded-xl shadow-card overflow-hidden">
+    <div className="bg-card rounded-lg shadow-card overflow-hidden">
       <div className="flex items-center gap-2.5 bg-stone-800 dark:bg-stone-900 px-5 py-3">
         <Icon className="h-3.5 w-3.5 text-stone-400" />
         <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">{title}</h3>
-        <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-full bg-stone-600 text-stone-100">
+        <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-md bg-stone-600 text-stone-100">
           {count}
         </span>
       </div>
@@ -141,12 +141,12 @@ function DviReadyRow({ dvi, today }: { dvi: InboxDvi; today: string }) {
         </div>
         <div className="flex shrink-0 items-center gap-2 pl-3">
           {dvi.attention > 0 && (
-            <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400">
+            <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400">
               {dvi.attention} attn
             </span>
           )}
           {dvi.monitor > 0 && (
-            <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+            <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
               {dvi.monitor} mon
             </span>
           )}
@@ -222,7 +222,7 @@ function ParkingLeadRow({ lead }: { lead: InboxParkingLead }) {
         </div>
         <div className="flex shrink-0 items-center gap-1.5 pl-3 flex-wrap justify-end">
           {pending.map((s) => (
-            <span key={s} className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+            <span key={s} className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
               {PARKING_SERVICE_LABELS[s] || s}
             </span>
           ))}
@@ -245,7 +245,7 @@ function ParkingSpecialsRow({ reservation }: { reservation: InboxParkingSpecials
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2 pl-3">
-          <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+          <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
             Specials not sent
           </span>
         </div>
@@ -272,7 +272,7 @@ export function InboxList({ data, activeTab }: { data: InboxData; activeTab: str
 
   if (data.counts.total === 0) {
     return (
-      <div className="bg-card rounded-xl shadow-card p-12 text-center">
+      <div className="bg-card rounded-lg shadow-card p-12 text-center">
         <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
         <p className="mt-3 text-sm font-semibold text-stone-500 dark:text-stone-400">All caught up</p>
         <p className="text-xs text-muted-foreground mt-1">No action items right now.</p>
@@ -292,7 +292,7 @@ export function InboxList({ data, activeTab }: { data: InboxData; activeTab: str
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                "rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors",
+                "rounded-md px-3.5 py-1.5 text-xs font-bold transition-colors",
                 tab === t.key
                   ? "bg-blue-600 text-white shadow-sm"
                   : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"

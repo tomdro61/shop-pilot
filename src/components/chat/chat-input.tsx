@@ -49,13 +49,13 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
           placeholder="Type a message..."
           disabled={isLoading}
           rows={1}
-          className="flex-1 resize-none rounded-xl border bg-muted/50 px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring disabled:opacity-50"
+          className="flex-1 resize-none rounded-lg border bg-muted/50 px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring disabled:opacity-50"
         />
         <Button
           size="icon"
           onClick={handleSubmit}
           disabled={!value.trim() || isLoading}
-          className="h-10 w-10 shrink-0 rounded-xl"
+          className="h-10 w-10 shrink-0 rounded-lg"
         >
           <SendHorizontal className="h-4 w-4" />
         </Button>

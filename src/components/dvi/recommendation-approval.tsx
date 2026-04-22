@@ -63,7 +63,7 @@ export function RecommendationApproval({
 
   if (isApproved) {
     return (
-      <div className="rounded-xl bg-green-50 dark:bg-green-950/30 p-6 text-center">
+      <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-6 text-center">
         <CheckCircle className="mx-auto mb-3 h-10 w-10 text-green-600 dark:text-green-400" />
         <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50">
           Services Approved
@@ -112,7 +112,7 @@ export function RecommendationApproval({
                     {item.recommended_description || item.item_name}
                   </span>
                   {condColor && (
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ${condColor.bg} ${condColor.text}`}>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase ${condColor.bg} ${condColor.text}`}>
                       {item.condition}
                     </span>
                   )}
@@ -130,7 +130,7 @@ export function RecommendationApproval({
       </div>
 
       {/* Total + approve button */}
-      <div className="mt-4 rounded-xl bg-stone-50 dark:bg-stone-800/50 p-4">
+      <div className="mt-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-muted-foreground">
             {selected.size} service{selected.size !== 1 ? "s" : ""} selected

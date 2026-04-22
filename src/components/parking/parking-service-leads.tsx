@@ -30,7 +30,7 @@ export function ParkingServiceLeads({
 }) {
   if (reservations.length === 0) {
     return (
-      <div className="bg-card rounded-xl shadow-card p-8 text-center">
+      <div className="bg-card rounded-lg shadow-card p-8 text-center">
         <p className="text-sm text-stone-500 dark:text-stone-400">
           No active reservations with service requests.
         </p>

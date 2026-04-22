@@ -27,7 +27,7 @@ export function CustomerTypeFilter() {
 
   return (
     <Select value={type} onValueChange={handleChange}>
-      <SelectTrigger className="w-[140px] rounded-full border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-[11px] font-bold uppercase tracking-widest text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-none">
+      <SelectTrigger className="w-[140px] rounded-md border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-[11px] font-bold uppercase tracking-widest text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-none">
         <SelectValue placeholder="All Types" />
       </SelectTrigger>
       <SelectContent>

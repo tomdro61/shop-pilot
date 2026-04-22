@@ -83,7 +83,7 @@ export function Header({ user }: { user: User | null }) {
       <h1 className="text-sm font-semibold tracking-tight lg:text-lg text-stone-900 dark:text-stone-50">{title}</h1>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <Button variant="ghost" size="icon" className="rounded-md">
             <Avatar className="h-7 w-7">
               <AvatarFallback className="bg-blue-50 dark:bg-blue-950 text-[10px] font-semibold text-blue-700 dark:text-blue-400">
                 {initials}

@@ -309,7 +309,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   return (
     <div className="mx-auto max-w-sm space-y-4">
       {/* Amount display */}
-      <div className="rounded-xl border bg-card p-6 text-center">
+      <div className="rounded-lg border bg-card p-6 text-center">
         <p className="text-4xl font-bold tabular-nums tracking-tight">
           {displayAmount}
         </p>

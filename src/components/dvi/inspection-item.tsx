@@ -76,7 +76,7 @@ export const InspectionItem = forwardRef<HTMLDivElement, InspectionItemProps>(
           <button
             type="button"
             onClick={() => setShowNote(!showNote)}
-            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase transition-colors ${
+            className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase transition-colors ${
               showNote || note
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
                 : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
@@ -88,7 +88,7 @@ export const InspectionItem = forwardRef<HTMLDivElement, InspectionItemProps>(
           <button
             type="button"
             onClick={() => setShowPhotos(!showPhotos)}
-            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase transition-colors ${
+            className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase transition-colors ${
               showPhotos || photos.length > 0
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
                 : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"

@@ -134,7 +134,7 @@ export function ReceivablesReport({ data, initialCustomerType = "all" }: Receiva
                         {job.daysOutstanding}
                       </td>
                       <td className="py-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                        <span className={`rounded-md px-2 py-0.5 text-[10px] font-black uppercase ${
                           job.paymentStatus === "invoiced"
                             ? "bg-blue-100 text-blue-950 dark:bg-blue-950 dark:text-blue-100"
                             : "bg-stone-100 text-stone-950 dark:bg-stone-800 dark:text-stone-100"

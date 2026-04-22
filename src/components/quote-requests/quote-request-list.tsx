@@ -90,7 +90,7 @@ export function QuoteRequestList({
               key={tab.value}
               onClick={() => updateParams({ status: tab.value })}
               className={cn(
-                "rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors",
+                "rounded-md px-3.5 py-1.5 text-xs font-bold transition-colors",
                 currentStatus === tab.value
                   ? "bg-blue-600 text-white shadow-sm"
                   : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"
@@ -105,7 +105,7 @@ export function QuoteRequestList({
       {/* List */}
       <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
         {quoteRequests.length === 0 ? (
-          <div className="bg-card rounded-xl shadow-card p-8 text-center">
+          <div className="bg-card rounded-lg shadow-card p-8 text-center">
             <p className="text-sm text-stone-500 dark:text-stone-400">
               No quote requests found.
             </p>
@@ -203,7 +203,7 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
   return (
     <div
       className={cn(
-        "bg-card rounded-xl shadow-card px-6 py-5 transition-opacity",
+        "bg-card rounded-lg shadow-card px-6 py-5 transition-opacity",
         isUpdating && "opacity-50"
       )}
     >
@@ -264,7 +264,7 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
               {qr.services.map((s) => (
                 <span
                   key={s}
-                  className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400"
+                  className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400"
                 >
                   {s}
                 </span>

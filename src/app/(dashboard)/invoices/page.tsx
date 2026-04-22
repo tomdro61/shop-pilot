@@ -35,13 +35,13 @@ export default async function InvoicesPage({
       </div>
 
       {invoices.length === 0 ? (
-        <div className="bg-card rounded-xl shadow-card p-8 text-center text-sm text-stone-500 dark:text-stone-400">
+        <div className="bg-card rounded-lg shadow-card p-8 text-center text-sm text-stone-500 dark:text-stone-400">
           No invoices found.
         </div>
       ) : (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block bg-card rounded-xl shadow-card overflow-hidden">
+          <div className="hidden md:block bg-card rounded-lg shadow-card overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100">
@@ -126,7 +126,7 @@ export default async function InvoicesPage({
                         ${(invoice.amount ?? 0).toFixed(2)}
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${INVOICE_STATUS_COLORS[invoiceStatus]?.bg ?? ""} ${INVOICE_STATUS_COLORS[invoiceStatus]?.text ?? ""}`}>
+                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${INVOICE_STATUS_COLORS[invoiceStatus]?.bg ?? ""} ${INVOICE_STATUS_COLORS[invoiceStatus]?.text ?? ""}`}>
                           {INVOICE_STATUS_LABELS[invoiceStatus] ?? invoiceStatus}
                         </span>
                       </td>
@@ -186,7 +186,7 @@ export default async function InvoicesPage({
                 <Link
                   key={invoice.id}
                   href={href}
-                  className="block bg-card rounded-xl shadow-card p-4 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
+                  className="block bg-card rounded-lg shadow-card p-4 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-stone-900 dark:text-stone-50">
@@ -197,7 +197,7 @@ export default async function InvoicesPage({
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${INVOICE_STATUS_COLORS[invoiceStatus]?.bg ?? ""} ${INVOICE_STATUS_COLORS[invoiceStatus]?.text ?? ""}`}>
+                    <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${INVOICE_STATUS_COLORS[invoiceStatus]?.bg ?? ""} ${INVOICE_STATUS_COLORS[invoiceStatus]?.text ?? ""}`}>
                       {INVOICE_STATUS_LABELS[invoiceStatus] ?? invoiceStatus}
                     </span>
                     <span className="text-xs text-stone-500 dark:text-stone-400 tabular-nums">

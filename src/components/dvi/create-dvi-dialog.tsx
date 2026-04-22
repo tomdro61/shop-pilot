@@ -203,7 +203,7 @@ export function CreateDviDialog() {
 
   return (
     <>
-      <Button size="sm" className="rounded-full" onClick={() => setOpen(true)}>
+      <Button size="sm" className="rounded-md" onClick={() => setOpen(true)}>
         <Plus className="mr-1.5 h-3.5 w-3.5" />
         Create DVI
       </Button>
@@ -397,7 +397,7 @@ export function CreateDviDialog() {
 
           {/* Loading overlay */}
           {isPending && (
-            <div className="absolute inset-0 bg-white/50 dark:bg-stone-950/50 flex items-center justify-center rounded-xl">
+            <div className="absolute inset-0 bg-white/50 dark:bg-stone-950/50 flex items-center justify-center rounded-lg">
               <Loader2 className="h-6 w-6 animate-spin text-stone-400" />
             </div>
           )}

@@ -161,7 +161,7 @@ export function ParkingAllView({
               <button
                 type="button"
                 onClick={() => removeDate("dropoff", date)}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                className="ml-0.5 rounded-md p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -177,7 +177,7 @@ export function ParkingAllView({
               <button
                 type="button"
                 onClick={() => removeDate("pickup", date)}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors"
+                className="ml-0.5 rounded-md p-0.5 hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -199,7 +199,7 @@ export function ParkingAllView({
       {/* List */}
       <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
       {reservations.length === 0 ? (
-        <div className="bg-card rounded-xl shadow-card p-8 text-center">
+        <div className="bg-card rounded-lg shadow-card p-8 text-center">
           <p className="text-sm text-stone-500 dark:text-stone-400">
             No reservations found.
           </p>

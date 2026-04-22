@@ -70,11 +70,11 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
   const categoryNames = Object.keys(categoryGroups);
 
   return (
-    <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
+    <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-6 py-3 bg-stone-800 dark:bg-stone-900">
         <h3 className="text-xs font-bold uppercase tracking-widest text-stone-100">Line Items</h3>
-        <Button size="sm" className="rounded-full" onClick={() => setAddSheetOpen(true)}>
+        <Button size="sm" className="rounded-md" onClick={() => setAddSheetOpen(true)}>
           <Plus className="mr-2 h-3.5 w-3.5" />
           Add
         </Button>
@@ -272,7 +272,7 @@ function AddItemSheet({
               type="button"
               onClick={() => setTab(t.key)}
               className={cn(
-                "text-[11px] font-black px-4 py-1.5 rounded-full uppercase transition-colors",
+                "text-[11px] font-black px-4 py-1.5 rounded-md uppercase transition-colors",
                 tab === t.key
                   ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
                   : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700"

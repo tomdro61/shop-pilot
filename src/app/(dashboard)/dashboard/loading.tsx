@@ -12,7 +12,7 @@ export default function DashboardLoading() {
       {/* Revenue Metrics */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-card p-5 lg:p-6 rounded-xl shadow-card">
+          <div key={i} className="bg-card p-5 lg:p-6 rounded-lg shadow-card">
             <Skeleton className="h-3 w-20 mb-3" />
             <Skeleton className="h-10 w-28" />
           </div>
@@ -31,10 +31,10 @@ export default function DashboardLoading() {
               <Skeleton className="h-3.5 w-28 ml-1" />
               <div className="space-y-3">
                 {Array.from({ length: col === 1 ? 1 : 2 }).map((_, j) => (
-                  <div key={j} className="bg-card p-5 rounded-xl shadow-card border-l-4 border-stone-200 dark:border-stone-700">
+                  <div key={j} className="bg-card p-5 rounded-lg shadow-card border-l-4 border-stone-200 dark:border-stone-700">
                     <div className="flex justify-between items-start mb-2">
                       <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-5 w-14 rounded-full" />
+                      <Skeleton className="h-5 w-14 rounded-md" />
                     </div>
                     <Skeleton className="h-3.5 w-40" />
                   </div>
@@ -48,7 +48,7 @@ export default function DashboardLoading() {
       {/* Tech Workload + Unpaid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <div key={i} className="bg-card rounded-lg shadow-card p-5 lg:p-6">
             <Skeleton className="h-5 w-36 mb-5" />
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, j) => (
@@ -68,7 +68,7 @@ export default function DashboardLoading() {
       {/* Pending Estimates + Today's Schedule */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="bg-card rounded-xl shadow-card p-5 lg:p-6">
+          <div key={i} className="bg-card rounded-lg shadow-card p-5 lg:p-6">
             <Skeleton className="h-5 w-36 mb-5" />
             <div className="space-y-4">
               {Array.from({ length: 2 }).map((_, j) => (

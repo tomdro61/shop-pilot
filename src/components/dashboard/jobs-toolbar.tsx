@@ -20,7 +20,7 @@ interface JobsToolbarProps {
   jobCount: number;
 }
 
-const pillTrigger = "rounded-full border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-[11px] font-bold uppercase tracking-widest text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-none";
+const pillTrigger = "rounded-md border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-[11px] font-bold uppercase tracking-widest text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-none";
 
 export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   const router = useRouter();
@@ -66,7 +66,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           placeholder="Search jobs..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-11 rounded-full"
+          className="pl-11 rounded-md"
         />
       </div>
 
@@ -142,14 +142,14 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
           value={view}
           onValueChange={(val) => updateParams({ view: val })}
         >
-          <TabsList className="rounded-full">
-            <TabsTrigger value="list" className="rounded-full">
+          <TabsList className="rounded-md">
+            <TabsTrigger value="list" className="rounded-md">
               <List className="h-4 w-4" />
             </TabsTrigger>
-            <TabsTrigger value="board" className="rounded-full">
+            <TabsTrigger value="board" className="rounded-md">
               <Columns3 className="h-4 w-4" />
             </TabsTrigger>
-            <TabsTrigger value="calendar" className="rounded-full">
+            <TabsTrigger value="calendar" className="rounded-md">
               <CalendarDays className="h-4 w-4" />
             </TabsTrigger>
           </TabsList>
@@ -157,7 +157,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
 
         <div className="ml-auto">
           <Link href="/jobs/new">
-            <Button className="rounded-full gap-2 shadow-lg shadow-blue-600/20">
+            <Button className="rounded-md gap-2 shadow-lg shadow-blue-600/20">
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New Job</span>
             </Button>

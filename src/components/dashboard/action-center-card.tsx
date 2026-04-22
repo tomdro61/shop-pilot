@@ -88,7 +88,7 @@ export function ActionCenterCard({
 
   if (total === 0) {
     return (
-      <div className="bg-card rounded-xl shadow-card overflow-hidden">
+      <div className="bg-card rounded-lg shadow-card overflow-hidden">
         <div className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Action Center</h3>
         </div>
@@ -101,10 +101,10 @@ export function ActionCenterCard({
   }
 
   return (
-    <div className="bg-card rounded-xl shadow-card overflow-hidden">
+    <div className="bg-card rounded-lg shadow-card overflow-hidden">
       <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
         <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Action Center</h3>
-        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-stone-600 text-stone-100">
+        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-stone-600 text-stone-100">
           {total}
         </span>
       </div>
@@ -123,7 +123,7 @@ export function ActionCenterCard({
                     <span className="ml-2 text-xs text-stone-500 dark:text-stone-400">{context}</span>
                   )}
                 </div>
-                <span className={`text-[10px] font-black px-2 py-1 rounded-full ${cat.badge}`}>
+                <span className={`text-[10px] font-black px-2 py-1 rounded-md ${cat.badge}`}>
                   {count}
                 </span>
                 <ChevronRight className="h-4 w-4 text-stone-400" />

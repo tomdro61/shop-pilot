@@ -40,7 +40,7 @@ export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
     <Select value={currentStatus} onValueChange={handleChange}>
       <SelectTrigger className="w-auto border-0 bg-transparent p-0 h-auto shadow-none focus:ring-0">
         <SelectValue>
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${colors.bg} ${colors.text}`}>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${colors.bg} ${colors.text}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLORS[currentStatus] || "bg-stone-400"}`} />
             {JOB_STATUS_LABELS[currentStatus]}
           </span>
@@ -51,7 +51,7 @@ export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
           const statusColors = JOB_STATUS_COLORS[status];
           return (
             <SelectItem key={status} value={status}>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusColors.bg} ${statusColors.text}`}>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${statusColors.bg} ${statusColors.text}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLORS[status] || "bg-stone-400"}`} />
                 {JOB_STATUS_LABELS[status]}
               </span>

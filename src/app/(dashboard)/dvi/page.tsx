@@ -47,7 +47,7 @@ export default async function DviJobListPage({
             {parkingRequests.map((req) => (
               <div
                 key={req.id}
-                className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-emerald-200/20 dark:ring-emerald-800/20 border-l-4 border-emerald-500"
+                className="flex items-center justify-between rounded-lg bg-card p-4 shadow-card ring-1 ring-emerald-200/20 dark:ring-emerald-800/20 border-l-4 border-emerald-500"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
@@ -88,7 +88,7 @@ export default async function DviJobListPage({
                 const dviStatus = insp.status as DviStatus;
                 return (
                   <Link key={insp.id} href={`/dvi/inspect/${insp.id}`} className="block">
-                    <div className="flex items-center justify-between rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
+                    <div className="flex items-center justify-between rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 active:bg-stone-50 dark:active:bg-stone-800 transition-colors">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
                           {insp.vehicle
@@ -103,7 +103,7 @@ export default async function DviJobListPage({
                       </div>
                       <div className="ml-3 flex items-center gap-2 shrink-0">
                         <span
-                          className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
+                          className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
                         >
                           {DVI_STATUS_LABELS[dviStatus]}
                         </span>
@@ -155,7 +155,7 @@ export default async function DviJobListPage({
             const dviStatus = job.dvi_status as DviStatus | null;
 
             return (
-              <div key={job.id} className="rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20">
+              <div key={job.id} className="rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">
@@ -174,12 +174,12 @@ export default async function DviJobListPage({
                   <div className="ml-3 flex items-center gap-2 shrink-0">
                     {dviStatus ? (
                       <span
-                        className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
+                        className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
                       >
                         {DVI_STATUS_LABELS[dviStatus]}
                       </span>
                     ) : (
-                      <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">
+                      <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">
                         No DVI
                       </span>
                     )}

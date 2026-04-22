@@ -95,7 +95,7 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
               {/* Condition summary */}
               <div className="flex gap-3">
                 {(["good", "monitor", "attention"] as const).map((c) => (
-                  <div key={c} className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}>
+                  <div key={c} className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}>
                     {counts[c]} {c === "good" ? "Good" : c === "monitor" ? "Monitor" : "Attention"}
                   </div>
                 ))}
@@ -124,7 +124,7 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
               {/* Condition summary */}
               <div className="flex gap-3">
                 {(["good", "monitor", "attention"] as const).map((c) => (
-                  <div key={c} className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}>
+                  <div key={c} className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}>
                     {counts[c]} {c === "good" ? "Good" : c === "monitor" ? "Monitor" : "Attention"}
                   </div>
                 ))}

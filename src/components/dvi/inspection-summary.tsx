@@ -51,7 +51,7 @@ export function InspectionSummary({ results, showRecommendations }: InspectionSu
         {(["good", "monitor", "attention"] as const).map((c) => (
           <div
             key={c}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}
           >
             {counts[c]} {DVI_CONDITION_LABELS[c]}
           </div>
@@ -60,7 +60,7 @@ export function InspectionSummary({ results, showRecommendations }: InspectionSu
 
       {/* Categories */}
       {categories.map((cat) => (
-        <div key={cat.name} className="rounded-xl bg-card shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
+        <div key={cat.name} className="rounded-lg bg-card shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
           <div className="px-4 py-2.5 bg-stone-800 dark:bg-stone-900">
             <h4 className="text-xs font-bold uppercase tracking-wider text-stone-100">
               {cat.name}
@@ -77,7 +77,7 @@ export function InspectionSummary({ results, showRecommendations }: InspectionSu
                       {item.item_name}
                     </span>
                     {item.condition && condColor && (
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 ${condColor.bg} ${condColor.text}`}>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase shrink-0 ${condColor.bg} ${condColor.text}`}>
                         {DVI_CONDITION_LABELS[item.condition]}
                       </span>
                     )}

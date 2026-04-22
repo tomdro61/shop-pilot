@@ -23,7 +23,7 @@ export function CategorySection({
   const isComplete = ratedCount === totalCount && totalCount > 0;
 
   return (
-    <div className="rounded-xl bg-card shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
+    <div className="rounded-lg bg-card shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -35,7 +35,7 @@ export function CategorySection({
           </h3>
           <span
             className={cn(
-              "text-[10px] font-black px-2 py-0.5 rounded-full",
+              "text-[10px] font-black px-2 py-0.5 rounded-md",
               isComplete
                 ? "bg-green-500/20 text-green-300"
                 : "bg-stone-600 text-stone-300"

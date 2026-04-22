@@ -88,13 +88,13 @@ export default async function JobDetailPage({
               <SendReadyTextButton jobId={id} />
             )}
             <Link href={`/jobs/${id}/print`}>
-              <Button variant="outline" size="sm" className="rounded-full">
+              <Button variant="outline" size="sm" className="rounded-md">
                 <Printer className="mr-1.5 h-3.5 w-3.5" />
                 Print RO
               </Button>
             </Link>
             <Link href={`/jobs/${id}/edit`}>
-              <Button variant="outline" size="sm" className="rounded-full">
+              <Button variant="outline" size="sm" className="rounded-md">
                 <Pencil className="mr-1.5 h-3.5 w-3.5" />
                 Edit
               </Button>
@@ -130,7 +130,7 @@ export default async function JobDetailPage({
           <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Payment Status</p>
           {job.payment_status ? (
             <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].bg} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].text}`}>
+              <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].bg} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].text}`}>
                 {PAYMENT_STATUS_LABELS[job.payment_status as PaymentStatus]}
               </span>
               {job.payment_method && (
@@ -148,7 +148,7 @@ export default async function JobDetailPage({
       {/* ── Customer & Vehicle Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-8 animate-in-up stagger-2">
         {customer && (
-          <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
+          <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
             <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
               <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Customer</p>
               <Link href={`/customers/${customer.id}`} className="text-stone-300 hover:text-white transition-colors">
@@ -181,7 +181,7 @@ export default async function JobDetailPage({
         )}
 
         {vehicle && (
-          <div className="bg-card rounded-xl shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
+          <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
             <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
               <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Vehicle</p>
               <Car className="h-4 w-4 text-stone-300" />
@@ -205,7 +205,7 @@ export default async function JobDetailPage({
 
       {/* ── Notes ── */}
       {job.notes && (
-        <div className="bg-card rounded-xl shadow-card overflow-hidden mb-8 animate-in-up stagger-2">
+        <div className="bg-card rounded-lg shadow-card overflow-hidden mb-8 animate-in-up stagger-2">
           <div className="flex items-center gap-2 bg-stone-800 dark:bg-stone-900 px-5 py-3">
             <StickyNote className="h-3.5 w-3.5 text-stone-300" />
             <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Primary Complaint / Notes</p>

@@ -42,7 +42,7 @@ export function ParkingTabs() {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl bg-stone-100 dark:bg-stone-800 p-1">
+      <div className="flex gap-1 rounded-lg bg-stone-100 dark:bg-stone-800 p-1">
         {tabs.map((tab) => (
           <button
             key={tab.value}

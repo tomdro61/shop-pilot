@@ -192,7 +192,7 @@ export function SendDviDialog({
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium">{item.item_name}</span>
                             {condColor && (
-                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ${condColor.bg} ${condColor.text}`}>
+                              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase ${condColor.bg} ${condColor.text}`}>
                                 {item.condition}
                               </span>
                             )}

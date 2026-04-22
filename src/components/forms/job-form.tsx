@@ -930,12 +930,12 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
           <Button
             type="button"
             variant="outline"
-            className="rounded-full px-8"
+            className="rounded-md px-8"
             onClick={() => router.back()}
           >
             Cancel
           </Button>
-          <Button type="submit" className="rounded-full px-8" disabled={form.formState.isSubmitting}>
+          <Button type="submit" className="rounded-md px-8" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting
               ? "Saving..."
               : isEditing

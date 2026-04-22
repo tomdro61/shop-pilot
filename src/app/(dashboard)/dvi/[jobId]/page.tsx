@@ -60,7 +60,7 @@ export default async function DviJobDetailPage({
             </h2>
           </div>
           <span
-            className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${JOB_STATUS_COLORS[job.status as JobStatus]?.bg ?? ""} ${JOB_STATUS_COLORS[job.status as JobStatus]?.text ?? ""}`}
+            className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${JOB_STATUS_COLORS[job.status as JobStatus]?.bg ?? ""} ${JOB_STATUS_COLORS[job.status as JobStatus]?.text ?? ""}`}
           >
             {JOB_STATUS_LABELS[job.status as JobStatus] ?? job.status}
           </span>
@@ -69,7 +69,7 @@ export default async function DviJobDetailPage({
 
       {/* Vehicle */}
       {vehicle && (
-        <div className="mb-4 rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20">
+        <div className="mb-4 rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20">
           <div className="flex items-center gap-2 mb-2">
             <Car className="h-3.5 w-3.5 text-stone-400" />
             <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
@@ -89,7 +89,7 @@ export default async function DviJobDetailPage({
 
       {/* Notes */}
       {job.notes && (
-        <div className="mb-4 rounded-xl bg-stone-50 dark:bg-stone-800/50 p-4 border-l-4 border-blue-600 dark:border-blue-500">
+        <div className="mb-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 p-4 border-l-4 border-blue-600 dark:border-blue-500">
           <div className="flex items-center gap-2 mb-1">
             <StickyNote className="h-3.5 w-3.5 text-stone-400" />
             <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
@@ -103,7 +103,7 @@ export default async function DviJobDetailPage({
       )}
 
       {/* DVI Action */}
-      <div className="mt-6 rounded-xl bg-card p-5 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20">
+      <div className="mt-6 rounded-lg bg-card p-5 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20">
         <div className="flex items-center gap-2 mb-3">
           <ClipboardCheck className="h-3.5 w-3.5 text-stone-400" />
           <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
@@ -111,7 +111,7 @@ export default async function DviJobDetailPage({
           </p>
           {dviStatus && (
             <span
-              className={`ml-auto text-[10px] font-black px-2 py-1 rounded-full uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
+              className={`ml-auto text-[10px] font-black px-2 py-1 rounded-md uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
             >
               {DVI_STATUS_LABELS[dviStatus]}
             </span>

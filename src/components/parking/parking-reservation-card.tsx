@@ -33,7 +33,7 @@ export function ParkingReservationCard({
   return (
     <Link
       href={`/parking/${reservation.id}`}
-      className="block bg-card rounded-xl shadow-card p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+      className="block bg-card rounded-lg shadow-card p-4 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -135,7 +135,7 @@ export function ParkingReservationCardCompact({
         : formatTime(reservation.drop_off_time);
 
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-xl border border-l-4 px-4 py-3 ${variantStyles[variant]}`}>
+    <div className={`flex items-center justify-between gap-3 rounded-lg border border-l-4 px-4 py-3 ${variantStyles[variant]}`}>
       <Link href={`/parking/${reservation.id}`} className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate">

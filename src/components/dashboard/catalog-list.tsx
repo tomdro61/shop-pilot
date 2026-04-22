@@ -97,7 +97,7 @@ export function CatalogList({ items, categories }: CatalogListProps) {
                   type="button"
                   onClick={() => setTypeFilter(t)}
                   className={cn(
-                    "text-[10px] font-black px-3 py-1.5 rounded-full uppercase transition-colors",
+                    "text-[10px] font-black px-3 py-1.5 rounded-md uppercase transition-colors",
                     typeFilter === t
                       ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
                       : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700"
@@ -126,7 +126,7 @@ export function CatalogList({ items, categories }: CatalogListProps) {
                     {grouped[catName].map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                        className="flex items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50"
                       >
                         {/* Type color bar */}
                         <div
@@ -146,7 +146,7 @@ export function CatalogList({ items, categories }: CatalogListProps) {
                             </p>
                             <span
                               className={cn(
-                                "text-[10px] font-black px-2 py-0.5 rounded-full uppercase shrink-0",
+                                "text-[10px] font-black px-2 py-0.5 rounded-md uppercase shrink-0",
                                 item.type === "labor"
                                   ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
                                   : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400"

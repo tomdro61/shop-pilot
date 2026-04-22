@@ -118,7 +118,7 @@ export default async function CustomerDetailPage({
           </div>
 
           {/* Contact info grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl bg-stone-50 dark:bg-stone-900/50 p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg bg-stone-50 dark:bg-stone-900/50 p-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">Phone</p>
               {customer.phone ? (
@@ -156,7 +156,7 @@ export default async function CustomerDetailPage({
 
           {/* Notes */}
           {customer.notes && (
-            <div className="mt-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3">
+            <div className="mt-4 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3">
               <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1">
                 <StickyNote className="h-3 w-3" />
                 Notes
@@ -204,7 +204,7 @@ export default async function CustomerDetailPage({
                   const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
                   return (
                     <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                      <div className="flex items-center justify-between rounded-xl px-4 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                      <div className="flex items-center justify-between rounded-lg px-4 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                         <div className="min-w-0">
                           <p className="text-sm font-medium">{job.title || "General"}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -247,7 +247,7 @@ export default async function CustomerDetailPage({
                   const colors = PARKING_STATUS_COLORS[status];
                   return (
                     <Link key={res.id} href={`/parking/${res.id}`} className="block">
-                      <div className="flex items-center justify-between rounded-xl px-4 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                      <div className="flex items-center justify-between rounded-lg px-4 py-3 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                         <div className="min-w-0">
                           <p className="text-sm font-medium">
                             {res.make} {res.model} — {res.license_plate}

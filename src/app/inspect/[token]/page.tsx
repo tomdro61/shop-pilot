@@ -108,7 +108,7 @@ export default async function CustomerDviPage({
 
       {/* Manager note */}
       {inspection.customer_note && (
-        <div className="mb-6 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-4">
+        <div className="mb-6 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-4">
           <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
             Note from Broadway Motors
           </p>
@@ -128,7 +128,7 @@ export default async function CustomerDviPage({
       {isRecommendations && recommendedResults.length > 0 && (
         <div className="mt-8">
           {isJobClosed ? (
-            <div className="rounded-xl bg-stone-50 dark:bg-stone-800/50 p-5 border-l-4 border-stone-400 text-center">
+            <div className="rounded-lg bg-stone-50 dark:bg-stone-800/50 p-5 border-l-4 border-stone-400 text-center">
               <CheckCircle className="mx-auto mb-2 h-8 w-8 text-stone-400" />
               <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">
                 This vehicle has already been serviced.

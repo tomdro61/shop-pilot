@@ -40,7 +40,7 @@ export function CustomerSearch() {
         placeholder="Search customers..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="pl-11 rounded-full"
+        className="pl-11 rounded-md"
       />
     </div>
   );

@@ -51,7 +51,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
             return (
               <Link key={customer.id} href={`/customers/${customer.id}`} className="block">
                 {/* Desktop: columnar table row */}
-                <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] items-center rounded-xl px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] items-center rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-bold text-blue-700 dark:text-blue-400">
                       {initials}
@@ -68,11 +68,11 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
                   </span>
                   <span className="w-16 flex justify-center">
                     {customer.customer_type === "fleet" ? (
-                      <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400">
+                      <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400">
                         Fleet
                       </span>
                     ) : customer.customer_type === "parking" ? (
-                      <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400">
+                      <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400">
                         Parking
                       </span>
                     ) : (
@@ -82,7 +82,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
                 </div>
 
                 {/* Mobile: compact stacked row */}
-                <div className="flex items-center gap-3 rounded-xl px-4 py-3.5 md:hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                <div className="flex items-center gap-3 rounded-lg px-4 py-3.5 md:hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-bold text-blue-700 dark:text-blue-400">
                     {initials}
                   </div>
@@ -92,12 +92,12 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
                         {customer.first_name} {customer.last_name}
                       </p>
                       {customer.customer_type === "fleet" && (
-                        <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 shrink-0">
+                        <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 shrink-0">
                           Fleet
                         </span>
                       )}
                       {customer.customer_type === "parking" && (
-                        <span className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 shrink-0">
+                        <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 shrink-0">
                           Parking
                         </span>
                       )}

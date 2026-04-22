@@ -103,7 +103,7 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
 
                     {/* Nested inspections */}
                     {inspections.length > 0 && (
-                      <div className="mx-5 mb-3 rounded-xl bg-stone-50/80 dark:bg-stone-900/40 border border-stone-200/60 dark:border-stone-700/40 overflow-hidden">
+                      <div className="mx-5 mb-3 rounded-lg bg-stone-50/80 dark:bg-stone-900/40 border border-stone-200/60 dark:border-stone-700/40 overflow-hidden">
                         <div className="flex items-center gap-1.5 px-3.5 py-2 border-b border-stone-200/60 dark:border-stone-700/40">
                           <ClipboardCheck className="h-3 w-3 text-stone-400" />
                           <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
@@ -136,7 +136,7 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
                                     return (
                                       <span
                                         key={c}
-                                        className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${DVI_CONDITION_COLORS[c as DviCondition].bg} ${DVI_CONDITION_COLORS[c as DviCondition].text}`}
+                                        className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${DVI_CONDITION_COLORS[c as DviCondition].bg} ${DVI_CONDITION_COLORS[c as DviCondition].text}`}
                                       >
                                         {count}
                                       </span>

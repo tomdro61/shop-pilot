@@ -23,7 +23,7 @@ export function CustomerTypePills({
           key={t.value}
           onClick={() => onChange(t.value)}
           className={cn(
-            "rounded-full px-3 py-1.5 text-xs font-bold transition-colors",
+            "rounded-md px-3 py-1.5 text-xs font-bold transition-colors",
             value === t.value
               ? "bg-blue-600 text-white shadow-sm"
               : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"

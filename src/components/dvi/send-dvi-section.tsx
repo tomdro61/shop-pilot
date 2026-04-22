@@ -24,7 +24,7 @@ export function SendDviSection({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-xl bg-card p-5 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 text-center">
+    <div className="rounded-lg bg-card p-5 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 text-center">
       <p className="text-sm text-muted-foreground mb-3">
         Inspection complete. Ready to send to customer?
       </p>

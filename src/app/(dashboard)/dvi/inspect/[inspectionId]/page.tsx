@@ -63,7 +63,7 @@ export default async function StandaloneInspectPage({
           {inspection.status === "completed" && (
             <SendDviSection inspectionId={inspection.id} results={results} />
           )}
-          <div className="rounded-xl bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 flex items-center justify-between">
+          <div className="rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Delete this inspection and all its data</p>
             <DeleteDviButton inspectionId={inspection.id} />
           </div>
