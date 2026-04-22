@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/section-card";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +29,6 @@ interface InvoiceSectionProps {
   customerPhone: string | null;
   isFleet?: boolean;
 }
-
-const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
 
 export function InvoiceSection({
   jobId,
@@ -72,21 +71,16 @@ export function InvoiceSection({
   const statusColors = status ? INVOICE_STATUS_COLORS[status] : null;
 
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
-        <h3 className={`flex items-center gap-1.5 ${SECTION_LABEL}`}>
-          <FileText className="h-3 w-3" />
-          Invoice
-        </h3>
-        {status && statusColors && (
+    <SectionCard
+      title={<><FileText className="h-3 w-3" />Invoice</>}
+      action={
+        status && statusColors ? (
           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors.bg} ${statusColors.text}`}>
             {INVOICE_STATUS_LABELS[status]}
           </span>
-        )}
-      </div>
-
-      {/* Body */}
+        ) : null
+      }
+    >
       <div className="px-4 py-3">
         {!invoice ? (
           <div className="flex flex-col items-center gap-3 py-2 text-center">
@@ -200,6 +194,6 @@ export function InvoiceSection({
           </div>
         )}
       </div>
-    </div>
+    </SectionCard>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/section-card";
 import { createEstimateFromJob, deleteEstimate } from "@/lib/actions/estimates";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import {
@@ -18,8 +19,6 @@ interface EstimateSectionProps {
   jobId: string;
   estimate: Estimate | null;
 }
-
-const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
 
 export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
   const [loading, setLoading] = useState(false);
@@ -57,21 +56,16 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
   const canDelete = status === "draft" || status === "sent";
 
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
-        <h3 className={`flex items-center gap-1.5 ${SECTION_LABEL}`}>
-          <ClipboardList className="h-3 w-3" />
-          Estimate
-        </h3>
-        {status && statusColors && (
+    <SectionCard
+      title={<><ClipboardList className="h-3 w-3" />Estimate</>}
+      action={
+        status && statusColors ? (
           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors.bg} ${statusColors.text}`}>
             {ESTIMATE_STATUS_LABELS[status]}
           </span>
-        )}
-      </div>
-
-      {/* Body */}
+        ) : null
+      }
+    >
       <div className="px-4 py-3">
         {!estimate ? (
           <div className="flex flex-col items-center gap-3 py-2 text-center">
@@ -121,6 +115,6 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
           </div>
         )}
       </div>
-    </div>
+    </SectionCard>
   );
 }

@@ -16,6 +16,7 @@ import { DviSection } from "@/components/dashboard/dvi-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
+import { SECTION_LABEL } from "@/components/ui/section-card";
 import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
 import { ArrowLeft, Pencil, Printer } from "lucide-react";
@@ -31,7 +32,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   };
 }
 
-const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
 const DL_TERM = "text-stone-500 dark:text-stone-400";
 const DL_VALUE = "text-stone-900 dark:text-stone-50";
 

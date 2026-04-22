@@ -4,8 +4,9 @@ import { getCustomer } from "@/lib/actions/customers";
 import { getInspectionsForVehicle } from "@/lib/actions/dvi";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { SectionCard, SECTION_LABEL } from "@/components/ui/section-card";
 import { formatPhone, formatVehicle, formatDate, formatRONumber, formatCustomerName } from "@/lib/utils/format";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS } from "@/lib/constants";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS, CUSTOMER_TYPE_COLORS } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
 import { VehicleSection } from "@/components/dashboard/vehicle-section";
 import { ArrowLeft, Pencil, Plus } from "lucide-react";
@@ -20,12 +21,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   };
 }
 
-const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
-
-const TYPE_CHIP: Record<string, string> = {
-  fleet: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400",
-  parking: "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400",
-};
 
 export default async function CustomerDetailPage({
   params,
@@ -101,12 +96,12 @@ export default async function CustomerDetailPage({
             {formatCustomerName(customer)}
           </h1>
           {customer.customer_type === "fleet" && (
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${TYPE_CHIP.fleet}`}>
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${CUSTOMER_TYPE_COLORS.fleet}`}>
               Fleet{customer.fleet_account ? ` · ${customer.fleet_account}` : ""}
             </span>
           )}
           {customer.customer_type === "parking" && (
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${TYPE_CHIP.parking}`}>
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${CUSTOMER_TYPE_COLORS.parking}`}>
               Parking
             </span>
           )}
@@ -161,16 +156,17 @@ export default async function CustomerDetailPage({
       </div>
 
       {/* Jobs */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
-          <h3 className={SECTION_LABEL}>Jobs ({jobs.length})</h3>
+      <SectionCard
+        title={`Jobs (${jobs.length})`}
+        action={
           <Link href={`/jobs/new?customerId=${id}`}>
             <Button size="sm">
               <Plus className="mr-1.5 h-3.5 w-3.5" />
               New Job
             </Button>
           </Link>
-        </div>
+        }
+      >
         {jobs.length === 0 ? (
           <div className="px-4 py-10 text-center">
             <p className="text-sm text-stone-500 dark:text-stone-400">No jobs yet</p>
@@ -211,14 +207,11 @@ export default async function CustomerDetailPage({
             })}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* Parking History */}
       {parkingReservations.length > 0 && (
-        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-          <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
-            <h3 className={SECTION_LABEL}>Parking History ({parkingReservations.length})</h3>
-          </div>
+        <SectionCard title={`Parking History (${parkingReservations.length})`}>
           <div>
             {parkingReservations.map((res) => {
               const status = res.status as ParkingStatus;
@@ -252,7 +245,7 @@ export default async function CustomerDetailPage({
               );
             })}
           </div>
-        </div>
+        </SectionCard>
       )}
     </div>
   );

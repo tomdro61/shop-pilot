@@ -186,6 +186,11 @@ export const PARKING_STATUS_LABELS: Record<ParkingStatus, string> = {
   cancelled: "Cancelled",
 };
 
+export const CUSTOMER_TYPE_COLORS: Record<string, string> = {
+  fleet: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400",
+  parking: "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400",
+};
+
 export const PARKING_STATUS_COLORS: Record<
   ParkingStatus,
   { bg: string; text: string }

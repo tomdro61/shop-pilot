@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatPhone, formatCustomerName } from "@/lib/utils/format";
+import { CUSTOMER_TYPE_COLORS } from "@/lib/constants";
 
 interface CustomerListItem {
   id: string;
@@ -15,16 +16,11 @@ interface CustomerListProps {
   totalCount?: number;
 }
 
-const TYPE_CHIP: Record<string, string> = {
-  fleet: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400",
-  parking: "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400",
-};
-
 function TypeChip({ type }: { type: string | null }) {
   if (!type || type === "retail") {
     return <span className="text-xs text-stone-400 dark:text-stone-500">Retail</span>;
   }
-  const colors = TYPE_CHIP[type] ?? "bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300";
+  const colors = CUSTOMER_TYPE_COLORS[type] ?? "bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300";
   return (
     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium capitalize ${colors}`}>
       {type}

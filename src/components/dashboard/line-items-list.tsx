@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/utils/format";
 import { calculateTotals, DEFAULT_SETTINGS } from "@/lib/utils/totals";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SectionCard, SECTION_LABEL } from "@/components/ui/section-card";
 import { cn } from "@/lib/utils";
 import { Plus, Pencil, Trash2, BookmarkPlus, Search } from "lucide-react";
 import type { JobLineItem, JobPreset, PresetLineItem, ShopSettings, CatalogItem } from "@/types";
@@ -23,8 +24,6 @@ interface LineItemsListProps {
   settings?: ShopSettings | null;
   presets?: JobPreset[];
 }
-
-const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
 
 export function LineItemsList({ jobId, lineItems, settings, presets = [] }: LineItemsListProps) {
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
@@ -72,16 +71,15 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
   const categoryNames = Object.keys(categoryGroups);
 
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
-        <h3 className={SECTION_LABEL}>Line Items</h3>
+    <SectionCard
+      title="Line Items"
+      action={
         <Button size="sm" onClick={() => setAddSheetOpen(true)}>
           <Plus className="mr-1.5 h-3.5 w-3.5" />
           Add
         </Button>
-      </div>
-
+      }
+    >
       {lineItems.length === 0 ? (
         <div className="px-4 py-10 text-center">
           <p className="text-sm text-stone-500 dark:text-stone-400">
@@ -257,7 +255,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
         open={addSheetOpen}
         onOpenChange={setAddSheetOpen}
       />
-    </div>
+    </SectionCard>
   );
 }
 

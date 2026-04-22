@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/section-card";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS, DVI_CONDITION_COLORS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils/format";
 import { ClipboardCheck, Send, Eye, ExternalLink } from "lucide-react";
@@ -35,8 +36,6 @@ interface DviSectionProps {
   inspection: DviInspection | null;
 }
 
-const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
-
 export function DviSection({ jobId, inspection }: DviSectionProps) {
   const [sendOpen, setSendOpen] = useState(false);
 
@@ -56,21 +55,16 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
 
   return (
     <>
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
-          <h3 className={`flex items-center gap-1.5 ${SECTION_LABEL}`}>
-            <ClipboardCheck className="h-3 w-3" />
-            Vehicle Inspection
-          </h3>
-          {status && statusColors && (
+      <SectionCard
+        title={<><ClipboardCheck className="h-3 w-3" />Vehicle Inspection</>}
+        action={
+          status && statusColors ? (
             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors.bg} ${statusColors.text}`}>
               {DVI_STATUS_LABELS[status]}
             </span>
-          )}
-        </div>
-
-        {/* Body */}
+          ) : null
+        }
+      >
         <div className="px-4 py-3">
           {!inspection ? (
             <p className="text-sm text-stone-500 dark:text-stone-400 text-center py-2">
@@ -177,7 +171,7 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
             </div>
           ) : null}
         </div>
-      </div>
+      </SectionCard>
 
       {inspection && (
         <SendDviDialog

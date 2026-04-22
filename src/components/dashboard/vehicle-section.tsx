@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { SectionCard, SECTION_LABEL } from "@/components/ui/section-card";
 import { VehicleForm } from "@/components/forms/vehicle-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteVehicle } from "@/lib/actions/vehicles";
@@ -27,8 +28,6 @@ interface VehicleSectionProps {
   inspectionsByVehicle?: Map<string, InspectionSummary[]>;
 }
 
-const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
-
 export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: VehicleSectionProps) {
   const [addOpen, setAddOpen] = useState(false);
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
@@ -45,14 +44,14 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
 
   return (
     <>
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2.5 bg-stone-50 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
-          <h3 className={SECTION_LABEL}>Vehicles ({vehicles.length})</h3>
+      <SectionCard
+        title={`Vehicles (${vehicles.length})`}
+        action={
           <Button size="sm" onClick={() => setAddOpen(true)}>
             Add Vehicle
           </Button>
-        </div>
-
+        }
+      >
         {vehicles.length === 0 ? (
           <div className="px-4 py-10 text-center">
             <p className="text-sm text-stone-500 dark:text-stone-400">No vehicles yet</p>
@@ -168,7 +167,7 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
             })}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       <VehicleForm
         customerId={customerId}
