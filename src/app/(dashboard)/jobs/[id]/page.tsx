@@ -9,7 +9,7 @@ import { getPresets } from "@/lib/actions/presets";
 import { calculateTotals } from "@/lib/utils/totals";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/dashboard/status-select";
-import { LineItemsList } from "@/components/dashboard/line-items-list";
+import { LineItemsList, LineItemsAddButton } from "@/components/dashboard/line-items-list";
 import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { DviSection } from "@/components/dashboard/dvi-section";
@@ -37,9 +37,19 @@ function initials(value: string | null | undefined, fallback = "?"): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function SectionTitle({ num, title, sub }: { num: string; title: string; sub?: string }) {
+function SectionTitle({
+  num,
+  title,
+  sub,
+  action,
+}: {
+  num: string;
+  title: string;
+  sub?: string;
+  action?: React.ReactNode;
+}) {
   return (
-    <div className="flex items-baseline gap-3 px-1 mb-2.5">
+    <div className="flex items-center gap-3 px-1 mb-2.5">
       <span className="font-mono tabular-nums text-[11px] font-semibold tracking-[0.08em] text-stone-400 dark:text-stone-600">
         {num}
       </span>
@@ -47,8 +57,9 @@ function SectionTitle({ num, title, sub }: { num: string; title: string; sub?: s
         {title}
       </h2>
       {sub && (
-        <span className="ml-auto text-xs text-stone-500 dark:text-stone-400">{sub}</span>
+        <span className="text-xs text-stone-500 dark:text-stone-400">{sub}</span>
       )}
+      {action && <div className="ml-auto flex items-center gap-1.5">{action}</div>}
     </div>
   );
 }
@@ -316,8 +327,12 @@ export default async function JobDetailPage({
 
         {/* Line Items */}
         <section className="pt-2">
-          <SectionTitle num="02" title="Line items" />
-          <LineItemsList jobId={id} lineItems={lineItems} settings={settings} presets={presets} />
+          <SectionTitle
+            num="02"
+            title="Line items"
+            action={<LineItemsAddButton jobId={id} settings={settings} presets={presets} />}
+          />
+          <LineItemsList jobId={id} lineItems={lineItems} settings={settings} />
         </section>
 
         {/* Inspection */}

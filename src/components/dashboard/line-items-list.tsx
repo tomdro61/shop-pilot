@@ -13,7 +13,7 @@ import { formatCurrency } from "@/lib/utils/format";
 import { calculateTotals, DEFAULT_SETTINGS } from "@/lib/utils/totals";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { SectionCard, SECTION_LABEL } from "@/components/ui/section-card";
+import { SECTION_LABEL } from "@/components/ui/section-card";
 import { cn } from "@/lib/utils";
 import { Plus, Pencil, Trash2, BookmarkPlus, Search } from "lucide-react";
 import type { JobLineItem, JobPreset, PresetLineItem, ShopSettings, CatalogItem } from "@/types";
@@ -22,12 +22,37 @@ interface LineItemsListProps {
   jobId: string;
   lineItems: JobLineItem[];
   settings?: ShopSettings | null;
-  presets?: JobPreset[];
 }
 
-export function LineItemsList({ jobId, lineItems, settings, presets = [] }: LineItemsListProps) {
+export function LineItemsAddButton({
+  jobId,
+  settings,
+  presets = [],
+}: {
+  jobId: string;
+  settings?: ShopSettings | null;
+  presets?: JobPreset[];
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" onClick={() => setOpen(true)}>
+        <Plus className="mr-1.5 h-3.5 w-3.5" />
+        Add
+      </Button>
+      <AddItemSheet
+        jobId={jobId}
+        presets={presets}
+        categories={((settings?.job_categories ?? DEFAULT_SETTINGS.job_categories) as string[])}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}
+
+export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps) {
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
-  const [addSheetOpen, setAddSheetOpen] = useState(false);
 
   const totals = calculateTotals(lineItems, settings);
 
@@ -71,15 +96,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
   const categoryNames = Object.keys(categoryGroups);
 
   return (
-    <SectionCard
-      title="Line Items"
-      action={
-        <Button size="sm" onClick={() => setAddSheetOpen(true)}>
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Add
-        </Button>
-      }
-    >
+    <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
       {lineItems.length === 0 ? (
         <div className="px-4 py-10 text-center">
           <p className="text-sm text-stone-500 dark:text-stone-400">
@@ -246,16 +263,7 @@ export function LineItemsList({ jobId, lineItems, settings, presets = [] }: Line
           }}
         />
       )}
-
-      {/* Add sheet with tabs */}
-      <AddItemSheet
-        jobId={jobId}
-        presets={presets}
-        categories={((settings?.job_categories ?? DEFAULT_SETTINGS.job_categories) as string[])}
-        open={addSheetOpen}
-        onOpenChange={setAddSheetOpen}
-      />
-    </SectionCard>
+    </div>
   );
 }
 
