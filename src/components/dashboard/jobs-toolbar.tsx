@@ -58,15 +58,15 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   }, [search, updateParams]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {/* Search bar — full width */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 dark:text-stone-500" />
+        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400 dark:text-stone-500" />
         <Input
           placeholder="Search jobs..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-11 rounded-md"
+          className="pl-9 h-9"
         />
       </div>
 
@@ -157,7 +157,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
 
         <div className="ml-auto">
           <Link href="/jobs/new">
-            <Button className="rounded-md gap-2 shadow-lg shadow-blue-600/20">
+            <Button size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">New Job</span>
             </Button>

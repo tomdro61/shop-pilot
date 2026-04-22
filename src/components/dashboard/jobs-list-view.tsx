@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,22 +11,30 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { useState } from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
-import { StatusSelect } from "./status-select";
-import { JobCard } from "./job-card";
-import { formatCustomerName, formatVehicle, formatCurrency, formatDate } from "@/lib/utils/format";
+  formatCustomerName,
+  formatVehicle,
+  formatCurrency,
+  formatDate,
+  formatRONumber,
+} from "@/lib/utils/format";
 import { ArrowUpDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { JOB_STATUS_LABELS } from "@/lib/constants";
 import type { JobStatus } from "@/types";
+
+const STATUS_BORDER: Record<JobStatus, string> = {
+  not_started: "border-l-stone-300 dark:border-l-stone-700",
+  waiting_for_parts: "border-l-amber-500",
+  in_progress: "border-l-blue-500",
+  complete: "border-l-emerald-500",
+};
+
+const STATUS_TEXT: Record<JobStatus, string> = {
+  not_started: "text-stone-500 dark:text-stone-400",
+  waiting_for_parts: "text-amber-700 dark:text-amber-400",
+  in_progress: "text-blue-700 dark:text-blue-400",
+  complete: "text-emerald-700 dark:text-emerald-400",
+};
 
 type JobRow = {
   id: string;
@@ -46,112 +55,128 @@ interface JobsListViewProps {
   jobs: JobRow[];
 }
 
-function SortableHeader({ column, children }: { column: { toggleSorting: (desc: boolean) => void; getIsSorted: () => false | "asc" | "desc" }; children: React.ReactNode }) {
+function SortHeader({
+  column,
+  children,
+  align = "left",
+}: {
+  column: { toggleSorting: (desc: boolean) => void; getIsSorted: () => false | "asc" | "desc" };
+  children: React.ReactNode;
+  align?: "left" | "right";
+}) {
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="-ml-3 h-8 text-[10px] font-black uppercase tracking-[0.1em] text-stone-100 hover:text-white hover:bg-stone-700"
+    <button
+      type="button"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      className={`inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 ${align === "right" ? "justify-end" : ""}`}
     >
       {children}
-      <ArrowUpDown className="ml-1 h-3 w-3" />
-    </Button>
+      <ArrowUpDown className="h-3 w-3 opacity-50" />
+    </button>
   );
 }
 
+function totalForJob(job: JobRow): number {
+  return job.job_line_items?.reduce((s, li) => s + (li.total || 0), 0) ?? 0;
+}
+
 export function JobsListView({ jobs }: JobsListViewProps) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns = useMemo<ColumnDef<JobRow>[]>(
     () => [
       {
-        accessorKey: "status",
-        header: "Status",
+        id: "ro",
+        accessorFn: (row) => row.ro_number ?? 0,
+        header: ({ column }) => <SortHeader column={column}>RO#</SortHeader>,
         cell: ({ row }) => (
-          <StatusSelect
-            jobId={row.original.id}
-            currentStatus={row.original.status as JobStatus}
-          />
+          <span className="font-mono text-xs text-stone-500 dark:text-stone-400 tabular-nums">
+            {row.original.ro_number ? formatRONumber(row.original.ro_number) : "—"}
+          </span>
         ),
       },
       {
-        id: "customer",
-        header: ({ column }) => <SortableHeader column={column}>Customer</SortableHeader>,
-        accessorFn: (row) =>
-          row.customers
-            ? `${row.customers.last_name}, ${row.customers.first_name}`
-            : "",
+        accessorKey: "status",
+        header: () => <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Status</span>,
         cell: ({ row }) => {
-          const customer = row.original.customers;
-          if (!customer) return null;
-          const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
+          const s = row.original.status as JobStatus;
           return (
-            <Link
-              href={`/customers/${customer.id}`}
-              className="flex items-center gap-3 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[10px] font-bold text-blue-700 dark:text-blue-400">
-                {initials}
-              </div>
-              <span className="font-bold text-stone-900 dark:text-stone-50">
-                {formatCustomerName(customer)}
-              </span>
-            </Link>
+            <span className={`text-xs font-medium ${STATUS_TEXT[s]}`}>
+              {JOB_STATUS_LABELS[s]}
+            </span>
           );
         },
       },
       {
+        id: "customer",
+        accessorFn: (row) => (row.customers ? `${row.customers.last_name}, ${row.customers.first_name}` : ""),
+        header: ({ column }) => <SortHeader column={column}>Customer</SortHeader>,
+        cell: ({ row }) =>
+          row.original.customers ? (
+            <span className="text-sm font-medium text-stone-900 dark:text-stone-50">
+              {formatCustomerName(row.original.customers)}
+            </span>
+          ) : (
+            <span className="text-sm text-stone-400">—</span>
+          ),
+      },
+      {
         id: "vehicle",
-        header: "Vehicle",
-        accessorFn: (row) =>
-          row.vehicles ? formatVehicle(row.vehicles) : "",
+        header: () => <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Vehicle</span>,
         cell: ({ row }) => (
-          <span className="text-stone-500 dark:text-stone-400">
-            {row.original.vehicles ? formatVehicle(row.original.vehicles) : null}
+          <span className="text-sm text-stone-600 dark:text-stone-400">
+            {row.original.vehicles ? formatVehicle(row.original.vehicles) : "—"}
           </span>
         ),
       },
       {
         id: "job",
         accessorFn: (row) => row.title || "",
-        header: ({ column }) => <SortableHeader column={column}>Job</SortableHeader>,
+        header: ({ column }) => <SortHeader column={column}>Job</SortHeader>,
         cell: ({ row }) => (
-          <span className="font-medium text-stone-900 dark:text-stone-50">{row.original.title}</span>
+          <span className="text-sm text-stone-900 dark:text-stone-50 block max-w-[280px] truncate">
+            {row.original.title || "—"}
+          </span>
         ),
       },
       {
         id: "tech",
-        header: "Tech",
-        accessorFn: (row) => row.users?.name ?? "",
+        header: () => <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Tech</span>,
         cell: ({ row }) => (
-          <span className="text-stone-500 dark:text-stone-400">
-            {row.original.users?.name ?? null}
+          <span className="text-sm text-stone-600 dark:text-stone-400">
+            {row.original.users?.name ?? "—"}
           </span>
         ),
       },
       {
         id: "total",
-        header: ({ column }) => <SortableHeader column={column}>Total</SortableHeader>,
-        accessorFn: (row) =>
-          row.job_line_items?.reduce((sum, li) => sum + (li.total || 0), 0) ?? 0,
+        accessorFn: (row) => totalForJob(row),
+        header: ({ column }) => (
+          <div className="text-right">
+            <SortHeader column={column} align="right">Total</SortHeader>
+          </div>
+        ),
         cell: ({ row }) => {
-          const total = row.original.job_line_items?.reduce(
-            (sum, li) => sum + (li.total || 0),
-            0
-          ) ?? 0;
-          return total > 0 ? (
-            <span className="font-bold text-stone-900 dark:text-stone-50 tabular-nums">
-              {formatCurrency(total)}
-            </span>
-          ) : null;
+          const t = totalForJob(row.original);
+          return (
+            <div className="text-right">
+              {t > 0 ? (
+                <span className="font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                  {formatCurrency(t)}
+                </span>
+              ) : (
+                <span className="text-sm text-stone-400">—</span>
+              )}
+            </div>
+          );
         },
       },
       {
         accessorKey: "date_received",
-        header: ({ column }) => <SortableHeader column={column}>Date</SortableHeader>,
+        header: ({ column }) => <SortHeader column={column}>Date</SortHeader>,
         cell: ({ row }) => (
-          <span className="text-stone-500 dark:text-stone-400 tabular-nums">
+          <span className="font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
             {formatDate(row.original.date_received)}
           </span>
         ),
@@ -169,93 +194,93 @@ export function JobsListView({ jobs }: JobsListViewProps) {
     state: { sorting },
   });
 
+  if (jobs.length === 0) {
+    return (
+      <div className="border border-stone-200 dark:border-stone-800 bg-card py-12 text-center">
+        <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No jobs found</p>
+        <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your filters</p>
+      </div>
+    );
+  }
+
   return (
     <>
-      {/* Mobile: Card list */}
-      <div className="lg:hidden">
-        {jobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <svg className="h-6 w-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085" /></svg>
-            </div>
-            <p className="mt-3 text-sm font-medium text-muted-foreground">No jobs found</p>
-            <p className="mt-1 text-xs text-muted-foreground/70">Try adjusting your filters</p>
-          </div>
-        ) : (
-          <Card className="py-0 gap-0">
-            <CardContent className="p-0">
-              <div className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100">
-                {jobs.length} jobs
-              </div>
-              <div className="space-y-1 p-2">
-                {jobs.map((job) => <JobCard key={job.id} job={job} />)}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      {/* Desktop: dense table */}
+      <div className="hidden lg:block border border-stone-200 dark:border-stone-800 bg-card">
+        <table className="w-full border-collapse">
+          <thead>
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id} className="border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/40">
+                {hg.headers.map((h) => (
+                  <th key={h.id} className="text-left px-3 py-2 border-l-2 border-l-transparent first:pl-[calc(0.75rem-2px)]">
+                    {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => {
+              const s = row.original.status as JobStatus;
+              return (
+                <tr
+                  key={row.id}
+                  onClick={() => router.push(`/jobs/${row.original.id}`)}
+                  className={`cursor-pointer border-b border-stone-200 dark:border-stone-800 last:border-b-0 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/40`}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-3 py-2 align-middle">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Desktop: Data table */}
-      <div className="hidden lg:block">
-        <Card className="py-0 gap-0">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-stone-800 dark:bg-stone-900 hover:bg-stone-800 dark:hover:bg-stone-900">
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="text-[10px] font-black uppercase tracking-[0.1em] text-stone-100">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      className="cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/50"
-                      onClick={(e) => {
-                        // Don't navigate if clicking on status select
-                        if ((e.target as HTMLElement).closest("[role='combobox']"))
-                          return;
-                        window.location.href = `/jobs/${row.original.id}`;
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-32 text-center"
-                    >
-                      <div className="flex flex-col items-center justify-center">
-                        <p className="text-sm font-medium text-muted-foreground">No jobs found</p>
-                        <p className="mt-1 text-xs text-muted-foreground/70">Try adjusting your filters</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+      {/* Mobile: dense stacked rows */}
+      <div className="lg:hidden border border-stone-200 dark:border-stone-800 bg-card divide-y divide-stone-200 dark:divide-stone-800">
+        {jobs.map((job) => {
+          const s = job.status as JobStatus;
+          const c = job.customers;
+          const t = totalForJob(job);
+          return (
+            <Link
+              key={job.id}
+              href={`/jobs/${job.id}`}
+              className={`block px-3 py-2.5 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className={`text-xs font-medium ${STATUS_TEXT[s]}`}>{JOB_STATUS_LABELS[s]}</span>
+                <span className="font-mono text-[11px] text-stone-400 tabular-nums">
+                  {job.ro_number ? formatRONumber(job.ro_number) : ""}
+                </span>
+              </div>
+              <div className="mt-1 flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                    {c ? formatCustomerName(c) : "—"}
+                  </div>
+                  <div className="text-xs text-stone-500 dark:text-stone-400 truncate">
+                    {job.vehicles ? formatVehicle(job.vehicles) : ""}{job.title ? ` · ${job.title}` : ""}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  {t > 0 && (
+                    <div className="font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50">
+                      {formatCurrency(t)}
+                    </div>
+                  )}
+                  <div className="font-mono tabular-nums text-[10px] text-stone-400">
+                    {formatDate(job.date_received)}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </>
   );

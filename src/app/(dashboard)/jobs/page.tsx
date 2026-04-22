@@ -58,12 +58,12 @@ export default async function JobsPage({
   ].sort();
 
   return (
-    <div className="p-4 lg:p-10">
+    <div className="p-4 lg:p-6">
       <Suspense>
         <JobsToolbar categories={allCategories} jobCount={jobs.length} />
       </Suspense>
 
-      <div className="mt-4">
+      <div className="mt-3">
         {view === "board" ? (
           <JobsBoardView jobs={jobs} />
         ) : view === "calendar" ? (
