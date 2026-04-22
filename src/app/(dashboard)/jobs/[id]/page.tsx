@@ -17,7 +17,6 @@ import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
 import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
-import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
 import { ArrowLeft, Pencil, Car, Printer, StickyNote } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
@@ -59,89 +58,75 @@ export default async function JobDetailPage({
   return (
     <><div className="p-4 pb-24 lg:p-10 lg:pb-24 max-w-5xl mx-auto">
 
-      {/* ── Header ── */}
-      <div className="mb-8 animate-in-up">
+      {/* ── Top Actions Bar ── */}
+      <div className="mb-4 flex items-center justify-between gap-3 animate-in-up">
         <Link href="/jobs">
-          <Button variant="ghost" size="sm" className="mb-3">
+          <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Jobs
           </Button>
         </Link>
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-stone-500">
-                Repair Order Detail
-              </span>
-              <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
-            </div>
-            <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
-              {job.title || "Job"}
-            </h2>
-            {job.ro_number && (
-              <p className="text-sm text-stone-400 dark:text-stone-500 mt-0.5">{formatRONumber(job.ro_number)}</p>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {job.status === "complete" && customer?.phone && (
-              <SendReadyTextButton jobId={id} />
-            )}
-            <Link href={`/jobs/${id}/print`}>
-              <Button variant="outline" size="sm" className="rounded-md">
-                <Printer className="mr-1.5 h-3.5 w-3.5" />
-                Print RO
-              </Button>
-            </Link>
-            <Link href={`/jobs/${id}/edit`}>
-              <Button variant="outline" size="sm" className="rounded-md">
-                <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                Edit
-              </Button>
-            </Link>
-            <JobDeleteButton jobId={id} />
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {job.status === "complete" && customer?.phone && (
+            <SendReadyTextButton jobId={id} />
+          )}
+          <Link href={`/jobs/${id}/print`}>
+            <Button variant="outline" size="sm">
+              <Printer className="mr-1.5 h-3.5 w-3.5" />
+              Print RO
+            </Button>
+          </Link>
+          <Link href={`/jobs/${id}/edit`}>
+            <Button variant="outline" size="sm">
+              <Pencil className="mr-1.5 h-3.5 w-3.5" />
+              Edit
+            </Button>
+          </Link>
+          <JobDeleteButton jobId={id} />
         </div>
       </div>
 
-      {/* ── Metadata Strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-6 lg:gap-8 mb-8 pt-6 border-t border-stone-200/50 dark:border-stone-700/30 animate-in-up stagger-1">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Date Received</p>
-          <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{formatDate(job.date_received)}</p>
+      {/* ── Job Header Card ── */}
+      <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden mb-8 animate-in-up">
+        <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Job</p>
+            {job.ro_number && (
+              <>
+                <span className="text-stone-500">·</span>
+                <p className="text-[11px] font-semibold tracking-wide text-stone-400 truncate">{formatRONumber(job.ro_number)}</p>
+              </>
+            )}
+          </div>
+          <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
         </div>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Date Finished</p>
-          {job.date_finished ? (
-            <DateFinishedEditor jobId={id} dateFinished={job.date_finished} />
-          ) : (
-            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Not Set</p>
-          )}
-        </div>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Assigned Tech</p>
-          <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{tech?.name || "Unassigned"}</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Current Mileage</p>
-          <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{job.mileage_in ? `${job.mileage_in.toLocaleString()} mi` : "—"}</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Payment Status</p>
-          {job.payment_status ? (
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].bg} ${PAYMENT_STATUS_COLORS[job.payment_status as PaymentStatus].text}`}>
-                {PAYMENT_STATUS_LABELS[job.payment_status as PaymentStatus]}
-              </span>
-              {job.payment_method && (
-                <span className="text-xs text-stone-400 dark:text-stone-500">
-                  {PAYMENT_METHOD_LABELS[job.payment_method as PaymentMethod]}
-                </span>
+        <div className="p-5 lg:p-6">
+          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
+            {job.title || "Untitled Job"}
+          </h2>
+
+          <div className="mt-5 pt-5 border-t border-stone-200/50 dark:border-stone-700/30 grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Date Received</p>
+              <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{formatDate(job.date_received)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Date Finished</p>
+              {job.date_finished ? (
+                <DateFinishedEditor jobId={id} dateFinished={job.date_finished} />
+              ) : (
+                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Not Set</p>
               )}
             </div>
-          ) : (
-            <p className="text-sm text-stone-400 dark:text-stone-500">Not Set</p>
-          )}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Assigned Tech</p>
+              <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{tech?.name || "Unassigned"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Current Mileage</p>
+              <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{job.mileage_in ? `${job.mileage_in.toLocaleString()} mi` : "—"}</p>
+            </div>
+          </div>
         </div>
       </div>
 
