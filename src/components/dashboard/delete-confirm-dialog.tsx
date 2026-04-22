@@ -43,7 +43,7 @@ export function DeleteConfirmDialog({
       <AlertDialogTrigger asChild>
         {trigger || (
           <Button variant="destructive" size="sm">
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
             Delete
           </Button>
         )}
