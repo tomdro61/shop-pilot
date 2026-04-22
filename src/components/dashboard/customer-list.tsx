@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { formatPhone } from "@/lib/utils/format";
-import { Card, CardContent } from "@/components/ui/card";
-import { ChevronRight, Users } from "lucide-react";
+import { formatPhone, formatCustomerName } from "@/lib/utils/format";
+
 interface CustomerListItem {
   id: string;
   first_name: string;
@@ -16,104 +15,99 @@ interface CustomerListProps {
   totalCount?: number;
 }
 
+const TYPE_CHIP: Record<string, string> = {
+  fleet: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400",
+  parking: "bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400",
+};
+
+function TypeChip({ type }: { type: string | null }) {
+  if (!type || type === "retail") {
+    return <span className="text-xs text-stone-400 dark:text-stone-500">Retail</span>;
+  }
+  const colors = TYPE_CHIP[type] ?? "bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300";
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium capitalize ${colors}`}>
+      {type}
+    </span>
+  );
+}
+
 export function CustomerList({ customers, totalCount }: CustomerListProps) {
   if (customers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-          <Users className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <p className="mt-3 text-sm font-medium text-muted-foreground">No customers found</p>
-        <p className="mt-1 text-xs text-muted-foreground/70">Try adjusting your search or add a new customer</p>
+      <div className="border border-stone-200 dark:border-stone-800 bg-card py-12 text-center">
+        <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No customers found</p>
+        <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your search or add a new customer</p>
       </div>
     );
   }
 
   return (
-    <Card className="py-0 gap-0">
-      <CardContent className="p-0">
-        {/* Table header — hidden on mobile */}
-        <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] px-5 py-3 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100">
-          <span>Name</span>
-          <span>Email</span>
-          <span>Phone</span>
-          <span className="w-16 text-center">Type</span>
-        </div>
+    <>
+      {/* Desktop: dense table */}
+      <div className="hidden lg:block border border-stone-200 dark:border-stone-800 bg-card">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/40">
+              <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Name</th>
+              <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Email</th>
+              <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Phone</th>
+              <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 w-24">Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            {customers.map((customer) => (
+              <tr
+                key={customer.id}
+                className="border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
+              >
+                <td className="px-3 py-2">
+                  <Link href={`/customers/${customer.id}`} className="text-sm font-medium text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 block">
+                    {formatCustomerName(customer)}
+                  </Link>
+                </td>
+                <td className="px-3 py-2 text-sm text-stone-600 dark:text-stone-400 truncate max-w-[280px]">
+                  {customer.email ?? "—"}
+                </td>
+                <td className="px-3 py-2 font-mono tabular-nums text-xs text-stone-600 dark:text-stone-400">
+                  {customer.phone ? formatPhone(customer.phone) : "—"}
+                </td>
+                <td className="px-3 py-2">
+                  <TypeChip type={customer.customer_type} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-        {/* Customer count — mobile only */}
-        <div className="md:hidden px-5 py-2.5 text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100">
+      {/* Mobile: dense stacked rows */}
+      <div className="lg:hidden border border-stone-200 dark:border-stone-800 bg-card divide-y divide-stone-200 dark:divide-stone-800">
+        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-900/40">
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
-
-        <div className="divide-y divide-stone-200 dark:divide-stone-800">
-          {customers.map((customer) => {
-            const initials = `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase();
-            return (
-              <Link key={customer.id} href={`/customers/${customer.id}`} className="block">
-                {/* Desktop: columnar table row */}
-                <div className="hidden md:grid md:grid-cols-[1fr_1fr_1fr_auto] items-center rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-bold text-blue-700 dark:text-blue-400">
-                      {initials}
-                    </div>
-                    <span className="text-sm font-bold truncate">
-                      {customer.first_name} {customer.last_name}
-                    </span>
-                  </div>
-                  <span className="text-sm text-muted-foreground truncate pr-4">
-                    {customer.email ?? "—"}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {customer.phone ? formatPhone(customer.phone) : "—"}
-                  </span>
-                  <span className="w-16 flex justify-center">
-                    {customer.customer_type === "fleet" ? (
-                      <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400">
-                        Fleet
-                      </span>
-                    ) : customer.customer_type === "parking" ? (
-                      <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400">
-                        Parking
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/50">Retail</span>
-                    )}
-                  </span>
-                </div>
-
-                {/* Mobile: compact stacked row */}
-                <div className="flex items-center gap-3 rounded-lg px-4 py-3.5 md:hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-bold text-blue-700 dark:text-blue-400">
-                    {initials}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold truncate">
-                        {customer.first_name} {customer.last_name}
-                      </p>
-                      {customer.customer_type === "fleet" && (
-                        <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 shrink-0">
-                          Fleet
-                        </span>
-                      )}
-                      {customer.customer_type === "parking" && (
-                        <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 shrink-0">
-                          Parking
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-                      {customer.phone && <span>{formatPhone(customer.phone)}</span>}
-                      {customer.email && <span className="truncate">{customer.email}</span>}
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+        {customers.map((customer) => (
+          <Link
+            key={customer.id}
+            href={`/customers/${customer.id}`}
+            className="block px-3 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                {formatCustomerName(customer)}
+              </p>
+              <TypeChip type={customer.customer_type} />
+            </div>
+            <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-stone-500 dark:text-stone-400">
+              {customer.phone && (
+                <span className="font-mono tabular-nums">{formatPhone(customer.phone)}</span>
+              )}
+              {customer.phone && customer.email && <span className="text-stone-300 dark:text-stone-700">·</span>}
+              {customer.email && <span className="truncate">{customer.email}</span>}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </>
   );
 }

@@ -34,13 +34,13 @@ export function CustomerSearch() {
   }, [search, updateSearch]);
 
   return (
-    <div className="relative">
-      <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 dark:text-stone-500" />
+    <div className="relative flex-1 min-w-[220px]">
+      <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400 dark:text-stone-500" />
       <Input
         placeholder="Search customers..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="pl-11 rounded-md"
+        className="h-8 pl-8 text-sm bg-card"
       />
     </div>
   );
