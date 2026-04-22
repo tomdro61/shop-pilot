@@ -18,7 +18,7 @@ import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-butt
 import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
 import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
-import { ArrowLeft, Pencil, Car, Printer, StickyNote } from "lucide-react";
+import { ArrowLeft, Pencil, Printer } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +30,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     title: `Job - ${customer ? formatCustomerName(customer) : "Unknown"} | ShopPilot`,
   };
 }
+
+const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
+const DL_TERM = "text-stone-500 dark:text-stone-400";
+const DL_VALUE = "text-stone-900 dark:text-stone-50";
 
 export default async function JobDetailPage({
   params,
@@ -53,187 +57,188 @@ export default async function JobDetailPage({
   const lineItems = (job.job_line_items || []) as JobLineItem[];
   const totals = calculateTotals(lineItems, settings);
   const grandTotal = totals.grandTotal;
-  const initials = customer ? `${customer.first_name?.[0] ?? ""}${customer.last_name?.[0] ?? ""}`.toUpperCase() : null;
 
   return (
-    <><div className="p-4 pb-24 lg:p-10 lg:pb-24 max-w-5xl mx-auto">
+    <>
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-24">
 
-      {/* ── Top Actions Bar ── */}
-      <div className="mb-4 flex items-center justify-between gap-3 animate-in-up">
-        <Link href="/jobs">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Jobs
-          </Button>
-        </Link>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {job.status === "complete" && customer?.phone && (
-            <SendReadyTextButton jobId={id} />
-          )}
-          <Link href={`/jobs/${id}/print`}>
-            <Button variant="outline" size="sm">
-              <Printer className="mr-1.5 h-3.5 w-3.5" />
-              Print RO
+        {/* Action strip */}
+        <div className="flex items-center justify-between py-3 border-b border-stone-200 dark:border-stone-800">
+          <Link href="/jobs">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+              Jobs
             </Button>
           </Link>
-          <Link href={`/jobs/${id}/edit`}>
-            <Button variant="outline" size="sm">
-              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Edit
-            </Button>
-          </Link>
-          <JobDeleteButton jobId={id} />
+          <div className="flex items-center gap-1.5">
+            {job.status === "complete" && customer?.phone && (
+              <SendReadyTextButton jobId={id} />
+            )}
+            <Link href={`/jobs/${id}/print`}>
+              <Button variant="outline" size="sm">
+                <Printer className="mr-1.5 h-3.5 w-3.5" />
+                Print
+              </Button>
+            </Link>
+            <Link href={`/jobs/${id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit
+              </Button>
+            </Link>
+            <JobDeleteButton jobId={id} />
+          </div>
         </div>
-      </div>
 
-      {/* ── Job Header Card ── */}
-      <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden mb-8 animate-in-up">
-        <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Job</p>
-            {job.ro_number && (
-              <>
-                <span className="text-stone-500">·</span>
-                <p className="text-[11px] font-semibold tracking-wide text-stone-400 truncate">{formatRONumber(job.ro_number)}</p>
-              </>
+        {/* Identity strip: RO + status + title */}
+        <div className="flex items-center gap-3 py-3 border-b border-stone-200 dark:border-stone-800 flex-wrap">
+          {job.ro_number && (
+            <span className="font-mono text-xs text-stone-400 dark:text-stone-500 tabular-nums shrink-0">
+              {formatRONumber(job.ro_number)}
+            </span>
+          )}
+          <div className="shrink-0">
+            <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
+          </div>
+          <h1 className="text-base lg:text-lg font-semibold text-stone-900 dark:text-stone-50 min-w-0 truncate">
+            {job.title || <span className="italic text-stone-400 font-normal">Untitled job</span>}
+          </h1>
+        </div>
+
+        {/* Info grid: customer · vehicle · details */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-10 py-4 border-b border-stone-200 dark:border-stone-800">
+          {/* Customer */}
+          <div>
+            <div className={`${SECTION_LABEL} mb-1.5`}>Customer</div>
+            {customer ? (
+              <div className="space-y-1">
+                <Link
+                  href={`/customers/${customer.id}`}
+                  className="block text-sm font-medium text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400"
+                >
+                  {formatCustomerName(customer)}
+                </Link>
+                {customer.phone && (
+                  <div className="flex items-center gap-1.5 text-xs flex-wrap">
+                    <span className="font-mono tabular-nums text-stone-600 dark:text-stone-400">
+                      {formatPhone(customer.phone)}
+                    </span>
+                    <span className="text-stone-300 dark:text-stone-700">·</span>
+                    <a href={`tel:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">Call</a>
+                    <span className="text-stone-300 dark:text-stone-700">·</span>
+                    <a href={`sms:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">Text</a>
+                  </div>
+                )}
+                {customer.email && (
+                  <div className="text-xs text-stone-600 dark:text-stone-400 truncate">{customer.email}</div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-stone-400">—</div>
             )}
           </div>
-          <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
-        </div>
-        <div className="p-5 lg:p-6">
-          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
-            {job.title || "Untitled Job"}
-          </h2>
 
-          <div className="mt-5 pt-5 border-t border-stone-200/50 dark:border-stone-700/30 grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Date Received</p>
-              <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{formatDate(job.date_received)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Date Finished</p>
-              {job.date_finished ? (
-                <DateFinishedEditor jobId={id} dateFinished={job.date_finished} />
-              ) : (
-                <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">Not Set</p>
-              )}
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Assigned Tech</p>
-              <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{tech?.name || "Unassigned"}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 mb-1">Current Mileage</p>
-              <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">{job.mileage_in ? `${job.mileage_in.toLocaleString()} mi` : "—"}</p>
-            </div>
+          {/* Vehicle */}
+          <div>
+            <div className={`${SECTION_LABEL} mb-1.5`}>Vehicle</div>
+            {vehicle ? (
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-stone-900 dark:text-stone-50">{formatVehicle(vehicle)}</div>
+                {(vehicle.color || vehicle.mileage != null) && (
+                  <div className="flex items-center gap-1.5 text-xs text-stone-600 dark:text-stone-400 flex-wrap">
+                    {vehicle.color && <span>{vehicle.color}</span>}
+                    {vehicle.color && vehicle.mileage != null && <span className="text-stone-300 dark:text-stone-700">·</span>}
+                    {vehicle.mileage != null && (
+                      <span className="font-mono tabular-nums">{vehicle.mileage.toLocaleString()} mi</span>
+                    )}
+                  </div>
+                )}
+                {vehicle.vin && (
+                  <div className="text-xs font-mono text-stone-500 dark:text-stone-500 truncate">
+                    <span className="uppercase text-stone-400">VIN </span>
+                    {vehicle.vin}
+                  </div>
+                )}
+                {vehicle.license_plate && (
+                  <div className="text-xs font-mono text-stone-500 dark:text-stone-500">
+                    <span className="uppercase text-stone-400">Plate </span>
+                    {vehicle.license_plate}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-stone-400">—</div>
+            )}
+          </div>
+
+          {/* Details */}
+          <div>
+            <div className={`${SECTION_LABEL} mb-1.5`}>Details</div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+              <dt className={DL_TERM}>Received</dt>
+              <dd className={`font-mono tabular-nums ${DL_VALUE}`}>{formatDate(job.date_received)}</dd>
+              <dt className={DL_TERM}>Finished</dt>
+              <dd>
+                {job.date_finished ? (
+                  <DateFinishedEditor jobId={id} dateFinished={job.date_finished} />
+                ) : (
+                  <span className="text-blue-600 dark:text-blue-400">Not set</span>
+                )}
+              </dd>
+              <dt className={DL_TERM}>Tech</dt>
+              <dd className={DL_VALUE}>
+                {tech?.name || <span className="text-stone-400">Unassigned</span>}
+              </dd>
+              <dt className={DL_TERM}>Mileage in</dt>
+              <dd className={`font-mono tabular-nums ${DL_VALUE}`}>
+                {job.mileage_in ? `${job.mileage_in.toLocaleString()} mi` : "—"}
+              </dd>
+            </dl>
           </div>
         </div>
-      </div>
 
-      {/* ── Customer & Vehicle Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-8 animate-in-up stagger-2">
-        {customer && (
-          <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
-            <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Customer</p>
-              <Link href={`/customers/${customer.id}`} className="text-stone-300 hover:text-white transition-colors">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
-              </Link>
-            </div>
-            <div className="p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-sm font-black text-blue-700 dark:text-blue-400 border-4 border-white dark:border-stone-900 shadow-sm">
-                  {initials}
-                </div>
-                <div>
-                  <p className="text-base font-bold text-stone-900 dark:text-stone-50">{formatCustomerName(customer)}</p>
-                  {customer.phone && <p className="text-sm text-stone-500 dark:text-stone-400">{formatPhone(customer.phone)}</p>}
-                  {customer.email && <p className="text-sm text-blue-600 dark:text-blue-400 truncate max-w-[180px]">{customer.email}</p>}
-                </div>
-              </div>
-              {customer.phone && (
-                <div className="flex gap-2">
-                  <a href={`tel:${customer.phone}`} className="flex-1 py-2 bg-stone-100 dark:bg-stone-800 text-[11px] font-bold uppercase text-center text-stone-900 dark:text-stone-50 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
-                    Call
-                  </a>
-                  <a href={`sms:${customer.phone}`} className="flex-1 py-2 bg-stone-100 dark:bg-stone-800 text-[11px] font-bold uppercase text-center text-stone-900 dark:text-stone-50 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
-                    Text
-                  </a>
-                </div>
-              )}
-            </div>
+        {/* Notes */}
+        {job.notes && (
+          <div className="py-4 border-b border-stone-200 dark:border-stone-800">
+            <div className={`${SECTION_LABEL} mb-1.5`}>Primary Complaint / Notes</div>
+            <p className="text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">
+              {job.notes}
+            </p>
           </div>
         )}
 
-        {vehicle && (
-          <div className="bg-card rounded-lg shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
-            <div className="flex items-center justify-between bg-stone-800 dark:bg-stone-900 px-5 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Vehicle</p>
-              <Car className="h-4 w-4 text-stone-300" />
-            </div>
-            <div className="p-5">
-              <div>
-                <p className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">Model</p>
-                <p className="text-lg font-bold text-stone-900 dark:text-stone-50 leading-tight">{formatVehicle(vehicle)}</p>
-                {vehicle.color && <p className="text-sm text-stone-500 dark:text-stone-400">{vehicle.color}</p>}
-              </div>
-              {vehicle.vin && (
-                <div className="mt-3">
-                  <p className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">VIN</p>
-                  <p className="text-sm text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 px-2 py-1 rounded inline-block mt-0.5">{vehicle.vin}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Notes ── */}
-      {job.notes && (
-        <div className="bg-card rounded-lg shadow-card overflow-hidden mb-8 animate-in-up stagger-2">
-          <div className="flex items-center gap-2 bg-stone-800 dark:bg-stone-900 px-5 py-3">
-            <StickyNote className="h-3.5 w-3.5 text-stone-300" />
-            <p className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Primary Complaint / Notes</p>
-          </div>
-          <div className="p-5">
-            <p className="text-sm text-stone-900 dark:text-stone-50 leading-relaxed italic whitespace-pre-wrap">{job.notes}</p>
-          </div>
+        {/* Line Items — primary work area */}
+        <div className="py-4">
+          <LineItemsList jobId={id} lineItems={lineItems} settings={settings} presets={presets} />
         </div>
-      )}
 
-      {/* ── Line Items ── */}
-      <div className="mb-8 animate-in-up stagger-3">
-        <LineItemsList jobId={id} lineItems={lineItems} settings={settings} presets={presets} />
+        {/* Inspection */}
+        <div className="py-4 border-t border-stone-200 dark:border-stone-800">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <DviSection jobId={id} inspection={dviInspection as any} />
+        </div>
+
+        {/* Estimate + Invoice */}
+        <div className="py-4 border-t border-stone-200 dark:border-stone-800 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <EstimateSection jobId={id} estimate={estimate} />
+          <InvoiceSection
+            jobId={id}
+            jobStatus={job.status as JobStatus}
+            invoice={invoice}
+            customerEmail={customer?.email || null}
+            customerPhone={customer?.phone || null}
+            isFleet={customer?.customer_type === "fleet"}
+          />
+        </div>
       </div>
 
-      {/* ── DVI ── */}
-      <div className="mb-8 animate-in-up stagger-3">
-        <DviSection jobId={id} inspection={dviInspection as any} />
-      </div>
-
-      {/* ── Estimate + Invoice ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 animate-in-up stagger-4">
-        <EstimateSection jobId={id} estimate={estimate} />
-        <InvoiceSection
-          jobId={id}
-          jobStatus={job.status as JobStatus}
-          invoice={invoice}
-          customerEmail={customer?.email || null}
-          customerPhone={customer?.phone || null}
-          isFleet={customer?.customer_type === "fleet"}
-        />
-      </div>
-
-    </div>
-
-    {/* Sticky Payment Footer */}
-    <JobPaymentFooter
-      jobId={id}
-      jobStatus={job.status as JobStatus}
-      paymentStatus={(job.payment_status || "unpaid") as PaymentStatus}
-      paymentMethod={(job.payment_method as PaymentMethod) || null}
-      grandTotal={grandTotal}
-    />
+      <JobPaymentFooter
+        jobId={id}
+        jobStatus={job.status as JobStatus}
+        paymentStatus={(job.payment_status || "unpaid") as PaymentStatus}
+        paymentMethod={(job.payment_method as PaymentMethod) || null}
+        grandTotal={grandTotal}
+      />
     </>
   );
 }
