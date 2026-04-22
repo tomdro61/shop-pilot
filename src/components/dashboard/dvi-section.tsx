@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS, DVI_CONDITION_COLORS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils/format";
 import { ClipboardCheck, Send, Eye, ExternalLink } from "lucide-react";
@@ -37,6 +35,8 @@ interface DviSectionProps {
   inspection: DviInspection | null;
 }
 
+const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
+
 export function DviSection({ jobId, inspection }: DviSectionProps) {
   const [sendOpen, setSendOpen] = useState(false);
 
@@ -56,95 +56,119 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
 
   return (
     <>
-      <Card className="py-0 gap-0">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-stone-800 dark:bg-stone-900 px-5 py-3">
-          <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-100">
-            <ClipboardCheck className="h-3.5 w-3.5" />
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200 dark:border-stone-800">
+          <h3 className={`flex items-center gap-1.5 ${SECTION_LABEL}`}>
+            <ClipboardCheck className="h-3 w-3" />
             Vehicle Inspection
-          </CardTitle>
+          </h3>
           {status && statusColors && (
-            <Badge variant="outline" className={`${statusColors.bg} ${statusColors.text}`}>
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors.bg} ${statusColors.text}`}>
               {DVI_STATUS_LABELS[status]}
-            </Badge>
+            </span>
           )}
-        </CardHeader>
-        <CardContent className="py-4">
+        </div>
+
+        {/* Body */}
+        <div className="px-4 py-3">
           {!inspection ? (
-            <p className="text-sm text-muted-foreground py-2 text-center">
+            <p className="text-sm text-stone-500 dark:text-stone-400 text-center py-2">
               No inspection yet — tech will start from their portal.
             </p>
           ) : status === "in_progress" ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Progress</span>
-                <span className="font-medium">{counts.rated}/{counts.total} items</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-stone-500 dark:text-stone-400">Progress</span>
+                <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                  {counts.rated} / {counts.total}
+                </span>
               </div>
-              <div className="h-2 rounded-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-blue-600 transition-all"
                   style={{ width: counts.total > 0 ? `${(counts.rated / counts.total) * 100}%` : "0%" }}
                 />
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Started</span>
-                <span>{formatDate(inspection.created_at)}</span>
+              <div className="flex justify-between text-xs pt-1">
+                <span className="text-stone-500 dark:text-stone-400">Started</span>
+                <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                  {formatDate(inspection.created_at)}
+                </span>
               </div>
             </div>
           ) : status === "completed" ? (
             <div className="space-y-3">
-              {/* Condition summary */}
-              <div className="flex gap-3">
+              {/* Condition chips */}
+              <div className="flex gap-1.5 flex-wrap">
                 {(["good", "monitor", "attention"] as const).map((c) => (
-                  <div key={c} className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}>
-                    {counts[c]} {c === "good" ? "Good" : c === "monitor" ? "Monitor" : "Attention"}
-                  </div>
+                  <span
+                    key={c}
+                    className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}
+                  >
+                    <span className="font-mono tabular-nums">{counts[c]}</span>
+                    <span className="capitalize">{c}</span>
+                  </span>
                 ))}
               </div>
 
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Completed</span>
-                <span>{inspection.completed_at ? formatDate(inspection.completed_at) : "—"}</span>
-              </div>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+                <dt className="text-stone-500 dark:text-stone-400">Completed</dt>
+                <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                  {inspection.completed_at ? formatDate(inspection.completed_at) : "—"}
+                </dd>
+              </dl>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-1">
                 <a href={`/jobs/${jobId}/dvi`} className="flex-1">
                   <Button variant="outline" size="sm" className="w-full">
-                    <Eye className="mr-2 h-4 w-4" />
+                    <Eye className="mr-1.5 h-3.5 w-3.5" />
                     View Report
                   </Button>
                 </a>
                 <Button size="sm" onClick={() => setSendOpen(true)}>
-                  <Send className="mr-2 h-4 w-4" />
+                  <Send className="mr-1.5 h-3.5 w-3.5" />
                   Send to Customer
                 </Button>
               </div>
             </div>
           ) : status === "sent" ? (
-            <div className="space-y-2">
-              {/* Condition summary */}
-              <div className="flex gap-3">
+            <div className="space-y-3">
+              {/* Condition chips */}
+              <div className="flex gap-1.5 flex-wrap">
                 {(["good", "monitor", "attention"] as const).map((c) => (
-                  <div key={c} className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}>
-                    {counts[c]} {c === "good" ? "Good" : c === "monitor" ? "Monitor" : "Attention"}
-                  </div>
+                  <span
+                    key={c}
+                    className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}
+                  >
+                    <span className="font-mono tabular-nums">{counts[c]}</span>
+                    <span className="capitalize">{c}</span>
+                  </span>
                 ))}
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                Sent {inspection.sent_at ? formatDate(inspection.sent_at) : ""}
-              </p>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+                <dt className="text-stone-500 dark:text-stone-400">Sent</dt>
+                <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                  {inspection.sent_at ? formatDate(inspection.sent_at) : ""}
+                </dd>
+              </dl>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-1">
                 <a href={`/jobs/${jobId}/dvi`} className="flex-1">
                   <Button variant="outline" size="sm" className="w-full">
-                    <Eye className="mr-2 h-4 w-4" />
+                    <Eye className="mr-1.5 h-3.5 w-3.5" />
                     View Report
                   </Button>
                 </a>
                 {inspection.approval_token && (
-                  <a href={`${appUrl}/inspect/${inspection.approval_token}`} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={`${appUrl}/inspect/${inspection.approval_token}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Button variant="outline" size="sm">
-                      <ExternalLink className="mr-2 h-4 w-4" />
+                      <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                       Customer Link
                     </Button>
                   </a>
@@ -152,8 +176,8 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
               </div>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {inspection && (
         <SendDviDialog
