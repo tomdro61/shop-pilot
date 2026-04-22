@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { recordPayment } from "@/lib/actions/jobs";
 import { formatCurrency } from "@/lib/utils/format";
-import { PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
+import { PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { CreditCard, Banknote, Landmark, CircleDollarSign, ChevronDown } from "lucide-react";
 import { TerminalPayButton } from "@/components/dashboard/terminal-pay-button";
 import type { JobStatus, PaymentStatus, PaymentMethod } from "@/types";
@@ -23,6 +22,13 @@ const paymentMethods: { value: PaymentMethod; label: string; icon: typeof Credit
   { value: "ach", label: "ACH", icon: Landmark },
   { value: "stripe", label: "Card", icon: CreditCard },
 ];
+
+const STATUS_DOT: Record<PaymentStatus, string> = {
+  unpaid: "bg-red-400",
+  invoiced: "bg-amber-400",
+  paid: "bg-emerald-400",
+  waived: "bg-stone-400",
+};
 
 interface JobPaymentFooterProps {
   jobId: string;
@@ -48,8 +54,6 @@ export function JobPaymentFooter({
     paymentStatus !== "paid" &&
     paymentStatus !== "waived";
 
-  const statusColors = PAYMENT_STATUS_COLORS[paymentStatus];
-
   async function handleRecordPayment(method: PaymentMethod) {
     setLoading(true);
     const result = await recordPayment(jobId, method);
@@ -62,24 +66,29 @@ export function JobPaymentFooter({
   }
 
   return (
-    <div className="fixed bottom-14 lg:sticky lg:bottom-0 left-0 right-0 z-20 border-t border-stone-300 dark:border-stone-800 bg-white/80 dark:bg-stone-900/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 lg:px-6">
-        <div className="flex items-center gap-3">
-          <p className="text-2xl font-bold tabular-nums tracking-tight">
+    <div className="fixed bottom-14 lg:sticky lg:bottom-0 left-0 right-0 z-20 bg-[#0F172A] text-white">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4 lg:px-6">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Grand Total
+          </span>
+          <span className="font-mono tabular-nums text-2xl lg:text-3xl font-semibold text-white">
             {formatCurrency(grandTotal)}
-          </p>
-          <Badge
-            variant="outline"
-            className={`${statusColors?.bg ?? ""} ${statusColors?.text ?? ""}`}
-          >
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-100`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[paymentStatus] ?? "bg-slate-400"}`} />
             {PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus}
-          </Badge>
+          </span>
           {paymentMethod && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-slate-400">
               via {PAYMENT_METHOD_LABELS[paymentMethod]}
             </span>
           )}
         </div>
+
         {showMarkAsPaid && (
           <div className="ml-auto flex items-center gap-2">
             <TerminalPayButton

@@ -197,7 +197,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         <table className="w-full border-collapse">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-stone-300 dark:border-stone-800 bg-stone-300 dark:bg-stone-900/40">
+              <tr key={hg.id} className="border-b border-stone-300 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
                 {hg.headers.map((h) => (
                   <th key={h.id} className="text-left px-3 py-2 border-l-2 border-l-transparent first:pl-[calc(0.75rem-2px)]">
                     {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}

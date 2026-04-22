@@ -44,7 +44,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
       <div className="hidden lg:block border border-stone-300 dark:border-stone-800 bg-card">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-stone-300 dark:border-stone-800 bg-stone-300 dark:bg-stone-900/40">
+            <tr className="border-b border-stone-300 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
               <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Name</th>
               <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Email</th>
               <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Phone</th>
@@ -79,7 +79,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
 
       {/* Mobile: dense stacked rows */}
       <div className="lg:hidden border border-stone-300 dark:border-stone-800 bg-card divide-y divide-stone-200 dark:divide-stone-800">
-        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 bg-stone-300 dark:bg-stone-900/40">
+        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-900/40">
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
         {customers.map((customer) => (
