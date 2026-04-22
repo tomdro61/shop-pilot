@@ -60,12 +60,12 @@ export default async function JobDetailPage({
 
   return (
     <>
-      <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-24">
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-4">
 
-        {/* Action strip */}
-        <div className="flex items-center justify-between py-3 border-b border-stone-200 dark:border-stone-800">
+        {/* Action strip — page-level chrome on the gray bg */}
+        <div className="flex items-center justify-between py-2">
           <Link href="/jobs">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="-ml-3">
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
               Jobs
             </Button>
@@ -90,23 +90,26 @@ export default async function JobDetailPage({
           </div>
         </div>
 
-        {/* Identity strip: RO + status + title */}
-        <div className="flex items-center gap-3 py-3 border-b border-stone-200 dark:border-stone-800 flex-wrap">
-          {job.ro_number && (
-            <span className="font-mono text-xs text-stone-400 dark:text-stone-500 tabular-nums shrink-0">
-              {formatRONumber(job.ro_number)}
-            </span>
-          )}
-          <div className="shrink-0">
-            <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
-          </div>
-          <h1 className="text-base lg:text-lg font-semibold text-stone-900 dark:text-stone-50 min-w-0 truncate">
-            {job.title || <span className="italic text-stone-400 font-normal">Untitled job</span>}
-          </h1>
-        </div>
+        {/* Job info card — light container, internal sections separated by borders */}
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
 
-        {/* Info grid: customer · vehicle · details */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-10 py-4 border-b border-stone-200 dark:border-stone-800">
+          {/* Identity strip: RO + status + title */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-200 dark:border-stone-800 flex-wrap">
+            {job.ro_number && (
+              <span className="font-mono text-xs text-stone-400 dark:text-stone-500 tabular-nums shrink-0">
+                {formatRONumber(job.ro_number)}
+              </span>
+            )}
+            <div className="shrink-0">
+              <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
+            </div>
+            <h1 className="text-base lg:text-lg font-semibold text-stone-900 dark:text-stone-50 min-w-0 truncate">
+              {job.title || <span className="italic text-stone-400 font-normal">Untitled job</span>}
+            </h1>
+          </div>
+
+          {/* Info grid: customer · vehicle · details */}
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-10 px-4 py-4 ${job.notes ? "border-b border-stone-200 dark:border-stone-800" : ""}`}>
           {/* Customer */}
           <div>
             <div className={`${SECTION_LABEL} mb-1.5`}>Customer</div>
@@ -197,29 +200,30 @@ export default async function JobDetailPage({
           </div>
         </div>
 
-        {/* Notes */}
-        {job.notes && (
-          <div className="py-4 border-b border-stone-200 dark:border-stone-800">
-            <div className={`${SECTION_LABEL} mb-1.5`}>Primary Complaint / Notes</div>
-            <p className="text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">
-              {job.notes}
-            </p>
-          </div>
-        )}
+          {/* Notes */}
+          {job.notes && (
+            <div className="px-4 py-4">
+              <div className={`${SECTION_LABEL} mb-1.5`}>Primary Complaint / Notes</div>
+              <p className="text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">
+                {job.notes}
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Line Items — primary work area */}
-        <div className="py-4">
+        <div>
           <LineItemsList jobId={id} lineItems={lineItems} settings={settings} presets={presets} />
         </div>
 
         {/* Inspection */}
-        <div className="py-4 border-t border-stone-200 dark:border-stone-800">
+        <div>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <DviSection jobId={id} inspection={dviInspection as any} />
         </div>
 
         {/* Estimate + Invoice */}
-        <div className="py-4 border-t border-stone-200 dark:border-stone-800 grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <EstimateSection jobId={id} estimate={estimate} />
           <InvoiceSection
             jobId={id}
