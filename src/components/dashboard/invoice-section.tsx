@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { MiniStatusCard } from "@/components/ui/mini-status-card";
+import { MiniStatusCard, ACCENT_PILL, type Accent } from "@/components/ui/mini-status-card";
 import {
   Dialog,
   DialogContent,
@@ -30,18 +30,10 @@ interface InvoiceSectionProps {
   isFleet?: boolean;
 }
 
-type Accent = "green" | "amber" | "blue" | "red" | "gray";
-
 const STATUS_ACCENT: Record<InvoiceStatus, Accent> = {
   draft: "blue",
   sent: "amber",
   paid: "green",
-};
-
-const STATUS_PILL: Record<InvoiceStatus, string> = {
-  draft: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
-  sent: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400",
-  paid: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
 };
 
 export function InvoiceSection({
@@ -187,7 +179,7 @@ export function InvoiceSection({
         <>
           <span>Invoice</span>
           <span
-            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${STATUS_PILL[status]}`}
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${ACCENT_PILL[accent]}`}
           >
             {INVOICE_STATUS_LABELS[status]}
           </span>

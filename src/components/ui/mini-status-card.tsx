@@ -1,6 +1,6 @@
 import * as React from "react";
 
-type Accent = "green" | "amber" | "blue" | "red" | "gray";
+export type Accent = "green" | "amber" | "blue" | "red" | "gray";
 
 const ACCENT_BAR: Record<Accent, string> = {
   green: "bg-emerald-500",
@@ -21,6 +21,14 @@ const ICON_TINT: Record<Accent, string> = {
     "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900",
   gray:
     "bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800",
+};
+
+export const ACCENT_PILL: Record<Accent, string> = {
+  green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
+  amber: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400",
+  blue: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
+  red: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
+  gray: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
 };
 
 interface MiniStatusCardProps {

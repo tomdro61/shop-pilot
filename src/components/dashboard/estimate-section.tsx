@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { MiniStatusCard } from "@/components/ui/mini-status-card";
+import { MiniStatusCard, ACCENT_PILL, type Accent } from "@/components/ui/mini-status-card";
 import { createEstimateFromJob, deleteEstimate } from "@/lib/actions/estimates";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { ESTIMATE_STATUS_LABELS } from "@/lib/constants";
@@ -17,8 +17,6 @@ interface EstimateSectionProps {
   estimate: Estimate | null;
 }
 
-type Accent = "green" | "amber" | "blue" | "red" | "gray";
-
 const STATUS_ACCENT: Record<EstimateStatus, Accent> = {
   draft: "blue",
   sent: "amber",
@@ -26,11 +24,11 @@ const STATUS_ACCENT: Record<EstimateStatus, Accent> = {
   declined: "red",
 };
 
-const STATUS_PILL: Record<EstimateStatus, string> = {
-  draft: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
-  sent: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400",
-  approved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
-  declined: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
+const DATE_LABEL: Record<EstimateStatus, (estimate: Estimate) => string> = {
+  draft: (e) => `Created ${formatDate(e.created_at)}`,
+  sent: (e) => `Sent ${e.sent_at ? formatDate(e.sent_at) : "—"}`,
+  approved: (e) => `Signed ${e.approved_at ? formatDate(e.approved_at) : "—"}`,
+  declined: (e) => `Declined ${e.declined_at ? formatDate(e.declined_at) : "—"}`,
 };
 
 export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
@@ -92,15 +90,6 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
   const accent = STATUS_ACCENT[status];
   const canDelete = status === "draft" || status === "sent";
 
-  const dateLabel =
-    status === "sent"
-      ? `Sent ${estimate.sent_at ? formatDate(estimate.sent_at) : "—"}`
-      : status === "approved"
-        ? `Signed ${estimate.approved_at ? formatDate(estimate.approved_at) : "—"}`
-        : status === "declined"
-          ? `Declined ${estimate.declined_at ? formatDate(estimate.declined_at) : "—"}`
-          : `Created ${formatDate(estimate.created_at)}`;
-
   return (
     <MiniStatusCard
       accent={accent}
@@ -109,13 +98,13 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
         <>
           <span>Estimate</span>
           <span
-            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${STATUS_PILL[status]}`}
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${ACCENT_PILL[accent]}`}
           >
             {ESTIMATE_STATUS_LABELS[status]}
           </span>
         </>
       }
-      meta={<span>{dateLabel}</span>}
+      meta={<span>{DATE_LABEL[status](estimate)}</span>}
       actions={
         <>
           <a href={`/estimates/${estimate.id}`}>

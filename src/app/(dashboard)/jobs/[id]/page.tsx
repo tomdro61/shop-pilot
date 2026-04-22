@@ -18,24 +18,18 @@ import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-butt
 import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
 import { JobProgressStepper } from "@/components/dashboard/job-progress-stepper";
 import { SECTION_LABEL } from "@/components/ui/section-card";
-import { formatPhone, formatVehicle, formatCustomerName, formatRONumber, formatDate } from "@/lib/utils/format";
+import {
+  formatPhone,
+  formatVehicle,
+  formatCustomerName,
+  formatRONumber,
+  formatDate,
+  formatDateLong,
+  getInitials,
+} from "@/lib/utils/format";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
 import { ArrowLeft, Pencil, Printer, User as UserIcon, Truck, ClipboardList } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
-
-function formatDateLong(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  const d = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-function initials(value: string | null | undefined, fallback = "?"): string {
-  if (!value) return fallback;
-  const parts = value.trim().split(/\s+/);
-  if (parts.length === 0) return fallback;
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 function SectionTitle({
   num,
@@ -74,7 +68,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   };
 }
 
-const DL_TERM = "text-stone-500 dark:text-stone-400";
 const DL_VALUE = "text-stone-900 dark:text-stone-50";
 
 export default async function JobDetailPage({
@@ -104,7 +97,6 @@ export default async function JobDetailPage({
     <>
       <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-5 lg:space-y-6">
 
-        {/* Action strip — page-level chrome on the gray bg */}
         <div className="flex items-center justify-between py-2">
           <Link href="/jobs">
             <Button variant="ghost" size="sm" className="-ml-3">
@@ -132,10 +124,7 @@ export default async function JobDetailPage({
           </div>
         </div>
 
-        {/* Hero — identity + 3-column overview + notes, all in one flat card */}
         <section className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
-
-          {/* Hero top: RO/opened strip, title, status pills */}
           <div className="px-5 lg:px-6 py-5">
             <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
               {job.ro_number ? formatRONumber(job.ro_number) : "—"}
@@ -156,10 +145,7 @@ export default async function JobDetailPage({
             </div>
           </div>
 
-          {/* 3-column overview: Customer / Vehicle / Details */}
           <div className="grid grid-cols-1 md:grid-cols-3 border-t border-stone-300 dark:border-stone-800 divide-y md:divide-y-0 md:divide-x divide-stone-200 dark:divide-stone-800">
-
-            {/* CUSTOMER */}
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
               <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <UserIcon className="h-3 w-3" /> Customer
@@ -168,7 +154,7 @@ export default async function JobDetailPage({
                 <>
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-md grid place-items-center text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900 flex-none">
-                      {initials(formatCustomerName(customer))}
+                      {getInitials(formatCustomerName(customer))}
                     </div>
                     <div className="min-w-0">
                       <Link
@@ -187,9 +173,9 @@ export default async function JobDetailPage({
                   <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
                     {customer.phone && (
                       <>
-                        <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>Phone</dt>
+                        <dt className={SECTION_LABEL}>Phone</dt>
                         <dd className="min-w-0 flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono tabular-nums text-stone-800 dark:text-stone-200">{formatPhone(customer.phone)}</span>
+                          <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">{formatPhone(customer.phone)}</span>
                           <a href={`tel:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">Call</a>
                           <a href={`sms:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">Text</a>
                         </dd>
@@ -197,14 +183,14 @@ export default async function JobDetailPage({
                     )}
                     {customer.email && (
                       <>
-                        <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>Email</dt>
-                        <dd className="min-w-0 text-stone-800 dark:text-stone-200 truncate">{customer.email}</dd>
+                        <dt className={SECTION_LABEL}>Email</dt>
+                        <dd className="min-w-0 text-stone-900 dark:text-stone-50 truncate">{customer.email}</dd>
                       </>
                     )}
                     {customer.address && (
                       <>
-                        <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>Address</dt>
-                        <dd className="min-w-0 text-stone-800 dark:text-stone-200 truncate">{customer.address}</dd>
+                        <dt className={SECTION_LABEL}>Address</dt>
+                        <dd className="min-w-0 text-stone-900 dark:text-stone-50 truncate">{customer.address}</dd>
                       </>
                     )}
                   </dl>
@@ -214,7 +200,6 @@ export default async function JobDetailPage({
               )}
             </div>
 
-            {/* VEHICLE */}
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
               <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <Truck className="h-3 w-3" /> Vehicle
@@ -235,20 +220,20 @@ export default async function JobDetailPage({
                   <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
                     {vehicle.vin && (
                       <>
-                        <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>VIN</dt>
-                        <dd className="min-w-0 font-mono tabular-nums text-stone-800 dark:text-stone-200 truncate">{vehicle.vin}</dd>
+                        <dt className={SECTION_LABEL}>VIN</dt>
+                        <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50 truncate">{vehicle.vin}</dd>
                       </>
                     )}
                     {vehicle.license_plate && (
                       <>
-                        <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>Plate</dt>
-                        <dd className="min-w-0 font-mono tabular-nums text-stone-800 dark:text-stone-200">{vehicle.license_plate}</dd>
+                        <dt className={SECTION_LABEL}>Plate</dt>
+                        <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50">{vehicle.license_plate}</dd>
                       </>
                     )}
                     {vehicle.mileage != null && (
                       <>
-                        <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>Mileage</dt>
-                        <dd className="min-w-0 font-mono tabular-nums text-stone-800 dark:text-stone-200">{vehicle.mileage.toLocaleString()} mi</dd>
+                        <dt className={SECTION_LABEL}>Mileage</dt>
+                        <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50">{vehicle.mileage.toLocaleString()} mi</dd>
                       </>
                     )}
                   </dl>
@@ -258,7 +243,6 @@ export default async function JobDetailPage({
               )}
             </div>
 
-            {/* DETAILS */}
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
               <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <ClipboardList className="h-3 w-3" /> Details
@@ -269,7 +253,7 @@ export default async function JobDetailPage({
                     ? "bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900"
                     : "bg-stone-100 text-stone-400 border border-stone-200 dark:bg-stone-900 dark:text-stone-600 dark:border-stone-800"
                 }`}>
-                  {tech?.name ? initials(tech.name) : "—"}
+                  {tech?.name ? getInitials(tech.name) : "—"}
                 </div>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
@@ -279,9 +263,9 @@ export default async function JobDetailPage({
                 </div>
               </div>
               <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
-                <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>Received</dt>
+                <dt className={SECTION_LABEL}>Received</dt>
                 <dd className={`min-w-0 font-mono tabular-nums ${DL_VALUE}`}>{formatDate(job.date_received)}</dd>
-                <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>Finished</dt>
+                <dt className={SECTION_LABEL}>Finished</dt>
                 <dd className="min-w-0">
                   {job.date_finished ? (
                     <DateFinishedEditor jobId={id} dateFinished={job.date_finished} />
@@ -291,7 +275,7 @@ export default async function JobDetailPage({
                 </dd>
                 {job.mileage_in != null && (
                   <>
-                    <dt className={`${DL_TERM} text-[11px] uppercase tracking-wide font-semibold`}>Mileage in</dt>
+                    <dt className={SECTION_LABEL}>Mileage in</dt>
                     <dd className={`min-w-0 font-mono tabular-nums ${DL_VALUE}`}>{job.mileage_in.toLocaleString()} mi</dd>
                   </>
                 )}
@@ -299,7 +283,6 @@ export default async function JobDetailPage({
             </div>
           </div>
 
-          {/* Notes — labeled "Customer concern" with amber accent */}
           {job.notes && (
             <div className="border-t border-stone-300 dark:border-stone-800 px-5 lg:px-6 py-4">
               <div className="flex items-center gap-2 mb-2">
@@ -315,7 +298,6 @@ export default async function JobDetailPage({
           )}
         </section>
 
-        {/* Progress */}
         <section className="pt-2">
           <SectionTitle num="01" title="Progress" />
           <JobProgressStepper
@@ -325,7 +307,6 @@ export default async function JobDetailPage({
           />
         </section>
 
-        {/* Line Items */}
         <section className="pt-2">
           <SectionTitle
             num="02"
@@ -335,14 +316,12 @@ export default async function JobDetailPage({
           <LineItemsList jobId={id} lineItems={lineItems} settings={settings} />
         </section>
 
-        {/* Inspection */}
         <section className="pt-2">
           <SectionTitle num="03" title="Inspection" />
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <DviSection jobId={id} inspection={dviInspection as any} />
         </section>
 
-        {/* Estimate + Invoice */}
         <section className="pt-2">
           <SectionTitle num="04" title="Estimate & invoice" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

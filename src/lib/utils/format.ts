@@ -72,3 +72,19 @@ export function formatCustomerName(customer: {
 }): string {
   return `${customer.first_name} ${customer.last_name}`;
 }
+
+// "Apr 19, 2026" — month abbrev, day, year. Uses the same T00:00:00 fix
+// as formatDate to avoid the UTC-midnight-shifts-to-yesterday bug.
+export function formatDateLong(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+  const d = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+export function getInitials(value: string | null | undefined, fallback = "?"): string {
+  if (!value) return fallback;
+  const parts = value.trim().split(/\s+/);
+  if (parts.length === 0) return fallback;
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
