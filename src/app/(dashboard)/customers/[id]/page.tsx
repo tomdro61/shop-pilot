@@ -24,7 +24,7 @@ import {
   PARKING_STATUS_COLORS,
 } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
-import { VehicleSection } from "@/components/dashboard/vehicle-section";
+import { VehicleSection, VehicleSectionAddButton } from "@/components/dashboard/vehicle-section";
 import { CustomerNameEditor } from "@/components/dashboard/customer-name-editor";
 import { CustomerTextFieldEditor } from "@/components/dashboard/customer-text-field-editor";
 import { CustomerNotesEditor } from "@/components/dashboard/customer-notes-editor";
@@ -360,7 +360,12 @@ export default async function CustomerDetailPage({
       </div>
 
       <section className="pt-2">
-        <SectionTitle num="01" title="Vehicles" sub={`${vehicles.length} on file`} />
+        <SectionTitle
+          num="01"
+          title="Vehicles"
+          sub={`${vehicles.length} on file`}
+          action={<VehicleSectionAddButton customerId={id} />}
+        />
         <VehicleSection customerId={id} vehicles={vehicles} inspectionsByVehicle={vehicleDviMap} />
       </section>
 
