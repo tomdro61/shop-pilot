@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { updateJobFields } from "@/lib/actions/jobs";
-import { createClient } from "@/lib/supabase/client";
+import { searchCustomersForPicker } from "@/lib/actions/customers";
 import { formatCustomerName, formatPhone } from "@/lib/utils/format";
 import { Pencil } from "lucide-react";
 
@@ -55,32 +55,13 @@ export function JobCustomerEditor({ jobId, currentCustomer, hasVehicle }: JobCus
   useEffect(() => {
     if (!open) return;
     const timer = setTimeout(async () => {
-      const supabase = createClient();
-      let query = supabase
-        .from("customers")
-        .select("id, first_name, last_name, phone")
-        .order("last_name")
-        .limit(20);
-
-      const trimmed = search.trim();
-      if (trimmed) {
-        const words = trimmed.split(/\s+/);
-        if (words.length > 1) {
-          query = query
-            .ilike("first_name", `%${words[0]}%`)
-            .ilike("last_name", `%${words.slice(1).join(" ")}%`);
-        } else {
-          query = query.or(
-            `first_name.ilike.%${trimmed}%,last_name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`
-          );
-        }
-      }
-
-      const { data } = await query;
-      setCustomers(data || []);
+      const results = await searchCustomersForPicker(search, {
+        includeIds: currentCustomer ? [currentCustomer.id] : [],
+      });
+      setCustomers(results);
     }, 150);
     return () => clearTimeout(timer);
-  }, [search, open]);
+  }, [search, open, currentCustomer]);
 
   function handleSelect(customer: CustomerOption) {
     setOpen(false);

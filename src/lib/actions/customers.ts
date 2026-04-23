@@ -46,6 +46,50 @@ export async function getCustomers(search?: string, customerType?: string, page 
   return { data: data ?? [], totalCount: count ?? 0 };
 }
 
+export async function searchCustomersForPicker(
+  query: string,
+  options?: { limit?: number; includeIds?: string[] }
+) {
+  const supabase = await createClient();
+  const limit = options?.limit ?? 20;
+  const includeIds = options?.includeIds?.filter(Boolean) ?? [];
+
+  let q = supabase
+    .from("customers")
+    .select("id, first_name, last_name, phone")
+    .order("last_name")
+    .limit(limit);
+
+  const trimmed = query.trim();
+  if (trimmed) {
+    const words = trimmed.split(/\s+/);
+    if (words.length > 1) {
+      q = q
+        .ilike("first_name", `%${words[0]}%`)
+        .ilike("last_name", `%${words.slice(1).join(" ")}%`);
+    } else {
+      q = q.or(
+        `first_name.ilike.%${trimmed}%,last_name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`
+      );
+    }
+  }
+
+  const { data } = await q;
+  const results = data ?? [];
+
+  if (includeIds.length === 0) return results;
+
+  const missing = includeIds.filter((id) => !results.some((r) => r.id === id));
+  if (missing.length === 0) return results;
+
+  const { data: pinned } = await supabase
+    .from("customers")
+    .select("id, first_name, last_name, phone")
+    .in("id", missing);
+
+  return [...(pinned ?? []), ...results];
+}
+
 export const getCustomer = cache(async (id: string) => {
   const supabase = await createClient();
 
