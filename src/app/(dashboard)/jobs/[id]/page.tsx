@@ -100,14 +100,14 @@ export default async function JobDetailPage({
     <>
       <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-5 lg:space-y-6">
 
-        <div className="flex items-center justify-between py-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
           <Link href="/jobs">
             <Button variant="ghost" size="sm" className="-ml-3">
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
               Jobs
             </Button>
           </Link>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
             {job.status === "complete" && customer?.phone && (
               <SendReadyTextButton jobId={id} />
             )}
