@@ -126,11 +126,15 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className={cn(
-                      "group flex items-start gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 border-l-2",
-                      item.type === "labor" ? "border-l-blue-500" : "border-l-amber-500"
-                    )}
+                    className="group relative flex items-start gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60"
                   >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r",
+                        item.type === "labor" ? "bg-blue-500" : "bg-amber-500"
+                      )}
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
                         <div className="min-w-0 flex items-baseline gap-2 flex-wrap">
