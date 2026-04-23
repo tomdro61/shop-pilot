@@ -16,13 +16,14 @@ export function JobProgressStepper({
 }: JobProgressStepperProps) {
   const currentIdx = JOB_STATUS_ORDER.indexOf(currentStatus);
   const safeIdx = currentIdx === -1 ? 0 : currentIdx;
+  const isTerminal = safeIdx === JOB_STATUS_ORDER.length - 1;
 
   return (
     <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
       <div className="grid grid-cols-2 md:grid-cols-4 divide-x md:divide-x divide-y md:divide-y-0 divide-stone-200 dark:divide-stone-800">
         {JOB_STATUS_ORDER.map((status, idx) => {
-          const done = idx < safeIdx;
-          const current = idx === safeIdx;
+          const done = isTerminal ? idx <= safeIdx : idx < safeIdx;
+          const current = !isTerminal && idx === safeIdx;
           const label = JOB_STATUS_LABELS[status] ?? status;
 
           let subline: string | null = null;
