@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatPhone, formatCustomerName } from "@/lib/utils/format";
 import { CUSTOMER_TYPE_COLORS } from "@/lib/constants";
+import { SECTION_LABEL } from "@/components/ui/section-card";
 
 interface CustomerListItem {
   id: string;
@@ -31,7 +32,7 @@ function TypeChip({ type }: { type: string | null }) {
 export function CustomerList({ customers, totalCount }: CustomerListProps) {
   if (customers.length === 0) {
     return (
-      <div className="border border-stone-300 dark:border-stone-800 bg-card py-12 text-center">
+      <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg py-12 text-center">
         <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No customers found</p>
         <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your search or add a new customer</p>
       </div>
@@ -41,14 +42,14 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
   return (
     <>
       {/* Desktop: dense table */}
-      <div className="hidden lg:block border border-stone-300 dark:border-stone-800 bg-card">
+      <div className="hidden lg:block bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-stone-300 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
-              <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Name</th>
-              <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Email</th>
-              <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Phone</th>
-              <th className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 w-24">Type</th>
+              <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Name</th>
+              <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Email</th>
+              <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Phone</th>
+              <th className={`text-left px-3 py-2 w-24 ${SECTION_LABEL}`}>Type</th>
             </tr>
           </thead>
           <tbody>
@@ -78,8 +79,8 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
       </div>
 
       {/* Mobile: dense stacked rows */}
-      <div className="lg:hidden border border-stone-300 dark:border-stone-800 bg-card divide-y divide-stone-200 dark:divide-stone-800">
-        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-900/40">
+      <div className="lg:hidden bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
+        <div className={`px-3 py-2 bg-stone-100 dark:bg-stone-900/40 ${SECTION_LABEL}`}>
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
         {customers.map((customer) => (
