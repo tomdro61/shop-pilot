@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Plus, Wallet, TrendingUp, TrendingDown, ChevronRight,
   DollarSign, Send, ClipboardCheck, FileText, Car,
+  CalendarDays, Receipt, AlertCircle, CheckCircle2,
 } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrencyWhole, formatCustomerName } from "@/lib/utils/format";
@@ -202,13 +203,35 @@ function pctChange(current: number, previous: number): number {
   return ((current - previous) / previous) * 100;
 }
 
+type Accent = "blue" | "emerald" | "indigo" | "amber" | "violet";
+
+const ACCENT_BAR: Record<Accent, string> = {
+  blue: "bg-blue-500",
+  emerald: "bg-emerald-500",
+  indigo: "bg-indigo-500",
+  amber: "bg-amber-500",
+  violet: "bg-violet-500",
+};
+
+const ACCENT_ICON_TINT: Record<Accent, string> = {
+  blue: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900",
+  emerald: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900",
+  indigo: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900",
+  amber: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900",
+  violet: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900",
+};
+
 function KpiCard({
+  accent,
+  icon,
   label,
   value,
   changePct,
   sub,
   tone = "default",
 }: {
+  accent: Accent;
+  icon: React.ReactNode;
   label: string;
   value: number;
   changePct?: number;
@@ -216,14 +239,20 @@ function KpiCard({
   tone?: "default" | "amber";
 }) {
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden px-4 py-3">
-      <div className={SECTION_LABEL}>{label}</div>
-      <div className={`font-mono tabular-nums text-[22px] lg:text-[26px] font-semibold leading-tight mt-1 ${
+    <div className="relative bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden px-4 py-3">
+      <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${ACCENT_BAR[accent]}`} />
+      <div className="flex items-center gap-2">
+        <div className={`w-7 h-7 rounded-md grid place-items-center border flex-none ${ACCENT_ICON_TINT[accent]}`}>
+          {icon}
+        </div>
+        <div className={SECTION_LABEL}>{label}</div>
+      </div>
+      <div className={`font-mono tabular-nums text-[22px] lg:text-[26px] font-semibold leading-tight mt-2 ${
         tone === "amber" && value > 0 ? "text-amber-700 dark:text-amber-400" : "text-stone-900 dark:text-stone-50"
       }`}>
         {formatCurrencyWhole(value)}
       </div>
-      <div className="mt-1 flex items-center gap-2">
+      <div className="mt-1 flex items-center gap-2 flex-wrap">
         {typeof changePct === "number" && (
           <span className={`inline-flex items-center gap-0.5 text-[11px] font-medium ${
             changePct >= 0
@@ -241,21 +270,31 @@ function KpiCard({
 }
 
 function OpsCard({
+  accent,
+  icon,
   label,
   today,
   week,
   month,
 }: {
+  accent: Accent;
+  icon: React.ReactNode;
   label: string;
   today: number;
   week: number;
   month: number;
 }) {
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+    <div className="relative bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${ACCENT_BAR[accent]}`} />
       <div className="px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60">
-        <div className={SECTION_LABEL}>{label}</div>
-        <div className="font-mono tabular-nums text-[20px] font-semibold text-stone-900 dark:text-stone-50 leading-tight mt-0.5">
+        <div className="flex items-center gap-2">
+          <div className={`w-7 h-7 rounded-md grid place-items-center border flex-none ${ACCENT_ICON_TINT[accent]}`}>
+            {icon}
+          </div>
+          <div className={SECTION_LABEL}>{label}</div>
+        </div>
+        <div className="font-mono tabular-nums text-[20px] font-semibold text-stone-900 dark:text-stone-50 leading-tight mt-2">
           {today}
           <span className="text-xs text-stone-500 dark:text-stone-400 font-sans font-normal ml-1.5">today</span>
         </div>
@@ -488,23 +527,31 @@ export default async function DashboardPage() {
         <div className="space-y-3">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard
+              accent="blue"
+              icon={<TrendingUp className="h-3.5 w-3.5" />}
               label="This week"
               value={stats.weeklyRevenue}
               changePct={weekChange}
               sub="vs last week"
             />
             <KpiCard
+              accent="emerald"
+              icon={<CalendarDays className="h-3.5 w-3.5" />}
               label="This month"
               value={stats.monthlyRevenue}
               changePct={monthChange}
               sub="vs last month"
             />
             <KpiCard
+              accent="indigo"
+              icon={<Receipt className="h-3.5 w-3.5" />}
               label="Avg ticket"
               value={stats.avgTicketWeek}
               sub={`${stats.weekTicketCount} tickets this week`}
             />
             <KpiCard
+              accent="amber"
+              icon={<AlertCircle className="h-3.5 w-3.5" />}
               label="Outstanding A/R"
               value={totalOutstanding}
               tone="amber"
@@ -516,9 +563,30 @@ export default async function DashboardPage() {
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <OpsCard label="State inspections" today={ops.stateToday} week={ops.stateWeek} month={ops.stateMonth} />
-            <OpsCard label="TNC inspections" today={ops.tncToday} week={ops.tncWeek} month={ops.tncMonth} />
-            <OpsCard label="Jobs closed" today={ops.jobsClosedToday} week={ops.jobsClosedWeek} month={ops.jobsClosedMonth} />
+            <OpsCard
+              accent="blue"
+              icon={<ClipboardCheck className="h-3.5 w-3.5" />}
+              label="State inspections"
+              today={ops.stateToday}
+              week={ops.stateWeek}
+              month={ops.stateMonth}
+            />
+            <OpsCard
+              accent="violet"
+              icon={<Car className="h-3.5 w-3.5" />}
+              label="TNC inspections"
+              today={ops.tncToday}
+              week={ops.tncWeek}
+              month={ops.tncMonth}
+            />
+            <OpsCard
+              accent="emerald"
+              icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+              label="Jobs closed"
+              today={ops.jobsClosedToday}
+              week={ops.jobsClosedWeek}
+              month={ops.jobsClosedMonth}
+            />
           </div>
         </div>
       </section>
