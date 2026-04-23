@@ -181,12 +181,11 @@ const getDashboardData = unstable_cache(async () => {
       jobsClosedWeek: weekCompleted.length,
       jobsClosedMonth: monthCompleted.length,
     },
-    statusCounts: {
-      notStarted: notStarted.length,
-      waitingForParts: waitingForParts.length,
-      inProgress: inProgress.length,
+    shopFloor: {
+      notStarted,
+      waitingForParts,
+      inProgress,
     },
-    todayScheduled,
     totalOutstanding,
     oldestUnpaidDays,
     pendingEstimateCount: pendingEstimates.length,
@@ -275,30 +274,100 @@ function OpsCard({
   );
 }
 
-function StatusStat({
-  label,
-  count,
-  dot,
-  href,
+type ShopFloorJob = {
+  id: string;
+  status: string;
+  title: string | null;
+  date_received: string | null;
+  customers: unknown;
+  vehicles: unknown;
+  users: unknown;
+};
+
+type ShopFloorStatus = "not_started" | "waiting_for_parts" | "in_progress";
+
+const SHOP_FLOOR_CONFIG: Record<
+  ShopFloorStatus,
+  { label: string; dot: string; queryKey: string }
+> = {
+  not_started: { label: "Not started", dot: "bg-stone-400 dark:bg-stone-500", queryKey: "not_started" },
+  waiting_for_parts: { label: "Waiting for parts", dot: "bg-amber-500", queryKey: "waiting_for_parts" },
+  in_progress: { label: "In progress", dot: "bg-blue-500", queryKey: "in_progress" },
+};
+
+function agingBadgeClass(days: number): string {
+  if (days >= 7) return "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400";
+  if (days >= 3) return "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400";
+  return "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400";
+}
+
+function ShopFloorColumn({
+  status,
+  jobs,
+  today,
 }: {
-  label: string;
-  count: number;
-  dot: string;
-  href: string;
+  status: ShopFloorStatus;
+  jobs: ShopFloorJob[];
+  today: string;
 }) {
+  const config = SHOP_FLOOR_CONFIG[status];
   return (
-    <Link
-      href={href}
-      className="group flex flex-col items-start gap-1 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
-    >
-      <div className="flex items-center gap-1.5">
-        <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-        <span className={SECTION_LABEL}>{label}</span>
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60">
+        <div className="flex items-center gap-2">
+          <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+          <span className={SECTION_LABEL}>{config.label}</span>
+          <span className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400">
+            {jobs.length}
+          </span>
+        </div>
+        <Link
+          href={`/jobs?status=${config.queryKey}`}
+          className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          View all
+        </Link>
       </div>
-      <div className="font-mono tabular-nums text-[22px] font-semibold text-stone-900 dark:text-stone-50 leading-tight">
-        {count}
-      </div>
-    </Link>
+      {jobs.length === 0 ? (
+        <div className="px-4 py-8 text-center text-xs text-stone-400 dark:text-stone-500">
+          None
+        </div>
+      ) : (
+        <div>
+          {jobs.map((job) => {
+            const customer = job.customers as { id: string; first_name: string; last_name: string } | null;
+            const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
+            const days = daysBetween(job.date_received, today);
+            return (
+              <ClickableRow
+                key={job.id}
+                href={`/jobs/${job.id}`}
+                className="flex items-center gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                    {customer ? (
+                      <CustomerLink customerId={customer.id} stopPropagation>
+                        {formatCustomerName(customer)}
+                      </CustomerLink>
+                    ) : "Unknown"}
+                  </div>
+                  <div className="text-xs text-stone-500 dark:text-stone-400 truncate">
+                    {vehicle ? formatVehicle(vehicle) : "—"}
+                    {job.title ? ` · ${job.title}` : ""}
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 font-mono tabular-nums text-[10px] font-semibold px-1.5 py-0.5 rounded ${agingBadgeClass(days)}`}
+                >
+                  {days}d
+                </span>
+              </ClickableRow>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -367,19 +436,14 @@ function ActionRow({
   );
 }
 
-const SCHEDULE_STATUS_DOT: Record<string, string> = {
-  not_started: "bg-stone-400",
-  waiting_for_parts: "bg-amber-500",
-  in_progress: "bg-blue-500",
-};
-
 export default async function DashboardPage() {
   const {
-    stats, ops, statusCounts, todayScheduled,
+    stats, ops, shopFloor,
     totalOutstanding, oldestUnpaidDays,
     pendingEstimateCount, estimateTotal, oldestEstimateDays,
     dviReadyCount, newQuoteRequests, parkingServiceLeadCount,
   } = await getDashboardData();
+  const today = todayET();
 
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
   const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);
@@ -460,86 +524,15 @@ export default async function DashboardPage() {
       </section>
 
       <section className="pt-2">
-        <SectionTitle num="02" title="Shop status" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-            <div className={`${SECTION_LABEL} px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60`}>
-              Open jobs
-            </div>
-            <div className="grid grid-cols-3 divide-x divide-stone-100 dark:divide-stone-800/60">
-              <StatusStat
-                label="Not started"
-                count={statusCounts.notStarted}
-                dot="bg-stone-400"
-                href="/jobs?status=not_started"
-              />
-              <StatusStat
-                label="Waiting for parts"
-                count={statusCounts.waitingForParts}
-                dot="bg-amber-500"
-                href="/jobs?status=waiting_for_parts"
-              />
-              <StatusStat
-                label="In progress"
-                count={statusCounts.inProgress}
-                dot="bg-blue-500"
-                href="/jobs?status=in_progress"
-              />
-            </div>
-          </div>
-
-          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60">
-              <div className={SECTION_LABEL}>Today&apos;s schedule</div>
-              <span className="text-xs text-stone-500 dark:text-stone-400">
-                {todayScheduled.length} {todayScheduled.length === 1 ? "job" : "jobs"}
-              </span>
-            </div>
-            {todayScheduled.length === 0 ? (
-              <div className="px-4 py-8 text-center text-xs text-stone-400 dark:text-stone-500">
-                Nothing scheduled today
-              </div>
-            ) : (
-              <div>
-                {todayScheduled.slice(0, 6).map((job) => {
-                  const customer = job.customers as { id: string; first_name: string; last_name: string } | null;
-                  const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
-                  const techName = (job.users as { name: string } | null)?.name || "Unassigned";
-                  return (
-                    <ClickableRow
-                      key={job.id}
-                      href={`/jobs/${job.id}`}
-                      className="flex items-center gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full flex-none ${SCHEDULE_STATUS_DOT[job.status] || "bg-stone-400"}`} />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
-                          {customer ? (
-                            <CustomerLink customerId={customer.id} stopPropagation>
-                              {formatCustomerName(customer)}
-                            </CustomerLink>
-                          ) : "Unknown"}
-                        </div>
-                        <div className="text-xs text-stone-500 dark:text-stone-400 truncate">
-                          {vehicle ? formatVehicle(vehicle) : ""}
-                          {job.title ? ` · ${job.title}` : ""}
-                        </div>
-                      </div>
-                      <span className="shrink-0 text-[11px] text-stone-500 dark:text-stone-400 truncate max-w-[100px]">
-                        {techName}
-                      </span>
-                    </ClickableRow>
-                  );
-                })}
-                {todayScheduled.length > 6 && (
-                  <div className="px-4 py-2 text-center text-xs text-stone-400 dark:text-stone-500 border-t border-stone-100 dark:border-stone-800/60">
-                    {todayScheduled.length - 6} more
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+        <SectionTitle
+          num="02"
+          title="Shop floor"
+          sub={`${shopFloor.notStarted.length + shopFloor.waitingForParts.length + shopFloor.inProgress.length} open jobs`}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <ShopFloorColumn status="not_started" jobs={shopFloor.notStarted} today={today} />
+          <ShopFloorColumn status="waiting_for_parts" jobs={shopFloor.waitingForParts} today={today} />
+          <ShopFloorColumn status="in_progress" jobs={shopFloor.inProgress} today={today} />
         </div>
       </section>
 
