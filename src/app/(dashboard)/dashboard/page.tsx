@@ -394,22 +394,25 @@ export default async function DashboardPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
 
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
-        <h1 className="text-base lg:text-lg font-semibold text-stone-900 dark:text-stone-50 px-1">Dashboard</h1>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Link href="/jobs/new">
-            <Button size="sm">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New Job
-            </Button>
-          </Link>
-          <Link href="/quick-pay">
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Wallet className="mr-1.5 h-3.5 w-3.5" />
-              Quick Pay
-            </Button>
-          </Link>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-1.5 py-2">
+        <Link href="/customers/new">
+          <Button variant="ghost" size="sm">
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            New Customer
+          </Button>
+        </Link>
+        <Link href="/jobs/new">
+          <Button size="sm">
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            New Job
+          </Button>
+        </Link>
+        <Link href="/quick-pay">
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Wallet className="mr-1.5 h-3.5 w-3.5" />
+            Quick Pay
+          </Button>
+        </Link>
       </div>
 
       <section className="pt-2">
