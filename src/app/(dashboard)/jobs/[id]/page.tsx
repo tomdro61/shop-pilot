@@ -221,24 +221,18 @@ export default async function JobDetailPage({
                     </div>
                   </div>
                   <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
-                    {vehicle.vin && (
-                      <>
-                        <dt className={SECTION_LABEL}>VIN</dt>
-                        <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50 truncate">{vehicle.vin}</dd>
-                      </>
-                    )}
-                    {vehicle.license_plate && (
-                      <>
-                        <dt className={SECTION_LABEL}>Plate</dt>
-                        <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50">{vehicle.license_plate}</dd>
-                      </>
-                    )}
-                    {vehicle.mileage != null && (
-                      <>
-                        <dt className={SECTION_LABEL}>Mileage</dt>
-                        <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50">{vehicle.mileage.toLocaleString()} mi</dd>
-                      </>
-                    )}
+                    <dt className={SECTION_LABEL}>VIN</dt>
+                    <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50 truncate">
+                      {vehicle.vin || <span className="text-stone-400 font-sans">—</span>}
+                    </dd>
+                    <dt className={SECTION_LABEL}>Plate</dt>
+                    <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                      {vehicle.license_plate || <span className="text-stone-400 font-sans">—</span>}
+                    </dd>
+                    <dt className={SECTION_LABEL}>Mileage</dt>
+                    <dd className="min-w-0 font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                      {vehicle.mileage != null ? `${vehicle.mileage.toLocaleString()} mi` : <span className="text-stone-400 font-sans">—</span>}
+                    </dd>
                   </dl>
                 </>
               ) : (
