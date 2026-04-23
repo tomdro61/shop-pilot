@@ -6,7 +6,7 @@ import { useInlineEditor } from "@/hooks/use-inline-editor";
 import { Input } from "@/components/ui/input";
 import { Pencil, Check, X } from "lucide-react";
 
-type TextField = "phone" | "email" | "address";
+type TextField = Extract<keyof CustomerFieldPatch, "phone" | "email" | "address">;
 
 interface CustomerTextFieldEditorProps {
   customerId: string;
@@ -41,7 +41,7 @@ export function CustomerTextFieldEditor({
       setEditing(false);
       return;
     }
-    const patch = { [field]: next } as CustomerFieldPatch;
+    const patch: Partial<Pick<CustomerFieldPatch, TextField>> = { [field]: next };
     await commit(() => updateCustomerFields(customerId, patch), successMessage);
   }
 
