@@ -32,7 +32,7 @@ export default async function NewJobPage({
           <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">New Job</h2>
           <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">Configure repair order and assignment details.</p>
         </div>
-        <span className="text-[10px] font-black uppercase tracking-widest border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-400 px-3 py-1 rounded-md">
+        <span className="text-[10px] font-black uppercase tracking-widest border border-stone-200 dark:border-stone-600 text-stone-600 dark:text-stone-400 px-3 py-1 rounded-md">
           Draft Job
         </span>
       </div>

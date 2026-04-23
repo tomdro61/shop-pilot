@@ -58,7 +58,7 @@ export function MiniStatusCard({
   const iconTint = iconAccent ?? accent;
   return (
     <div
-      className={`relative flex items-center gap-3 bg-card border border-stone-300 dark:border-stone-800 rounded-lg px-4 py-3 ${className}`}
+      className={`relative flex items-center gap-3 bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm px-4 py-3 ${className}`}
     >
       <span
         aria-hidden

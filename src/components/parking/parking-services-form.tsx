@@ -77,7 +77,7 @@ export function ParkingServicesForm({
             return (
               <div
                 key={service}
-                className="flex items-center justify-between gap-3 rounded-lg border border-stone-300 dark:border-stone-700 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
@@ -138,7 +138,7 @@ export function ParkingServicesForm({
                   type="button"
                   onClick={() => addService(service.value)}
                   disabled={isPending}
-                  className="rounded-md border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-1 text-xs text-stone-600 dark:text-stone-400 hover:bg-violet-50 dark:hover:bg-violet-950 hover:text-violet-700 dark:hover:text-violet-300 hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
+                  className="rounded-md border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-1 text-xs text-stone-600 dark:text-stone-400 hover:bg-violet-50 dark:hover:bg-violet-950 hover:text-violet-700 dark:hover:text-violet-300 hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
                 >
                   {service.label}
                 </button>

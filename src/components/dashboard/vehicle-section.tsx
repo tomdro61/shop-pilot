@@ -56,7 +56,7 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
 
   if (vehicles.length === 0) {
     return (
-      <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg py-10 text-center">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm py-10 text-center">
         <p className="text-sm text-stone-500 dark:text-stone-400">No vehicles yet</p>
         <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Add a vehicle to start tracking inspections and jobs</p>
       </div>
@@ -71,7 +71,7 @@ export function VehicleSection({ customerId, vehicles, inspectionsByVehicle }: V
           return (
             <article
               key={vehicle.id}
-              className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden"
+              className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden"
             >
               <header className="flex items-start gap-3 px-4 py-3">
                 <div className="w-10 h-10 rounded-md grid place-items-center bg-stone-100 text-stone-600 border border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">

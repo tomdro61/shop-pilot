@@ -71,7 +71,7 @@ function QuickPayPresetPicker({
             className="pl-9"
           />
           {dropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-300 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+            <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
               {filtered.length === 0 ? (
                 <p className="py-3 text-center text-sm text-muted-foreground">No presets match</p>
               ) : (

@@ -151,7 +151,7 @@ export default async function CustomerDviPage({
       )}
 
       {/* Footer */}
-      <div className="mt-8 pt-6 border-t border-stone-300 dark:border-stone-800 text-center">
+      <div className="mt-8 pt-6 border-t border-stone-200 dark:border-stone-800 text-center">
         <p className="text-xs text-muted-foreground">
           Questions about this report?
         </p>

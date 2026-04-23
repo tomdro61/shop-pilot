@@ -588,7 +588,7 @@ function ShopFloorColumn({
     },
     not_started: {
       dot: "bg-stone-400 dark:bg-stone-500",
-      border: "border-stone-300 dark:border-stone-600",
+      border: "border-stone-200 dark:border-stone-600",
       badge: "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400",
     },
   }[status];
@@ -602,7 +602,7 @@ function ShopFloorColumn({
         </span>
       </div>
       {jobs.length === 0 ? (
-        <div className="border-2 border-dashed border-stone-300 dark:border-stone-700 rounded-lg py-8 flex items-center justify-center">
+        <div className="border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-lg py-8 flex items-center justify-center">
           <p className="text-xs text-stone-400 dark:text-stone-500">None</p>
         </div>
       ) : (

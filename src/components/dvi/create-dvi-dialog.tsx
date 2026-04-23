@@ -215,7 +215,7 @@ export function CreateDviDialog() {
           </DialogHeader>
 
           {/* Tabs */}
-          <div className="flex border-b border-stone-300 dark:border-stone-800 px-5">
+          <div className="flex border-b border-stone-200 dark:border-stone-800 px-5">
             <button
               type="button"
               onClick={() => setTab("parking")}
@@ -339,7 +339,7 @@ export function CreateDviDialog() {
                         type="button"
                         onClick={() => handleSelectVehicle(v.id)}
                         disabled={isPending}
-                        className="w-full text-left rounded-lg border border-stone-300 dark:border-stone-700 p-3 text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors disabled:opacity-50"
+                        className="w-full text-left rounded-lg border border-stone-200 dark:border-stone-700 p-3 text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors disabled:opacity-50"
                       >
                         <span className="font-medium">
                           {formatVehicle(v) || "Unknown Vehicle"}

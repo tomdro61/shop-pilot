@@ -5,7 +5,7 @@ import * as React from "react";
  * and secondary labels inside card bodies (Phone/Email/Address spec-sheet pattern).
  */
 export const SECTION_LABEL =
-  "text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400";
+  "text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-300";
 
 interface SectionCardProps {
   title: React.ReactNode;
@@ -28,8 +28,8 @@ export function SectionCard({
   className = "",
 }: SectionCardProps) {
   return (
-    <div className={`bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden ${className}`}>
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-300 dark:border-stone-800">
+    <div className={`bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden ${className}`}>
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
         <div className="min-w-0">
           <h3 className={`flex items-center gap-1.5 ${SECTION_LABEL}`}>
             {title}

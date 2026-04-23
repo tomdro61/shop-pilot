@@ -268,7 +268,7 @@ export function InspectionForm({
 
       {/* Complete button */}
       {!isCompleted && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-300 dark:border-stone-800 bg-background p-4">
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 dark:border-stone-800 bg-background p-4">
           <div className="mx-auto max-w-2xl">
             <Button
               onClick={handleComplete}

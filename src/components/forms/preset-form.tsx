@@ -224,7 +224,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
                 className="pl-9"
               />
               {catalogOpen && catalogResults.length > 0 && (
-                <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-300 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+                <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
                   {catalogResults.map((item) => (
                     <button
                       key={item.id}
@@ -263,7 +263,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
               {lineItems.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 rounded-lg border border-stone-300 dark:border-stone-700 px-3 py-2"
+                  className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
                 >
                   <div
                     className={cn(
@@ -306,7 +306,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
           )}
 
           {lineItems.length === 0 && (
-            <div className="rounded-lg border border-dashed border-stone-300 dark:border-stone-700 py-6 text-center">
+            <div className="rounded-lg border border-dashed border-stone-200 dark:border-stone-700 py-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Search the catalog above to add items to this preset
               </p>

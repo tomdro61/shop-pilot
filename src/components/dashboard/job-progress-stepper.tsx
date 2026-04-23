@@ -19,7 +19,7 @@ export function JobProgressStepper({
   const isTerminal = safeIdx === JOB_STATUS_ORDER.length - 1;
 
   return (
-    <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
       <div className="grid grid-cols-2 md:grid-cols-4 divide-x md:divide-x divide-y md:divide-y-0 divide-stone-200 dark:divide-stone-800">
         {JOB_STATUS_ORDER.map((status, idx) => {
           const done = isTerminal ? idx <= safeIdx : idx < safeIdx;
@@ -49,7 +49,7 @@ export function JobProgressStepper({
                       ? "bg-emerald-600 text-white"
                       : current
                         ? "bg-blue-600 text-white"
-                        : "bg-card border border-stone-300 dark:border-stone-700"
+                        : "bg-card border border-stone-200 dark:border-stone-700"
                   }`}
                 >
                   {done && <Check className="w-3 h-3" strokeWidth={3} />}

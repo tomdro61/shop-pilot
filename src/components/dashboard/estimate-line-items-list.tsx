@@ -127,7 +127,7 @@ export function EstimateLineItemsList({
                 );
               });
             })()}
-            <div className="border-t border-stone-300 dark:border-stone-800 pt-3 space-y-1">
+            <div className="border-t border-stone-200 dark:border-stone-800 pt-3 space-y-1">
               <div className="flex justify-end gap-6 text-sm text-stone-500 dark:text-stone-400">
                 {totals.laborTotal > 0 && <span>Labor: {formatCurrency(totals.laborTotal)}</span>}
                 {totals.partsTotal > 0 && <span>Parts: {formatCurrency(totals.partsTotal)}</span>}

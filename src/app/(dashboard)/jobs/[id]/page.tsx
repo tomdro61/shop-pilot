@@ -97,7 +97,7 @@ export default async function JobDetailPage({
           </div>
         </div>
 
-        <section className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
           <div className="px-5 lg:px-6 py-5">
             <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
               {job.ro_number ? formatRONumber(job.ro_number) : "—"}
@@ -118,7 +118,7 @@ export default async function JobDetailPage({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 border-t border-stone-300 dark:border-stone-800 divide-y md:divide-y-0 md:divide-x divide-stone-200 dark:divide-stone-800">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-100 dark:divide-stone-800/60">
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
               <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <UserIcon className="h-3 w-3" /> Customer
@@ -244,7 +244,7 @@ export default async function JobDetailPage({
             </div>
           </div>
 
-          <div className="border-t border-stone-300 dark:border-stone-800 px-5 lg:px-6 py-4">
+          <div className="px-5 lg:px-6 pt-3 pb-4">
             <div className="flex items-center gap-2 mb-2">
               <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">

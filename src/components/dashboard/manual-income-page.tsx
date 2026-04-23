@@ -138,7 +138,7 @@ export function ManualIncomePage({ entries, existingCategories }: ManualIncomePa
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-stone-300 dark:border-stone-800 text-left">
+                <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
                   <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Date</th>
                   <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Label</th>
                   <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Category</th>

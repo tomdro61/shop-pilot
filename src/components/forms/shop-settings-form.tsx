@@ -64,7 +64,7 @@ function CategorySelector({
             type="checkbox"
             checked={isAll}
             onChange={toggleAll}
-            className="rounded border-stone-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+            className="rounded border-stone-200 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
           />
           <span className={isAll ? "font-medium" : ""}>All Categories</span>
         </label>
@@ -74,7 +74,7 @@ function CategorySelector({
               type="checkbox"
               checked={isAll || (selected?.includes(cat) ?? false)}
               onChange={() => toggleCategory(cat)}
-              className="rounded border-stone-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+              className="rounded border-stone-200 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
             />
             <span>{cat}</span>
           </label>

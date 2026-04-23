@@ -21,7 +21,7 @@ interface JobsToolbarProps {
 }
 
 const filterTrigger =
-  "bg-card border-stone-300 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 shadow-none";
+  "bg-card border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 shadow-none";
 
 export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   const router = useRouter();

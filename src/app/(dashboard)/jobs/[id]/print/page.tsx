@@ -195,7 +195,7 @@ export default async function PrintRepairOrderPage({
                 </tr>
               )}
               {items.map((li) => (
-                <tr key={li.id} className="border-b border-stone-300">
+                <tr key={li.id} className="border-b border-stone-200">
                   <td className="py-1.5">
                     {li.description}
                     {li.part_number && (
@@ -268,7 +268,7 @@ export default async function PrintRepairOrderPage({
       )}
 
       {/* Footer */}
-      <div className="border-t border-stone-300 pt-4 text-center text-sm text-stone-500">
+      <div className="border-t border-stone-200 pt-4 text-center text-sm text-stone-500">
         <p>Thank you for your business!</p>
       </div>
     </div>

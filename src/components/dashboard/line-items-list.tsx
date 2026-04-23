@@ -96,7 +96,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
   const categoryNames = Object.keys(categoryGroups);
 
   return (
-    <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
       {lineItems.length === 0 ? (
         <div className="px-4 py-10 text-center">
           <p className="text-sm text-stone-500 dark:text-stone-400">
@@ -202,7 +202,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
           })}
 
           {/* Totals */}
-          <div className="px-4 py-3 border-t border-stone-300 dark:border-stone-800">
+          <div className="px-4 py-3 border-t border-stone-200 dark:border-stone-800">
             <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-xs">
               {totals.laborTotal > 0 && (
                 <>
@@ -247,7 +247,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
                 </>
               )}
             </dl>
-            <div className="mt-2 pt-2 border-t border-stone-300 dark:border-stone-700 flex items-baseline justify-between">
+            <div className="mt-2 pt-2 border-t border-stone-200 dark:border-stone-700 flex items-baseline justify-between">
               <span className={SECTION_LABEL}>Total</span>
               <span className="font-mono tabular-nums text-base font-semibold text-stone-900 dark:text-stone-50">
                 {formatCurrency(totals.grandTotal)}
@@ -313,7 +313,7 @@ function AddItemSheet({
         </SheetHeader>
 
         {/* Tabs */}
-        <div className="mt-3 flex gap-1 mb-4 border-b border-stone-300 dark:border-stone-800">
+        <div className="mt-3 flex gap-1 mb-4 border-b border-stone-200 dark:border-stone-800">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -384,7 +384,7 @@ function PresetsTab({
           className="pl-9"
         />
       </div>
-      <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-stone-300 dark:border-stone-700">
+      <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
         {filtered.length === 0 ? (
           <p className="py-4 text-center text-sm text-stone-500 dark:text-stone-400">No presets match</p>
         ) : (
@@ -516,7 +516,7 @@ function CatalogTab({
           categoryNames.map((catName) => (
             <div key={catName} className="mb-3">
               <p className={`${SECTION_LABEL} mb-1 px-1`}>{catName}</p>
-              <div className="rounded-lg border border-stone-300 dark:border-stone-700">
+              <div className="rounded-lg border border-stone-200 dark:border-stone-700">
                 {grouped[catName].map((item) => (
                   <button
                     key={item.id}

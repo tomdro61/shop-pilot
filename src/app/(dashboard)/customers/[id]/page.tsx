@@ -188,7 +188,7 @@ export default async function CustomerDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
 
-        <section className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
           <div className="px-5 lg:px-6 py-5 flex items-start gap-4">
             <div className="w-14 h-14 rounded-md grid place-items-center text-base font-semibold bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900 flex-none">
               {getInitials(customerName)}
@@ -224,8 +224,8 @@ export default async function CustomerDetailPage({
             </div>
           </div>
 
-          <dl className="border-t border-stone-300 dark:border-stone-800">
-            <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-200 dark:border-stone-800">
+          <dl>
+            <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-100 dark:border-stone-800/60">
               <dt className={SECTION_LABEL}>Phone</dt>
               <dd className="min-w-0 text-sm">
                 <CustomerTextFieldEditor
@@ -248,7 +248,7 @@ export default async function CustomerDetailPage({
                 </CustomerTextFieldEditor>
               </dd>
             </div>
-            <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-200 dark:border-stone-800">
+            <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-100 dark:border-stone-800/60">
               <dt className={SECTION_LABEL}>Email</dt>
               <dd className="min-w-0 text-sm">
                 <CustomerTextFieldEditor
@@ -287,7 +287,7 @@ export default async function CustomerDetailPage({
             </div>
           </dl>
 
-          <div className="border-t border-stone-300 dark:border-stone-800 px-5 lg:px-6 py-4">
+          <div className="px-5 lg:px-6 pt-3 pb-4">
             <div className="flex items-center gap-2 mb-2">
               <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
@@ -298,11 +298,11 @@ export default async function CustomerDetailPage({
           </div>
         </section>
 
-        <section className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
-          <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-5 py-3 border-b border-stone-200 dark:border-stone-800`}>
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+          <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-5 py-3 border-b border-stone-100 dark:border-stone-800/60`}>
             <DollarSign className="h-3 w-3" /> Financial Snapshot
           </div>
-          <div className="px-5 py-4 border-b border-stone-200 dark:border-stone-800">
+          <div className="px-5 py-4 border-b border-stone-100 dark:border-stone-800/60">
             <div className={SECTION_LABEL}>Lifetime spend</div>
             <div className="font-mono tabular-nums text-[26px] font-bold text-stone-900 dark:text-stone-50 leading-tight mt-1">
               {formatCurrencyWhole(lifetimeSpend)}
@@ -312,7 +312,7 @@ export default async function CustomerDetailPage({
             </div>
           </div>
 
-          <dl className="grid grid-cols-2 divide-x divide-stone-200 dark:divide-stone-800 border-b border-stone-200 dark:border-stone-800">
+          <dl className="grid grid-cols-2 divide-x divide-stone-100 dark:divide-stone-800/60 border-b border-stone-100 dark:border-stone-800/60">
             <div className="px-5 py-3 flex flex-col gap-0.5">
               <dt className={SECTION_LABEL}>Last visit</dt>
               <dd className="font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">
@@ -325,13 +325,13 @@ export default async function CustomerDetailPage({
                 {totalJobs > 0 ? formatCurrencyWhole(avgRO) : <span className="text-stone-400 font-normal font-sans">—</span>}
               </dd>
             </div>
-            <div className="px-5 py-3 flex flex-col gap-0.5 border-t border-stone-200 dark:border-stone-800">
+            <div className="px-5 py-3 flex flex-col gap-0.5 border-t border-stone-100 dark:border-stone-800/60">
               <dt className={SECTION_LABEL}>Open jobs</dt>
               <dd className="font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">
                 {openJobs}
               </dd>
             </div>
-            <div className="px-5 py-3 flex flex-col gap-0.5 border-t border-stone-200 dark:border-stone-800">
+            <div className="px-5 py-3 flex flex-col gap-0.5 border-t border-stone-100 dark:border-stone-800/60">
               <dt className={SECTION_LABEL}>Vehicles</dt>
               <dd className="font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">
                 {vehicles.length}
@@ -419,7 +419,7 @@ export default async function CustomerDetailPage({
             </>
           }
         />
-        <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
           {displayJobs.length === 0 ? (
             <div className="px-4 py-10 text-center">
               <p className="text-sm text-stone-500 dark:text-stone-400">
@@ -433,7 +433,7 @@ export default async function CustomerDetailPage({
             <>
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b border-stone-300 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
+                  <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
                     <th className={`text-left px-4 py-2 ${SECTION_LABEL}`}>Repair Order</th>
                     <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Vehicle</th>
                     <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Received</th>
@@ -517,7 +517,7 @@ export default async function CustomerDetailPage({
       {parkingReservations.length > 0 && (
         <section className="pt-2">
           <SectionTitle num="03" title="Parking" sub={`${parkingReservations.length} reservation${parkingReservations.length === 1 ? "" : "s"}`} />
-          <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
+          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
             {parkingReservations.map((res) => {
               const status = res.status as ParkingStatus;
               const colors = PARKING_STATUS_COLORS[status];

@@ -32,7 +32,7 @@ function TypeChip({ type }: { type: string | null }) {
 export function CustomerList({ customers, totalCount }: CustomerListProps) {
   if (customers.length === 0) {
     return (
-      <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg py-12 text-center">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm py-12 text-center">
         <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No customers found</p>
         <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your search or add a new customer</p>
       </div>
@@ -42,10 +42,10 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
   return (
     <>
       {/* Desktop: dense table */}
-      <div className="hidden lg:block bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
+      <div className="hidden lg:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-stone-300 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
+            <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
               <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Name</th>
               <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Email</th>
               <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Phone</th>
@@ -56,7 +56,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
             {customers.map((customer) => (
               <tr
                 key={customer.id}
-                className="border-b border-stone-300 dark:border-stone-800 last:border-b-0 hover:bg-stone-100 dark:hover:bg-stone-800/40"
+                className="border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-100 dark:hover:bg-stone-800/40"
               >
                 <td className="px-3 py-2">
                   <Link href={`/customers/${customer.id}`} className="text-sm font-medium text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 block">
@@ -79,7 +79,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
       </div>
 
       {/* Mobile: dense stacked rows */}
-      <div className="lg:hidden bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
+      <div className="lg:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
         <div className={`px-3 py-2 bg-stone-100 dark:bg-stone-900/40 ${SECTION_LABEL}`}>
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>

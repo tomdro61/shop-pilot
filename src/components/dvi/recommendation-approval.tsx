@@ -97,7 +97,7 @@ export function RecommendationApproval({
               className={`flex items-start gap-3 rounded-lg border-2 p-3 cursor-pointer transition-colors ${
                 isSelected
                   ? "border-blue-600 bg-blue-50/50 dark:bg-blue-950/20"
-                  : "border-stone-300 dark:border-stone-700"
+                  : "border-stone-200 dark:border-stone-700"
               }`}
             >
               <input

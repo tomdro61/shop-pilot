@@ -184,7 +184,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
 
   if (jobs.length === 0) {
     return (
-      <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg py-12 text-center">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm py-12 text-center">
         <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No jobs found</p>
         <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your filters</p>
       </div>
@@ -194,11 +194,11 @@ export function JobsListView({ jobs }: JobsListViewProps) {
   return (
     <>
       {/* Desktop: dense table */}
-      <div className="hidden lg:block bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
+      <div className="hidden lg:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-stone-300 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
+              <tr key={hg.id} className="border-b border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
                 {hg.headers.map((h) => (
                   <th key={h.id} className="text-left px-3 py-2 border-l-2 border-l-transparent first:pl-[calc(0.75rem-2px)]">
                     {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
@@ -214,7 +214,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
                 <tr
                   key={row.id}
                   onClick={() => router.push(`/jobs/${row.original.id}`)}
-                  className={`cursor-pointer border-b border-stone-300 dark:border-stone-800 last:border-b-0 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-100 dark:hover:bg-stone-800/40`}
+                  className={`cursor-pointer border-b border-stone-200 dark:border-stone-800 last:border-b-0 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-100 dark:hover:bg-stone-800/40`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-2 align-middle">
@@ -229,7 +229,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
       </div>
 
       {/* Mobile: dense stacked rows */}
-      <div className="lg:hidden bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
+      <div className="lg:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
         {jobs.map((job) => {
           const s = job.status as JobStatus;
           const c = job.customers;

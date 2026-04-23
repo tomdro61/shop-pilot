@@ -151,7 +151,7 @@ export function PhotoUpload({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={isUploading}
-            className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-stone-300 dark:border-stone-600 text-stone-400 hover:border-blue-400 hover:text-blue-500 transition-colors disabled:opacity-50"
+            className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-dashed border-stone-200 dark:border-stone-600 text-stone-400 hover:border-blue-400 hover:text-blue-500 transition-colors disabled:opacity-50"
           >
             {isUploading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
