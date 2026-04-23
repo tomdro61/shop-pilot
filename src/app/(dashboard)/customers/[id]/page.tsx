@@ -71,7 +71,8 @@ export default async function CustomerDetailPage({
 
   const supabase = await createClient();
 
-  const [vehiclesResult, jobsResult, jobsCountResult, parkingResult] = await Promise.all([
+  const JOBS_LIMIT = 20;
+  const [vehiclesResult, jobsResult, parkingResult] = await Promise.all([
     supabase
       .from("vehicles")
       .select("*")
@@ -82,11 +83,7 @@ export default async function CustomerDetailPage({
       .select("id, status, title, date_received, ro_number, vehicles(year, make, model)")
       .eq("customer_id", id)
       .order("date_received", { ascending: false })
-      .limit(20),
-    supabase
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("customer_id", id),
+      .limit(JOBS_LIMIT),
     supabase
       .from("parking_reservations")
       .select("id, status, make, model, license_plate, lot, drop_off_date, pick_up_date")
@@ -97,9 +94,10 @@ export default async function CustomerDetailPage({
 
   const vehicles = vehiclesResult.data || [];
   const jobs = jobsResult.data || [];
-  const totalJobs = jobsCountResult.count ?? 0;
   const parkingReservations = parkingResult.data || [];
   const lastVisit = jobs[0]?.date_received ?? null;
+  const jobsAtLimit = jobs.length === JOBS_LIMIT;
+  const jobsCountLabel = jobsAtLimit ? `${JOBS_LIMIT}+` : `${jobs.length}`;
 
   const vehicleDviMap = new Map<string, Awaited<ReturnType<typeof getInspectionsForVehicle>>>();
   if (vehicles.length > 0) {
@@ -207,7 +205,7 @@ export default async function CustomerDetailPage({
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-xs items-center min-w-0">
               <dt className={SECTION_LABEL}>Total jobs</dt>
               <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
-                {totalJobs}
+                {jobsCountLabel}
               </dd>
               <dt className={SECTION_LABEL}>Last visit</dt>
               <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
@@ -253,7 +251,7 @@ export default async function CustomerDetailPage({
         <SectionTitle
           num="02"
           title="Jobs"
-          sub={totalJobs > jobs.length ? `${totalJobs} total · showing ${jobs.length}` : `${totalJobs} total`}
+          sub={jobsAtLimit ? `showing ${jobs.length} most recent` : `${jobs.length} total`}
           action={
             <Link href={`/jobs/new?customerId=${id}`}>
               <Button size="sm">
