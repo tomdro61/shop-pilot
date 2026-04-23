@@ -22,7 +22,7 @@ export function JobNotesEditor({ jobId, value }: JobNotesEditorProps) {
       setEditing(false);
       return;
     }
-    await commit(() => updateJobFields(jobId, { notes: next }), "Customer concern saved");
+    await commit(() => updateJobFields(jobId, { notes: next }), "Notes saved");
   }
 
   if (editing) {
@@ -41,7 +41,7 @@ export function JobNotesEditor({ jobId, value }: JobNotesEditorProps) {
           }}
           autoFocus
           disabled={saving}
-          placeholder="Describe the customer's concern — symptoms, when it happens, anything they asked for."
+          placeholder="Notes about the job — customer concerns, tech findings, anything worth recording."
           className="min-h-24 text-sm leading-relaxed"
         />
         <div className="flex items-center gap-1.5">
@@ -63,7 +63,7 @@ export function JobNotesEditor({ jobId, value }: JobNotesEditorProps) {
         onClick={() => setEditing(true)}
         className="w-full text-left text-sm text-stone-400 dark:text-stone-500 italic hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
       >
-        Add customer concern…
+        Add notes…
       </button>
     );
   }
