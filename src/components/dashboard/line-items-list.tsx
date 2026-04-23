@@ -113,9 +113,11 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
             return (
               <div key={catName}>
                 {/* Category header */}
-                <div className="flex items-center justify-between px-4 py-2 border-b border-stone-200 dark:border-stone-800">
-                  <h4 className={SECTION_LABEL}>{catName}</h4>
-                  <span className="font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
+                <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/40">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                    {catName}
+                  </h4>
+                  <span className="font-mono tabular-nums text-xs font-medium text-indigo-700 dark:text-indigo-300">
                     {formatCurrency(catTotal)}
                   </span>
                 </div>
