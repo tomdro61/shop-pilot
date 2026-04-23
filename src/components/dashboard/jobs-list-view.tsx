@@ -20,6 +20,7 @@ import {
 import { ArrowUpDown } from "lucide-react";
 import { StatusSelect } from "./status-select";
 import { CustomerLink } from "@/components/ui/customer-link";
+import { SECTION_LABEL } from "@/components/ui/section-card";
 import type { JobStatus } from "@/types";
 
 const STATUS_BORDER: Record<JobStatus, string> = {
@@ -61,7 +62,7 @@ function SortHeader({
     <button
       type="button"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      className={`inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 ${align === "right" ? "justify-end" : ""}`}
+      className={`inline-flex items-center gap-1 ${SECTION_LABEL} hover:text-stone-900 dark:hover:text-stone-100 ${align === "right" ? "justify-end" : ""}`}
     >
       {children}
       <ArrowUpDown className="h-3 w-3 opacity-50" />
@@ -81,7 +82,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
     () => [
       {
         accessorKey: "status",
-        header: () => <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Status</span>,
+        header: () => <span className={SECTION_LABEL}>Status</span>,
         cell: ({ row }) => (
           <div onClick={(e) => e.stopPropagation()}>
             <StatusSelect
@@ -110,7 +111,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
       },
       {
         id: "vehicle",
-        header: () => <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Vehicle</span>,
+        header: () => <span className={SECTION_LABEL}>Vehicle</span>,
         cell: ({ row }) => (
           <span className="text-sm text-stone-600 dark:text-stone-400">
             {row.original.vehicles ? formatVehicle(row.original.vehicles) : "—"}
@@ -129,7 +130,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
       },
       {
         id: "tech",
-        header: () => <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">Tech</span>,
+        header: () => <span className={SECTION_LABEL}>Tech</span>,
         cell: ({ row }) => (
           <span className="text-sm text-stone-600 dark:text-stone-400">
             {row.original.users?.name ?? "—"}
@@ -183,7 +184,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
 
   if (jobs.length === 0) {
     return (
-      <div className="border border-stone-300 dark:border-stone-800 bg-card py-12 text-center">
+      <div className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg py-12 text-center">
         <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No jobs found</p>
         <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your filters</p>
       </div>
@@ -193,7 +194,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
   return (
     <>
       {/* Desktop: dense table */}
-      <div className="hidden lg:block border border-stone-300 dark:border-stone-800 bg-card">
+      <div className="hidden lg:block bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
             {table.getHeaderGroups().map((hg) => (
@@ -228,7 +229,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
       </div>
 
       {/* Mobile: dense stacked rows */}
-      <div className="lg:hidden border border-stone-300 dark:border-stone-800 bg-card divide-y divide-stone-200 dark:divide-stone-800">
+      <div className="lg:hidden bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
         {jobs.map((job) => {
           const s = job.status as JobStatus;
           const c = job.customers;
