@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { updateJobFields } from "@/lib/actions/jobs";
+import { useInlineEditor } from "@/hooks/use-inline-editor";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil } from "lucide-react";
@@ -16,10 +14,7 @@ interface JobNotesEditorProps {
 const BODY_CLASS = "text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap leading-relaxed";
 
 export function JobNotesEditor({ jobId, value }: JobNotesEditorProps) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
-  const [saving, setSaving] = useState(false);
+  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(value ?? "");
 
   async function save() {
     const next = draft.trim() || null;
@@ -27,22 +22,7 @@ export function JobNotesEditor({ jobId, value }: JobNotesEditorProps) {
       setEditing(false);
       return;
     }
-    setSaving(true);
-    const result = await updateJobFields(jobId, { notes: next });
-    setSaving(false);
-
-    if ("error" in result) {
-      toast.error(typeof result.error === "string" ? result.error : "Update failed");
-      return;
-    }
-    toast.success("Customer concern saved");
-    setEditing(false);
-    router.refresh();
-  }
-
-  function cancel() {
-    setDraft(value ?? "");
-    setEditing(false);
+    await commit(() => updateJobFields(jobId, { notes: next }), "Customer concern saved");
   }
 
   if (editing) {

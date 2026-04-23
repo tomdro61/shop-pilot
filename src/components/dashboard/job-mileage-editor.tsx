@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateJobFields } from "@/lib/actions/jobs";
+import { useInlineEditor } from "@/hooks/use-inline-editor";
 import { Input } from "@/components/ui/input";
 import { Pencil, Check, X } from "lucide-react";
 
@@ -13,10 +12,9 @@ interface JobMileageEditorProps {
 }
 
 export function JobMileageEditor({ jobId, value }: JobMileageEditorProps) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value != null ? String(value) : "");
-  const [saving, setSaving] = useState(false);
+  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(
+    value != null ? String(value) : ""
+  );
 
   async function save() {
     const trimmed = draft.trim();
@@ -33,22 +31,7 @@ export function JobMileageEditor({ jobId, value }: JobMileageEditorProps) {
       setEditing(false);
       return;
     }
-    setSaving(true);
-    const result = await updateJobFields(jobId, { mileage_in: next });
-    setSaving(false);
-
-    if ("error" in result) {
-      toast.error(typeof result.error === "string" ? result.error : "Update failed");
-      return;
-    }
-    toast.success("Mileage saved");
-    setEditing(false);
-    router.refresh();
-  }
-
-  function cancel() {
-    setDraft(value != null ? String(value) : "");
-    setEditing(false);
+    await commit(() => updateJobFields(jobId, { mileage_in: next }), "Mileage saved");
   }
 
   if (editing) {

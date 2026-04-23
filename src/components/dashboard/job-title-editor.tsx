@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { updateJobFields } from "@/lib/actions/jobs";
+import { useInlineEditor } from "@/hooks/use-inline-editor";
 import { Pencil } from "lucide-react";
 
 interface JobTitleEditorProps {
@@ -15,10 +13,7 @@ const HEADING_CLASS =
   "text-[22px] lg:text-[26px] font-semibold tracking-tight text-stone-900 dark:text-stone-50 leading-tight";
 
 export function JobTitleEditor({ jobId, value }: JobTitleEditorProps) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
-  const [saving, setSaving] = useState(false);
+  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(value ?? "");
 
   async function save() {
     const next = draft.trim() || null;
@@ -26,22 +21,7 @@ export function JobTitleEditor({ jobId, value }: JobTitleEditorProps) {
       setEditing(false);
       return;
     }
-    setSaving(true);
-    const result = await updateJobFields(jobId, { title: next });
-    setSaving(false);
-
-    if ("error" in result) {
-      toast.error(typeof result.error === "string" ? result.error : "Update failed");
-      return;
-    }
-    toast.success("Title saved");
-    setEditing(false);
-    router.refresh();
-  }
-
-  function cancel() {
-    setDraft(value ?? "");
-    setEditing(false);
+    await commit(() => updateJobFields(jobId, { title: next }), "Title saved");
   }
 
   if (editing) {

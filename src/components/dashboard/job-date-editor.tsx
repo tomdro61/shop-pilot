@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { updateJobFields } from "@/lib/actions/jobs";
+import { useInlineEditor } from "@/hooks/use-inline-editor";
 import { formatDate } from "@/lib/utils/format";
 import { Input } from "@/components/ui/input";
 import { Pencil, Check, X } from "lucide-react";
@@ -16,10 +14,7 @@ interface JobDateEditorProps {
 }
 
 export function JobDateEditor({ jobId, field, value, emptyLabel = "Not set" }: JobDateEditorProps) {
-  const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
-  const [saving, setSaving] = useState(false);
+  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(value ?? "");
 
   async function save() {
     const next = draft || null;
@@ -27,22 +22,7 @@ export function JobDateEditor({ jobId, field, value, emptyLabel = "Not set" }: J
       setEditing(false);
       return;
     }
-    setSaving(true);
-    const result = await updateJobFields(jobId, { [field]: next });
-    setSaving(false);
-
-    if ("error" in result) {
-      toast.error(typeof result.error === "string" ? result.error : "Update failed");
-      return;
-    }
-    toast.success("Saved");
-    setEditing(false);
-    router.refresh();
-  }
-
-  function cancel() {
-    setDraft(value ?? "");
-    setEditing(false);
+    await commit(() => updateJobFields(jobId, { [field]: next }), "Saved");
   }
 
   if (editing) {

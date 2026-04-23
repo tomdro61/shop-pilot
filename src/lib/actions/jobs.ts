@@ -176,30 +176,37 @@ export async function updateJobStatus(id: string, status: JobStatus) {
   return { success: true };
 }
 
-export type JobFieldPatch = {
-  title?: string | null;
-  notes?: string | null;
-  mileage_in?: number | null;
-  date_received?: string;
-  assigned_tech?: string | null;
-};
+export type JobFieldPatch = Partial<{
+  title: string | null;
+  notes: string | null;
+  mileage_in: number | null;
+  date_received: string | null;
+  assigned_tech: string | null;
+}>;
+
+const EDITABLE_KEYS = [
+  "title",
+  "notes",
+  "mileage_in",
+  "date_received",
+  "assigned_tech",
+] as const satisfies readonly (keyof JobFieldPatch)[];
 
 export async function updateJobFields(id: string, patch: JobFieldPatch) {
   const supabase = await createClient();
 
-  const allowed: Record<string, unknown> = {};
-  for (const key of ["title", "notes", "mileage_in", "date_received", "assigned_tech"] as const) {
-    if (key in patch) {
-      const raw = patch[key] as unknown;
-      allowed[key] = typeof raw === "string" && raw.trim() === "" ? null : raw;
-    }
+  const update: Record<string, unknown> = {};
+  for (const key of EDITABLE_KEYS) {
+    if (!(key in patch)) continue;
+    const raw = patch[key];
+    update[key] = typeof raw === "string" && raw.trim() === "" ? null : raw;
   }
 
-  if (Object.keys(allowed).length === 0) {
+  if (Object.keys(update).length === 0) {
     return { error: "Nothing to update" };
   }
 
-  const { error } = await supabase.from("jobs").update(allowed).eq("id", id);
+  const { error } = await supabase.from("jobs").update(update).eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/jobs");
