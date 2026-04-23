@@ -25,6 +25,7 @@ import { JobCustomerEditor } from "@/components/dashboard/job-customer-editor";
 import { JobVehicleEditor } from "@/components/dashboard/job-vehicle-editor";
 import { JobProgressStepper } from "@/components/dashboard/job-progress-stepper";
 import { SECTION_LABEL } from "@/components/ui/section-card";
+import { SectionTitle } from "@/components/ui/section-title";
 import {
   formatPhone,
   formatVehicle,
@@ -36,33 +37,6 @@ import {
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
 import { ArrowLeft, Printer, User as UserIcon, Truck, ClipboardList } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
-
-function SectionTitle({
-  num,
-  title,
-  sub,
-  action,
-}: {
-  num: string;
-  title: string;
-  sub?: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 px-1 mb-2.5">
-      <span className="font-mono tabular-nums text-[11px] font-semibold tracking-[0.08em] text-stone-400 dark:text-stone-600">
-        {num}
-      </span>
-      <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-50 tracking-tight">
-        {title}
-      </h2>
-      {sub && (
-        <span className="text-xs text-stone-500 dark:text-stone-400">{sub}</span>
-      )}
-      {action && <div className="ml-auto flex items-center gap-1.5">{action}</div>}
-    </div>
-  );
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

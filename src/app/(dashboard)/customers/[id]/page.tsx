@@ -26,7 +26,8 @@ import {
 } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
 import { VehicleSection } from "@/components/dashboard/vehicle-section";
-import { ArrowLeft, Pencil, Plus, User as UserIcon, DollarSign } from "lucide-react";
+import { SectionTitle } from "@/components/ui/section-title";
+import { ArrowLeft, Pencil, Plus, DollarSign } from "lucide-react";
 import type { JobStatus, PaymentStatus, ParkingStatus, Vehicle } from "@/types";
 
 const JOBS_DISPLAY_LIMIT = 20;
@@ -77,6 +78,23 @@ const ACCENT_BAR: Record<AccentTone, string> = {
   stone: "bg-stone-300 dark:bg-stone-700",
 };
 
+type CustomerType = "retail" | "fleet" | "parking";
+
+const CUSTOMER_TYPE_CONFIG: Record<CustomerType, { colors: string; label: (account?: string | null) => string }> = {
+  retail: {
+    colors: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
+    label: () => "Retail",
+  },
+  fleet: {
+    colors: CUSTOMER_TYPE_COLORS.fleet,
+    label: (account) => (account ? `Fleet · ${account}` : "Fleet"),
+  },
+  parking: {
+    colors: CUSTOMER_TYPE_COLORS.parking,
+    label: () => "Parking",
+  },
+};
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const customer = await getCustomer(id);
@@ -84,31 +102,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return {
     title: `${formatCustomerName(customer)} | ShopPilot`,
   };
-}
-
-function SectionTitle({
-  num,
-  title,
-  sub,
-  action,
-}: {
-  num: string;
-  title: string;
-  sub?: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 px-1 mb-2.5">
-      <span className="font-mono tabular-nums text-[11px] font-semibold tracking-[0.08em] text-stone-400 dark:text-stone-600">
-        {num}
-      </span>
-      <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-50 tracking-tight">
-        {title}
-      </h2>
-      {sub && <span className="text-xs text-stone-500 dark:text-stone-400">{sub}</span>}
-      {action && <div className="ml-auto flex items-center gap-1.5">{action}</div>}
-    </div>
-  );
 }
 
 export default async function CustomerDetailPage({
@@ -158,16 +151,16 @@ export default async function CustomerDetailPage({
   const totalJobs = allJobs.length;
   const openJobs = allJobs.filter((j) => j.status !== "complete").length;
   const lifetimeSpend = allJobs.reduce((s, j) => s + jobTotal(j), 0);
-  const outstandingSpend = allJobs
-    .filter(
-      (j) =>
-        j.status === "complete" &&
-        j.payment_status !== "paid" &&
-        j.payment_status !== "waived"
-    )
-    .reduce((s, j) => s + jobTotal(j), 0);
+  const outstandingJobs = allJobs.filter(
+    (j) =>
+      j.status === "complete" &&
+      j.payment_status !== "paid" &&
+      j.payment_status !== "waived"
+  );
+  const outstandingSpend = outstandingJobs.reduce((s, j) => s + jobTotal(j), 0);
   const avgRO = totalJobs > 0 ? lifetimeSpend / totalJobs : 0;
   const lastVisit = allJobs[0]?.date_received ?? null;
+  const typeConfig = CUSTOMER_TYPE_CONFIG[(customer.customer_type as CustomerType) ?? "retail"] ?? CUSTOMER_TYPE_CONFIG.retail;
 
   const filteredJobs =
     vehicleFilter && vehicleFilter !== "all"
@@ -227,21 +220,9 @@ export default async function CustomerDetailPage({
                 {customerName}
               </h1>
               <div className="flex items-center gap-2 flex-wrap mt-3">
-                <span
-                  className={`inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-[11px] font-medium ${
-                    customer.customer_type === "fleet"
-                      ? CUSTOMER_TYPE_COLORS.fleet
-                      : customer.customer_type === "parking"
-                        ? CUSTOMER_TYPE_COLORS.parking
-                        : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
-                  }`}
-                >
+                <span className={`inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-[11px] font-medium ${typeConfig.colors}`}>
                   <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                  {customer.customer_type === "fleet"
-                    ? `Fleet${customer.fleet_account ? ` · ${customer.fleet_account}` : ""}`
-                    : customer.customer_type === "parking"
-                      ? "Parking"
-                      : "Retail"}
+                  {typeConfig.label(customer.fleet_account)}
                 </span>
                 <span className="inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
@@ -356,8 +337,7 @@ export default async function CustomerDetailPage({
                     Outstanding balance
                   </div>
                   <div className="text-xs text-amber-700 dark:text-amber-400/80 mt-0.5">
-                    Across {allJobs.filter(j => j.status === "complete" && j.payment_status !== "paid" && j.payment_status !== "waived").length} completed job
-                    {allJobs.filter(j => j.status === "complete" && j.payment_status !== "paid" && j.payment_status !== "waived").length === 1 ? "" : "s"}
+                    Across {outstandingJobs.length} completed job{outstandingJobs.length === 1 ? "" : "s"}
                   </div>
                 </div>
                 <span className="font-mono tabular-nums text-base font-bold text-amber-900 dark:text-amber-200">
