@@ -137,6 +137,7 @@
     height: 100%;
     height: -webkit-fill-available;
     background-color: oklch(0.955 0.002 260);
+    font-size: 17px;
   }
   html.dark {
     background-color: #1c1917;
