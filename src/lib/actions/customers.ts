@@ -2,7 +2,7 @@
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { customerSchema, prepareCustomerData } from "@/lib/validators/customer";
+import { customerSchema, prepareCustomerData, formatPhoneForStorage } from "@/lib/validators/customer";
 import { revalidatePath } from "next/cache";
 import type { CustomerFormData } from "@/lib/validators/customer";
 
@@ -102,6 +102,56 @@ export const getCustomer = cache(async (id: string) => {
   if (error) return null;
   return data;
 });
+
+export type CustomerFieldPatch = Partial<{
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  customer_type: "retail" | "fleet" | "parking";
+  fleet_account: string | null;
+}>;
+
+const EDITABLE_CUSTOMER_KEYS = [
+  "first_name",
+  "last_name",
+  "phone",
+  "email",
+  "address",
+  "notes",
+  "customer_type",
+  "fleet_account",
+] as const satisfies readonly (keyof CustomerFieldPatch)[];
+
+export async function updateCustomerFields(id: string, patch: CustomerFieldPatch) {
+  const supabase = await createClient();
+
+  const update: Record<string, unknown> = {};
+  for (const key of EDITABLE_CUSTOMER_KEYS) {
+    if (!(key in patch)) continue;
+    const raw = patch[key];
+    if (key === "phone") {
+      update[key] = raw ? formatPhoneForStorage(String(raw)) : null;
+      continue;
+    }
+    update[key] = typeof raw === "string" && raw.trim() === "" ? null : raw;
+  }
+
+  if (Object.keys(update).length === 0) return { error: "Nothing to update" };
+
+  if ("first_name" in update && !update.first_name) return { error: "First name is required" };
+  if ("last_name" in update && !update.last_name) return { error: "Last name is required" };
+
+  const { error } = await supabase.from("customers").update(update).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/customers");
+  revalidatePath(`/customers/${id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
 
 export async function createCustomer(formData: CustomerFormData) {
   const parsed = customerSchema.safeParse(formData);

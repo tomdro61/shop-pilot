@@ -22,12 +22,15 @@ import {
   PAYMENT_STATUS_COLORS,
   PARKING_STATUS_LABELS,
   PARKING_STATUS_COLORS,
-  CUSTOMER_TYPE_COLORS,
 } from "@/lib/constants";
 import { CustomerDeleteButton } from "@/components/dashboard/customer-delete-button";
 import { VehicleSection } from "@/components/dashboard/vehicle-section";
+import { CustomerNameEditor } from "@/components/dashboard/customer-name-editor";
+import { CustomerTextFieldEditor } from "@/components/dashboard/customer-text-field-editor";
+import { CustomerNotesEditor } from "@/components/dashboard/customer-notes-editor";
+import { CustomerTypeEditor } from "@/components/dashboard/customer-type-editor";
 import { SectionTitle } from "@/components/ui/section-title";
-import { ArrowLeft, Pencil, Plus, DollarSign } from "lucide-react";
+import { ArrowLeft, Plus, DollarSign } from "lucide-react";
 import type { JobStatus, PaymentStatus, ParkingStatus, Vehicle } from "@/types";
 
 const JOBS_DISPLAY_LIMIT = 20;
@@ -79,21 +82,6 @@ const ACCENT_BAR: Record<AccentTone, string> = {
 };
 
 type CustomerType = "retail" | "fleet" | "parking";
-
-const CUSTOMER_TYPE_CONFIG: Record<CustomerType, { colors: string; label: (account?: string | null) => string }> = {
-  retail: {
-    colors: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
-    label: () => "Retail",
-  },
-  fleet: {
-    colors: CUSTOMER_TYPE_COLORS.fleet,
-    label: (account) => (account ? `Fleet · ${account}` : "Fleet"),
-  },
-  parking: {
-    colors: CUSTOMER_TYPE_COLORS.parking,
-    label: () => "Parking",
-  },
-};
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -160,7 +148,6 @@ export default async function CustomerDetailPage({
   const outstandingSpend = outstandingJobs.reduce((s, j) => s + jobTotal(j), 0);
   const avgRO = totalJobs > 0 ? lifetimeSpend / totalJobs : 0;
   const lastVisit = allJobs[0]?.date_received ?? null;
-  const typeConfig = CUSTOMER_TYPE_CONFIG[(customer.customer_type as CustomerType) ?? "retail"] ?? CUSTOMER_TYPE_CONFIG.retail;
 
   const filteredJobs =
     vehicleFilter && vehicleFilter !== "all"
@@ -195,12 +182,6 @@ export default async function CustomerDetailPage({
               New Job
             </Button>
           </Link>
-          <Link href={`/customers/${id}/edit`}>
-            <Button variant="outline" size="sm">
-              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Edit
-            </Button>
-          </Link>
           <CustomerDeleteButton customerId={id} />
         </div>
       </div>
@@ -216,14 +197,19 @@ export default async function CustomerDetailPage({
               <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
                 Customer since {formatDateLong(customer.created_at) ?? "—"}
               </div>
-              <h1 className="text-[22px] lg:text-[26px] font-semibold tracking-tight text-stone-900 dark:text-stone-50 mt-1 leading-tight">
-                {customerName}
-              </h1>
+              <div className="mt-1">
+                <CustomerNameEditor
+                  customerId={id}
+                  firstName={customer.first_name}
+                  lastName={customer.last_name}
+                />
+              </div>
               <div className="flex items-center gap-2 flex-wrap mt-3">
-                <span className={`inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-[11px] font-medium ${typeConfig.colors}`}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                  {typeConfig.label(customer.fleet_account)}
-                </span>
+                <CustomerTypeEditor
+                  customerId={id}
+                  currentType={(customer.customer_type as CustomerType) ?? "retail"}
+                  fleetAccount={customer.fleet_account}
+                />
                 <span className="inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
                   {vehicles.length} vehicle{vehicles.length === 1 ? "" : "s"}
@@ -241,51 +227,75 @@ export default async function CustomerDetailPage({
           <dl className="border-t border-stone-300 dark:border-stone-800">
             <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-200 dark:border-stone-800">
               <dt className={SECTION_LABEL}>Phone</dt>
-              <dd className="min-w-0 flex items-center gap-2 flex-wrap text-sm">
-                {customer.phone ? (
-                  <>
-                    <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">{formatPhone(customer.phone)}</span>
-                    <a href={`tel:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">Call</a>
-                    <a href={`sms:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">Text</a>
-                  </>
-                ) : (
-                  <span className="text-stone-400">—</span>
-                )}
+              <dd className="min-w-0 text-sm">
+                <CustomerTextFieldEditor
+                  customerId={id}
+                  field="phone"
+                  value={customer.phone}
+                  inputType="tel"
+                  placeholder="(555) 555-1234"
+                  successMessage="Phone saved"
+                >
+                  {customer.phone ? (
+                    <>
+                      <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">{formatPhone(customer.phone)}</span>
+                      <a href={`tel:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">Call</a>
+                      <a href={`sms:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">Text</a>
+                    </>
+                  ) : (
+                    <span className="text-stone-400">—</span>
+                  )}
+                </CustomerTextFieldEditor>
               </dd>
             </div>
             <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-200 dark:border-stone-800">
               <dt className={SECTION_LABEL}>Email</dt>
-              <dd className="min-w-0 text-sm text-stone-900 dark:text-stone-50 truncate">
-                {customer.email ? (
-                  <a href={`mailto:${customer.email}`} className="hover:text-blue-600 dark:hover:text-blue-400 truncate">
-                    {customer.email}
-                  </a>
-                ) : (
-                  <span className="text-stone-400">—</span>
-                )}
+              <dd className="min-w-0 text-sm">
+                <CustomerTextFieldEditor
+                  customerId={id}
+                  field="email"
+                  value={customer.email}
+                  inputType="email"
+                  placeholder="name@example.com"
+                  successMessage="Email saved"
+                >
+                  {customer.email ? (
+                    <a href={`mailto:${customer.email}`} className="text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 truncate">
+                      {customer.email}
+                    </a>
+                  ) : (
+                    <span className="text-stone-400">—</span>
+                  )}
+                </CustomerTextFieldEditor>
               </dd>
             </div>
             <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5">
               <dt className={SECTION_LABEL}>Address</dt>
-              <dd className="min-w-0 text-sm text-stone-900 dark:text-stone-50 truncate">
-                {customer.address || <span className="text-stone-400">—</span>}
+              <dd className="min-w-0 text-sm">
+                <CustomerTextFieldEditor
+                  customerId={id}
+                  field="address"
+                  value={customer.address}
+                  placeholder="Street address, city, ZIP"
+                  successMessage="Address saved"
+                >
+                  <span className="text-stone-900 dark:text-stone-50 truncate">
+                    {customer.address || <span className="text-stone-400">—</span>}
+                  </span>
+                </CustomerTextFieldEditor>
               </dd>
             </div>
           </dl>
 
-          {customer.notes && (
-            <div className="border-t border-stone-300 dark:border-stone-800 px-5 lg:px-6 py-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                  Notes
-                </span>
-              </div>
-              <p className="text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">
-                {customer.notes}
-              </p>
+          <div className="border-t border-stone-300 dark:border-stone-800 px-5 lg:px-6 py-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                Notes
+              </span>
             </div>
-          )}
+            <CustomerNotesEditor customerId={id} value={customer.notes} />
+          </div>
         </section>
 
         <section className="bg-card border border-stone-300 dark:border-stone-800 rounded-lg overflow-hidden">
