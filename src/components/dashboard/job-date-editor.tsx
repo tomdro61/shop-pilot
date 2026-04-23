@@ -64,7 +64,7 @@ export function JobDateEditor({ jobId, field, value, emptyLabel = "Not set" }: J
       className="group inline-flex items-center gap-1 font-mono tabular-nums text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
     >
       {value ? formatDate(value) : <span className="text-stone-400">{emptyLabel}</span>}
-      <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-60 transition-opacity" />
+      <Pencil className="h-2.5 w-2.5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors" />
     </button>
   );
 }

@@ -181,7 +181,10 @@ export type JobFieldPatch = Partial<{
   notes: string | null;
   mileage_in: number | null;
   date_received: string | null;
+  date_finished: string | null;
   assigned_tech: string | null;
+  customer_id: string;
+  vehicle_id: string | null;
 }>;
 
 const EDITABLE_KEYS = [
@@ -189,7 +192,10 @@ const EDITABLE_KEYS = [
   "notes",
   "mileage_in",
   "date_received",
+  "date_finished",
   "assigned_tech",
+  "customer_id",
+  "vehicle_id",
 ] as const satisfies readonly (keyof JobFieldPatch)[];
 
 export async function updateJobFields(id: string, patch: JobFieldPatch) {

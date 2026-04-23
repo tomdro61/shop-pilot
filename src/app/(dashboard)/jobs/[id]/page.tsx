@@ -21,6 +21,8 @@ import { JobTitleEditor } from "@/components/dashboard/job-title-editor";
 import { JobNotesEditor } from "@/components/dashboard/job-notes-editor";
 import { JobMileageEditor } from "@/components/dashboard/job-mileage-editor";
 import { JobTechEditor } from "@/components/dashboard/job-tech-editor";
+import { JobCustomerEditor } from "@/components/dashboard/job-customer-editor";
+import { JobVehicleEditor } from "@/components/dashboard/job-vehicle-editor";
 import { JobProgressStepper } from "@/components/dashboard/job-progress-stepper";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import {
@@ -32,7 +34,7 @@ import {
   getInitials,
 } from "@/lib/utils/format";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
-import { ArrowLeft, Pencil, Printer, User as UserIcon, Truck, ClipboardList } from "lucide-react";
+import { ArrowLeft, Printer, User as UserIcon, Truck, ClipboardList } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 function SectionTitle({
@@ -117,12 +119,6 @@ export default async function JobDetailPage({
                 Print
               </Button>
             </Link>
-            <Link href={`/jobs/${id}/edit`}>
-              <Button variant="outline" size="sm">
-                <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                Edit
-              </Button>
-            </Link>
             <JobDeleteButton jobId={id} />
           </div>
         </div>
@@ -152,6 +148,13 @@ export default async function JobDetailPage({
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
               <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <UserIcon className="h-3 w-3" /> Customer
+                <span className="ml-auto">
+                  <JobCustomerEditor
+                    jobId={id}
+                    currentCustomer={customer}
+                    hasVehicle={!!vehicle}
+                  />
+                </span>
               </div>
               {customer ? (
                 <>
@@ -204,6 +207,13 @@ export default async function JobDetailPage({
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
               <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <Truck className="h-3 w-3" /> Vehicle
+                <span className="ml-auto">
+                  <JobVehicleEditor
+                    jobId={id}
+                    customerId={customer?.id ?? null}
+                    currentVehicleId={vehicle?.id ?? null}
+                  />
+                </span>
               </div>
               {vehicle ? (
                 <>

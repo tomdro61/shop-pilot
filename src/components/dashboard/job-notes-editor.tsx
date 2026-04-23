@@ -74,7 +74,7 @@ export function JobNotesEditor({ jobId, value }: JobNotesEditorProps) {
       className="group w-full text-left flex items-start gap-2"
     >
       <p className={`${BODY_CLASS} flex-1 min-w-0`}>{value}</p>
-      <Pencil className="h-3.5 w-3.5 shrink-0 text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
+      <Pencil className="h-3.5 w-3.5 shrink-0 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors mt-0.5" />
     </button>
   );
 }
