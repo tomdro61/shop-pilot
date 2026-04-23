@@ -176,6 +176,38 @@ export async function updateJobStatus(id: string, status: JobStatus) {
   return { success: true };
 }
 
+export type JobFieldPatch = {
+  title?: string | null;
+  notes?: string | null;
+  mileage_in?: number | null;
+  date_received?: string;
+  assigned_tech?: string | null;
+};
+
+export async function updateJobFields(id: string, patch: JobFieldPatch) {
+  const supabase = await createClient();
+
+  const allowed: Record<string, unknown> = {};
+  for (const key of ["title", "notes", "mileage_in", "date_received", "assigned_tech"] as const) {
+    if (key in patch) {
+      const raw = patch[key] as unknown;
+      allowed[key] = typeof raw === "string" && raw.trim() === "" ? null : raw;
+    }
+  }
+
+  if (Object.keys(allowed).length === 0) {
+    return { error: "Nothing to update" };
+  }
+
+  const { error } = await supabase.from("jobs").update(allowed).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function updateJobDateFinished(id: string, dateFinished: string) {
   const supabase = await createClient();
 

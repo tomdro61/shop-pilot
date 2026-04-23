@@ -6,6 +6,7 @@ import { getEstimateForJob } from "@/lib/actions/estimates";
 import { getInspectionForJob } from "@/lib/actions/dvi";
 import { getShopSettings } from "@/lib/actions/settings";
 import { getPresets } from "@/lib/actions/presets";
+import { getTechnicians } from "@/lib/actions/team";
 import { calculateTotals } from "@/lib/utils/totals";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/dashboard/status-select";
@@ -15,7 +16,11 @@ import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { DviSection } from "@/components/dashboard/dvi-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
-import { DateFinishedEditor } from "@/components/dashboard/date-finished-editor";
+import { JobDateEditor } from "@/components/dashboard/job-date-editor";
+import { JobTitleEditor } from "@/components/dashboard/job-title-editor";
+import { JobNotesEditor } from "@/components/dashboard/job-notes-editor";
+import { JobMileageEditor } from "@/components/dashboard/job-mileage-editor";
+import { JobTechEditor } from "@/components/dashboard/job-tech-editor";
 import { JobProgressStepper } from "@/components/dashboard/job-progress-stepper";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import {
@@ -23,7 +28,6 @@ import {
   formatVehicle,
   formatCustomerName,
   formatRONumber,
-  formatDate,
   formatDateLong,
   getInitials,
 } from "@/lib/utils/format";
@@ -68,21 +72,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   };
 }
 
-const DL_VALUE = "text-stone-900 dark:text-stone-50";
-
 export default async function JobDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, invoice, estimate, dviInspection, settings, presets] = await Promise.all([
+  const [job, invoice, estimate, dviInspection, settings, presets, technicians] = await Promise.all([
     getJob(id),
     getInvoiceForJob(id),
     getEstimateForJob(id),
     getInspectionForJob(id),
     getShopSettings(),
     getPresets(),
+    getTechnicians(),
   ]);
   if (!job) notFound();
 
@@ -131,9 +134,9 @@ export default async function JobDetailPage({
               <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
               Opened {formatDateLong(job.date_received) ?? "—"}
             </div>
-            <h1 className="text-[22px] lg:text-[26px] font-semibold tracking-tight text-stone-900 dark:text-stone-50 mt-1.5 leading-tight">
-              {job.title || <span className="italic text-stone-400 font-normal">Untitled job</span>}
-            </h1>
+            <div className="mt-1.5">
+              <JobTitleEditor jobId={id} value={job.title} />
+            </div>
             <div className="flex items-center gap-2 flex-wrap mt-3">
               <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
               {tech?.name && (
@@ -247,55 +250,33 @@ export default async function JobDetailPage({
               <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <ClipboardList className="h-3 w-3" /> Details
               </div>
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-10 h-10 rounded-md grid place-items-center text-sm font-semibold flex-none ${
-                  tech?.name
-                    ? "bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900"
-                    : "bg-stone-100 text-stone-400 border border-stone-200 dark:bg-stone-900 dark:text-stone-600 dark:border-stone-800"
-                }`}>
-                  {tech?.name ? getInitials(tech.name) : "—"}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
-                    {tech?.name || <span className="text-stone-400 font-normal">Unassigned</span>}
-                  </div>
-                  <div className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">Technician</div>
-                </div>
-              </div>
+              <JobTechEditor jobId={id} currentTech={tech} techs={technicians} />
               <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
                 <dt className={SECTION_LABEL}>Received</dt>
-                <dd className={`min-w-0 font-mono tabular-nums ${DL_VALUE}`}>{formatDate(job.date_received)}</dd>
-                <dt className={SECTION_LABEL}>Finished</dt>
-                <dd className="min-w-0">
-                  {job.date_finished ? (
-                    <DateFinishedEditor jobId={id} dateFinished={job.date_finished} />
-                  ) : (
-                    <span className="text-blue-600 dark:text-blue-400">Not set</span>
-                  )}
+                <dd className="min-w-0 text-xs">
+                  <JobDateEditor jobId={id} field="date_received" value={job.date_received} />
                 </dd>
-                {job.mileage_in != null && (
-                  <>
-                    <dt className={SECTION_LABEL}>Mileage in</dt>
-                    <dd className={`min-w-0 font-mono tabular-nums ${DL_VALUE}`}>{job.mileage_in.toLocaleString()} mi</dd>
-                  </>
-                )}
+                <dt className={SECTION_LABEL}>Finished</dt>
+                <dd className="min-w-0 text-xs">
+                  <JobDateEditor jobId={id} field="date_finished" value={job.date_finished} />
+                </dd>
+                <dt className={SECTION_LABEL}>Mileage in</dt>
+                <dd className="min-w-0 text-xs">
+                  <JobMileageEditor jobId={id} value={job.mileage_in} />
+                </dd>
               </dl>
             </div>
           </div>
 
-          {job.notes && (
-            <div className="border-t border-stone-300 dark:border-stone-800 px-5 lg:px-6 py-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
-                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                  Customer concern
-                </span>
-              </div>
-              <p className="text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">
-                {job.notes}
-              </p>
+          <div className="border-t border-stone-300 dark:border-stone-800 px-5 lg:px-6 py-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                Customer concern
+              </span>
             </div>
-          )}
+            <JobNotesEditor jobId={id} value={job.notes} />
+          </div>
         </section>
 
         <section className="pt-2">
