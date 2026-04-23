@@ -174,28 +174,26 @@ export default async function JobDetailPage({
                     </div>
                   </div>
                   <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
-                    {customer.phone && (
-                      <>
-                        <dt className={SECTION_LABEL}>Phone</dt>
-                        <dd className="min-w-0 flex items-center gap-1.5 flex-wrap">
+                    <dt className={SECTION_LABEL}>Phone</dt>
+                    <dd className="min-w-0 flex items-center gap-1.5 flex-wrap">
+                      {customer.phone ? (
+                        <>
                           <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">{formatPhone(customer.phone)}</span>
                           <a href={`tel:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">Call</a>
                           <a href={`sms:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">Text</a>
-                        </dd>
-                      </>
-                    )}
-                    {customer.email && (
-                      <>
-                        <dt className={SECTION_LABEL}>Email</dt>
-                        <dd className="min-w-0 text-stone-900 dark:text-stone-50 truncate">{customer.email}</dd>
-                      </>
-                    )}
-                    {customer.address && (
-                      <>
-                        <dt className={SECTION_LABEL}>Address</dt>
-                        <dd className="min-w-0 text-stone-900 dark:text-stone-50 truncate">{customer.address}</dd>
-                      </>
-                    )}
+                        </>
+                      ) : (
+                        <span className="text-stone-400">—</span>
+                      )}
+                    </dd>
+                    <dt className={SECTION_LABEL}>Email</dt>
+                    <dd className="min-w-0 text-stone-900 dark:text-stone-50 truncate">
+                      {customer.email || <span className="text-stone-400">—</span>}
+                    </dd>
+                    <dt className={SECTION_LABEL}>Address</dt>
+                    <dd className="min-w-0 text-stone-900 dark:text-stone-50 truncate">
+                      {customer.address || <span className="text-stone-400">—</span>}
+                    </dd>
                   </dl>
                 </>
               ) : (
