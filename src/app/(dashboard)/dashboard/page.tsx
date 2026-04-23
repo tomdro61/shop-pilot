@@ -245,11 +245,15 @@ function OpsCard({
   today,
   week,
   month,
+  weekSub,
+  monthSub,
 }: {
   label: string;
   today: number;
   week: number;
   month: number;
+  weekSub?: string;
+  monthSub?: string;
 }) {
   return (
     <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
@@ -264,10 +268,16 @@ function OpsCard({
         <div className="px-4 py-2">
           <dt className={SECTION_LABEL}>Week</dt>
           <dd className="font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">{week}</dd>
+          {weekSub && (
+            <dd className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400">{weekSub}</dd>
+          )}
         </div>
         <div className="px-4 py-2">
           <dt className={SECTION_LABEL}>Month</dt>
           <dd className="font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">{month}</dd>
+          {monthSub && (
+            <dd className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400">{monthSub}</dd>
+          )}
         </div>
       </dl>
     </div>
@@ -554,9 +564,28 @@ export default async function DashboardPage() {
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <OpsCard label="State inspections" today={ops.stateToday} week={ops.stateWeek} month={ops.stateMonth} />
-            <OpsCard label="TNC inspections" today={ops.tncToday} week={ops.tncWeek} month={ops.tncMonth} />
-            <OpsCard label="Jobs closed" today={ops.jobsClosedToday} week={ops.jobsClosedWeek} month={ops.jobsClosedMonth} />
+            <OpsCard
+              label="State inspections"
+              today={ops.stateToday}
+              week={ops.stateWeek}
+              month={ops.stateMonth}
+              weekSub={formatCurrencyWhole(ops.stateWeek * INSPECTION_RATE_STATE)}
+              monthSub={formatCurrencyWhole(ops.stateMonth * INSPECTION_RATE_STATE)}
+            />
+            <OpsCard
+              label="TNC inspections"
+              today={ops.tncToday}
+              week={ops.tncWeek}
+              month={ops.tncMonth}
+              weekSub={formatCurrencyWhole(ops.tncWeek * INSPECTION_RATE_TNC)}
+              monthSub={formatCurrencyWhole(ops.tncMonth * INSPECTION_RATE_TNC)}
+            />
+            <OpsCard
+              label="Jobs closed"
+              today={ops.jobsClosedToday}
+              week={ops.jobsClosedWeek}
+              month={ops.jobsClosedMonth}
+            />
           </div>
         </div>
       </section>
