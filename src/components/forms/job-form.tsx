@@ -622,7 +622,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                               )}
                             />
                             <span className="flex-1 truncate font-medium">{item.description}</span>
-                            <span className="text-[10px] font-black uppercase text-stone-400">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
                               {item.type}
                             </span>
                             <span className="text-xs tabular-nums text-stone-500">
