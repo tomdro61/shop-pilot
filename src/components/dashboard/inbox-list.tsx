@@ -7,9 +7,13 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatVehicle, formatCurrency, formatCustomerName, formatDateShort } from "@/lib/utils/format";
+import {
+  formatVehicle, formatCurrencyWhole, formatCustomerName, formatDateShort,
+} from "@/lib/utils/format";
 import { PARKING_SERVICE_LABELS } from "@/lib/constants";
+import { SECTION_LABEL } from "@/components/ui/section-card";
 import { CustomerLink } from "@/components/ui/customer-link";
+import { ClickableRow } from "@/components/ui/clickable-row";
 import type {
   InboxData,
   InboxUnpaidJob,
@@ -20,8 +24,6 @@ import type {
   InboxParkingSpecials,
 } from "@/lib/actions/inbox";
 
-// ── Helpers ─────────────────────────────────────────────
-
 function daysBetween(from: string | null, today: string): number {
   if (!from) return 0;
   const f = new Date(from + "T12:00:00");
@@ -30,19 +32,20 @@ function daysBetween(from: string | null, today: string): number {
 }
 
 function DaysBadge({ days, warnAt = 3 }: { days: number; warnAt?: number }) {
+  const cls = days >= 7
+    ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
+    : days >= warnAt
+      ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400"
+      : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400";
   return (
     <span className={cn(
-      "text-[10px] font-black px-2 py-1 rounded-md uppercase whitespace-nowrap",
-      days >= warnAt
-        ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
-        : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400"
+      "inline-flex items-center font-mono tabular-nums px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap",
+      cls,
     )}>
       {days}d
     </span>
   );
 }
-
-// ── Filter tabs ─────────────────────────────────────────
 
 const TABS = [
   { key: "all", label: "All" },
@@ -65,50 +68,62 @@ function tabCount(data: InboxData, tab: TabKey): number {
   return 0;
 }
 
-// ── Section wrapper ─────────────────────────────────────
+type SectionAccent = "red" | "blue" | "amber" | "indigo" | "stone";
+
+const SECTION_ICON_TINT: Record<SectionAccent, string> = {
+  red: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900",
+  blue: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900",
+  amber: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900",
+  indigo: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900",
+  stone: "bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800",
+};
 
 function Section({
   title,
   icon: Icon,
   count,
+  accent,
   children,
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   count: number;
+  accent: SectionAccent;
   children: React.ReactNode;
 }) {
   if (count === 0) return null;
   return (
-    <div className="bg-card rounded-lg shadow-card overflow-hidden">
-      <div className="flex items-center gap-2.5 bg-stone-800 dark:bg-stone-900 px-5 py-3">
-        <Icon className="h-3.5 w-3.5 text-stone-400" />
-        <h3 className="text-[11px] font-bold uppercase tracking-widest text-stone-100">{title}</h3>
-        <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-md bg-stone-600 text-stone-100">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800 px-4 py-2">
+        <div className={cn(
+          "w-6 h-6 rounded grid place-items-center border flex-none",
+          SECTION_ICON_TINT[accent],
+        )}>
+          <Icon className="h-3 w-3" />
+        </div>
+        <span className={SECTION_LABEL}>{title}</span>
+        <span className="ml-auto font-mono tabular-nums text-[11px] font-medium text-stone-500 dark:text-stone-400">
           {count}
         </span>
       </div>
-      <div className="divide-y divide-stone-200 dark:divide-stone-800">
+      <div className="divide-y divide-stone-100 dark:divide-stone-800/60">
         {children}
       </div>
     </div>
   );
 }
 
-// ── Item rows ───────────────────────────────────────────
-
 function UnpaidJobRow({ job, today }: { job: InboxUnpaidJob; today: string }) {
-  const router = useRouter();
   const customer = job.customers;
   const vehicle = job.vehicles;
   const days = daysBetween(job.date_finished, today);
   return (
-    <div
-      onClick={() => router.push(`/jobs/${job.id}`)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
+    <ClickableRow
+      href={`/jobs/${job.id}`}
+      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
     >
-      <div className="min-w-0">
-        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium truncate text-stone-900 dark:text-stone-50">
           {customer ? (
             <CustomerLink customerId={customer.id} stopPropagation>
               {formatCustomerName(customer)}
@@ -119,30 +134,29 @@ function UnpaidJobRow({ job, today }: { job: InboxUnpaidJob; today: string }) {
           {vehicle ? formatVehicle(vehicle) : ""}{job.title ? ` · ${job.title}` : ""}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2.5 pl-3">
-        <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">
-          {formatCurrency(job.total)}
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50">
+          {formatCurrencyWhole(job.total)}
         </span>
         <DaysBadge days={days} />
       </div>
-    </div>
+    </ClickableRow>
   );
 }
 
 function DviReadyRow({ dvi, today }: { dvi: InboxDvi; today: string }) {
-  const router = useRouter();
   const job = dvi.jobs;
   const customer = job?.customers || dvi.customers;
   const vehicle = job?.vehicles || dvi.vehicles;
   const days = daysBetween(dvi.completed_at?.split("T")[0] ?? null, today);
   const href = job ? `/jobs/${job.id}` : `/dvi/inspect/${dvi.id}`;
   return (
-    <div
-      onClick={() => router.push(href)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
+    <ClickableRow
+      href={href}
+      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
     >
-      <div className="min-w-0">
-        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium truncate text-stone-900 dark:text-stone-50">
           {customer ? (
             <CustomerLink customerId={customer.id} stopPropagation>
               {formatCustomerName(customer)}
@@ -153,37 +167,36 @@ function DviReadyRow({ dvi, today }: { dvi: InboxDvi; today: string }) {
           {vehicle ? formatVehicle(vehicle) : job?.title || "DVI"}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2 pl-3">
+      <div className="flex shrink-0 items-center gap-1.5">
         {dvi.attention > 0 && (
-          <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400">
+          <span className="inline-flex items-center font-mono tabular-nums px-1.5 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400">
             {dvi.attention} attn
           </span>
         )}
         {dvi.monitor > 0 && (
-          <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+          <span className="inline-flex items-center font-mono tabular-nums px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400">
             {dvi.monitor} mon
           </span>
         )}
         <DaysBadge days={days} warnAt={1} />
       </div>
-    </div>
+    </ClickableRow>
   );
 }
 
 function EstimateRow({ estimate, today }: { estimate: InboxEstimate; today: string }) {
-  const router = useRouter();
   const job = estimate.jobs;
   const customer = job?.customers;
   const vehicle = job?.vehicles;
   const days = daysBetween(estimate.sent_at?.split("T")[0] ?? null, today);
   const href = job ? `/jobs/${job.id}` : "#";
   return (
-    <div
-      onClick={() => router.push(href)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
+    <ClickableRow
+      href={href}
+      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
     >
-      <div className="min-w-0">
-        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium truncate text-stone-900 dark:text-stone-50">
           {customer ? (
             <CustomerLink customerId={customer.id} stopPropagation>
               {formatCustomerName(customer)}
@@ -194,13 +207,13 @@ function EstimateRow({ estimate, today }: { estimate: InboxEstimate; today: stri
           {vehicle ? formatVehicle(vehicle) : job?.title || "Estimate"}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2.5 pl-3">
-        <span className="text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">
-          {formatCurrency(estimate.total)}
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50">
+          {formatCurrencyWhole(estimate.total)}
         </span>
         <DaysBadge days={days} />
       </div>
-    </div>
+    </ClickableRow>
   );
 }
 
@@ -208,63 +221,63 @@ function QuoteRequestRow({ quote, today }: { quote: InboxQuote; today: string })
   const vehicle = formatVehicle({ year: quote.vehicle_year, make: quote.vehicle_make, model: quote.vehicle_model });
   const days = daysBetween(quote.created_at.split("T")[0], today);
   return (
-    <Link href="/quote-requests?status=new" className="block">
-      <div className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
-        <div className="min-w-0">
-          <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
-            {formatCustomerName(quote)}
-          </p>
-          <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-            {vehicle || "No vehicle"}{quote.services.length > 0 ? ` · ${quote.services.join(", ")}` : ""}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 pl-3">
-          <DaysBadge days={days} />
-        </div>
+    <Link
+      href="/quote-requests?status=new"
+      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium truncate text-stone-900 dark:text-stone-50">
+          {formatCustomerName(quote)}
+        </p>
+        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+          {vehicle || "No vehicle"}{quote.services.length > 0 ? ` · ${quote.services.join(", ")}` : ""}
+        </p>
       </div>
+      <DaysBadge days={days} />
     </Link>
   );
 }
 
 function ParkingLeadRow({ lead }: { lead: InboxParkingLead }) {
-  const router = useRouter();
   const completed = new Set(lead.services_completed || []);
   const pending = lead.services_interested.filter((s) => !completed.has(s));
   return (
-    <div
-      onClick={() => router.push(`/parking/${lead.id}`)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
+    <ClickableRow
+      href={`/parking/${lead.id}`}
+      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
     >
-      <div className="min-w-0">
-        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium truncate text-stone-900 dark:text-stone-50">
           <CustomerLink customerId={lead.customer_id} stopPropagation>
             {formatCustomerName(lead)}
           </CustomerLink>
         </p>
         <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-          {[lead.make, lead.model].filter(Boolean).join(" ") || "Vehicle"} · {lead.lot} · {formatDateShort(lead.drop_off_date)} – {formatDateShort(lead.pick_up_date)}
+          {[lead.make, lead.model].filter(Boolean).join(" ") || "Vehicle"} · {lead.lot} · <span className="font-mono tabular-nums">{formatDateShort(lead.drop_off_date)}–{formatDateShort(lead.pick_up_date)}</span>
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1.5 pl-3 flex-wrap justify-end">
+      <div className="flex shrink-0 items-center gap-1 flex-wrap justify-end max-w-[180px]">
         {pending.map((s) => (
-          <span key={s} className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+          <span
+            key={s}
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+          >
             {PARKING_SERVICE_LABELS[s] || s}
           </span>
         ))}
       </div>
-    </div>
+    </ClickableRow>
   );
 }
 
 function ParkingSpecialsRow({ reservation }: { reservation: InboxParkingSpecials }) {
-  const router = useRouter();
   return (
-    <div
-      onClick={() => router.push(`/parking/${reservation.id}`)}
-      className="flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50 cursor-pointer"
+    <ClickableRow
+      href={`/parking/${reservation.id}`}
+      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
     >
-      <div className="min-w-0">
-        <p className="text-sm font-bold truncate text-stone-900 dark:text-stone-50">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium truncate text-stone-900 dark:text-stone-50">
           <CustomerLink customerId={reservation.customer_id} stopPropagation>
             {formatCustomerName(reservation)}
           </CustomerLink>
@@ -273,16 +286,12 @@ function ParkingSpecialsRow({ reservation }: { reservation: InboxParkingSpecials
           {[reservation.make, reservation.model].filter(Boolean).join(" ") || "Vehicle"} · {reservation.lot}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2 pl-3">
-        <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
-          Specials not sent
-        </span>
-      </div>
-    </div>
+      <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400">
+        Specials not sent
+      </span>
+    </ClickableRow>
   );
 }
-
-// ── Main component ──────────────────────────────────────
 
 export function InboxList({ data, activeTab }: { data: InboxData; activeTab: string }) {
   const router = useRouter();
@@ -300,37 +309,38 @@ export function InboxList({ data, activeTab }: { data: InboxData; activeTab: str
 
   if (data.counts.total === 0) {
     return (
-      <div className="bg-card rounded-lg shadow-card p-12 text-center">
-        <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
-        <p className="mt-3 text-sm font-semibold text-stone-500 dark:text-stone-400">All caught up</p>
-        <p className="text-xs text-muted-foreground mt-1">No action items right now.</p>
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm py-12 text-center">
+        <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400 mx-auto" />
+        <p className="mt-2 text-sm font-medium text-stone-500 dark:text-stone-400">All caught up</p>
+        <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">No action items right now</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filter tabs */}
-      <div className="flex gap-1.5 flex-wrap">
+    <div className="space-y-3">
+      {/* Segmented filter */}
+      <div className="inline-flex items-center gap-0.5 p-0.5 rounded-md bg-stone-100 dark:bg-stone-800">
         {TABS.map((t) => {
           const count = tabCount(data, t.key);
           if (t.key !== "all" && count === 0) return null;
+          const active = tab === t.key;
           return (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
-                "rounded-md px-3.5 py-1.5 text-xs font-bold transition-colors",
-                tab === t.key
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"
+                "inline-flex items-center gap-1.5 h-7 px-2.5 rounded text-[11px] font-medium transition-colors",
+                active
+                  ? "bg-card text-stone-900 dark:text-stone-50 shadow-sm"
+                  : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200",
               )}
             >
               {t.label}
               {count > 0 && (
                 <span className={cn(
-                  "ml-1.5 tabular-nums",
-                  tab === t.key ? "text-blue-200" : "text-stone-400 dark:text-stone-500"
+                  "font-mono tabular-nums",
+                  active ? "text-stone-500 dark:text-stone-400" : "text-stone-400 dark:text-stone-500",
                 )}>
                   {count}
                 </span>
@@ -341,53 +351,53 @@ export function InboxList({ data, activeTab }: { data: InboxData; activeTab: str
       </div>
 
       {/* Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {showPayments && (
-        <Section title="Unpaid Jobs" icon={DollarSign} count={data.unpaidJobs.length}>
-          {data.unpaidJobs.map((job) => (
-            <UnpaidJobRow key={job.id} job={job} today={data.today} />
-          ))}
-        </Section>
-      )}
-
-      {showDvi && (
-        <Section title="DVIs Ready to Send" icon={ClipboardCheck} count={data.dvisReady.length}>
-          {data.dvisReady.map((dvi) => (
-            <DviReadyRow key={dvi.id} dvi={dvi} today={data.today} />
-          ))}
-        </Section>
-      )}
-
-      {showEstimates && (
-        <Section title="Pending Estimates" icon={FileText} count={data.pendingEstimates.length}>
-          {data.pendingEstimates.map((est) => (
-            <EstimateRow key={est.id} estimate={est} today={data.today} />
-          ))}
-        </Section>
-      )}
-
-      {showQuotes && (
-        <Section title="New Quote Requests" icon={FileQuestion} count={data.quoteRequests.length}>
-          {data.quoteRequests.map((q) => (
-            <QuoteRequestRow key={q.id} quote={q} today={data.today} />
-          ))}
-        </Section>
-      )}
-
-      {showParking && (
-        <>
-          <Section title="Parking Service Leads" icon={Car} count={data.parkingServiceLeads.length}>
-            {data.parkingServiceLeads.map((lead) => (
-              <ParkingLeadRow key={lead.id} lead={lead} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {showPayments && (
+          <Section title="Unpaid jobs" icon={DollarSign} accent="red" count={data.unpaidJobs.length}>
+            {data.unpaidJobs.map((job) => (
+              <UnpaidJobRow key={job.id} job={job} today={data.today} />
             ))}
           </Section>
-          <Section title="Parking Specials Not Sent" icon={Megaphone} count={data.parkingSpecialsNotSent.length}>
-            {data.parkingSpecialsNotSent.map((r) => (
-              <ParkingSpecialsRow key={r.id} reservation={r} />
+        )}
+
+        {showDvi && (
+          <Section title="DVIs ready to send" icon={ClipboardCheck} accent="blue" count={data.dvisReady.length}>
+            {data.dvisReady.map((dvi) => (
+              <DviReadyRow key={dvi.id} dvi={dvi} today={data.today} />
             ))}
           </Section>
-        </>
-      )}
+        )}
+
+        {showEstimates && (
+          <Section title="Pending estimates" icon={FileText} accent="amber" count={data.pendingEstimates.length}>
+            {data.pendingEstimates.map((est) => (
+              <EstimateRow key={est.id} estimate={est} today={data.today} />
+            ))}
+          </Section>
+        )}
+
+        {showQuotes && (
+          <Section title="New quote requests" icon={FileQuestion} accent="blue" count={data.quoteRequests.length}>
+            {data.quoteRequests.map((q) => (
+              <QuoteRequestRow key={q.id} quote={q} today={data.today} />
+            ))}
+          </Section>
+        )}
+
+        {showParking && (
+          <>
+            <Section title="Parking service leads" icon={Car} accent="indigo" count={data.parkingServiceLeads.length}>
+              {data.parkingServiceLeads.map((lead) => (
+                <ParkingLeadRow key={lead.id} lead={lead} />
+              ))}
+            </Section>
+            <Section title="Parking specials not sent" icon={Megaphone} accent="amber" count={data.parkingSpecialsNotSent.length}>
+              {data.parkingSpecialsNotSent.map((r) => (
+                <ParkingSpecialsRow key={r.id} reservation={r} />
+              ))}
+            </Section>
+          </>
+        )}
       </div>
     </div>
   );
