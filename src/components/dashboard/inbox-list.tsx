@@ -11,7 +11,7 @@ import {
   formatVehicle, formatCurrencyWhole, formatCustomerName, formatDateShort,
 } from "@/lib/utils/format";
 import { PARKING_SERVICE_LABELS } from "@/lib/constants";
-import { SECTION_LABEL } from "@/components/ui/section-card";
+import { COLUMN_HEADER } from "@/components/ui/section-card";
 import { ACCENT_ICON_TINT, type Accent } from "@/components/ui/mini-status-card";
 import { CustomerLink } from "@/components/ui/customer-link";
 import { ClickableRow } from "@/components/ui/clickable-row";
@@ -78,14 +78,14 @@ function Section({
   if (count === 0) return null;
   return (
     <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800 px-4 py-2">
+      <div className="flex items-center gap-2 border-b border-stone-200 dark:border-stone-800 px-4 py-2">
         <div className={cn(
           "w-6 h-6 rounded grid place-items-center border flex-none",
           ACCENT_ICON_TINT[accent],
         )}>
           <Icon className="h-3 w-3" />
         </div>
-        <span className={SECTION_LABEL}>{title}</span>
+        <span className={COLUMN_HEADER}>{title}</span>
         <span className="ml-auto font-mono tabular-nums text-[11px] font-medium text-stone-500 dark:text-stone-400">
           {count}
         </span>

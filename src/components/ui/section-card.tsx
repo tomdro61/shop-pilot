@@ -1,11 +1,20 @@
 import * as React from "react";
 
 /**
- * Small uppercase label class — used for card section headers, table column headers,
- * and secondary labels inside card bodies (Phone/Email/Address spec-sheet pattern).
+ * Small uppercase label class — used for secondary labels inside card bodies
+ * (Phone/Email/Address spec-sheet pattern) and any label where the bg is already
+ * tinted or the label role is supporting.
  */
 export const SECTION_LABEL =
   "text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-300";
+
+/**
+ * Heavier variant for column/section HEADER rows where the bg is white
+ * (no tinted header strip). Black + bold type carries the "this is a
+ * header" read since there's no background distinction.
+ */
+export const COLUMN_HEADER =
+  "text-[11px] font-bold uppercase tracking-wider text-stone-900 dark:text-stone-50";
 
 interface SectionCardProps {
   title: React.ReactNode;
@@ -29,9 +38,9 @@ export function SectionCard({
 }: SectionCardProps) {
   return (
     <div className={`bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden ${className}`}>
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800">
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-stone-200 dark:border-stone-800">
         <div className="min-w-0">
-          <h3 className={`flex items-center gap-1.5 ${SECTION_LABEL}`}>
+          <h3 className={`flex items-center gap-1.5 ${COLUMN_HEADER}`}>
             {title}
           </h3>
           {description && (

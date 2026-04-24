@@ -4,7 +4,7 @@ import { getCustomer } from "@/lib/actions/customers";
 import { getInspectionsForVehicle } from "@/lib/actions/dvi";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { SECTION_LABEL } from "@/components/ui/section-card";
+import { SECTION_LABEL, COLUMN_HEADER } from "@/components/ui/section-card";
 import {
   formatPhone,
   formatVehicle,
@@ -433,13 +433,13 @@ export default async function CustomerDetailPage({
             <>
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
-                    <th className={`text-left px-4 py-2 ${SECTION_LABEL}`}>Repair Order</th>
-                    <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Vehicle</th>
-                    <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Received</th>
-                    <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Status</th>
-                    <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Payment</th>
-                    <th className={`text-right px-4 py-2 ${SECTION_LABEL}`}>Total</th>
+                  <tr className="border-b border-stone-200 dark:border-stone-800">
+                    <th className={`text-left px-4 py-2 ${COLUMN_HEADER}`}>Repair Order</th>
+                    <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Vehicle</th>
+                    <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Received</th>
+                    <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Status</th>
+                    <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Payment</th>
+                    <th className={`text-right px-4 py-2 ${COLUMN_HEADER}`}>Total</th>
                   </tr>
                 </thead>
                 <tbody>

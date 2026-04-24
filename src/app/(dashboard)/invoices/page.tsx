@@ -5,7 +5,7 @@ import { INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/lib/constants";
 import { ExternalLink } from "lucide-react";
 import { InvoiceSearch } from "./invoice-search";
 import { InvoiceStatusFilter } from "./invoice-status-filter";
-import { SECTION_LABEL } from "@/components/ui/section-card";
+import { COLUMN_HEADER } from "@/components/ui/section-card";
 import { formatCurrencyWhole, formatDate, getInitials } from "@/lib/utils/format";
 import type { InvoiceStatus } from "@/types";
 
@@ -52,14 +52,14 @@ export default async function InvoicesPage({
           <div className="hidden md:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
-                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Customer</th>
-                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Vehicle</th>
-                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Job</th>
-                  <th className={`text-right px-3 py-2 ${SECTION_LABEL}`}>Amount</th>
-                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Status</th>
-                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Date</th>
-                  <th className={`text-left px-3 py-2 w-8 ${SECTION_LABEL}`}></th>
+                <tr className="border-b border-stone-200 dark:border-stone-800">
+                  <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Customer</th>
+                  <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Vehicle</th>
+                  <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Job</th>
+                  <th className={`text-right px-3 py-2 ${COLUMN_HEADER}`}>Amount</th>
+                  <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Status</th>
+                  <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Date</th>
+                  <th className={`text-left px-3 py-2 w-8 ${COLUMN_HEADER}`}></th>
                 </tr>
               </thead>
               <tbody>

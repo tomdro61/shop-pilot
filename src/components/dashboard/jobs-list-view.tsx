@@ -20,7 +20,7 @@ import {
 import { ArrowUpDown } from "lucide-react";
 import { StatusSelect } from "./status-select";
 import { CustomerLink } from "@/components/ui/customer-link";
-import { SECTION_LABEL } from "@/components/ui/section-card";
+import { COLUMN_HEADER } from "@/components/ui/section-card";
 import type { JobStatus } from "@/types";
 
 const STATUS_BORDER: Record<JobStatus, string> = {
@@ -62,7 +62,7 @@ function SortHeader({
     <button
       type="button"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      className={`inline-flex items-center gap-1 ${SECTION_LABEL} hover:text-stone-900 dark:hover:text-stone-100 ${align === "right" ? "justify-end" : ""}`}
+      className={`inline-flex items-center gap-1 ${COLUMN_HEADER} hover:text-stone-900 dark:hover:text-stone-100 ${align === "right" ? "justify-end" : ""}`}
     >
       {children}
       <ArrowUpDown className="h-3 w-3 opacity-50" />
@@ -82,7 +82,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
     () => [
       {
         accessorKey: "status",
-        header: () => <span className={SECTION_LABEL}>Status</span>,
+        header: () => <span className={COLUMN_HEADER}>Status</span>,
         cell: ({ row }) => (
           <div onClick={(e) => e.stopPropagation()}>
             <StatusSelect
@@ -111,7 +111,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
       },
       {
         id: "vehicle",
-        header: () => <span className={SECTION_LABEL}>Vehicle</span>,
+        header: () => <span className={COLUMN_HEADER}>Vehicle</span>,
         cell: ({ row }) => (
           <span className="text-sm text-stone-600 dark:text-stone-400">
             {row.original.vehicles ? formatVehicle(row.original.vehicles) : "—"}
@@ -130,7 +130,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
       },
       {
         id: "tech",
-        header: () => <span className={SECTION_LABEL}>Tech</span>,
+        header: () => <span className={COLUMN_HEADER}>Tech</span>,
         cell: ({ row }) => (
           <span className="text-sm text-stone-600 dark:text-stone-400">
             {row.original.users?.name ?? "—"}
@@ -198,7 +198,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
         <table className="w-full border-collapse">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
+              <tr key={hg.id} className="border-b border-stone-200 dark:border-stone-800">
                 {hg.headers.map((h) => (
                   <th key={h.id} className="text-left px-3 py-2 border-l-2 border-l-transparent first:pl-[calc(0.75rem-2px)]">
                     {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}

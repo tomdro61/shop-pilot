@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatPhone, formatCustomerName, getInitials } from "@/lib/utils/format";
 import { CUSTOMER_TYPE_COLORS } from "@/lib/constants";
-import { SECTION_LABEL } from "@/components/ui/section-card";
+import { SECTION_LABEL, COLUMN_HEADER } from "@/components/ui/section-card";
 
 interface CustomerListItem {
   id: string;
@@ -45,11 +45,11 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
       <div className="hidden lg:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
-              <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Name</th>
-              <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Email</th>
-              <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Phone</th>
-              <th className={`text-left px-3 py-2 w-24 ${SECTION_LABEL}`}>Type</th>
+            <tr className="border-b border-stone-200 dark:border-stone-800">
+              <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Name</th>
+              <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Email</th>
+              <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Phone</th>
+              <th className={`text-left px-3 py-2 w-24 ${COLUMN_HEADER}`}>Type</th>
             </tr>
           </thead>
           <tbody>
@@ -88,7 +88,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
 
       {/* Mobile: dense stacked rows */}
       <div className="lg:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
-        <div className={`px-3 py-2 bg-stone-100 dark:bg-stone-900/40 ${SECTION_LABEL}`}>
+        <div className={`px-3 py-2 border-b border-stone-200 dark:border-stone-800 ${COLUMN_HEADER}`}>
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
         {customers.map((customer) => {
