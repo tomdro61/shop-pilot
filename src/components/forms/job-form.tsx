@@ -47,9 +47,9 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER } from "@/lib/constants";
-import { formatCustomerName, formatCurrency, getInitials } from "@/lib/utils/format";
+import { formatCustomerName, formatCurrency, getInitials, formatRONumber, formatDate } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, X, Plus, Search, Trash2, Car } from "lucide-react";
+import { Check, ChevronsUpDown, X, Plus, Search, Trash2, Car, ExternalLink, FileText } from "lucide-react";
 import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, CatalogItem, JobStatus } from "@/types";
 
 interface JobFormProps {
@@ -64,9 +64,30 @@ interface JobFormProps {
   presets?: JobPreset[];
 }
 
-type CustomerOption = { id: string; first_name: string; last_name: string; phone: string | null };
-type VehicleOption = { id: string; year: number | null; make: string | null; model: string | null };
+type CustomerOption = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+};
+type VehicleOption = {
+  id: string;
+  year: number | null;
+  make: string | null;
+  model: string | null;
+  license_plate: string | null;
+  mileage: number | null;
+};
 type TechOption = { id: string; name: string };
+type RecentJob = {
+  id: string;
+  ro_number: number | null;
+  title: string | null;
+  status: string;
+  date_received: string;
+};
 
 function PresetSearchPicker({
   presets,
@@ -140,6 +161,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
   const [vehicleAddOpen, setVehicleAddOpen] = useState(false);
+  const [recentJobs, setRecentJobs] = useState<RecentJob[]>([]);
 
   // Catalog item picking
   const [catalogSearch, setCatalogSearch] = useState("");
@@ -179,6 +201,8 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
         first_name: job.customers.first_name,
         last_name: job.customers.last_name,
         phone: null,
+        email: null,
+        address: null,
       }]);
     }
   }, [job?.customers]);
@@ -190,7 +214,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
       const supabase = createClient();
       const { data } = await supabase
         .from("customers")
-        .select("id, first_name, last_name, phone")
+        .select("id, first_name, last_name, phone, email, address")
         .eq("id", defaultCustomerId!)
         .single();
       if (data) {
@@ -206,7 +230,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
       const supabase = createClient();
       let query = supabase
         .from("customers")
-        .select("id, first_name, last_name, phone")
+        .select("id, first_name, last_name, phone, email, address")
         .order("last_name")
         .limit(20);
 
@@ -249,7 +273,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
     const supabase = createClient();
     const { data } = await supabase
       .from("vehicles")
-      .select("id, year, make, model")
+      .select("id, year, make, model, license_plate, mileage")
       .eq("customer_id", cid)
       .order("year", { ascending: false });
     setVehicles(data || []);
@@ -259,6 +283,26 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
     loadVehicles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCustomerId]);
+
+  // Load recent jobs for selected customer
+  useEffect(() => {
+    if (!selectedCustomerId) {
+      setRecentJobs([]);
+      return;
+    }
+    async function loadRecentJobs() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("jobs")
+        .select("id, ro_number, title, status, date_received")
+        .eq("customer_id", selectedCustomerId)
+        .neq("id", job?.id ?? "00000000-0000-0000-0000-000000000000")
+        .order("date_received", { ascending: false })
+        .limit(5);
+      setRecentJobs(data || []);
+    }
+    loadRecentJobs();
+  }, [selectedCustomerId, job?.id]);
 
   // Load technicians
   useEffect(() => {
@@ -375,11 +419,46 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
   const selectedVehicleId = form.watch("vehicle_id");
   const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
+  const watchedTitle = form.watch("title");
+  const watchedDate = form.watch("date_received");
+  const metaPieces: { label: string; value: string }[] = [
+    { label: "RO", value: isEditing && job?.ro_number ? formatRONumber(job.ro_number) : "Pending" },
+    { label: "", value: isEditing ? "SAVED" : "DRAFT" },
+  ];
+  if (selectedCustomer) metaPieces.push({ label: "Customer", value: formatCustomerName(selectedCustomer) });
+  if (selectedVehicle) {
+    const v = [selectedVehicle.year, selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(" ");
+    if (v) metaPieces.push({ label: "Vehicle", value: v });
+  }
+  if (watchedDate) metaPieces.push({ label: "Received", value: formatDate(watchedDate) });
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
 
-        <SectionCard
+            {/* Meta row + page title */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                {metaPieces.map((m, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 text-stone-500 dark:text-stone-400">
+                    {m.label && <span className="font-semibold uppercase tracking-wider text-stone-400">{m.label}</span>}
+                    <span className={cn(
+                      "font-mono tabular-nums text-stone-700 dark:text-stone-300",
+                      m.value === "DRAFT" && "rounded-full bg-amber-100 dark:bg-amber-950 px-2 py-0.5 text-amber-700 dark:text-amber-400 font-semibold uppercase tracking-wider",
+                      m.value === "SAVED" && "rounded-full bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 text-emerald-700 dark:text-emerald-400 font-semibold uppercase tracking-wider",
+                    )}>{m.value}</span>
+                    {i < metaPieces.length - 1 && <span className="text-stone-300 dark:text-stone-600">·</span>}
+                  </span>
+                ))}
+              </div>
+              <h2 className="text-[20px] lg:text-[22px] font-semibold tracking-tight text-stone-900 dark:text-stone-50 leading-tight">
+                {watchedTitle?.trim() || (isEditing ? "Edit repair order" : "New repair order")}
+              </h2>
+            </div>
+
+            <SectionCard
           title="Customer"
           action={
             <Link
@@ -398,31 +477,41 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   {selectedCustomer ? (
-                    <div className="flex items-center gap-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                    <div className="flex items-start gap-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 px-3 py-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                         {getInitials(formatCustomerName(selectedCustomer))}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                        <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
                           {formatCustomerName(selectedCustomer)}
                         </div>
-                        {selectedCustomer.phone && (
-                          <div className="text-xs text-stone-500 dark:text-stone-400 truncate">
-                            {selectedCustomer.phone}
-                          </div>
-                        )}
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-stone-500 dark:text-stone-400">
+                          {selectedCustomer.phone && <span>{selectedCustomer.phone}</span>}
+                          {selectedCustomer.email && <span className="truncate">{selectedCustomer.email}</span>}
+                          {selectedCustomer.address && <span className="truncate">{selectedCustomer.address}</span>}
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          field.onChange("");
-                          form.setValue("vehicle_id", undefined);
-                          setCustomerOpen(true);
-                        }}
-                        className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 transition-colors"
-                      >
-                        Change
-                      </button>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <Link
+                          href={`/customers/${selectedCustomer.id}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                        >
+                          View
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            field.onChange("");
+                            form.setValue("vehicle_id", undefined);
+                            setCustomerOpen(true);
+                          }}
+                          className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 transition-colors"
+                        >
+                          Change
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
@@ -501,44 +590,66 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
               name="vehicle_id"
               render={({ field }) => (
                 <FormItem>
-                  {selectedVehicle ? (
-                    <div className="flex items-center gap-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300">
-                        <Car className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1 text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
-                        {[selectedVehicle.year, selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(" ")}
-                      </div>
+                  {!selectedCustomerId ? (
+                    <div className="rounded-lg border border-dashed border-stone-300 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/20 px-4 py-6 text-center">
+                      <p className="text-xs text-stone-500 dark:text-stone-400">Select a customer first</p>
+                    </div>
+                  ) : vehicles.length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setVehicleAddOpen(true)}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-stone-300 dark:border-stone-700 bg-stone-50/50 dark:bg-stone-800/20 px-4 py-6 text-xs text-stone-500 dark:text-stone-400 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add this customer&rsquo;s first vehicle
+                    </button>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {vehicles.map((v) => {
+                        const active = v.id === field.value;
+                        const label = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Vehicle";
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => field.onChange(v.id)}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                              active
+                                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 ring-1 ring-blue-500"
+                                : "border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900/40 hover:border-stone-400 dark:hover:border-stone-600"
+                            )}
+                          >
+                            <div className={cn(
+                              "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                              active ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300"
+                            )}>
+                              <Car className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">{label}</div>
+                              <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-stone-500 dark:text-stone-400 font-mono tabular-nums">
+                                {v.license_plate && <span>{v.license_plate}</span>}
+                                {v.mileage != null && <span>{v.mileage.toLocaleString()} mi</span>}
+                              </div>
+                            </div>
+                            {active && (
+                              <div className="rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shrink-0">
+                                Selected
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
                       <button
                         type="button"
-                        onClick={() => field.onChange(undefined)}
-                        className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 transition-colors"
+                        onClick={() => setVehicleAddOpen(true)}
+                        className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-stone-300 dark:border-stone-700 px-3 py-2.5 text-xs font-medium text-stone-500 dark:text-stone-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-colors"
                       >
-                        Change
+                        <Plus className="h-4 w-4" />
+                        Add vehicle
                       </button>
                     </div>
-                  ) : (
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-                      disabled={!selectedCustomerId}
-                    >
-                      <FormControl>
-                        <SelectTrigger className={cn(!selectedCustomerId && "text-muted-foreground")}>
-                          <SelectValue
-                            placeholder={selectedCustomerId ? "Select vehicle (optional)" : "Select customer first"}
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No vehicle</SelectItem>
-                        {vehicles.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   )}
                   <FormMessage />
                 </FormItem>
@@ -869,22 +980,81 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
           </SectionCard>
         )}
 
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => router.back()}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting
-              ? "Saving..."
-              : isEditing
-                ? "Update job"
-                : "Create job"}
-          </Button>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => router.back()}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting
+                  ? "Saving..."
+                  : isEditing
+                    ? "Update job"
+                    : "Create job"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Right sidebar */}
+          <aside className="space-y-4 lg:col-span-1">
+            <SectionCard title={selectedCustomer ? `${selectedCustomer.first_name}'s recent jobs` : "Recent jobs"}>
+              <div className="p-2">
+                {!selectedCustomerId ? (
+                  <div className="px-3 py-6 text-center">
+                    <FileText className="mx-auto h-5 w-5 text-stone-300 dark:text-stone-600" />
+                    <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+                      Select a customer to see their history.
+                    </p>
+                  </div>
+                ) : recentJobs.length === 0 ? (
+                  <div className="px-3 py-6 text-center">
+                    <p className="text-xs text-stone-500 dark:text-stone-400">
+                      No prior jobs for this customer.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-stone-100 dark:divide-stone-800">
+                    {recentJobs.map((rj) => {
+                      const colors = JOB_STATUS_COLORS[rj.status as JobStatus];
+                      return (
+                        <li key={rj.id}>
+                          <Link
+                            href={`/jobs/${rj.id}`}
+                            target="_blank"
+                            className="flex items-start gap-2 rounded-md px-2 py-2 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400">
+                                  {formatRONumber(rj.ro_number)}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className={cn("text-[10px] py-0 px-1.5", colors?.bg, colors?.text)}
+                                >
+                                  {JOB_STATUS_LABELS[rj.status as JobStatus]}
+                                </Badge>
+                              </div>
+                              <div className="mt-0.5 text-xs text-stone-900 dark:text-stone-50 truncate">
+                                {rj.title || <span className="text-stone-400 italic">Untitled</span>}
+                              </div>
+                              <div className="mt-0.5 font-mono tabular-nums text-[10px] text-stone-400">
+                                {formatDate(rj.date_received)}
+                              </div>
+                            </div>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </SectionCard>
+          </aside>
         </div>
       </form>
 

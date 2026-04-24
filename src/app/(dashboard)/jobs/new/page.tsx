@@ -28,7 +28,7 @@ export default async function NewJobPage({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 lg:px-6 pb-12 space-y-4">
+    <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-12 space-y-2">
       <div className="py-2">
         <Link href="/jobs">
           <Button variant="ghost" size="sm" className="-ml-3">
@@ -36,14 +36,6 @@ export default async function NewJobPage({
             Jobs
           </Button>
         </Link>
-      </div>
-      <div>
-        <h1 className="text-[22px] lg:text-[26px] font-semibold tracking-tight text-stone-900 dark:text-stone-50 leading-tight">
-          New Job
-        </h1>
-        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-          Configure the repair order and assignment details.
-        </p>
       </div>
       <JobForm
         defaultCustomerId={customerId}
