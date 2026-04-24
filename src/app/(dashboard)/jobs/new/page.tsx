@@ -28,7 +28,7 @@ export default async function NewJobPage({
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 lg:px-6 pb-12 space-y-4">
+    <div className="max-w-3xl mx-auto px-4 lg:px-6 pb-12 space-y-4">
       <div className="py-2">
         <Link href="/jobs">
           <Button variant="ghost" size="sm" className="-ml-3">

@@ -16,7 +16,7 @@ import { VehicleForm } from "@/components/forms/vehicle-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SectionCard } from "@/components/ui/section-card";
+import { SectionCard, SECTION_LABEL } from "@/components/ui/section-card";
 import {
   Select,
   SelectContent,
@@ -46,11 +46,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER, PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
-import { formatCustomerName, formatCurrency } from "@/lib/utils/format";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER } from "@/lib/constants";
+import { formatCustomerName, formatCurrency, getInitials } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, X, Plus, Search, Trash2 } from "lucide-react";
-import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, CatalogItem, JobStatus, PaymentStatus, PaymentMethod } from "@/types";
+import { Check, ChevronsUpDown, X, Plus, Search, Trash2, Car } from "lucide-react";
+import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, CatalogItem, JobStatus } from "@/types";
 
 interface JobFormProps {
   job?: Job & {
@@ -372,48 +372,68 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
   }
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+  const selectedVehicleId = form.watch("vehicle_id");
+  const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
         <SectionCard
-          title="Customer & Vehicle"
-          description="Who's the job for?"
+          title="Customer"
+          action={
+            <Link
+              href="/customers/new"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/80 hover:text-white transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              New customer
+            </Link>
+          }
         >
           <div className="p-4">
-
-            <div className="space-y-4">
-              {/* Customer — full width, prominent */}
-              <FormField
-                control={form.control}
-                name="customer_id"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Customer</FormLabel>
-                      <Link
-                        href="/customers/new"
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            <FormField
+              control={form.control}
+              name="customer_id"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  {selectedCustomer ? (
+                    <div className="flex items-center gap-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                        {getInitials(formatCustomerName(selectedCustomer))}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                          {formatCustomerName(selectedCustomer)}
+                        </div>
+                        {selectedCustomer.phone && (
+                          <div className="text-xs text-stone-500 dark:text-stone-400 truncate">
+                            {selectedCustomer.phone}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          field.onChange("");
+                          form.setValue("vehicle_id", undefined);
+                          setCustomerOpen(true);
+                        }}
+                        className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 transition-colors"
                       >
-                        <Plus className="h-3 w-3" />
-                        New Customer
-                      </Link>
+                        Change
+                      </button>
                     </div>
+                  ) : (
                     <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             role="combobox"
-                            className={cn(
-                              "w-full justify-between h-10",
-                              !field.value && "text-muted-foreground"
-                            )}
+                            className="w-full justify-between h-10 text-muted-foreground"
                           >
-                            {selectedCustomer
-                              ? formatCustomerName(selectedCustomer)
-                              : "Select customer..."}
+                            Search by name or phone…
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </FormControl>
@@ -452,30 +472,52 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                         </Command>
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </SectionCard>
 
-              {/* Vehicle — depends on customer */}
-              <FormField
-                control={form.control}
-                name="vehicle_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Vehicle</FormLabel>
-                      {selectedCustomerId && (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          onClick={() => setVehicleAddOpen(true)}
-                        >
-                          <Plus className="h-3 w-3" />
-                          Add Vehicle
-                        </button>
-                      )}
+        <SectionCard
+          title="Vehicle"
+          action={
+            selectedCustomerId ? (
+              <button
+                type="button"
+                onClick={() => setVehicleAddOpen(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/80 hover:text-white transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Add vehicle
+              </button>
+            ) : undefined
+          }
+        >
+          <div className="p-4">
+            <FormField
+              control={form.control}
+              name="vehicle_id"
+              render={({ field }) => (
+                <FormItem>
+                  {selectedVehicle ? (
+                    <div className="flex items-center gap-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300">
+                        <Car className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1 text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                        {[selectedVehicle.year, selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(" ")}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => field.onChange(undefined)}
+                        className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 transition-colors"
+                      >
+                        Change
+                      </button>
                     </div>
+                  ) : (
                     <Select
                       value={field.value ?? "none"}
                       onValueChange={(val) => field.onChange(val === "none" ? null : val)}
@@ -484,11 +526,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                       <FormControl>
                         <SelectTrigger className={cn(!selectedCustomerId && "text-muted-foreground")}>
                           <SelectValue
-                            placeholder={
-                              selectedCustomerId
-                                ? "Select vehicle (optional)"
-                                : "Select customer first"
-                            }
+                            placeholder={selectedCustomerId ? "Select vehicle (optional)" : "Select customer first"}
                           />
                         </SelectTrigger>
                       </FormControl>
@@ -501,215 +539,94 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                         ))}
                       </SelectContent>
                     </Select>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Job details">
+          <div className="p-4 space-y-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title / complaint</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. Brake pads + rotor replacement"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <FormField
+                control={form.control}
+                name="date_received"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date received</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          title="Job Details"
-          description="Title, status, and assignment"
-        >
-          <div className="p-4">
-
-            <div className="space-y-4">
-              {/* Title — full width */}
               <FormField
                 control={form.control}
-                name="title"
+                name="mileage_in"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Job Title</FormLabel>
+                    <FormLabel>Mileage in</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Brake job and coolant filter"
-                        {...field}
+                        type="number"
+                        placeholder="45000"
                         value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {/* Presets */}
-              {!isEditing && presets && presets.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Presets</FormLabel>
-                    {selectedPresetIds.length > 0 && (
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        onClick={() => setSelectedPresetIds([])}
-                      >
-                        Clear all
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Selected presets */}
-                  {selectedPresetIds.length > 0 && (
-                    <div className="space-y-2">
-                      {selectedPresetIds.map((presetId) => {
-                        const selected = presets.find((p) => p.id === presetId);
-                        if (!selected) return null;
-                        const items = selected.line_items as PresetLineItem[];
-                        const total = items.reduce(
-                          (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
-                          0
-                        );
-                        return (
-                          <div key={presetId} className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-2.5">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-blue-700 dark:text-blue-400">{selected.name}</p>
-                              <p className="text-xs text-blue-600/70 dark:text-blue-400/70 truncate">
-                                {items.map((item) => item.description).join(", ")}
-                              </p>
-                            </div>
-                            <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400 shrink-0">
-                              {formatCurrency(total)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handlePresetSelect(selected)}
-                              className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <PresetSearchPicker
-                    presets={presets.filter((p) => !selectedPresetIds.includes(p.id))}
-                    onSelect={handlePresetSelect}
-                  />
-                </div>
-              )}
-
-              {/* Catalog items */}
-              {!isEditing && (
-                <div className="space-y-2">
-                  <FormLabel>Catalog Items</FormLabel>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-                    <Input
-                      placeholder="Search catalog..."
-                      value={catalogSearch}
-                      onChange={(e) => setCatalogSearch(e.target.value)}
-                      onFocus={() => catalogResults.length > 0 && setCatalogDropdownOpen(true)}
-                      className="pl-9"
-                    />
-                    {catalogDropdownOpen && catalogResults.length > 0 && (
-                      <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
-                        {catalogResults.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
-                            onClick={() => addCatalogSelection(item)}
-                          >
-                            <div
-                              className={cn(
-                                "h-5 w-1 shrink-0 rounded-full",
-                                item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
-                              )}
-                            />
-                            <span className="flex-1 truncate font-medium">{item.description}</span>
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-                              {item.type}
-                            </span>
-                            <span className="text-xs tabular-nums text-stone-500">
-                              {formatCurrency(item.default_unit_cost)}
-                            </span>
-                          </button>
+              <FormField
+                control={form.control}
+                name="assigned_tech"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tech</FormLabel>
+                    <Select
+                      value={field.value ?? "none"}
+                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {technicians.map((tech) => (
+                          <SelectItem key={tech.id} value={tech.id}>
+                            {tech.name}
+                          </SelectItem>
                         ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedCatalogItems.length > 0 && (
-                    <div className="space-y-2">
-                      {selectedCatalogItems.map((sel, idx) => (
-                        <div
-                          key={sel.item.id}
-                          className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
-                        >
-                          <div
-                            className={cn(
-                              "h-6 w-1 shrink-0 rounded-full",
-                              sel.item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
-                            )}
-                          />
-                          <span className="flex-1 truncate text-sm font-medium">
-                            {sel.item.description}
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            value={sel.quantity}
-                            onChange={(e) =>
-                              setSelectedCatalogItems((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx ? { ...s, quantity: Number(e.target.value) || 1 } : s
-                                )
-                              )
-                            }
-                            className="w-16 h-8 text-xs text-center"
-                          />
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={sel.unit_cost}
-                            onChange={(e) =>
-                              setSelectedCatalogItems((prev) =>
-                                prev.map((s, i) =>
-                                  i === idx
-                                    ? { ...s, unit_cost: Number(e.target.value) || 0 }
-                                    : s
-                                )
-                              )
-                            }
-                            className="w-20 h-8 text-xs text-right"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 shrink-0"
-                            onClick={() => removeCatalogSelection(idx)}
-                          >
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="text-right text-sm text-stone-500">
-                        Catalog items total:{" "}
-                        <span className="font-semibold text-stone-900 dark:text-stone-50">
-                          {formatCurrency(
-                            selectedCatalogItems.reduce(
-                              (sum, s) => sum + s.quantity * s.unit_cost,
-                              0
-                            )
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Status — half */}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="status"
@@ -754,162 +671,205 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                   );
                 }}
               />
-
-              {/* Assigned Tech — half */}
-              <FormField
-                control={form.control}
-                name="assigned_tech"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assigned Tech</FormLabel>
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Unassigned" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Unassigned</SelectItem>
-                        {technicians.map((tech) => (
-                          <SelectItem key={tech.id} value={tech.id}>
-                            {tech.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Job Date — half */}
-              <FormField
-                control={form.control}
-                name="date_received"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Intake notes</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Customer requests, symptoms, special instructions…"
+                      rows={3}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </SectionCard>
 
-        <SectionCard
-          title="Payment & Notes"
-          description="Billing info and additional details"
-        >
-          <div className="p-4">
+        {!isEditing && (
+          <SectionCard
+            title="Pre-fill services"
+            description="Optional — add a preset or catalog item to populate line items on create."
+          >
+            <div className="p-4 space-y-4">
+              {presets && presets.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className={SECTION_LABEL}>Presets</span>
+                    {selectedPresetIds.length > 0 && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setSelectedPresetIds([])}
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Payment Status — half */}
-              <FormField
-                control={form.control}
-                name="payment_status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Status</FormLabel>
-                    <Select value={field.value || "unpaid"} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(Object.entries(PAYMENT_STATUS_LABELS) as [PaymentStatus, string][]).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  {selectedPresetIds.length > 0 && (
+                    <div className="space-y-2">
+                      {selectedPresetIds.map((presetId) => {
+                        const selected = presets.find((p) => p.id === presetId);
+                        if (!selected) return null;
+                        const items = selected.line_items as PresetLineItem[];
+                        const total = items.reduce(
+                          (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
+                          0
+                        );
+                        return (
+                          <div key={presetId} className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 truncate">{selected.name}</p>
+                              <p className="text-xs text-blue-600/70 dark:text-blue-400/70 truncate">
+                                {items.map((item) => item.description).join(", ")}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400 shrink-0">
+                              {formatCurrency(total)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handlePresetSelect(selected)}
+                              className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-              {/* Payment Method — half */}
-              <FormField
-                control={form.control}
-                name="payment_method"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Method</FormLabel>
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Not set" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Not set</SelectItem>
-                        {(Object.entries(PAYMENT_METHOD_LABELS) as [PaymentMethod, string][]).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <PresetSearchPicker
+                    presets={presets.filter((p) => !selectedPresetIds.includes(p.id))}
+                    onSelect={handlePresetSelect}
+                  />
+                </div>
+              )}
 
-              {/* Mileage In — half */}
-              <FormField
-                control={form.control}
-                name="mileage_in"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mileage In</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="e.g. 45000"
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2">
+                <span className={SECTION_LABEL}>Catalog</span>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                  <Input
+                    placeholder="Search parts or labor…"
+                    value={catalogSearch}
+                    onChange={(e) => setCatalogSearch(e.target.value)}
+                    onFocus={() => catalogResults.length > 0 && setCatalogDropdownOpen(true)}
+                    className="pl-9"
+                  />
+                  {catalogDropdownOpen && catalogResults.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+                      {catalogResults.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+                          onClick={() => addCatalogSelection(item)}
+                        >
+                          <div
+                            className={cn(
+                              "h-5 w-1 shrink-0 rounded-full",
+                              item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
+                            )}
+                          />
+                          <span className="flex-1 truncate font-medium">{item.description}</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                            {item.type}
+                          </span>
+                          <span className="text-xs tabular-nums text-stone-500">
+                            {formatCurrency(item.default_unit_cost)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              {/* Notes — full width */}
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Job notes, customer requests, etc."
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                {selectedCatalogItems.length > 0 && (
+                  <div className="space-y-2">
+                    {selectedCatalogItems.map((sel, idx) => (
+                      <div
+                        key={sel.item.id}
+                        className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
+                      >
+                        <div
+                          className={cn(
+                            "h-6 w-1 shrink-0 rounded-full",
+                            sel.item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
+                          )}
+                        />
+                        <span className="flex-1 truncate text-sm font-medium">
+                          {sel.item.description}
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={sel.quantity}
+                          onChange={(e) =>
+                            setSelectedCatalogItems((prev) =>
+                              prev.map((s, i) =>
+                                i === idx ? { ...s, quantity: Number(e.target.value) || 1 } : s
+                              )
+                            )
+                          }
+                          className="w-16 h-8 text-xs text-center"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={sel.unit_cost}
+                          onChange={(e) =>
+                            setSelectedCatalogItems((prev) =>
+                              prev.map((s, i) =>
+                                i === idx
+                                  ? { ...s, unit_cost: Number(e.target.value) || 0 }
+                                  : s
+                              )
+                            )
+                          }
+                          className="w-20 h-8 text-xs text-right"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => removeCatalogSelection(idx)}
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="text-right text-sm text-stone-500">
+                      Catalog items total:{" "}
+                      <span className="font-semibold text-stone-900 dark:text-stone-50">
+                        {formatCurrency(
+                          selectedCatalogItems.reduce(
+                            (sum, s) => sum + s.quantity * s.unit_cost,
+                            0
+                          )
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 )}
-              />
+              </div>
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
+        )}
 
-        {/* ── Actions ── */}
-        <div className="flex items-center justify-end gap-2 pt-2">
+        <div className="flex items-center justify-end gap-2 pt-1">
           <Button
             type="button"
             variant="outline"
@@ -922,13 +882,12 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
             {form.formState.isSubmitting
               ? "Saving..."
               : isEditing
-                ? "Update Job"
-                : "Create Job"}
+                ? "Update job"
+                : "Create job"}
           </Button>
         </div>
       </form>
 
-      {/* Add Vehicle Sheet */}
       {selectedCustomerId && (
         <VehicleForm
           customerId={selectedCustomerId}
