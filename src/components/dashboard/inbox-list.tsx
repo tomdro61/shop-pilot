@@ -6,12 +6,13 @@ import {
   DollarSign, ClipboardCheck, FileText, FileQuestion, Car, Megaphone,
   CheckCircle2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, daysBetween } from "@/lib/utils";
 import {
   formatVehicle, formatCurrencyWhole, formatCustomerName, formatDateShort,
 } from "@/lib/utils/format";
 import { PARKING_SERVICE_LABELS } from "@/lib/constants";
 import { SECTION_LABEL } from "@/components/ui/section-card";
+import { ACCENT_ICON_TINT, type Accent } from "@/components/ui/mini-status-card";
 import { CustomerLink } from "@/components/ui/customer-link";
 import { ClickableRow } from "@/components/ui/clickable-row";
 import type {
@@ -23,13 +24,6 @@ import type {
   InboxParkingLead,
   InboxParkingSpecials,
 } from "@/lib/actions/inbox";
-
-function daysBetween(from: string | null, today: string): number {
-  if (!from) return 0;
-  const f = new Date(from + "T12:00:00");
-  const t = new Date(today + "T12:00:00");
-  return Math.max(0, Math.floor((t.getTime() - f.getTime()) / (1000 * 60 * 60 * 24)));
-}
 
 function DaysBadge({ days, warnAt = 3 }: { days: number; warnAt?: number }) {
   const cls = days >= 7
@@ -68,16 +62,6 @@ function tabCount(data: InboxData, tab: TabKey): number {
   return 0;
 }
 
-type SectionAccent = "red" | "blue" | "amber" | "indigo" | "stone";
-
-const SECTION_ICON_TINT: Record<SectionAccent, string> = {
-  red: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900",
-  blue: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900",
-  amber: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900",
-  indigo: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900",
-  stone: "bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800",
-};
-
 function Section({
   title,
   icon: Icon,
@@ -88,7 +72,7 @@ function Section({
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   count: number;
-  accent: SectionAccent;
+  accent: Accent;
   children: React.ReactNode;
 }) {
   if (count === 0) return null;
@@ -97,7 +81,7 @@ function Section({
       <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-900/40 border-b border-stone-200 dark:border-stone-800 px-4 py-2">
         <div className={cn(
           "w-6 h-6 rounded grid place-items-center border flex-none",
-          SECTION_ICON_TINT[accent],
+          ACCENT_ICON_TINT[accent],
         )}>
           <Icon className="h-3 w-3" />
         </div>

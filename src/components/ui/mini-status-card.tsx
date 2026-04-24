@@ -1,16 +1,17 @@
 import * as React from "react";
 
-export type Accent = "green" | "amber" | "blue" | "red" | "gray";
+export type Accent = "green" | "amber" | "blue" | "red" | "indigo" | "stone";
 
-const ACCENT_BAR: Record<Accent, string> = {
+export const ACCENT_BAR: Record<Accent, string> = {
   green: "bg-emerald-500",
   amber: "bg-amber-500",
   blue: "bg-blue-500",
   red: "bg-red-500",
-  gray: "bg-stone-300 dark:bg-stone-700",
+  indigo: "bg-indigo-500",
+  stone: "bg-stone-300 dark:bg-stone-700",
 };
 
-const ICON_TINT: Record<Accent, string> = {
+export const ACCENT_ICON_TINT: Record<Accent, string> = {
   green:
     "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900",
   amber:
@@ -19,7 +20,9 @@ const ICON_TINT: Record<Accent, string> = {
     "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900",
   red:
     "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900",
-  gray:
+  indigo:
+    "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900",
+  stone:
     "bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800",
 };
 
@@ -28,7 +31,8 @@ export const ACCENT_PILL: Record<Accent, string> = {
   amber: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400",
   blue: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
   red: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-  gray: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
+  indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400",
+  stone: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
 };
 
 interface MiniStatusCardProps {
@@ -65,7 +69,7 @@ export function MiniStatusCard({
         className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${ACCENT_BAR[accent]}`}
       />
       <div
-        className={`w-9 h-9 rounded-md grid place-items-center border flex-none ${ICON_TINT[iconTint]}`}
+        className={`w-9 h-9 rounded-md grid place-items-center border flex-none ${ACCENT_ICON_TINT[iconTint]}`}
       >
         {icon}
       </div>

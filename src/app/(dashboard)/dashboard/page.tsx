@@ -8,24 +8,18 @@ import {
 } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrencyWhole, formatCustomerName } from "@/lib/utils/format";
-import { todayET } from "@/lib/utils";
+import { todayET, daysBetween } from "@/lib/utils";
 import { sumJobRevenue } from "@/lib/utils/revenue";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { ClickableRow } from "@/components/ui/clickable-row";
 import { CustomerLink } from "@/components/ui/customer-link";
+import { ACCENT_BAR, ACCENT_ICON_TINT, type Accent } from "@/components/ui/mini-status-card";
 
 export const metadata = {
   title: "Dashboard | ShopPilot",
 };
-
-function daysBetween(from: string | null, today: string): number {
-  if (!from) return 0;
-  const f = new Date(from + "T12:00:00");
-  const t = new Date(today + "T12:00:00");
-  return Math.max(0, Math.floor((t.getTime() - f.getTime()) / (1000 * 60 * 60 * 24)));
-}
 
 const getDashboardData = unstable_cache(async () => {
   const supabase = createAdminClient();
@@ -419,20 +413,6 @@ function ShopFloorColumn({
   );
 }
 
-const ACTION_ACCENT: Record<"red" | "amber" | "blue" | "indigo", string> = {
-  red: "bg-red-500",
-  amber: "bg-amber-500",
-  blue: "bg-blue-500",
-  indigo: "bg-indigo-500",
-};
-
-const ACTION_ICON_TINT: Record<"red" | "amber" | "blue" | "indigo", string> = {
-  red: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900",
-  amber: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900",
-  blue: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900",
-  indigo: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900",
-};
-
 function ActionRow({
   accent,
   icon,
@@ -441,7 +421,7 @@ function ActionRow({
   detail,
   href,
 }: {
-  accent: "red" | "amber" | "blue" | "indigo";
+  accent: Accent;
   icon: React.ReactNode;
   title: string;
   count: number;
@@ -451,8 +431,8 @@ function ActionRow({
   if (count === 0) {
     return (
       <div className="relative flex items-center gap-3 px-4 py-3 opacity-50">
-        <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-stone-200 dark:bg-stone-700`} />
-        <div className={`w-9 h-9 rounded-md grid place-items-center border flex-none bg-stone-50 text-stone-400 border-stone-200 dark:bg-stone-900 dark:text-stone-600 dark:border-stone-800`}>
+        <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-stone-200 dark:bg-stone-700" />
+        <div className="w-9 h-9 rounded-md grid place-items-center border flex-none bg-stone-50 text-stone-400 border-stone-200 dark:bg-stone-900 dark:text-stone-600 dark:border-stone-800">
           {icon}
         </div>
         <div className="flex-1 min-w-0">
@@ -468,8 +448,8 @@ function ActionRow({
       href={href}
       className="group relative flex items-center gap-3 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
     >
-      <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${ACTION_ACCENT[accent]}`} />
-      <div className={`w-9 h-9 rounded-md grid place-items-center border flex-none ${ACTION_ICON_TINT[accent]}`}>
+      <span aria-hidden className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${ACCENT_BAR[accent]}`} />
+      <div className={`w-9 h-9 rounded-md grid place-items-center border flex-none ${ACCENT_ICON_TINT[accent]}`}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">

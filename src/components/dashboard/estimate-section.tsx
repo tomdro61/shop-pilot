@@ -65,7 +65,7 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
   if (!estimate) {
     return (
       <MiniStatusCard
-        accent="gray"
+        accent="stone"
         icon={<ClipboardList className="h-4 w-4" />}
         title={
           <>

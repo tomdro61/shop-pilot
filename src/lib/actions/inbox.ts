@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { todayET } from "@/lib/utils";
 
@@ -116,7 +117,8 @@ export interface InboxData {
 
 // ── Full data fetch for /inbox page ─────────────────────
 
-export async function getInboxData(): Promise<InboxData> {
+export const getInboxData = unstable_cache(
+  async (): Promise<InboxData> => {
   const supabase = createAdminClient();
   const today = todayET();
 
@@ -238,7 +240,10 @@ export async function getInboxData(): Promise<InboxData> {
     counts,
     today,
   };
-}
+  },
+  ["inbox-data"],
+  { revalidate: 30 },
+);
 
 // ── Lightweight count for sidebar badge ─────────────────
 

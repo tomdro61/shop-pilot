@@ -76,7 +76,7 @@ export function InvoiceSection({
     if (isFleet) {
       return (
         <MiniStatusCard
-          accent="gray"
+          accent="stone"
           icon={<FileText className="h-4 w-4" />}
           title={
             <>
@@ -93,7 +93,7 @@ export function InvoiceSection({
 
     return (
       <MiniStatusCard
-        accent="gray"
+        accent="stone"
         icon={<FileText className="h-4 w-4" />}
         title={
           <>
