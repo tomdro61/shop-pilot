@@ -45,7 +45,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
       <div className="hidden lg:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-[#8099c9] dark:bg-slate-700 border-b border-stone-200 dark:border-stone-800">
+            <tr className="bg-slate-200 dark:bg-slate-800/60 border-b border-stone-200 dark:border-stone-800">
               <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Name</th>
               <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Email</th>
               <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Phone</th>
@@ -88,7 +88,7 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
 
       {/* Mobile: dense stacked rows */}
       <div className="lg:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
-        <div className={`px-3 py-2 bg-[#8099c9] dark:bg-slate-700 border-b border-stone-200 dark:border-stone-800 ${COLUMN_HEADER}`}>
+        <div className={`px-3 py-2 bg-slate-200 dark:bg-slate-800/60 border-b border-stone-200 dark:border-stone-800 ${COLUMN_HEADER}`}>
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
         {customers.map((customer) => {

@@ -78,7 +78,7 @@ function Section({
   if (count === 0) return null;
   return (
     <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 bg-[#8099c9] dark:bg-slate-700 border-b border-stone-200 dark:border-stone-800 px-4 py-2">
+      <div className="flex items-center gap-2 bg-slate-200 dark:bg-slate-800/60 border-b border-stone-200 dark:border-stone-800 px-4 py-2">
         <div className={cn(
           "w-6 h-6 rounded grid place-items-center border flex-none",
           ACCENT_ICON_TINT[accent],
