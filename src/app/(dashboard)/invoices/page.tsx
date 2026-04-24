@@ -5,10 +5,18 @@ import { INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/lib/constants";
 import { ExternalLink } from "lucide-react";
 import { InvoiceSearch } from "./invoice-search";
 import { InvoiceStatusFilter } from "./invoice-status-filter";
+import { SECTION_LABEL } from "@/components/ui/section-card";
+import { formatCurrencyWhole, formatDate, getInitials } from "@/lib/utils/format";
 import type { InvoiceStatus } from "@/types";
 
 export const metadata = {
   title: "Invoices | ShopPilot",
+};
+
+const STATUS_BORDER: Record<InvoiceStatus, string> = {
+  draft: "border-l-stone-300 dark:border-l-stone-700",
+  sent: "border-l-amber-500",
+  paid: "border-l-emerald-500",
 };
 
 export default async function InvoicesPage({
@@ -20,41 +28,41 @@ export default async function InvoicesPage({
   const invoices = await getInvoices(status, search);
 
   return (
-    <div className="p-4 lg:p-10 space-y-6">
+    <div className="p-4 lg:p-6 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Suspense>
           <InvoiceSearch />
         </Suspense>
-        <div className="hidden md:flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-          <span className="font-bold text-stone-900 dark:text-stone-50">All Invoices</span>
-          <span>({invoices.length})</span>
-        </div>
         <Suspense>
           <InvoiceStatusFilter />
         </Suspense>
+        <span className="hidden md:inline text-xs text-stone-500 dark:text-stone-400 font-mono tabular-nums">
+          {invoices.length.toLocaleString()}
+        </span>
       </div>
 
       {invoices.length === 0 ? (
-        <div className="bg-card rounded-lg shadow-card p-8 text-center text-sm text-stone-500 dark:text-stone-400">
-          No invoices found.
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm py-12 text-center">
+          <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No invoices found</p>
+          <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your filters</p>
         </div>
       ) : (
         <>
-          {/* Desktop table */}
-          <div className="hidden md:block bg-card rounded-lg shadow-card overflow-hidden">
-            <table className="w-full text-sm">
+          {/* Desktop: dense table */}
+          <div className="hidden md:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="text-left text-[11px] font-bold uppercase tracking-widest bg-stone-800 dark:bg-stone-900 text-stone-100">
-                  <th className="px-5 py-4">Customer</th>
-                  <th className="px-5 py-4">Vehicle</th>
-                  <th className="px-5 py-4">Job</th>
-                  <th className="px-5 py-4 text-right">Amount</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Date</th>
-                  <th className="px-5 py-4"></th>
+                <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900/40">
+                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Customer</th>
+                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Vehicle</th>
+                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Job</th>
+                  <th className={`text-right px-3 py-2 ${SECTION_LABEL}`}>Amount</th>
+                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Status</th>
+                  <th className={`text-left px-3 py-2 ${SECTION_LABEL}`}>Date</th>
+                  <th className={`text-left px-3 py-2 w-8 ${SECTION_LABEL}`}></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-200 dark:divide-stone-800">
+              <tbody>
                 {invoices.map((invoice) => {
                   const job = invoice.jobs as {
                     id: string;
@@ -83,41 +91,42 @@ export default async function InvoicesPage({
                     : parking?.customer_id
                       ? `/customers/${parking.customer_id}`
                       : null;
-                  const initials = customerName
-                    ? customerName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
-                    : "??";
+                  const statusColors = INVOICE_STATUS_COLORS[invoiceStatus];
 
                   return (
-                    <tr key={invoice.id} className="hover:bg-stone-100 dark:hover:bg-stone-800/50 transition-colors">
-                      <td className="px-5 py-4">
+                    <tr
+                      key={invoice.id}
+                      className={`border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 border-l-2 ${STATUS_BORDER[invoiceStatus]} hover:bg-stone-50 dark:hover:bg-stone-800/40`}
+                    >
+                      <td className="px-3 py-2 align-middle">
                         {customerName ? (
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-[11px] font-bold text-blue-700 dark:text-blue-400">
-                              {initials}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900 text-[11px] font-semibold">
+                              {getInitials(customerName)}
                             </div>
                             {customerLink ? (
-                              <Link href={customerLink} className="font-bold text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400">
+                              <Link href={customerLink} className="text-sm font-medium text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 truncate">
                                 {customerName}
                               </Link>
                             ) : (
-                              <span className="font-bold text-stone-900 dark:text-stone-50">{customerName}</span>
+                              <span className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">{customerName}</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-stone-400">—</span>
+                          <span className="text-sm text-stone-400">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-stone-500 dark:text-stone-400">
+                      <td className="px-3 py-2 align-middle text-sm text-stone-600 dark:text-stone-400">
                         {vehicle
                           ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")
                           : parking
                             ? parking.lot
                             : "—"}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-3 py-2 align-middle text-sm">
                         {job ? (
-                          <Link href={`/jobs/${job.id}`} className="text-stone-700 dark:text-stone-300 hover:text-blue-600 dark:hover:text-blue-400">
-                            {job.title}
+                          <Link href={`/jobs/${job.id}`} className="text-stone-700 dark:text-stone-300 hover:text-blue-600 dark:hover:text-blue-400 truncate block max-w-[240px]">
+                            {job.title || "Job"}
                           </Link>
                         ) : parking ? (
                           <Link href={`/parking/${parking.id}`} className="text-stone-700 dark:text-stone-300 hover:text-blue-600 dark:hover:text-blue-400">
@@ -127,18 +136,18 @@ export default async function InvoicesPage({
                           <span className="text-stone-400">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-right font-bold tabular-nums text-stone-900 dark:text-stone-50">
-                        ${(invoice.amount ?? 0).toFixed(2)}
+                      <td className="px-3 py-2 align-middle text-right font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50">
+                        {formatCurrencyWhole(invoice.amount ?? 0)}
                       </td>
-                      <td className="px-5 py-4">
-                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${INVOICE_STATUS_COLORS[invoiceStatus]?.bg ?? ""} ${INVOICE_STATUS_COLORS[invoiceStatus]?.text ?? ""}`}>
+                      <td className="px-3 py-2 align-middle">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""}`}>
                           {INVOICE_STATUS_LABELS[invoiceStatus] ?? invoiceStatus}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-stone-500 dark:text-stone-400 tabular-nums">
-                        {new Date(invoice.created_at).toLocaleDateString()}
+                      <td className="px-3 py-2 align-middle font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
+                        {formatDate(invoice.created_at)}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-3 py-2 align-middle">
                         {invoice.stripe_hosted_invoice_url && (
                           <a
                             href={invoice.stripe_hosted_invoice_url}
@@ -147,7 +156,7 @@ export default async function InvoicesPage({
                             className="text-stone-400 hover:text-blue-600 dark:hover:text-blue-400"
                             title="View in Stripe"
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         )}
                       </td>
@@ -158,8 +167,8 @@ export default async function InvoicesPage({
             </table>
           </div>
 
-          {/* Mobile cards */}
-          <div className="md:hidden space-y-2">
+          {/* Mobile: dense stacked rows */}
+          <div className="md:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden divide-y divide-stone-100 dark:divide-stone-800/60">
             {invoices.map((invoice) => {
               const job = invoice.jobs as {
                 id: string;
@@ -175,6 +184,7 @@ export default async function InvoicesPage({
               } | null;
               const customer = job?.customers;
               const invoiceStatus = invoice.status as InvoiceStatus;
+              const statusColors = INVOICE_STATUS_COLORS[invoiceStatus];
 
               const displayName = customer
                 ? `${customer.first_name} ${customer.last_name}`
@@ -191,22 +201,22 @@ export default async function InvoicesPage({
                 <Link
                   key={invoice.id}
                   href={href}
-                  className="block bg-card rounded-lg shadow-card p-4 hover:bg-stone-100 dark:hover:bg-stone-800/50 transition-colors"
+                  className={`block px-3 py-2.5 border-l-2 ${STATUS_BORDER[invoiceStatus]} hover:bg-stone-50 dark:hover:bg-stone-800/40`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-stone-900 dark:text-stone-50">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
                       {displayName}
-                    </span>
-                    <span className="font-bold tabular-nums text-stone-900 dark:text-stone-50">
-                      ${(invoice.amount ?? 0).toFixed(2)}
+                    </p>
+                    <span className="font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50 shrink-0">
+                      {formatCurrencyWhole(invoice.amount ?? 0)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${INVOICE_STATUS_COLORS[invoiceStatus]?.bg ?? ""} ${INVOICE_STATUS_COLORS[invoiceStatus]?.text ?? ""}`}>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors?.bg ?? ""} ${statusColors?.text ?? ""}`}>
                       {INVOICE_STATUS_LABELS[invoiceStatus] ?? invoiceStatus}
                     </span>
-                    <span className="text-xs text-stone-500 dark:text-stone-400 tabular-nums">
-                      {new Date(invoice.created_at).toLocaleDateString()}
+                    <span className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400">
+                      {formatDate(invoice.created_at)}
                     </span>
                   </div>
                 </Link>
