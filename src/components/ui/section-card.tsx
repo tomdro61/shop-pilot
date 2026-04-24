@@ -38,7 +38,7 @@ export function SectionCard({
 }: SectionCardProps) {
   return (
     <div className={`bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden ${className}`}>
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-200 dark:bg-slate-800/60 border-b border-stone-200 dark:border-stone-800">
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[#8099c9] dark:bg-slate-700 border-b border-stone-200 dark:border-stone-800">
         <div className="min-w-0">
           <h3 className={`flex items-center gap-1.5 ${COLUMN_HEADER}`}>
             {title}

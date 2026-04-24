@@ -306,7 +306,7 @@ const SHOP_FLOOR_CONFIG: Record<
   not_started: {
     label: "Not started",
     dot: "bg-stone-400 dark:bg-stone-500",
-    headerBg: "bg-slate-200 dark:bg-slate-800/60",
+    headerBg: "bg-[#8099c9] dark:bg-slate-700",
     headerBorder: "border-stone-200 dark:border-stone-800",
     labelColor: "text-stone-900 dark:text-stone-50 font-bold",
     countColor: "text-stone-500 dark:text-stone-400",
