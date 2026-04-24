@@ -305,12 +305,12 @@ const SHOP_FLOOR_CONFIG: Record<
 > = {
   not_started: {
     label: "Not started",
-    dot: "bg-stone-400 dark:bg-stone-500",
-    headerBg: "bg-slate-200 dark:bg-slate-800/60",
+    dot: "bg-stone-300",
+    headerBg: "bg-sidebar",
     headerBorder: "border-stone-200 dark:border-stone-800",
-    labelColor: "text-stone-900 dark:text-stone-50 font-bold",
-    countColor: "text-stone-500 dark:text-stone-400",
-    linkColor: "text-stone-600 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200",
+    labelColor: "text-white font-bold",
+    countColor: "text-stone-400",
+    linkColor: "text-stone-300 hover:text-white",
     queryKey: "not_started",
   },
   waiting_for_parts: {

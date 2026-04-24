@@ -52,7 +52,7 @@ export default async function InvoicesPage({
           <div className="hidden md:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-slate-200 dark:bg-slate-800/60 border-b border-stone-200 dark:border-stone-800">
+                <tr className="bg-sidebar border-b border-stone-200 dark:border-stone-800">
                   <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Customer</th>
                   <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Vehicle</th>
                   <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Job</th>
