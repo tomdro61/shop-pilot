@@ -24,7 +24,8 @@ import { JobTechEditor } from "@/components/dashboard/job-tech-editor";
 import { JobCustomerEditor } from "@/components/dashboard/job-customer-editor";
 import { JobVehicleEditor } from "@/components/dashboard/job-vehicle-editor";
 import { JobProgressStepper } from "@/components/dashboard/job-progress-stepper";
-import { SECTION_LABEL, SectionCard } from "@/components/ui/section-card";
+import { SECTION_LABEL } from "@/components/ui/section-card";
+import { SectionTitle } from "@/components/ui/section-title";
 import {
   formatPhone,
   formatVehicle,
@@ -96,39 +97,39 @@ export default async function JobDetailPage({
           </div>
         </div>
 
-        {/* Identity block — RO#, title, status chip */}
-        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm px-5 lg:px-6 py-5">
-          <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
-            {job.ro_number ? formatRONumber(job.ro_number) : "—"}
-            <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
-            Opened {formatDateLong(job.date_received) ?? "—"}
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+          <div className="px-5 lg:px-6 py-5">
+            <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
+              {job.ro_number ? formatRONumber(job.ro_number) : "—"}
+              <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
+              Opened {formatDateLong(job.date_received) ?? "—"}
+            </div>
+            <div className="mt-1.5">
+              <JobTitleEditor jobId={id} value={job.title} />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap mt-3">
+              <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
+              {tech?.name && (
+                <span className="inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  {tech.name}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="mt-1.5">
-            <JobTitleEditor jobId={id} value={job.title} />
-          </div>
-          <div className="flex items-center gap-2 flex-wrap mt-3">
-            <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
-            {tech?.name && (
-              <span className="inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                {tech.name}
-              </span>
-            )}
-          </div>
-        </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SectionCard
-            title={<><UserIcon className="h-3 w-3" /> Customer</>}
-            action={
-              <JobCustomerEditor
-                jobId={id}
-                currentCustomer={customer}
-                hasVehicle={!!vehicle}
-              />
-            }
-          >
-            <div className="p-4 flex flex-col gap-4 min-w-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-100 dark:divide-stone-800/60">
+            <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
+              <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
+                <UserIcon className="h-3 w-3" /> Customer
+                <span className="ml-auto">
+                  <JobCustomerEditor
+                    jobId={id}
+                    currentCustomer={customer}
+                    hasVehicle={!!vehicle}
+                  />
+                </span>
+              </div>
               {customer ? (
                 <>
                   <div className="flex items-center gap-3 min-w-0">
@@ -176,19 +177,18 @@ export default async function JobDetailPage({
                 <div className="text-sm text-stone-400">—</div>
               )}
             </div>
-          </SectionCard>
 
-          <SectionCard
-            title={<><Truck className="h-3 w-3" /> Vehicle</>}
-            action={
-              <JobVehicleEditor
-                jobId={id}
-                customerId={customer?.id ?? null}
-                currentVehicleId={vehicle?.id ?? null}
-              />
-            }
-          >
-            <div className="p-4 flex flex-col gap-4 min-w-0">
+            <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
+              <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
+                <Truck className="h-3 w-3" /> Vehicle
+                <span className="ml-auto">
+                  <JobVehicleEditor
+                    jobId={id}
+                    customerId={customer?.id ?? null}
+                    currentVehicleId={vehicle?.id ?? null}
+                  />
+                </span>
+              </div>
               {vehicle ? (
                 <>
                   <div className="flex items-center gap-3 min-w-0">
@@ -221,10 +221,11 @@ export default async function JobDetailPage({
                 <div className="text-sm text-stone-400">—</div>
               )}
             </div>
-          </SectionCard>
 
-          <SectionCard title={<><ClipboardList className="h-3 w-3" /> Details</>}>
-            <div className="p-4 flex flex-col gap-4 min-w-0">
+            <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
+              <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
+                <ClipboardList className="h-3 w-3" /> Details
+              </div>
               <JobTechEditor jobId={id} currentTech={tech} techs={technicians} />
               <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
                 <dt className={SECTION_LABEL}>Received</dt>
@@ -241,56 +242,57 @@ export default async function JobDetailPage({
                 </dd>
               </dl>
             </div>
-          </SectionCard>
-        </div>
+          </div>
 
-        <SectionCard title="Notes">
-          <div className="p-4">
+          <div className="px-5 lg:px-6 pt-3 pb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                Notes
+              </span>
+            </div>
             <JobNotesEditor jobId={id} value={job.notes} />
           </div>
-        </SectionCard>
+        </section>
 
-        <SectionCard title="Progress">
-          <div className="p-4">
-            <JobProgressStepper
-              currentStatus={job.status as JobStatus}
-              dateReceived={job.date_received}
-              dateFinished={job.date_finished}
+        <section className="pt-2">
+          <SectionTitle num="01" title="Progress" />
+          <JobProgressStepper
+            currentStatus={job.status as JobStatus}
+            dateReceived={job.date_received}
+            dateFinished={job.date_finished}
+          />
+        </section>
+
+        <section className="pt-2">
+          <SectionTitle
+            num="02"
+            title="Line items"
+            action={<LineItemsAddButton jobId={id} settings={settings} presets={presets} />}
+          />
+          <LineItemsList jobId={id} lineItems={lineItems} settings={settings} />
+        </section>
+
+        <section className="pt-2">
+          <SectionTitle num="03" title="Inspection" />
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <DviSection jobId={id} inspection={dviInspection as any} />
+        </section>
+
+        <section className="pt-2">
+          <SectionTitle num="04" title="Estimate & invoice" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <EstimateSection jobId={id} estimate={estimate} />
+            <InvoiceSection
+              jobId={id}
+              jobStatus={job.status as JobStatus}
+              invoice={invoice}
+              customerEmail={customer?.email || null}
+              customerPhone={customer?.phone || null}
+              isFleet={customer?.customer_type === "fleet"}
             />
           </div>
-        </SectionCard>
-
-        <SectionCard
-          title="Line items"
-          action={<LineItemsAddButton jobId={id} settings={settings} presets={presets} />}
-        >
-          <div className="p-4">
-            <LineItemsList jobId={id} lineItems={lineItems} settings={settings} />
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Inspection">
-          <div className="p-4">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            <DviSection jobId={id} inspection={dviInspection as any} />
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Estimate & invoice">
-          <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <EstimateSection jobId={id} estimate={estimate} />
-              <InvoiceSection
-                jobId={id}
-                jobStatus={job.status as JobStatus}
-                invoice={invoice}
-                customerEmail={customer?.email || null}
-                customerPhone={customer?.phone || null}
-                isFleet={customer?.customer_type === "fleet"}
-              />
-            </div>
-          </div>
-        </SectionCard>
+        </section>
       </div>
 
       <JobPaymentFooter
