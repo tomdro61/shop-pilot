@@ -91,7 +91,7 @@ export function JobVehicleEditor({ jobId, customerId, currentVehicleId }: JobVeh
           <button
             type="button"
             title="Change vehicle"
-            className="inline-flex items-center justify-center w-5 h-5 rounded text-stone-400 hover:text-stone-700 hover:bg-stone-100 dark:hover:text-stone-200 dark:hover:bg-stone-800 transition-colors"
+            className="inline-flex items-center justify-center w-5 h-5 rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           >
             <Pencil className="h-3 w-3" />
           </button>
