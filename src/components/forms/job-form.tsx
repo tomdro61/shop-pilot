@@ -8,13 +8,14 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { jobSchema, type JobFormData } from "@/lib/validators/job";
 import { createJob, updateJob } from "@/lib/actions/jobs";
+import { applyPresetToJob } from "@/lib/actions/presets";
 import { updateQuoteRequestStatus } from "@/lib/actions/quote-requests";
 import { createClient } from "@/lib/supabase/client";
 import { VehicleForm } from "@/components/forms/vehicle-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SectionCard } from "@/components/ui/section-card";
+import { SECTION_LABEL } from "@/components/ui/section-card";
 import {
   Select,
   SelectContent,
@@ -45,10 +46,10 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER } from "@/lib/constants";
-import { formatCustomerName, getInitials } from "@/lib/utils/format";
+import { formatCustomerName, formatCurrency, getInitials } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Plus, Car } from "lucide-react";
-import type { Customer, Vehicle, Job, JobStatus } from "@/types";
+import { Check, ChevronsUpDown, Plus, Car, Search, X } from "lucide-react";
+import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, JobStatus } from "@/types";
 
 interface JobFormProps {
   job?: Job & {
@@ -59,13 +60,69 @@ interface JobFormProps {
   defaultVehicleId?: string;
   defaultTitle?: string;
   fromQuoteId?: string;
+  presets?: JobPreset[];
 }
 
 type CustomerOption = { id: string; first_name: string; last_name: string; phone: string | null };
 type VehicleOption = { id: string; year: number | null; make: string | null; model: string | null };
 type TechOption = { id: string; name: string };
 
-export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle, fromQuoteId }: JobFormProps) {
+function PresetSearchPicker({
+  presets,
+  onSelect,
+}: {
+  presets: JobPreset[];
+  onSelect: (preset: JobPreset) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = presets.filter((p) =>
+    !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="relative mb-2">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+        <Input
+          placeholder="Search presets…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+      <div className="max-h-48 overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
+        {filtered.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">No presets match</p>
+        ) : (
+          filtered.map((preset) => {
+            const items = preset.line_items as PresetLineItem[];
+            const total = items.reduce((s, i) => s + (i.quantity || 0) * (i.unit_cost || 0), 0);
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onSelect(preset)}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{preset.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {items.map((i) => i.description).join(", ")}
+                  </p>
+                </div>
+                <span className="text-sm font-semibold tabular-nums shrink-0">
+                  {formatCurrency(total)}
+                </span>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle, fromQuoteId, presets }: JobFormProps) {
   const router = useRouter();
   const isEditing = !!job;
 
@@ -75,6 +132,13 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
   const [technicians, setTechnicians] = useState<TechOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [vehicleAddOpen, setVehicleAddOpen] = useState(false);
+  const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
+
+  function handlePresetSelect(preset: JobPreset) {
+    setSelectedPresetIds((prev) =>
+      prev.includes(preset.id) ? prev.filter((id) => id !== preset.id) : [...prev, preset.id]
+    );
+  }
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -215,6 +279,16 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
       return;
     }
 
+    // Apply selected presets
+    if (!isEditing && "data" in result && result.data && selectedPresetIds.length > 0) {
+      for (const presetId of selectedPresetIds) {
+        const presetResult = await applyPresetToJob(result.data.id, presetId);
+        if ("error" in presetResult && presetResult.error) {
+          toast.error(`Failed to apply preset: ${presetResult.error}`);
+        }
+      }
+    }
+
     // Mark quote request as converted
     if (!isEditing && fromQuoteId) {
       await updateQuoteRequestStatus(fromQuoteId, "converted");
@@ -237,19 +311,20 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
-        <SectionCard
-          title="Customer"
-          action={
-            <Link
-              href="/customers/new"
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/80 hover:text-white transition-colors"
-            >
-              <Plus className="h-3 w-3" />
-              New customer
-            </Link>
-          }
-        >
-          <div className="p-4">
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+
+          {/* Customer */}
+          <div className="p-5 border-b border-stone-200 dark:border-stone-800">
+            <div className="flex items-center justify-between mb-3">
+              <span className={SECTION_LABEL}>Customer</span>
+              <Link
+                href="/customers/new"
+                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                New customer
+              </Link>
+            </div>
             <FormField
               control={form.control}
               name="customer_id"
@@ -336,24 +411,22 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
               )}
             />
           </div>
-        </SectionCard>
 
-        <SectionCard
-          title="Vehicle"
-          action={
-            selectedCustomerId ? (
-              <button
-                type="button"
-                onClick={() => setVehicleAddOpen(true)}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-white/80 hover:text-white transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-                Add vehicle
-              </button>
-            ) : undefined
-          }
-        >
-          <div className="p-4">
+          {/* Vehicle */}
+          <div className="p-5 border-b border-stone-200 dark:border-stone-800">
+            <div className="flex items-center justify-between mb-3">
+              <span className={SECTION_LABEL}>Vehicle</span>
+              {selectedCustomerId && (
+                <button
+                  type="button"
+                  onClick={() => setVehicleAddOpen(true)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add vehicle
+                </button>
+              )}
+            </div>
             <FormField
               control={form.control}
               name="vehicle_id"
@@ -403,10 +476,13 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
               )}
             />
           </div>
-        </SectionCard>
 
-        <SectionCard title="Job details">
-          <div className="p-4 space-y-4">
+          {/* Job details */}
+          <div className="p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className={SECTION_LABEL}>Job details</span>
+            </div>
+
             <FormField
               control={form.control}
               name="title"
@@ -424,6 +500,62 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                 </FormItem>
               )}
             />
+
+            {!isEditing && presets && presets.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <FormLabel>Presets</FormLabel>
+                  {selectedPresetIds.length > 0 && (
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setSelectedPresetIds([])}
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+
+                {selectedPresetIds.length > 0 && (
+                  <div className="space-y-2">
+                    {selectedPresetIds.map((presetId) => {
+                      const selected = presets.find((p) => p.id === presetId);
+                      if (!selected) return null;
+                      const items = selected.line_items as PresetLineItem[];
+                      const total = items.reduce(
+                        (sum, i) => sum + (i.quantity || 0) * (i.unit_cost || 0),
+                        0
+                      );
+                      return (
+                        <div key={presetId} className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 truncate">{selected.name}</p>
+                            <p className="text-xs text-blue-600/70 dark:text-blue-400/70 truncate">
+                              {items.map((i) => i.description).join(", ")}
+                            </p>
+                          </div>
+                          <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400 shrink-0">
+                            {formatCurrency(total)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handlePresetSelect(selected)}
+                            className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <PresetSearchPicker
+                  presets={presets.filter((p) => !selectedPresetIds.includes(p.id))}
+                  onSelect={handlePresetSelect}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <FormField
@@ -549,7 +681,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
               )}
             />
           </div>
-        </SectionCard>
+        </section>
 
         <div className="flex items-center justify-end gap-2 pt-1">
           <Button
