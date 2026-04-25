@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import {
   Plus, Wallet, TrendingUp, TrendingDown, ChevronRight,
   DollarSign, Send, ClipboardCheck, FileText, Car,
+  Inbox, Package, Wrench,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrencyWhole, formatCustomerName } from "@/lib/utils/format";
 import { todayET, daysBetween } from "@/lib/utils";
@@ -307,7 +309,8 @@ const SHOP_FLOOR_CONFIG: Record<
   ShopFloorStatus,
   {
     label: string;
-    dot: string;
+    Icon: LucideIcon;
+    iconColor: string;
     headerBg: string;
     headerBorder: string;
     labelColor: string;
@@ -318,17 +321,19 @@ const SHOP_FLOOR_CONFIG: Record<
 > = {
   not_started: {
     label: "Not started",
-    dot: "bg-stone-300",
-    headerBg: "bg-sidebar",
-    headerBorder: "border-stone-200 dark:border-stone-800",
-    labelColor: "text-white font-bold",
-    countColor: "text-stone-400",
-    linkColor: "text-stone-300 hover:text-white",
+    Icon: Inbox,
+    iconColor: "text-slate-500 dark:text-slate-400",
+    headerBg: "bg-slate-100 dark:bg-slate-900/40",
+    headerBorder: "border-slate-200 dark:border-slate-800/40",
+    labelColor: "text-slate-700 dark:text-slate-300",
+    countColor: "text-slate-600 dark:text-slate-400",
+    linkColor: "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200",
     queryKey: "not_started",
   },
   waiting_for_parts: {
     label: "Waiting for parts",
-    dot: "bg-amber-500",
+    Icon: Package,
+    iconColor: "text-amber-600 dark:text-amber-400",
     headerBg: "bg-amber-50 dark:bg-amber-950/30",
     headerBorder: "border-amber-100 dark:border-amber-900/40",
     labelColor: "text-amber-800 dark:text-amber-300",
@@ -338,7 +343,8 @@ const SHOP_FLOOR_CONFIG: Record<
   },
   in_progress: {
     label: "In progress",
-    dot: "bg-blue-500",
+    Icon: Wrench,
+    iconColor: "text-blue-600 dark:text-blue-400",
     headerBg: "bg-blue-50 dark:bg-blue-950/30",
     headerBorder: "border-blue-100 dark:border-blue-900/40",
     labelColor: "text-blue-800 dark:text-blue-300",
@@ -364,11 +370,12 @@ function ShopFloorColumn({
   today: string;
 }) {
   const config = SHOP_FLOOR_CONFIG[status];
+  const Icon = config.Icon;
   return (
     <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
       <div className={`flex items-center justify-between px-4 py-2.5 border-b ${config.headerBg} ${config.headerBorder}`}>
         <div className="flex items-center gap-2">
-          <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+          <Icon className={`h-3.5 w-3.5 ${config.iconColor}`} />
           <span className={`text-[11px] font-semibold uppercase tracking-wider ${config.labelColor}`}>
             {config.label}
           </span>
