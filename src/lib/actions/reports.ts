@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { subDays, differenceInDays, parseISO } from "date-fns";
 import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
-import { INSPECTION_CATEGORIES, calcInspectionRevenue } from "@/lib/utils/revenue";
+import { INSPECTION_CATEGORIES, calcInspectionRevenue, sumManualIncome, sumManualIncomeProfit } from "@/lib/utils/revenue";
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 
@@ -335,16 +335,14 @@ export async function getReportData(params: {
       hasEstimatedCosts: false,
     });
   }
-  let manualIncomeTotal = 0;
-  let manualProfitTotal = 0;
+  const manualEntriesForTotal = isFiltered ? [] : manualEntries;
+  const manualIncomeTotal = sumManualIncome(manualEntriesForTotal);
+  const manualProfitTotal = sumManualIncomeProfit(manualEntriesForTotal);
   const manualByCategory: Record<string, { revenue: number; cost: number }> = {};
 
-  for (const entry of (isFiltered ? [] : manualEntries)) {
+  for (const entry of manualEntriesForTotal) {
     const profit = entry.amount * (entry.shop_keep_pct / 100);
     const cost = entry.amount - profit;
-    manualIncomeTotal += entry.amount;
-    manualProfitTotal += profit;
-
     if (!manualByCategory[entry.category]) {
       manualByCategory[entry.category] = { revenue: 0, cost: 0 };
     }
@@ -386,14 +384,8 @@ export async function getReportData(params: {
     if (grossProfitPrior !== null) grossProfitPrior += priorInspCalc.totalProfit;
     if (revenuePrior !== null) revenuePrior += priorInspCalc.totalRevenue;
 
-    let priorManualRevenue = 0;
-    let priorManualProfit = 0;
-    for (const entry of priorManualEntries) {
-      priorManualRevenue += entry.amount;
-      priorManualProfit += entry.amount * (entry.shop_keep_pct / 100);
-    }
-    if (revenuePrior !== null) revenuePrior += priorManualRevenue;
-    if (grossProfitPrior !== null) grossProfitPrior += priorManualProfit;
+    if (revenuePrior !== null) revenuePrior += sumManualIncome(priorManualEntries);
+    if (grossProfitPrior !== null) grossProfitPrior += sumManualIncomeProfit(priorManualEntries);
   }
 
   // Estimate close rate

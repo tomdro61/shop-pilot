@@ -9,7 +9,8 @@ import {
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrencyWhole, formatCustomerName } from "@/lib/utils/format";
 import { todayET, daysBetween } from "@/lib/utils";
-import { sumJobRevenue } from "@/lib/utils/revenue";
+import { sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
+import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { SectionTitle } from "@/components/ui/section-title";
@@ -48,6 +49,7 @@ const getDashboardData = unstable_cache(async () => {
     pendingEstimatesResult,
     dviReadyResult,
     parkingLeadCountResult,
+    manualIncomeRangeResult,
   ] = await Promise.all([
     supabase
       .from("jobs")
@@ -101,6 +103,7 @@ const getDashboardData = unstable_cache(async () => {
       .select("id", { count: "exact", head: true })
       .not("services_interested", "eq", "{}")
       .in("status", ["reserved", "checked_in"]),
+    getManualIncomeForRange(inspectionRangeStart, monthEnd),
   ]);
 
   const activeJobs = activeJobsResult.data || [];
@@ -130,6 +133,13 @@ const getDashboardData = unstable_cache(async () => {
   const inspLastWeek = inspectionRows.filter(r => r.date >= lastWeekStart && r.date <= lastWeekEnd);
   const inspLastMonth = inspectionRows.filter(r => r.date >= lastMonthStart && r.date <= lastMonthEnd);
 
+  const manualIncomeRows = manualIncomeRangeResult || [];
+  const manualIncomeToday = manualIncomeRows.filter(e => e.date === today);
+  const manualIncomeWeek = manualIncomeRows.filter(e => e.date >= weekStart && e.date <= weekEnd);
+  const manualIncomeMonth = manualIncomeRows.filter(e => e.date >= monthStart && e.date <= monthEnd);
+  const manualIncomeLastWeek = manualIncomeRows.filter(e => e.date >= lastWeekStart && e.date <= lastWeekEnd);
+  const manualIncomeLastMonth = manualIncomeRows.filter(e => e.date >= lastMonthStart && e.date <= lastMonthEnd);
+
   const todayCompleted = monthCompleted.filter(j => j.date_finished === today);
   const weekCompleted = monthCompleted.filter(j =>
     j.date_finished !== null && j.date_finished >= weekStart && j.date_finished <= weekEnd
@@ -155,11 +165,11 @@ const getDashboardData = unstable_cache(async () => {
 
   return {
     stats: {
-      todayRevenue: sumJobRevenue(todayCompleted) + sumInspectionRev(inspToday),
-      weeklyRevenue: weekJobRevenue + sumInspectionRev(inspWeek),
-      lastWeekRevenue: sumJobRevenue(lastWeekCompletedResult.data) + sumInspectionRev(inspLastWeek),
-      monthlyRevenue: sumJobRevenue(monthCompleted) + sumInspectionRev(inspMonth),
-      lastMonthRevenue: sumJobRevenue(lastMonthCompletedResult.data) + sumInspectionRev(inspLastMonth),
+      todayRevenue: sumJobRevenue(todayCompleted) + sumInspectionRev(inspToday) + sumManualIncome(manualIncomeToday),
+      weeklyRevenue: weekJobRevenue + sumInspectionRev(inspWeek) + sumManualIncome(manualIncomeWeek),
+      lastWeekRevenue: sumJobRevenue(lastWeekCompletedResult.data) + sumInspectionRev(inspLastWeek) + sumManualIncome(manualIncomeLastWeek),
+      monthlyRevenue: sumJobRevenue(monthCompleted) + sumInspectionRev(inspMonth) + sumManualIncome(manualIncomeMonth),
+      lastMonthRevenue: sumJobRevenue(lastMonthCompletedResult.data) + sumInspectionRev(inspLastMonth) + sumManualIncome(manualIncomeLastMonth),
       avgTicketWeek: weekJobCount > 0 ? weekJobRevenue / weekJobCount : 0,
       weekTicketCount: weekJobCount,
       unpaidJobCount: unpaidJobs.length,
