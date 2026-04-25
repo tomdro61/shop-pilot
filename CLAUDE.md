@@ -325,6 +325,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 - **Environment variables** — all secrets in `.env.local`, never committed. Use `NEXT_PUBLIC_` prefix only for client-safe values.
 - **Git** — conventional commits (feat:, fix:, chore:, etc.). Work on the `staging` branch. Push feature changes to `staging` first so they can be validated before merging to `master`. Only merge to `master` when the user explicitly asks.
 - **Mobile-first** — design for phone screens first, then expand to desktop
+- **Front-end design / UI changes** — ALWAYS invoke the front-end design skill (`/front-end-design` or whichever slash-skill is configured for visual/design work) before making visual changes, restructuring layouts, or proposing redesigns. The skill exists specifically to give design decisions structure — don't freelance the visuals. If the task touches component layout, typography, color, spacing, or visual composition, the skill is in scope.
 
 ## Useful Commands
 
