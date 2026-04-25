@@ -10,7 +10,6 @@ import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import { formatVehicle, formatCurrencyWhole, formatCustomerName } from "@/lib/utils/format";
 import { todayET, daysBetween } from "@/lib/utils";
 import { sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
-import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { SectionTitle } from "@/components/ui/section-title";
@@ -103,7 +102,11 @@ const getDashboardData = unstable_cache(async () => {
       .select("id", { count: "exact", head: true })
       .not("services_interested", "eq", "{}")
       .in("status", ["reserved", "checked_in"]),
-    getManualIncomeForRange(inspectionRangeStart, monthEnd),
+    supabase
+      .from("manual_income")
+      .select("date, amount, shop_keep_pct")
+      .gte("date", inspectionRangeStart)
+      .lte("date", monthEnd),
   ]);
 
   const activeJobs = activeJobsResult.data || [];
@@ -133,7 +136,7 @@ const getDashboardData = unstable_cache(async () => {
   const inspLastWeek = inspectionRows.filter(r => r.date >= lastWeekStart && r.date <= lastWeekEnd);
   const inspLastMonth = inspectionRows.filter(r => r.date >= lastMonthStart && r.date <= lastMonthEnd);
 
-  const manualIncomeRows = manualIncomeRangeResult || [];
+  const manualIncomeRows = manualIncomeRangeResult.data || [];
   const manualIncomeToday = manualIncomeRows.filter(e => e.date === today);
   const manualIncomeWeek = manualIncomeRows.filter(e => e.date >= weekStart && e.date <= weekEnd);
   const manualIncomeMonth = manualIncomeRows.filter(e => e.date >= monthStart && e.date <= monthEnd);
