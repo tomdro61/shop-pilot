@@ -336,13 +336,15 @@ export async function getReportData(params: {
     });
   }
   const manualEntriesForTotal = isFiltered ? [] : manualEntries;
-  const manualIncomeTotal = sumManualIncome(manualEntriesForTotal);
-  const manualProfitTotal = sumManualIncomeProfit(manualEntriesForTotal);
+  let manualIncomeTotal = 0;
+  let manualProfitTotal = 0;
   const manualByCategory: Record<string, { revenue: number; cost: number }> = {};
 
   for (const entry of manualEntriesForTotal) {
     const profit = entry.amount * (entry.shop_keep_pct / 100);
     const cost = entry.amount - profit;
+    manualIncomeTotal += entry.amount;
+    manualProfitTotal += profit;
     if (!manualByCategory[entry.category]) {
       manualByCategory[entry.category] = { revenue: 0, cost: 0 };
     }
