@@ -8,15 +8,13 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { jobSchema, type JobFormData } from "@/lib/validators/job";
 import { createJob, updateJob } from "@/lib/actions/jobs";
-import { applyPresetToJob } from "@/lib/actions/presets";
-import { addCatalogItemsToJob } from "@/lib/actions/catalog";
 import { updateQuoteRequestStatus } from "@/lib/actions/quote-requests";
 import { createClient } from "@/lib/supabase/client";
 import { VehicleForm } from "@/components/forms/vehicle-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SectionCard, SECTION_LABEL } from "@/components/ui/section-card";
+import { SectionCard } from "@/components/ui/section-card";
 import {
   Select,
   SelectContent,
@@ -47,10 +45,10 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER } from "@/lib/constants";
-import { formatCustomerName, formatCurrency, getInitials } from "@/lib/utils/format";
+import { formatCustomerName, getInitials } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, X, Plus, Search, Trash2, Car } from "lucide-react";
-import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, CatalogItem, JobStatus } from "@/types";
+import { Check, ChevronsUpDown, Plus, Car } from "lucide-react";
+import type { Customer, Vehicle, Job, JobStatus } from "@/types";
 
 interface JobFormProps {
   job?: Job & {
@@ -61,75 +59,13 @@ interface JobFormProps {
   defaultVehicleId?: string;
   defaultTitle?: string;
   fromQuoteId?: string;
-  presets?: JobPreset[];
 }
 
 type CustomerOption = { id: string; first_name: string; last_name: string; phone: string | null };
 type VehicleOption = { id: string; year: number | null; make: string | null; model: string | null };
 type TechOption = { id: string; name: string };
 
-function PresetSearchPicker({
-  presets,
-  onSelect,
-}: {
-  presets: JobPreset[];
-  onSelect: (preset: JobPreset) => void;
-}) {
-  const [search, setSearch] = useState("");
-
-  const filtered = presets.filter((p) =>
-    !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
-  );
-
-  return (
-    <div>
-      <div className="relative mb-2">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-        <Input
-          placeholder="Search presets... (e.g. brake job)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-      </div>
-      <div className="max-h-48 overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
-        {filtered.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            No presets match
-          </p>
-        ) : (
-          filtered.map((preset) => {
-            const items = preset.line_items as PresetLineItem[];
-            const total = items.reduce(
-              (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
-              0
-            );
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => onSelect(preset)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{preset.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {items.map((item) => item.description).join(", ")}
-                  </p>
-                </div>
-                <span className="text-sm font-semibold tabular-nums shrink-0">
-                  {formatCurrency(total)}
-                </span>
-              </button>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-}
-
-export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle, fromQuoteId, presets }: JobFormProps) {
+export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle, fromQuoteId }: JobFormProps) {
   const router = useRouter();
   const isEditing = !!job;
 
@@ -138,16 +74,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [technicians, setTechnicians] = useState<TechOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
-  const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
   const [vehicleAddOpen, setVehicleAddOpen] = useState(false);
-
-  // Catalog item picking
-  const [catalogSearch, setCatalogSearch] = useState("");
-  const [catalogResults, setCatalogResults] = useState<CatalogItem[]>([]);
-  const [catalogDropdownOpen, setCatalogDropdownOpen] = useState(false);
-  const [selectedCatalogItems, setSelectedCatalogItems] = useState<
-    { item: CatalogItem; quantity: number; unit_cost: number }[]
-  >([]);
 
   const form = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
@@ -274,51 +201,6 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
     loadTechnicians();
   }, []);
 
-  // Search catalog
-  useEffect(() => {
-    if (isEditing) return;
-    const timer = setTimeout(async () => {
-      if (!catalogSearch.trim()) {
-        setCatalogResults([]);
-        return;
-      }
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("catalog_items")
-        .select("*")
-        .eq("is_active", true)
-        .ilike("description", `%${catalogSearch.trim()}%`)
-        .order("usage_count", { ascending: false })
-        .limit(10);
-      setCatalogResults(data || []);
-      setCatalogDropdownOpen(true);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [catalogSearch, isEditing]);
-
-  function addCatalogSelection(item: CatalogItem) {
-    // Don't add duplicates
-    if (selectedCatalogItems.some((s) => s.item.id === item.id)) return;
-    setSelectedCatalogItems((prev) => [
-      ...prev,
-      { item, quantity: item.default_quantity, unit_cost: item.default_unit_cost },
-    ]);
-    setCatalogSearch("");
-    setCatalogDropdownOpen(false);
-  }
-
-  function removeCatalogSelection(index: number) {
-    setSelectedCatalogItems((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function handlePresetSelect(preset: JobPreset) {
-    setSelectedPresetIds((prev) =>
-      prev.includes(preset.id)
-        ? prev.filter((id) => id !== preset.id)
-        : [...prev, preset.id]
-    );
-  }
-
   async function onSubmit(data: JobFormData) {
     const result = isEditing
       ? await updateJob(job.id, data)
@@ -331,30 +213,6 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
         toast.error("Please fix the form errors");
       }
       return;
-    }
-
-    if (!isEditing && "data" in result && result.data && selectedPresetIds.length > 0) {
-      for (const presetId of selectedPresetIds) {
-        const presetResult = await applyPresetToJob(result.data.id, presetId);
-        if ("error" in presetResult && presetResult.error) {
-          toast.error(`Failed to apply preset: ${presetResult.error}`);
-        }
-      }
-    }
-
-    // Apply selected catalog items
-    if (!isEditing && "data" in result && result.data && selectedCatalogItems.length > 0) {
-      const catalogResult = await addCatalogItemsToJob(
-        result.data.id,
-        selectedCatalogItems.map((s) => ({
-          catalog_item_id: s.item.id,
-          quantity: s.quantity,
-          unit_cost: s.unit_cost,
-        }))
-      );
-      if ("error" in catalogResult && catalogResult.error) {
-        toast.error(`Job created but failed to add catalog items: ${catalogResult.error}`);
-      }
     }
 
     // Mark quote request as converted
@@ -692,182 +550,6 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
             />
           </div>
         </SectionCard>
-
-        {!isEditing && (
-          <SectionCard
-            title="Pre-fill services"
-            description="Optional — add a preset or catalog item to populate line items on create."
-          >
-            <div className="p-4 space-y-4">
-              {presets && presets.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className={SECTION_LABEL}>Presets</span>
-                    {selectedPresetIds.length > 0 && (
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        onClick={() => setSelectedPresetIds([])}
-                      >
-                        Clear all
-                      </button>
-                    )}
-                  </div>
-
-                  {selectedPresetIds.length > 0 && (
-                    <div className="space-y-2">
-                      {selectedPresetIds.map((presetId) => {
-                        const selected = presets.find((p) => p.id === presetId);
-                        if (!selected) return null;
-                        const items = selected.line_items as PresetLineItem[];
-                        const total = items.reduce(
-                          (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
-                          0
-                        );
-                        return (
-                          <div key={presetId} className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 truncate">{selected.name}</p>
-                              <p className="text-xs text-blue-600/70 dark:text-blue-400/70 truncate">
-                                {items.map((item) => item.description).join(", ")}
-                              </p>
-                            </div>
-                            <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400 shrink-0">
-                              {formatCurrency(total)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handlePresetSelect(selected)}
-                              className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 shrink-0"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <PresetSearchPicker
-                    presets={presets.filter((p) => !selectedPresetIds.includes(p.id))}
-                    onSelect={handlePresetSelect}
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <span className={SECTION_LABEL}>Catalog</span>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-                  <Input
-                    placeholder="Search parts or labor…"
-                    value={catalogSearch}
-                    onChange={(e) => setCatalogSearch(e.target.value)}
-                    onFocus={() => catalogResults.length > 0 && setCatalogDropdownOpen(true)}
-                    className="pl-9"
-                  />
-                  {catalogDropdownOpen && catalogResults.length > 0 && (
-                    <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
-                      {catalogResults.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
-                          onClick={() => addCatalogSelection(item)}
-                        >
-                          <div
-                            className={cn(
-                              "h-5 w-1 shrink-0 rounded-full",
-                              item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
-                            )}
-                          />
-                          <span className="flex-1 truncate font-medium">{item.description}</span>
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-                            {item.type}
-                          </span>
-                          <span className="text-xs tabular-nums text-stone-500">
-                            {formatCurrency(item.default_unit_cost)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {selectedCatalogItems.length > 0 && (
-                  <div className="space-y-2">
-                    {selectedCatalogItems.map((sel, idx) => (
-                      <div
-                        key={sel.item.id}
-                        className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-2"
-                      >
-                        <div
-                          className={cn(
-                            "h-6 w-1 shrink-0 rounded-full",
-                            sel.item.type === "labor" ? "bg-blue-400" : "bg-amber-400"
-                          )}
-                        />
-                        <span className="flex-1 truncate text-sm font-medium">
-                          {sel.item.description}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          value={sel.quantity}
-                          onChange={(e) =>
-                            setSelectedCatalogItems((prev) =>
-                              prev.map((s, i) =>
-                                i === idx ? { ...s, quantity: Number(e.target.value) || 1 } : s
-                              )
-                            )
-                          }
-                          className="w-16 h-8 text-xs text-center"
-                        />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={sel.unit_cost}
-                          onChange={(e) =>
-                            setSelectedCatalogItems((prev) =>
-                              prev.map((s, i) =>
-                                i === idx
-                                  ? { ...s, unit_cost: Number(e.target.value) || 0 }
-                                  : s
-                              )
-                            )
-                          }
-                          className="w-20 h-8 text-xs text-right"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 shrink-0"
-                          onClick={() => removeCatalogSelection(idx)}
-                        >
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
-                    <div className="text-right text-sm text-stone-500">
-                      Catalog items total:{" "}
-                      <span className="font-semibold text-stone-900 dark:text-stone-50">
-                        {formatCurrency(
-                          selectedCatalogItems.reduce(
-                            (sum, s) => sum + s.quantity * s.unit_cost,
-                            0
-                          )
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </SectionCard>
-        )}
 
         <div className="flex items-center justify-end gap-2 pt-1">
           <Button

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { JobForm } from "@/components/forms/job-form";
-import { getPresets } from "@/lib/actions/presets";
 import { getQuoteRequest } from "@/lib/actions/quote-requests";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -15,7 +14,6 @@ export default async function NewJobPage({
   searchParams: Promise<{ customerId?: string; vehicleId?: string; fromQuote?: string }>;
 }) {
   const { customerId, vehicleId, fromQuote } = await searchParams;
-  const presets = await getPresets();
 
   let quoteTitle: string | undefined;
   if (fromQuote) {
@@ -37,20 +35,11 @@ export default async function NewJobPage({
           </Button>
         </Link>
       </div>
-      <div>
-        <h1 className="text-[22px] lg:text-[26px] font-semibold tracking-tight text-stone-900 dark:text-stone-50 leading-tight">
-          New Job
-        </h1>
-        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-          Configure the repair order and assignment details.
-        </p>
-      </div>
       <JobForm
         defaultCustomerId={customerId}
         defaultVehicleId={vehicleId}
         defaultTitle={quoteTitle}
         fromQuoteId={fromQuote}
-        presets={presets}
       />
     </div>
   );
