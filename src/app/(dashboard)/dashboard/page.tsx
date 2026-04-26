@@ -17,6 +17,7 @@ import { SECTION_LABEL } from "@/components/ui/section-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { ClickableRow } from "@/components/ui/clickable-row";
 import { CustomerLink } from "@/components/ui/customer-link";
+import { DaysBadge } from "@/components/ui/days-badge";
 import { ACCENT_BAR, ACCENT_ICON_TINT, type Accent } from "@/components/ui/mini-status-card";
 
 export const metadata = {
@@ -354,12 +355,6 @@ const SHOP_FLOOR_CONFIG: Record<
   },
 };
 
-function agingBadgeClass(days: number): string {
-  if (days >= 7) return "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400";
-  if (days >= 3) return "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400";
-  return "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400";
-}
-
 function ShopFloorColumn({
   status,
   jobs,
@@ -404,26 +399,30 @@ function ShopFloorColumn({
               <ClickableRow
                 key={job.id}
                 href={`/jobs/${job.id}`}
-                className="flex items-center gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
+                className="flex items-start gap-2 px-4 py-2 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
               >
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate leading-tight">
                     {customer ? (
                       <CustomerLink customerId={customer.id} stopPropagation>
                         {formatCustomerName(customer)}
                       </CustomerLink>
                     ) : "Unknown"}
                   </div>
-                  <div className="text-xs text-stone-500 dark:text-stone-400 truncate">
-                    {vehicle ? formatVehicle(vehicle) : "—"}
-                    {job.title ? ` · ${job.title}` : ""}
-                  </div>
+                  {vehicle && (
+                    <div className="flex items-center gap-1.5 text-xs text-stone-700 dark:text-stone-300 min-w-0 leading-tight">
+                      <Car className="h-3 w-3 shrink-0 text-stone-400" />
+                      <span className="truncate">{formatVehicle(vehicle)}</span>
+                    </div>
+                  )}
+                  {job.title && (
+                    <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 min-w-0 leading-tight">
+                      <Wrench className="h-3 w-3 shrink-0 text-stone-400" />
+                      <span className="truncate">{job.title}</span>
+                    </div>
+                  )}
                 </div>
-                <span
-                  className={`shrink-0 font-mono tabular-nums text-[10px] font-semibold px-1.5 py-0.5 rounded ${agingBadgeClass(days)}`}
-                >
-                  {days}d
-                </span>
+                <DaysBadge days={days} className="mt-0.5" />
               </ClickableRow>
             );
           })}

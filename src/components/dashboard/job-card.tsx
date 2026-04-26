@@ -4,8 +4,16 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusSelect } from "./status-select";
 import { CustomerLink } from "@/components/ui/customer-link";
-import { formatCustomerName, formatVehicle, formatRONumber, formatDate } from "@/lib/utils/format";
+import { DaysBadge } from "@/components/ui/days-badge";
+import {
+  formatCustomerName,
+  formatVehicle,
+  formatRONumber,
+  formatDate,
+} from "@/lib/utils/format";
+import { todayET, daysBetween } from "@/lib/utils";
 import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
+import { Car, Wrench, User, Calendar } from "lucide-react";
 import type { JobStatus, DviStatus } from "@/types";
 
 interface JobCardProps {
@@ -27,66 +35,68 @@ interface JobCardProps {
 
 export function JobCard({ job, showStatus = true }: JobCardProps) {
   const router = useRouter();
+  const days = daysBetween(job.date_received, todayET());
+  const dviStatus = job.dvi_inspections?.[0]?.status as DviStatus | undefined;
+  const dviColors = dviStatus ? DVI_STATUS_COLORS[dviStatus] : null;
 
   return (
     <Card
       className="transition-colors hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
       onClick={() => router.push(`/jobs/${job.id}`)}
     >
-      <CardContent className="p-3.5">
+      <CardContent className="p-3.5 space-y-2">
+        {/* Header — RO# left, vital signs right */}
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            {job.customers && (
-              <p className="text-sm font-medium leading-tight">
-                <CustomerLink customerId={job.customers.id} stopPropagation>
-                  {formatCustomerName(job.customers)}
-                </CustomerLink>
-              </p>
+          <span className="font-mono uppercase tracking-wider text-[11px] text-stone-500 dark:text-stone-400">
+            {job.ro_number ? formatRONumber(job.ro_number) : ""}
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <DaysBadge days={days} />
+            {showStatus && (
+              <StatusSelect jobId={job.id} currentStatus={job.status as JobStatus} />
             )}
-            {job.vehicles && (
-              <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-                {formatVehicle(job.vehicles)}
-              </p>
-            )}
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-stone-500 dark:text-stone-400">
-              {job.ro_number && (
-                <span>{formatRONumber(job.ro_number)}</span>
-              )}
-              {job.title && (
-                <>
-                  {job.ro_number && <span className="text-border">·</span>}
-                  <span>{job.title}</span>
-                </>
-              )}
-              {job.users && (
-                <>
-                  <span className="text-border">·</span>
-                  <span>{job.users.name}</span>
-                </>
-              )}
-              <span className="text-border">·</span>
-              <span className="tabular-nums">{formatDate(job.date_received)}</span>
-              {job.dvi_inspections?.[0] && (() => {
-                const dviStatus = job.dvi_inspections[0].status as DviStatus;
-                const colors = DVI_STATUS_COLORS[dviStatus];
-                return (
-                  <>
-                    <span className="text-border">·</span>
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase ${colors?.bg} ${colors?.text}`}>
-                      DVI {DVI_STATUS_LABELS[dviStatus]}
-                    </span>
-                  </>
-                );
-              })()}
-            </div>
           </div>
-          {showStatus && (
-            <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
-              <StatusSelect
-                jobId={job.id}
-                currentStatus={job.status as JobStatus}
-              />
+        </div>
+
+        {/* Body — customer / vehicle / title */}
+        <div className="space-y-1">
+          {job.customers && (
+            <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 leading-tight">
+              <CustomerLink customerId={job.customers.id} stopPropagation>
+                {formatCustomerName(job.customers)}
+              </CustomerLink>
             </div>
+          )}
+          {job.vehicles && (
+            <div className="flex items-center gap-1.5 text-xs text-stone-700 dark:text-stone-300 min-w-0">
+              <Car className="h-3 w-3 shrink-0 text-stone-400" />
+              <span className="truncate">{formatVehicle(job.vehicles)}</span>
+            </div>
+          )}
+          {job.title && (
+            <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 min-w-0">
+              <Wrench className="h-3 w-3 shrink-0 text-stone-400" />
+              <span className="truncate">{job.title}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer — operational meta */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 border-t border-stone-100 dark:border-stone-800/60 text-[11px] text-stone-500 dark:text-stone-400">
+          {job.users && (
+            <div className="flex items-center gap-1">
+              <User className="h-3 w-3 text-stone-400" />
+              <span>{job.users.name}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-stone-400" />
+            <span className="font-mono tabular-nums">{formatDate(job.date_received)}</span>
+          </div>
+          {dviStatus && dviColors && (
+            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase ${dviColors.bg} ${dviColors.text}`}>
+              DVI {DVI_STATUS_LABELS[dviStatus]}
+            </span>
           )}
         </div>
       </CardContent>
