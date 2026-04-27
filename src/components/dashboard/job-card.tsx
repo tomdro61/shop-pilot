@@ -8,7 +8,6 @@ import { DaysBadge } from "@/components/ui/days-badge";
 import {
   formatCustomerName,
   formatVehicle,
-  formatRONumber,
   formatDate,
 } from "@/lib/utils/format";
 import { todayET, daysBetween } from "@/lib/utils";
@@ -45,11 +44,17 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
       onClick={() => router.push(`/jobs/${job.id}`)}
     >
       <CardContent className="p-3.5 space-y-2">
-        {/* Header — RO# left, vital signs right */}
+        {/* Header — customer left, vital signs right */}
         <div className="flex items-start justify-between gap-2">
-          <span className="font-mono uppercase tracking-wider text-[11px] text-stone-500 dark:text-stone-400">
-            {job.ro_number ? formatRONumber(job.ro_number) : ""}
-          </span>
+          <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 leading-tight min-w-0 flex-1 truncate">
+            {job.customers ? (
+              <CustomerLink customerId={job.customers.id} stopPropagation>
+                {formatCustomerName(job.customers)}
+              </CustomerLink>
+            ) : (
+              <span className="text-stone-400">No customer</span>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
             <DaysBadge days={days} />
             {showStatus && (
@@ -58,15 +63,8 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
           </div>
         </div>
 
-        {/* Body — customer / vehicle / title */}
+        {/* Body — vehicle / title */}
         <div className="space-y-1">
-          {job.customers && (
-            <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 leading-tight">
-              <CustomerLink customerId={job.customers.id} stopPropagation>
-                {formatCustomerName(job.customers)}
-              </CustomerLink>
-            </div>
-          )}
           {job.vehicles && (
             <div className="flex items-center gap-1.5 text-xs text-stone-700 dark:text-stone-300 min-w-0">
               <Car className="h-3 w-3 shrink-0 text-stone-400" />
