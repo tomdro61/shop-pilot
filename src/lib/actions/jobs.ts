@@ -2,6 +2,7 @@
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
 import { todayET } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
@@ -20,7 +21,7 @@ export async function getJobs(filters?: {
 
   let query = supabase
     .from("jobs")
-    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model), users(id, name), job_line_items(total), dvi_inspections(status)")
+    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model, license_plate), users(id, name), job_line_items(total), dvi_inspections(status)")
     .order("date_received", { ascending: false });
 
   if (filters?.dateFrom) {
@@ -199,6 +200,9 @@ const EDITABLE_KEYS = [
 ] as const satisfies readonly (keyof JobFieldPatch)[];
 
 export async function updateJobFields(id: string, patch: JobFieldPatch) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const update: Record<string, unknown> = {};

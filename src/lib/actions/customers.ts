@@ -2,6 +2,7 @@
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { customerSchema, prepareCustomerData, formatPhoneForStorage } from "@/lib/validators/customer";
 import { revalidatePath } from "next/cache";
 import type { CustomerFormData } from "@/lib/validators/customer";
@@ -126,6 +127,9 @@ const EDITABLE_CUSTOMER_KEYS = [
 ] as const satisfies readonly (keyof CustomerFieldPatch)[];
 
 export async function updateCustomerFields(id: string, patch: CustomerFieldPatch) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const update: Record<string, unknown> = {};
