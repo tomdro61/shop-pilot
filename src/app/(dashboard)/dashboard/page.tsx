@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import {
   Plus, Wallet, TrendingUp, TrendingDown, ChevronRight,
@@ -24,7 +24,7 @@ export const metadata = {
 };
 
 async function getDashboardData() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
   const today = todayET();
 
   const week = resolveDateRange("this_week");

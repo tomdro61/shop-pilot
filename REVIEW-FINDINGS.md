@@ -931,14 +931,11 @@ The C-13 reviewer enumerated patterns that aren't blockers but should be cleaned
 
 ---
 
-## C-18 — Dashboard server component uses `createAdminClient()` (NEW — surfaced during C-9/C-10)
+## C-18 — Dashboard server component uses `createAdminClient()` ✅ FIXED
 
 **File:** `src/app/(dashboard)/dashboard/page.tsx:28`
 **Confidence:** 92
-
-Same pattern as C-2 (which fixed it for inbox.ts). The dashboard server component uses `createAdminClient()` (service role, bypasses RLS) instead of `createClient()` (cookie-bound, RLS-respecting). Per CLAUDE.md and our anti-pattern rules: service role is API-routes-only.
-
-**Fix:** Replace `createAdminClient()` with `await createClient()`. Verify RLS allows manager reads on all 11 tables touched (`jobs`, `daily_inspection_counts`, `quote_requests`, `estimates`, `dvi_inspections`, `parking_reservations`, `manual_income`).
+**Fix shipped:** Two-line swap — `createAdminClient` → `createClient` from `@/lib/supabase/server` (cookie-bound, RLS-respecting). Validated by `feature-dev:code-reviewer` which also did a direct RLS audit and confirmed manager-readable policies on all 7 tables (`jobs`, `daily_inspection_counts`, `quote_requests`, `estimates`, `dvi_inspections`, `parking_reservations`, `manual_income`). No error-boundary debugging needed.
 
 ---
 
