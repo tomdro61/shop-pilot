@@ -287,7 +287,7 @@ export default async function CustomerDetailPage({
             </div>
           </dl>
 
-          <div className="px-5 lg:px-6 pt-3 pb-4">
+          <div className="bg-yellow-50 dark:bg-yellow-950/30 border-t border-yellow-200 dark:border-yellow-900 px-5 lg:px-6 pt-3 pb-4">
             <div className="flex items-center gap-2 mb-2">
               <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
