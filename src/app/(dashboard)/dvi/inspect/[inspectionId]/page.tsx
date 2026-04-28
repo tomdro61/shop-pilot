@@ -53,7 +53,7 @@ export default async function StandaloneInspectPage({
 
   const photoUrls = await getDviPhotoSignedUrls(allPhotoPaths);
 
-  const isCompleted = inspection.status === "completed" || inspection.status === "sent";
+  const isCompleted = inspection.status === "completed" || inspection.status === "sent" || inspection.status === "approved";
 
   return (
     <div className="mx-auto max-w-2xl p-4">
@@ -63,8 +63,8 @@ export default async function StandaloneInspectPage({
           {inspection.status === "completed" && (
             <SendDviSection inspectionId={inspection.id} results={results} />
           )}
-          <div className="rounded-lg bg-card p-4 shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Delete this inspection and all its data</p>
+          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm p-4 flex items-center justify-between">
+            <p className="text-sm text-stone-500 dark:text-stone-400">Delete this inspection and all its data</p>
             <DeleteDviButton inspectionId={inspection.id} />
           </div>
         </div>

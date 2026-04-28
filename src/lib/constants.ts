@@ -297,12 +297,14 @@ export const DVI_STATUS_ORDER: DviStatus[] = [
   "in_progress",
   "completed",
   "sent",
+  "approved",
 ];
 
 export const DVI_STATUS_LABELS: Record<DviStatus, string> = {
   in_progress: "In Progress",
   completed: "Ready to Send",
   sent: "Sent",
+  approved: "Approved",
 };
 
 export const DVI_STATUS_COLORS: Record<DviStatus, { bg: string; text: string }> = {
@@ -317,6 +319,10 @@ export const DVI_STATUS_COLORS: Record<DviStatus, { bg: string; text: string }> 
   sent: {
     bg: "bg-purple-100 dark:bg-purple-950",
     text: "text-purple-700 dark:text-purple-400",
+  },
+  approved: {
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
 };
 

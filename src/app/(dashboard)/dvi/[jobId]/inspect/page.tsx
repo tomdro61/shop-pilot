@@ -65,7 +65,7 @@ export default async function DviInspectPage({
         photoUrls={photoUrls}
         customerName={customerName}
         vehicleDesc={vehicleDesc}
-        isCompleted={inspection.status === "completed" || inspection.status === "sent"}
+        isCompleted={inspection.status === "completed" || inspection.status === "sent" || inspection.status === "approved"}
       />
     </div>
   );

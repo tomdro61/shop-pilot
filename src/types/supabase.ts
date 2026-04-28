@@ -1168,7 +1168,7 @@ export type Database = {
     Enums: {
       customer_type: "retail" | "fleet" | "parking"
       dvi_condition: "good" | "monitor" | "attention"
-      dvi_status: "in_progress" | "completed" | "sent"
+      dvi_status: "in_progress" | "completed" | "sent" | "approved"
       estimate_status: "draft" | "sent" | "approved" | "declined"
       invoice_status: "draft" | "sent" | "paid"
       job_status:
@@ -1317,7 +1317,7 @@ export const Constants = {
     Enums: {
       customer_type: ["retail", "fleet", "parking"],
       dvi_condition: ["good", "monitor", "attention"],
-      dvi_status: ["in_progress", "completed", "sent"],
+      dvi_status: ["in_progress", "completed", "sent", "approved"],
       estimate_status: ["draft", "sent", "approved", "declined"],
       invoice_status: ["draft", "sent", "paid"],
       job_status: [

@@ -203,5 +203,24 @@ export function DviSection({ jobId, inspection }: DviSectionProps) {
     );
   }
 
+  if (status === "approved") {
+    return (
+      <MiniStatusCard
+        accent="green"
+        icon={<ClipboardCheck className="h-4 w-4" />}
+        title={
+          <>
+            <span>Vehicle Inspection</span>
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${ACCENT_PILL.green}`}>
+              {DVI_STATUS_LABELS.approved}
+            </span>
+          </>
+        }
+        meta={conditionChips}
+        actions={viewReportButton}
+      />
+    );
+  }
+
   return null;
 }
