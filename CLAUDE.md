@@ -327,6 +327,67 @@ Read `PROGRESS.md` first to pick up where we left off.
 - **Mobile-first** — design for phone screens first, then expand to desktop
 - **Front-end design / UI changes** — ALWAYS invoke the front-end design skill (`/front-end-design` or whichever slash-skill is configured for visual/design work) before making visual changes, restructuring layouts, or proposing redesigns. The skill exists specifically to give design decisions structure — don't freelance the visuals. If the task touches component layout, typography, color, spacing, or visual composition, the skill is in scope.
 
+## Review Workflow (read this — required, not optional)
+
+A 13-agent review of `staging` (April 2026) found 118 issues that accumulated across many sessions because review wasn't built into the workflow. The full report lives at `REVIEW-FINDINGS.md`. To prevent this from repeating, every change runs through the `/scoped-review` skill at scoped triggers.
+
+**Invoke `/scoped-review` automatically (without being asked) when:**
+
+- A change is "done" and touches **any** of: `src/lib/actions/`, `src/hooks/`, `src/middleware.ts`, `src/lib/auth.ts`, `src/components/ui/`, `src/components/forms/`, `src/lib/utils/`, `src/lib/validators/`, `src/app/api/`
+- A change adds more than ~50 lines or touches more than 3 files
+- A change adds new types, hooks, or generic functions
+- The user is about to commit (`git commit`) — invoke `/review staged` first
+- The user asks to merge `staging` → `master` — invoke `/review merge` first (full sweep)
+
+**Don't invoke for:** typo fixes, doc-only changes, single-line bug fixes, formatting, or anything under ~10 lines.
+
+**The skill picks the agents.** It reads the diff, categorizes the changes, and dispatches only the relevant reviewers in parallel. A 30-line server-action change runs 2 agents. A whole feature runs 3-4. Pre-merge runs all 12. A typo fix runs zero.
+
+**After invoking `/scoped-review`:** address all Critical findings before declaring done. Triage High/Medium with the user. Don't ship a Critical "as a follow-up."
+
+## Anti-patterns to avoid (these are what the review keeps catching)
+
+These are the recurring failure modes from `REVIEW-FINDINGS.md`. Treat them as hard rules during writing, not just review-time checks.
+
+**Server actions that mutate (`src/lib/actions/*`):**
+- MUST call `requireManager()` from `src/lib/auth.ts` at the top, OR have an inline comment explaining why no auth check is needed (e.g., public form endpoint)
+- MUST destructure `{ data, error }` from every Supabase call and check `error` — never `const { data } = await supabase.from(...)`
+- MUST validate foreign-key inputs (`customer_id`, `vehicle_id`, etc.) before writing — don't trust client-supplied UUIDs
+- MUST use `await createClient()` from `@/lib/supabase/server`, NEVER `createAdminClient()` (service role is API-routes-only)
+
+**Error handling:**
+- NEVER `catch { return null }` or `catch { return [] }` — that masks bugs and the UI can't distinguish "no data" from "query failed"
+- NEVER fire-and-forget Promises with only `.catch(console.error)` — surface delivery status to the caller
+- Hooks that wrap async work MUST handle thrown exceptions (try/catch around `await`) — the `{ error }` shape isn't enough
+
+**Caching:**
+- `unstable_cache` invalidation requires `revalidateTag` matching the cache's tag array — `revalidatePath` does NOT bust `unstable_cache` entries
+- Don't add `unstable_cache` for low-traffic internal-tool data — the staleness/invalidation cost outweighs the perf gain
+
+**UI primitives:**
+- Any `<div onClick>` MUST have `role`, `tabIndex={0}`, AND `onKeyDown` for Enter/Space — keyboard nav is not optional
+- Buttons, inputs, selects: `rounded-full` (per Stitch design system); inputs use `bg-stone-50`
+- Don't use `<div>` for things that should be `<a>` or `<button>` — semantic HTML first
+
+**Forms:**
+- Always `value={field.value ?? ""}` on text inputs/textareas; never bare `{...field}` (avoids controlled/uncontrolled flip)
+- Submit handlers MUST guard against double-submit — `if (isSubmitting) return`
+- Search inputs hitting Supabase MUST debounce (300ms) AND use AbortController for cancellation
+
+**Comments:**
+- Default to writing NO comments
+- Never write JSDoc that names a specific consumer ("first shipped on the X page", "used by Y") — it rots
+- Never restate what well-named code already does — only document non-obvious WHY
+
+**Types:**
+- No `any`. No casts through `unknown` to "fix" type errors — fix the real type
+- Discriminated unions over optional-fields-on-both-arms (`{ ok: true; data } | { ok: false; error }`, not `{ data?, error? }`)
+- Action return types: use a shared `ActionResult<T>` (or equivalent) so the hook layer can rely on the shape
+
+**Dead code:**
+- When deleting a route or feature, also delete the components, server actions, types, and form branches that supported it
+- After heavy refactor churn (multiple reverts), grep for unused state, leftover handlers, and `eslint-disable` comments
+
 ## Useful Commands
 
 ```bash
