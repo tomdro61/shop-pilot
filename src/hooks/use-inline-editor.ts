@@ -1,24 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 type SaveResult = { error?: unknown } | { success: true };
 
-/**
- * Shared state machine for click-to-edit fields on the job detail page.
- *
- * Holds the three flags every inline editor needs (editing / draft / saving),
- * keeps the draft in sync when the underlying `initial` prop changes (e.g.
- * after router.refresh brings a new server value), and wraps the common
- * save flow: toast on error, success toast, exit edit mode, refresh.
- */
 export function useInlineEditor<D>(initial: D) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<D>(initial);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!editing) setDraft(initial);
@@ -29,17 +29,33 @@ export function useInlineEditor<D>(initial: D) {
     successMessage: string,
     errorFallback = "Update failed"
   ) {
+    if (savingRef.current) return false;
+    savingRef.current = true;
     setSaving(true);
-    const result = await runSave();
-    setSaving(false);
-    if ("error" in result && result.error) {
-      toast.error(typeof result.error === "string" ? result.error : errorFallback);
+
+    try {
+      const result = await runSave();
+      if ("error" in result && result.error) {
+        if (mountedRef.current) {
+          toast.error(typeof result.error === "string" ? result.error : errorFallback);
+        }
+        return false;
+      }
+      router.refresh();
+      if (mountedRef.current) {
+        toast.success(successMessage);
+        setEditing(false);
+      }
+      return true;
+    } catch (err) {
+      if (mountedRef.current) {
+        toast.error(err instanceof Error ? err.message : errorFallback);
+      }
       return false;
+    } finally {
+      savingRef.current = false;
+      if (mountedRef.current) setSaving(false);
     }
-    toast.success(successMessage);
-    setEditing(false);
-    router.refresh();
-    return true;
   }
 
   function cancel() {
