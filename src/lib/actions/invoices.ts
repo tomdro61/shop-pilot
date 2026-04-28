@@ -122,15 +122,21 @@ export async function createInvoiceFromJob(
   let stripeCustomerId = customer.stripe_customer_id;
 
   if (stripeCustomerId) {
-    // Verify the Stripe customer still exists
     try {
       const existing = await stripe.customers.retrieve(stripeCustomerId);
       if ((existing as { deleted?: boolean }).deleted) {
         stripeCustomerId = null;
       }
-    } catch {
-      // Customer doesn't exist in Stripe — clear stale ID
-      stripeCustomerId = null;
+    } catch (err) {
+      // Stripe sets code "resource_missing" specifically for 404. Other errors
+      // (rate limit, network, auth) must surface — silently treating them as
+      // missing creates duplicate Stripe customers.
+      if ((err as { code?: string } | null)?.code === "resource_missing") {
+        stripeCustomerId = null;
+      } else {
+        const message = err instanceof Error ? err.message : "Failed to verify Stripe customer";
+        return { error: message };
+      }
     }
   }
 

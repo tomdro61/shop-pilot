@@ -120,9 +120,10 @@ The public `approveRecommendations` server action is callable by anyone with the
 
 ---
 
-## C-6 — `createInvoiceFromJob` swallows Stripe customer retrieve errors
+## C-6 — `createInvoiceFromJob` swallows Stripe customer retrieve errors ✅ FIXED
 
-**File:** `src/lib/actions/invoices.ts:126-135`
+**File:** `src/lib/actions/invoices.ts:126-135` + same pattern in `src/lib/actions/estimates.ts:295-302`
+**Fix shipped:** Both stale-Stripe-customer verification blocks now distinguish `err.code === "resource_missing"` (Stripe's canonical 404) from other errors (rate limit, network, auth). Only `resource_missing` triggers the create-new-customer path; other errors return `{ error: <stripe message> }` so the caller's existing toast/UI handles them. Validated by retroactive `feature-dev:code-reviewer` — caught a critical issue I introduced where the throw-on-error path bubbled out as an unhandled rejection (callers expect `{ error } | { data }`, not throws). Switched to typed return, fixed before close.
 
 ```ts
 try {
