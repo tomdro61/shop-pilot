@@ -76,6 +76,7 @@ export function ParkingAllView({
 
   const currentDropoffs = searchParams.get("dropoff")?.split(",").filter(Boolean) || [];
   const currentPickups = searchParams.get("pickup")?.split(",").filter(Boolean) || [];
+  const currentAnyDate = searchParams.get("date") || "";
 
   function addDate(key: "dropoff" | "pickup", date: string) {
     const current = key === "dropoff" ? currentDropoffs : currentPickups;
@@ -102,10 +103,10 @@ export function ParkingAllView({
       {/* Toolbar */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400 dark:text-stone-500" />
           <Input
-            placeholder="Search name, plate, phone, confirmation #..."
-            className="pl-9 h-9 text-sm"
+            placeholder="Search name, plate, phone, confirmation #…"
+            className="pl-8 h-8 text-sm bg-card"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
@@ -114,7 +115,7 @@ export function ParkingAllView({
           <label className="text-xs text-stone-500 dark:text-stone-400 shrink-0">Drop-off</label>
           <Input
             type="date"
-            className="w-full sm:w-[150px] h-9 text-xs"
+            className="w-full sm:w-[140px] h-8 text-xs bg-card"
             value=""
             onChange={(e) => { addDate("dropoff", e.target.value); e.target.value = ""; }}
           />
@@ -123,7 +124,7 @@ export function ParkingAllView({
           <label className="text-xs text-stone-500 dark:text-stone-400 shrink-0">Pick-up</label>
           <Input
             type="date"
-            className="w-full sm:w-[150px] h-9 text-xs"
+            className="w-full sm:w-[140px] h-8 text-xs bg-card"
             value=""
             onChange={(e) => { addDate("pickup", e.target.value); e.target.value = ""; }}
           />
@@ -134,7 +135,10 @@ export function ParkingAllView({
             updateParams({ status: value === "all" ? "" : value, page: "" })
           }
         >
-          <SelectTrigger className="w-full sm:w-[160px] h-9 text-xs">
+          <SelectTrigger
+            size="sm"
+            className="w-full sm:w-[160px] bg-card border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 shadow-none"
+          >
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -149,8 +153,23 @@ export function ParkingAllView({
       </div>
 
       {/* Selected date badges */}
-      {(currentDropoffs.length > 0 || currentPickups.length > 0) && (
+      {(currentDropoffs.length > 0 || currentPickups.length > 0 || currentAnyDate) && (
         <div className="flex flex-wrap gap-1.5">
+          {currentAnyDate && (
+            <Badge
+              variant="secondary"
+              className="bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400 border-0 text-xs gap-1 pr-1"
+            >
+              On {formatShortDate(currentAnyDate)}
+              <button
+                type="button"
+                onClick={() => updateParams({ date: "", page: "" })}
+                className="ml-0.5 rounded-md p-0.5 hover:bg-violet-200 dark:hover:bg-violet-800 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
           {currentDropoffs.map((date) => (
             <Badge
               key={`dropoff-${date}`}
@@ -199,7 +218,7 @@ export function ParkingAllView({
       {/* List */}
       <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
       {reservations.length === 0 ? (
-        <div className="bg-card rounded-lg shadow-card p-8 text-center">
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm p-8 text-center">
           <p className="text-sm text-stone-500 dark:text-stone-400">
             No reservations found.
           </p>

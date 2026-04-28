@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { PARKING_SERVICE_LABELS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS } from "@/lib/constants";
 import { formatCustomerName } from "@/lib/utils/format";
 import { CustomerLink } from "@/components/ui/customer-link";
@@ -52,12 +51,12 @@ export function ParkingServiceLeads({
           const statusColors = PARKING_STATUS_COLORS[r.status];
 
           return (
-            <Card
+            <div
               key={r.id}
               onClick={() => router.push(`/parking/${r.id}`)}
-              className="cursor-pointer transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50"
+              className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm cursor-pointer transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40"
             >
-              <CardContent className="p-4">
+              <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     {/* Name + Status */}
@@ -133,8 +132,8 @@ export function ParkingServiceLeads({
                       </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           );
         })}
       </div>

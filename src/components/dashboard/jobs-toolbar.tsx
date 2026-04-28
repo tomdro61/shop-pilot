@@ -28,7 +28,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState(searchParams.get("search") || "");
-  const view = searchParams.get("view") || "list";
+  const view = searchParams.get("view") || "board";
   const category = searchParams.get("category") || "all";
   const status = searchParams.get("status") || "all";
   const paymentStatus = searchParams.get("payment_status") || "all";
@@ -129,11 +129,11 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
 
         <Tabs value={view} onValueChange={(val) => updateParams({ view: val })}>
           <TabsList className="h-8 p-0.5 bg-stone-100 dark:bg-stone-800">
-            <TabsTrigger value="list" className="h-7 px-2">
-              <List className="h-3.5 w-3.5" />
-            </TabsTrigger>
             <TabsTrigger value="board" className="h-7 px-2">
               <Columns3 className="h-3.5 w-3.5" />
+            </TabsTrigger>
+            <TabsTrigger value="list" className="h-7 px-2">
+              <List className="h-3.5 w-3.5" />
             </TabsTrigger>
             <TabsTrigger value="calendar" className="h-7 px-2">
               <CalendarDays className="h-3.5 w-3.5" />

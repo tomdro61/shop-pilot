@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TeamMemberForm } from "@/components/forms/team-member-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteTeamMember } from "@/lib/actions/team";
+import { getInitials } from "@/lib/utils/format";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import type { User } from "@/types";
 
@@ -30,73 +30,79 @@ export function TeamList({ members }: TeamListProps) {
   }
 
   return (
-    <div>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">Team ({members.length})</CardTitle>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Add Member</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {members.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              No team members yet
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-xs font-bold text-blue-700 dark:text-blue-400">
-                      {member.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold">{member.name}</p>
-                      <p className="text-xs text-muted-foreground">{member.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-[10px] font-black px-2 py-1 rounded-md uppercase",
-                      member.role === "manager"
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
-                        : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
-                    )}>
-                      {member.role === "manager" ? "Manager" : "Technician"}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setEditMember(member)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <DeleteConfirmDialog
-                      title="Delete Team Member"
-                      description={`Delete ${member.name}? Any jobs assigned to them will become unassigned.`}
-                      onConfirm={() => handleDelete(member.id)}
-                      trigger={
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      }
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-bold tracking-tight text-stone-900 dark:text-stone-50">
+          Team
+          <span className="ml-2 font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
+            {members.length}
+          </span>
+        </h2>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Add Member</span>
+          <span className="sm:hidden">Add</span>
+        </Button>
+      </div>
 
-      <TeamMemberForm
-        open={addOpen}
-        onOpenChange={setAddOpen}
-      />
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        {members.length === 0 ? (
+          <div className="px-4 py-10 text-center">
+            <p className="text-sm text-stone-500 dark:text-stone-400">No team members yet</p>
+          </div>
+        ) : (
+          members.map((member) => (
+            <div
+              key={member.id}
+              className="group flex items-center gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0"
+            >
+              <div className="w-8 h-8 rounded-md grid place-items-center bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900 text-[11px] font-semibold flex-none">
+                {getInitials(member.name)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
+                  {member.name}
+                </p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
+                  {member.email}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  "shrink-0 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider",
+                  member.role === "manager"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
+                    : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+                )}
+              >
+                {member.role === "manager" ? "Manager" : "Technician"}
+              </span>
+              <div className="flex shrink-0 items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  title="Edit"
+                  onClick={() => setEditMember(member)}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+                <DeleteConfirmDialog
+                  title="Delete Team Member"
+                  description={`Delete ${member.name}? Any jobs assigned to them will become unassigned.`}
+                  onConfirm={() => handleDelete(member.id)}
+                  trigger={
+                    <Button variant="ghost" size="icon-xs" title="Delete">
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                  }
+                />
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <TeamMemberForm open={addOpen} onOpenChange={setAddOpen} />
 
       {editMember && (
         <TeamMemberForm

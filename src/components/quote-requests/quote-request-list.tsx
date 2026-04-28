@@ -16,7 +16,7 @@ import {
   QUOTE_REQUEST_STATUS_LABELS,
 } from "@/lib/constants";
 import { updateQuoteRequestStatus, deleteQuoteRequest } from "@/lib/actions/quote-requests";
-import { Search, Phone, Mail, Car, MessageSquare, ExternalLink, Wrench, Trash2 } from "lucide-react";
+import { Search, Phone, Mail, Car, ExternalLink, Wrench, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -105,7 +105,7 @@ export function QuoteRequestList({
       {/* List */}
       <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
         {quoteRequests.length === 0 ? (
-          <div className="bg-card rounded-lg shadow-card p-8 text-center">
+          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm p-8 text-center">
             <p className="text-sm text-stone-500 dark:text-stone-400">
               No quote requests found.
             </p>
@@ -203,7 +203,7 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
   return (
     <div
       className={cn(
-        "bg-card rounded-lg shadow-card px-6 py-5 transition-opacity",
+        "bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm px-6 py-5 transition-opacity",
         isUpdating && "opacity-50"
       )}
     >

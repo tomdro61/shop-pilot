@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PresetForm } from "@/components/forms/preset-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
@@ -44,78 +42,83 @@ export function PresetList({ presets, categories }: PresetListProps) {
   }
 
   return (
-    <div>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
-            Job Presets ({presets.length})
-          </CardTitle>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Add Preset</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {presets.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-bold tracking-tight text-stone-900 dark:text-stone-50">
+          Job Presets
+          <span className="ml-2 font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
+            {presets.length}
+          </span>
+        </h2>
+        <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Add Preset</span>
+          <span className="sm:hidden">Add</span>
+        </Button>
+      </div>
+
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        {presets.length === 0 ? (
+          <div className="px-4 py-10 text-center">
+            <p className="text-sm text-stone-500 dark:text-stone-400">
               No presets yet. Create one to speed up job creation.
             </p>
-          ) : (
-            <div className="divide-y divide-stone-200 dark:divide-stone-800">
-              {presets.map((preset) => {
-                const items = preset.line_items as PresetLineItem[];
-                return (
-                  <div
-                    key={preset.id}
-                    className="flex items-center justify-between rounded-lg px-4 py-3.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold">{preset.name}</p>
-                        {preset.category && (
-                          <Badge variant="secondary" className="text-xs">
-                            {preset.category}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {getLineItemCount(preset)} item{getLineItemCount(preset) !== 1 ? "s" : ""}
-                        {" \u00B7 "}
-                        {items
-                          .map((item) => item.description)
-                          .join(", ")}
-                        {" \u00B7 "}
-                        {formatCurrency(getPresetTotal(preset))}
+          </div>
+        ) : (
+          presets.map((preset) => {
+            const itemCount = getLineItemCount(preset);
+            const items = preset.line_items as PresetLineItem[];
+            const total = getPresetTotal(preset);
+            return (
+              <div
+                key={preset.id}
+                className="group flex items-start gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="min-w-0 flex items-baseline gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
+                        {preset.name}
                       </p>
+                      {preset.category && (
+                        <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 uppercase tracking-wider">
+                          {preset.category}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setEditPreset(preset)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <DeleteConfirmDialog
-                        title="Delete Preset"
-                        description={`Delete "${preset.name}"? This won't affect existing jobs.`}
-                        onConfirm={() => handleDelete(preset.id)}
-                        trigger={
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        }
-                      />
-                    </div>
+                    <span className="shrink-0 font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50">
+                      {formatCurrency(total)}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400 truncate">
+                    {itemCount} item{itemCount !== 1 ? "s" : ""} · {items.map((item) => item.description).join(", ")}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    title="Edit"
+                    onClick={() => setEditPreset(preset)}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  <DeleteConfirmDialog
+                    title="Delete Preset"
+                    description={`Delete "${preset.name}"? This won't affect existing jobs.`}
+                    onConfirm={() => handleDelete(preset.id)}
+                    trigger={
+                      <Button variant="ghost" size="icon-xs" title="Delete">
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    }
+                  />
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
 
       <PresetForm
         categories={categories}

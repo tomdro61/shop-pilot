@@ -3,11 +3,12 @@ import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
 import { getInspectionForJob } from "@/lib/actions/dvi";
 import { getDviPhotoSignedUrls } from "@/lib/supabase/storage";
-import { formatVehicle, formatRONumber, formatDate } from "@/lib/utils/format";
+import { formatVehicle, formatRONumber, formatDate, formatCustomerName } from "@/lib/utils/format";
 import { InspectionSummary } from "@/components/dvi/inspection-summary";
+import { CustomerLink } from "@/components/ui/customer-link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import type { Vehicle, DviCondition } from "@/types";
+import type { Vehicle, Customer, DviCondition } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,6 +35,7 @@ export default async function DviReportPage({
   if (!inspection) redirect(`/jobs/${id}`);
 
   const vehicle = job.vehicles as Vehicle | null;
+  const customer = job.customers as Customer | null;
 
   // Collect photo paths and generate signed URLs
   const allPhotoPaths: string[] = [];
@@ -70,24 +72,35 @@ export default async function DviReportPage({
     }));
 
   return (
-    <div className="p-4 lg:p-10 max-w-3xl mx-auto">
-      <Link href={`/jobs/${id}`}>
-        <Button variant="ghost" size="sm" className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Job
-        </Button>
-      </Link>
+    <div className="max-w-3xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
+      <div className="py-2">
+        <Link href={`/jobs/${id}`}>
+          <Button variant="ghost" size="sm" className="-ml-3">
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            Job
+          </Button>
+        </Link>
+      </div>
 
-      <div className="mb-6">
-        <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
           Vehicle Inspection Report
-        </span>
-        <h2 className="text-xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
+        </div>
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
           {vehicle ? formatVehicle(vehicle) : "Vehicle"}
-        </h2>
-        <div className="flex gap-4 text-xs text-muted-foreground mt-1">
-          {job.ro_number && <span>{formatRONumber(job.ro_number)}</span>}
-          <span>{formatDate(inspection.created_at)}</span>
+        </h1>
+        {customer && (
+          <div className="mt-1 text-sm text-stone-700 dark:text-stone-300">
+            <CustomerLink customerId={customer.id}>
+              {formatCustomerName(customer)}
+            </CustomerLink>
+          </div>
+        )}
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-stone-500 dark:text-stone-400">
+          {job.ro_number && (
+            <span className="font-mono tabular-nums">{formatRONumber(job.ro_number)}</span>
+          )}
+          <span className="font-mono tabular-nums">{formatDate(inspection.created_at)}</span>
         </div>
       </div>
 

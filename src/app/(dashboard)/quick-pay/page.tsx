@@ -16,13 +16,16 @@ export default async function QuickPayPage() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl p-4 pb-20 lg:p-10 lg:pb-10">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold tracking-tight lg:text-2xl">Quick Pay</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="max-w-4xl mx-auto px-4 lg:px-6 pb-24 space-y-5 lg:space-y-6">
+      <div className="py-2">
+        <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
+          Quick Pay
+        </h1>
+        <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
           Collect a payment at the counter. A job record will be created automatically.
         </p>
       </div>
+
       <QuickPayForm presets={presetsWithTotals} />
     </div>
   );

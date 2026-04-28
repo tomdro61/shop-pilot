@@ -19,12 +19,12 @@ export default async function PresetsPage() {
   const categories = (settings?.job_categories as string[] | undefined) ?? DEFAULT_JOB_CATEGORIES;
 
   return (
-    <div className="p-4 lg:p-10">
-      <div className="mb-4">
+    <div className="max-w-4xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
+      <div className="py-2">
         <Link href="/settings">
-          <Button variant="ghost" size="sm" className="mb-2">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Settings
+          <Button variant="ghost" size="sm" className="-ml-3">
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            Settings
           </Button>
         </Link>
       </div>

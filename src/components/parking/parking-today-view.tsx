@@ -1,11 +1,9 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ParkingReservationCardCompact,
 } from "@/components/parking/parking-reservation-card";
 import { ParkingCardActions } from "@/components/parking/parking-card-actions";
-import { Badge } from "@/components/ui/badge";
 import { PlaneLanding, PlaneTakeoff, Car } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
@@ -29,21 +27,19 @@ function KPICard({
   accent?: string;
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${accent || "bg-stone-100 dark:bg-stone-800"}`}
-        >
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-3xl font-extrabold tabular-nums tracking-tighter text-stone-900 dark:text-stone-50">
-            {value}
-          </p>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm flex items-center gap-3 p-4">
+      <div
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${accent || "bg-stone-100 dark:bg-stone-800"}`}
+      >
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="font-mono tabular-nums text-3xl font-extrabold tracking-tighter text-stone-900 dark:text-stone-50">
+          {value}
+        </p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">{label}</p>
+      </div>
+    </div>
   );
 }
 
@@ -104,7 +100,7 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
             No pickups scheduled for today.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {data.pickups.map((r) => (
               <ParkingReservationCardCompact
                 key={r.id}
@@ -126,7 +122,7 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
             No pickups scheduled for tomorrow.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {data.tomorrowPickups.map((r) => (
               <ParkingReservationCardCompact
                 key={r.id}
@@ -148,7 +144,7 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
             No arrivals scheduled for today.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {data.arrivals.map((r) => (
               <ParkingReservationCardCompact
                 key={r.id}
@@ -173,7 +169,7 @@ export function ParkingTodayView({ data, lockBoxCodes = {} }: { data: DashboardD
             No vehicles currently parked.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {data.currentlyParked.map((r) => (
               <ParkingReservationCardCompact
                 key={r.id}

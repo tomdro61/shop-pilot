@@ -94,6 +94,51 @@ export async function getParkingReservations(filters?: {
   };
 }
 
+// ── Calendar counts ────────────────────────────────────────────
+
+export type ParkingDayCounts = { dropOffs: number; pickUps: number };
+
+export async function getParkingCalendarCounts({
+  from,
+  to,
+  lot,
+}: {
+  from: string;
+  to: string;
+  lot?: string;
+}): Promise<Record<string, ParkingDayCounts>> {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("parking_reservations")
+    .select("drop_off_date, pick_up_date, status, lot")
+    .in("status", ["reserved", "checked_in", "checked_out"])
+    // Reservation overlaps the visible window: drop ≤ to AND pick ≥ from
+    .lte("drop_off_date", to)
+    .gte("pick_up_date", from);
+
+  if (lot) {
+    query = query.eq("lot", lot);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const counts: Record<string, ParkingDayCounts> = {};
+  for (const r of data ?? []) {
+    if (r.drop_off_date >= from && r.drop_off_date <= to) {
+      const day = (counts[r.drop_off_date] ??= { dropOffs: 0, pickUps: 0 });
+      day.dropOffs += 1;
+    }
+    if (r.pick_up_date >= from && r.pick_up_date <= to) {
+      const day = (counts[r.pick_up_date] ??= { dropOffs: 0, pickUps: 0 });
+      day.pickUps += 1;
+    }
+  }
+
+  return counts;
+}
+
 // ── Get single reservation ──────────────────────────────────────
 
 export const getParkingReservation = cache(async (id: string) => {

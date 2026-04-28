@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { getReportData } from "@/lib/actions/reports";
 import { resolveDateRange } from "@/lib/utils/date-range";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { HorizontalBarChart } from "@/components/dashboard/horizontal-bar-chart";
 import { ReportsToolbar } from "@/components/dashboard/reports-toolbar";
+import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 
 export const metadata = {
@@ -137,46 +137,48 @@ export default async function RevenueReportPage({
 
       {/* Service Profitability */}
       {profitability.length > 0 && (
-        <div className="mt-6">
-          <Card className="py-0 gap-0">
-            <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
-              <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">Service Profitability ({resolved.label})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                      <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Category</th>
-                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
-                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Parts Cost</th>
-                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Labor Rev</th>
-                      <th className="pb-2 pr-4 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Gross Profit</th>
-                      <th className="pb-2 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Margin %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {profitability.map((row) => (
-                      <tr key={row.category}>
-                        <td className="py-2 pr-4 font-medium">{row.category}</td>
-                        <td className="py-2 pr-4 text-right">{formatCurrency(row.revenue)}</td>
-                        <td className="py-2 pr-4 text-right">
-                          {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500" title="Includes estimated costs">~</span>}
-                          {formatCurrency(row.partsCost)}
-                        </td>
-                        <td className="py-2 pr-4 text-right">{formatCurrency(row.laborRevenue)}</td>
-                        <td className="py-2 pr-4 text-right">{formatCurrency(row.grossProfit)}</td>
-                        <td className={`py-2 text-right font-medium ${row.margin >= 50 ? "text-green-600 dark:text-green-400" : row.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
-                          {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500">~</span>}
-                          {row.margin.toFixed(1)}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="mt-6 bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+            <h3 className={COLUMN_HEADER}>Service Profitability ({resolved.label})</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+                  <th className={`px-4 py-2 ${SECTION_LABEL}`}>Category</th>
+                  <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Revenue</th>
+                  <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Parts Cost</th>
+                  <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Labor Rev</th>
+                  <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Gross Profit</th>
+                  <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Margin %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profitability.map((row) => (
+                  <tr key={row.category} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                    <td className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-50">{row.category}</td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {formatCurrency(row.revenue)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500" title="Includes estimated costs">~</span>}
+                      {formatCurrency(row.partsCost)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {formatCurrency(row.laborRevenue)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {formatCurrency(row.grossProfit)}
+                    </td>
+                    <td className={`px-4 py-2 text-right font-mono tabular-nums text-sm font-medium ${row.margin >= 50 ? "text-green-600 dark:text-green-400" : row.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                      {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500">~</span>}
+                      {row.margin.toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { updateShopSettings } from "@/lib/actions/settings";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GripVertical, Plus, Trash2, ChevronUp, ChevronDown, Pencil, Check, X } from "lucide-react";
@@ -119,113 +118,96 @@ export function JobCategoriesForm({ categories: initial }: JobCategoriesFormProp
             You have unsaved changes
           </p>
           <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Saving…" : "Save Changes"}
           </Button>
         </div>
       )}
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="divide-y divide-stone-100 dark:divide-stone-800">
-            {categories.map((cat, index) => (
-              <div
-                key={`${index}-${cat}`}
-                className="flex items-center gap-2 px-4 py-2.5 transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50"
-              >
-                <GripVertical className="h-4 w-4 shrink-0 text-stone-300 dark:text-stone-600" />
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        {categories.map((cat, index) => (
+          <div
+            key={`${index}-${cat}`}
+            className="group flex items-center gap-2 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40"
+          >
+            <GripVertical className="h-4 w-4 shrink-0 text-stone-300 dark:text-stone-600" />
 
-                {editingIndex === index ? (
-                  <div className="flex flex-1 items-center gap-2">
-                    <Input
-                      value={editingValue}
-                      onChange={(e) => setEditingValue(e.target.value)}
-                      onKeyDown={handleEditKeyDown}
-                      className="h-8 text-sm"
-                      autoFocus
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={confirmEdit}
-                    >
-                      <Check className="h-3.5 w-3.5 text-green-600" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={cancelEdit}
-                    >
-                      <X className="h-3.5 w-3.5 text-stone-400" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <span className="min-w-0 flex-1 text-sm font-medium">{cat}</span>
-
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => startEdit(index)}
-                        title="Rename"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => moveUp(index)}
-                        disabled={index === 0}
-                        title="Move up"
-                      >
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => moveDown(index)}
-                        disabled={index === categories.length - 1}
-                        title="Move down"
-                      >
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => remove(index)}
-                        title="Remove"
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </div>
-                  </>
-                )}
+            {editingIndex === index ? (
+              <div className="flex flex-1 items-center gap-2">
+                <Input
+                  value={editingValue}
+                  onChange={(e) => setEditingValue(e.target.value)}
+                  onKeyDown={handleEditKeyDown}
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+                <Button variant="ghost" size="icon-xs" onClick={confirmEdit} title="Confirm">
+                  <Check className="h-3 w-3 text-green-600" />
+                </Button>
+                <Button variant="ghost" size="icon-xs" onClick={cancelEdit} title="Cancel">
+                  <X className="h-3 w-3 text-stone-400" />
+                </Button>
               </div>
-            ))}
+            ) : (
+              <>
+                <span className="min-w-0 flex-1 text-sm text-stone-900 dark:text-stone-50 truncate">
+                  {cat}
+                </span>
+
+                <div className="flex shrink-0 items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => startEdit(index)}
+                    title="Rename"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => moveUp(index)}
+                    disabled={index === 0}
+                    title="Move up"
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => moveDown(index)}
+                    disabled={index === categories.length - 1}
+                    title="Move down"
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => remove(index)}
+                    title="Remove"
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
 
       <div className="flex gap-2">
         <Input
-          placeholder="New category name..."
+          placeholder="New category name…"
           value={newCategory}
           onChange={(e) => setNewCategory(e.target.value)}
           onKeyDown={handleAddKeyDown}
           className="flex-1"
         />
-        <Button variant="outline" onClick={addCategory} disabled={!newCategory.trim()}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button onClick={addCategory} disabled={!newCategory.trim()}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
           Add
         </Button>
       </div>
-
     </div>
   );
 }

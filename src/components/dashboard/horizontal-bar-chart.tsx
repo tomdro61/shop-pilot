@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { COLUMN_HEADER } from "@/components/ui/section-card";
 import { formatCurrency } from "@/lib/utils/format";
 
 const BAR_COLORS = [
@@ -18,60 +18,46 @@ interface HorizontalBarChartProps {
 }
 
 export function HorizontalBarChart({ title, data }: HorizontalBarChartProps) {
-  if (data.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
-            {title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="py-8 text-center text-sm text-stone-400 dark:text-stone-500">
-            No data for this period
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const maxRevenue = Math.max(...data.map((d) => d.revenue));
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {data.map((row, i) => {
-            const pct = maxRevenue > 0 ? (row.revenue / maxRevenue) * 100 : 0;
-            const color = BAR_COLORS[i % BAR_COLORS.length];
-            return (
-              <div key={row.label} className="flex items-center gap-3">
-                <span className="w-24 shrink-0 truncate text-sm font-medium text-stone-700 dark:text-stone-300">
-                  {row.label}
-                </span>
-                <div className="relative flex-1">
-                  <div className="h-2 w-full rounded-full bg-stone-100 dark:bg-stone-800" />
-                  <div
-                    className={`absolute inset-y-0 left-0 rounded-full ${color}`}
-                    style={{ width: `${Math.max(pct, 1)}%` }}
-                  />
-                </div>
-                <span className="shrink-0 text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50">
-                  {formatCurrency(row.revenue)}
-                </span>
-                <span className="shrink-0 text-xs tabular-nums text-stone-400 dark:text-stone-500">
-                  ({row.jobCount} {row.jobCount === 1 ? "job" : "jobs"})
-                </span>
-              </div>
-            );
-          })}
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+        <h3 className={COLUMN_HEADER}>{title}</h3>
+      </div>
+      {data.length === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <p className="text-sm text-stone-500 dark:text-stone-400">No data for this period</p>
         </div>
-      </CardContent>
-    </Card>
+      ) : (
+        <div className="px-4 py-4 space-y-3">
+          {(() => {
+            const maxRevenue = Math.max(...data.map((d) => d.revenue));
+            return data.map((row, i) => {
+              const pct = maxRevenue > 0 ? (row.revenue / maxRevenue) * 100 : 0;
+              const color = BAR_COLORS[i % BAR_COLORS.length];
+              return (
+                <div key={row.label} className="flex items-center gap-3">
+                  <span className="w-24 shrink-0 truncate text-sm font-medium text-stone-700 dark:text-stone-300">
+                    {row.label}
+                  </span>
+                  <div className="relative flex-1">
+                    <div className="h-2 w-full rounded-full bg-stone-100 dark:bg-stone-800" />
+                    <div
+                      className={`absolute inset-y-0 left-0 rounded-full ${color}`}
+                      style={{ width: `${Math.max(pct, 1)}%` }}
+                    />
+                  </div>
+                  <span className="shrink-0 font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">
+                    {formatCurrency(row.revenue)}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
+                    ({row.jobCount} {row.jobCount === 1 ? "job" : "jobs"})
+                  </span>
+                </div>
+              );
+            });
+          })()}
+        </div>
+      )}
+    </div>
   );
 }

@@ -8,7 +8,6 @@ import {
   ChartTooltip,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -17,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import type { Granularity } from "@/lib/utils/trend-buckets";
@@ -151,73 +151,69 @@ export function TrendsExplorer({
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-3 py-3">
-          <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {METRIC_KEYS.map((k) => (
-                <SelectItem key={k} value={k}>
-                  {METRICS[k].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex gap-1">
-            {GRANULARITIES.map((g) => (
-              <Button
-                key={g.value}
-                variant={initialGranularity === g.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setGranularity(g.value)}
-              >
-                {g.label}
-              </Button>
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm flex flex-wrap items-center gap-3 px-4 py-3">
+        <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {METRIC_KEYS.map((k) => (
+              <SelectItem key={k} value={k}>
+                {METRICS[k].label}
+              </SelectItem>
             ))}
-          </div>
+          </SelectContent>
+        </Select>
 
-          {initialGranularity === "month" && (
-            <div className="flex items-center gap-1 ml-auto">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setYear(initialYear - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="min-w-[4rem] text-center text-sm font-semibold tabular-nums">
-                {initialYear}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={initialYear >= (data.year ?? initialYear)}
-                onClick={() => setYear(initialYear + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+        <div className="flex gap-1">
+          {GRANULARITIES.map((g) => (
+            <Button
+              key={g.value}
+              variant={initialGranularity === g.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setGranularity(g.value)}
+            >
+              {g.label}
+            </Button>
+          ))}
+        </div>
 
-          <div className="ml-auto">
-            <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
+        {initialGranularity === "month" && (
+          <div className="flex items-center gap-1 ml-auto">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setYear(initialYear - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="min-w-[4rem] text-center text-sm font-semibold font-mono tabular-nums text-stone-900 dark:text-stone-50">
+              {initialYear}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={initialYear >= (data.year ?? initialYear)}
+              onClick={() => setYear(initialYear + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        <div className="ml-auto">
+          <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
+        </div>
+      </div>
 
       {/* Chart */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold">
-            {metricCfg.label}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+          <h3 className={COLUMN_HEADER}>{metricCfg.label}</h3>
+        </div>
+        <div className="px-4 py-3">
           <ChartContainer config={chartConfig} className="h-[350px] w-full">
             <BarChart data={chartData}>
               <CartesianGrid vertical={false} />
@@ -243,9 +239,9 @@ export function TrendsExplorer({
                   if (!active || !payload?.length) return null;
                   const val = payload[0].value as number;
                   return (
-                    <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl">
-                      <p className="font-medium">{label}</p>
-                      <p className="text-foreground font-mono font-medium tabular-nums mt-0.5">
+                    <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
+                      <p className="font-medium text-stone-900 dark:text-stone-50">{label}</p>
+                      <p className="text-stone-900 dark:text-stone-50 font-mono font-medium tabular-nums mt-0.5">
                         {metricCfg.format(val)}
                       </p>
                     </div>
@@ -259,51 +255,45 @@ export function TrendsExplorer({
               />
             </BarChart>
           </ChartContainer>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Data table */}
-      <Card className="py-0 gap-0">
-        <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
-          <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+          <h3 className={COLUMN_HEADER}>
             {metricCfg.label} — {initialGranularity === "month" ? initialYear : initialGranularity === "week" ? "Last 12 Weeks" : "Last 30 Days"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                  <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
-                    Period
-                  </th>
-                  <th className="pb-2 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
-                    {metricCfg.label}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.buckets.map((bucket) => (
-                  <tr key={bucket.key}>
-                    <td className="py-2 pr-4 font-medium">{bucket.label}</td>
-                    <td className="py-2 text-right tabular-nums">
-                      {metricCfg.format(bucket[metric])}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="border-t border-stone-200 dark:border-stone-700 font-semibold">
-                  <td className="py-2 pr-4">
-                    {metricCfg.aggregate === "sum" ? "Total" : "Average"}
-                  </td>
-                  <td className="py-2 text-right tabular-nums">
-                    {metricCfg.format(totalValue)}
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+                <th className={`px-4 py-2 ${SECTION_LABEL}`}>Period</th>
+                <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>{metricCfg.label}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.buckets.map((bucket) => (
+                <tr key={bucket.key} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                  <td className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-50">{bucket.label}</td>
+                  <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                    {metricCfg.format(bucket[metric])}
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+              <tr className="bg-stone-50 dark:bg-stone-900/40 border-t border-stone-200 dark:border-stone-800 font-semibold">
+                <td className="px-4 py-2.5 text-sm text-stone-900 dark:text-stone-50">
+                  {metricCfg.aggregate === "sum" ? "Total" : "Average"}
+                </td>
+                <td className="px-4 py-2.5 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                  {metricCfg.format(totalValue)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

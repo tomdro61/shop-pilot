@@ -6,10 +6,12 @@ export default function ReportsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="p-4 lg:p-10">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold tracking-tight">Reports</h2>
-        <p className="text-sm text-muted-foreground">
+    <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
+      <div className="py-2">
+        <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
+          Reports
+        </h1>
+        <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
           Business analytics and performance tracking
         </p>
       </div>

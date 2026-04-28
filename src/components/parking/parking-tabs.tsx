@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 const tabs = [
   { value: "today", label: "Today" },
+  { value: "calendar", label: "Calendar" },
   { value: "all", label: "All Reservations" },
   { value: "services", label: "Service Leads" },
 ];
@@ -41,17 +42,17 @@ export function ParkingTabs() {
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-lg bg-stone-100 dark:bg-stone-800 p-1">
+      {/* Tabs — bordered segmented control with high-contrast active state */}
+      <div className="flex gap-0.5 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-0.5 self-start">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => updateParams({ tab: tab.value === "today" ? "" : tab.value })}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              "rounded px-3 py-1.5 text-xs font-medium transition-colors",
               currentTab === tab.value
-                ? "bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-50 shadow-sm"
-                : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300"
+                ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
+                : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
             )}
           >
             {tab.label}
@@ -64,7 +65,10 @@ export function ParkingTabs() {
         value={currentLot || "all"}
         onValueChange={(value) => updateParams({ lot: value === "all" ? "" : value })}
       >
-        <SelectTrigger className="w-full sm:w-[220px] h-10 text-xs">
+        <SelectTrigger
+          size="sm"
+          className="w-full sm:w-[220px] bg-card border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 shadow-none"
+        >
           <SelectValue placeholder="All Lots" />
         </SelectTrigger>
         <SelectContent>

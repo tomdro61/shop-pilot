@@ -4,8 +4,8 @@ import { getTrendData } from "@/lib/actions/trends";
 import { getReceivablesSummary } from "@/lib/actions/receivables";
 import { getCustomerKpis } from "@/lib/actions/customer-insights";
 import { resolveDateRange } from "@/lib/utils/date-range";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
+import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { ReportsOverviewChart } from "@/components/dashboard/reports-overview-chart";
 
@@ -136,80 +136,78 @@ export default async function ReportsOverviewPage() {
       {/* Row 4 — Mini tables */}
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Top Categories */}
-        <Card className="py-0 gap-0">
-          <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
-            <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
-              Top Categories (This Month)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                  <th className="pb-2 pr-4 pt-3 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Category</th>
-                  <th className="pb-2 pr-4 pt-3 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
-                  <th className="pb-2 pt-3 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Margin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topCategories.length === 0 ? (
-                  <tr><td colSpan={3} className="py-4 text-center text-muted-foreground">No data</td></tr>
-                ) : (
-                  topCategories.map((cat) => (
-                    <tr key={cat.category} className="hover:bg-stone-100 dark:hover:bg-stone-800/50">
-                      <td className="py-1.5 pr-4">
-                        <Link href={`/reports/service-mix?category=${encodeURIComponent(cat.category)}&granularity=month`} className="text-blue-600 hover:underline dark:text-blue-400 text-sm font-medium">
-                          {cat.category}
-                        </Link>
-                      </td>
-                      <td className="py-1.5 pr-4 text-right tabular-nums text-sm">{formatCurrency(cat.revenue)}</td>
-                      <td className={`py-1.5 text-right tabular-nums text-sm font-medium ${cat.margin >= 50 ? "text-green-600 dark:text-green-400" : cat.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
-                        {cat.margin.toFixed(1)}%
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+            <h3 className={COLUMN_HEADER}>Top Categories (This Month)</h3>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+                <th className={`px-4 py-2 ${SECTION_LABEL}`}>Category</th>
+                <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Revenue</th>
+                <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topCategories.length === 0 ? (
+                <tr><td colSpan={3} className="px-4 py-4 text-center text-stone-500 dark:text-stone-400">No data</td></tr>
+              ) : (
+                topCategories.map((cat) => (
+                  <tr key={cat.category} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                    <td className="px-4 py-2">
+                      <Link href={`/reports/service-mix?category=${encodeURIComponent(cat.category)}&granularity=month`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
+                        {cat.category}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {formatCurrency(cat.revenue)}
+                    </td>
+                    <td className={`px-4 py-2 text-right font-mono tabular-nums text-sm font-medium ${cat.margin >= 50 ? "text-green-600 dark:text-green-400" : cat.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                      {cat.margin.toFixed(1)}%
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Tech Summary */}
-        <Card className="py-0 gap-0">
-          <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
-            <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
-              Tech Summary (This Month)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                  <th className="pb-2 pr-4 pt-3 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Tech</th>
-                  <th className="pb-2 pr-4 pt-3 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Revenue</th>
-                  <th className="pb-2 pt-3 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">Jobs</th>
-                </tr>
-              </thead>
-              <tbody>
-                {techSummary.length === 0 ? (
-                  <tr><td colSpan={3} className="py-4 text-center text-muted-foreground">No data</td></tr>
-                ) : (
-                  techSummary.map((tech) => (
-                    <tr key={tech.name} className="hover:bg-stone-100 dark:hover:bg-stone-800/50">
-                      <td className="py-1.5 pr-4">
-                        <Link href={`/reports/tech?category=${encodeURIComponent(tech.name)}&granularity=month`} className="text-blue-600 hover:underline dark:text-blue-400 text-sm font-medium">
-                          {tech.name}
-                        </Link>
-                      </td>
-                      <td className="py-1.5 pr-4 text-right tabular-nums text-sm">{formatCurrency(tech.revenue)}</td>
-                      <td className="py-1.5 text-right tabular-nums text-sm">{tech.jobCount}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+            <h3 className={COLUMN_HEADER}>Tech Summary (This Month)</h3>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+                <th className={`px-4 py-2 ${SECTION_LABEL}`}>Tech</th>
+                <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Revenue</th>
+                <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Jobs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {techSummary.length === 0 ? (
+                <tr><td colSpan={3} className="px-4 py-4 text-center text-stone-500 dark:text-stone-400">No data</td></tr>
+              ) : (
+                techSummary.map((tech) => (
+                  <tr key={tech.name} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                    <td className="px-4 py-2">
+                      <Link href={`/reports/tech?category=${encodeURIComponent(tech.name)}&granularity=month`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
+                        {tech.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {formatCurrency(tech.revenue)}
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {tech.jobCount}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

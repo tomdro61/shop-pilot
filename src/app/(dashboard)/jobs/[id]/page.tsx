@@ -99,22 +99,20 @@ export default async function JobDetailPage({
 
         <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
           <div className="px-5 lg:px-6 py-5">
-            <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
-              {job.ro_number ? formatRONumber(job.ro_number) : "—"}
-              <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
-              Opened {formatDateLong(job.date_received) ?? "—"}
-            </div>
-            <div className="mt-1.5">
-              <JobTitleEditor jobId={id} value={job.title} />
-            </div>
-            <div className="flex items-center gap-2 flex-wrap mt-3">
-              <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
-              {tech?.name && (
-                <span className="inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-[11px] font-medium bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                  {tech.name}
-                </span>
-              )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
+                  {job.ro_number ? formatRONumber(job.ro_number) : "—"}
+                  <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
+                  Opened {formatDateLong(job.date_received) ?? "—"}
+                </div>
+                <div className="mt-1.5">
+                  <JobTitleEditor jobId={id} value={job.title} />
+                </div>
+              </div>
+              <div className="shrink-0">
+                <StatusSelect jobId={id} currentStatus={job.status as JobStatus} />
+              </div>
             </div>
           </div>
 

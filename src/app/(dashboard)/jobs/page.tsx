@@ -28,7 +28,7 @@ export default async function JobsPage({
   }>;
 }) {
   const params = await searchParams;
-  const view = params.view || "list";
+  const view = params.view || "board";
 
   // Only apply date filter when a range param is explicitly set
   let dateFrom: string | undefined;

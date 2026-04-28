@@ -6,12 +6,10 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
-  ChartLegend,
-  ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import {
   Select,
   SelectContent,
@@ -233,111 +231,109 @@ export function CategoryDeepDive({
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-3 py-3">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="w-[200px] justify-between text-left font-normal">
-                <span className="truncate">{triggerLabel}</span>
-                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[220px] p-1.5" align="start">
-              <button
-                onClick={toggleAll}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
-              >
-                <Checkbox
-                  checked={isAllSelected ? true : selected.length > 0 ? "indeterminate" : false}
-                  tabIndex={-1}
-                  className="pointer-events-none"
-                />
-                <span className="font-medium">{allLabel}</span>
-              </button>
-              <div className="my-1 border-t border-stone-200 dark:border-stone-700" />
-              <div className="max-h-[240px] overflow-y-auto">
-                {data.categories.map((cat, idx) => (
-                    <button
-                      key={cat}
-                      onClick={() => toggleCategory(cat)}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
-                    >
-                      <Checkbox
-                        checked={selected.includes(cat)}
-                        tabIndex={-1}
-                        className="pointer-events-none"
-                      />
-                      <div
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
-                      />
-                      <span className="truncate">{cat}</span>
-                    </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Select value={metric} onValueChange={(v) => setMetric(v as CategoryMetricKey)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {METRIC_KEYS.map((k) => (
-                <SelectItem key={k} value={k}>
-                  {METRICS[k].label}
-                </SelectItem>
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm flex flex-wrap items-center gap-3 px-4 py-3">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="w-[200px] justify-between text-left font-normal">
+              <span className="truncate">{triggerLabel}</span>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[220px] p-1.5" align="start">
+            <button
+              onClick={toggleAll}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
+            >
+              <Checkbox
+                checked={isAllSelected ? true : selected.length > 0 ? "indeterminate" : false}
+                tabIndex={-1}
+                className="pointer-events-none"
+              />
+              <span className="font-medium">{allLabel}</span>
+            </button>
+            <div className="my-1 border-t border-stone-200 dark:border-stone-700" />
+            <div className="max-h-[240px] overflow-y-auto">
+              {data.categories.map((cat, idx) => (
+                <button
+                  key={cat}
+                  onClick={() => toggleCategory(cat)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
+                >
+                  <Checkbox
+                    checked={selected.includes(cat)}
+                    tabIndex={-1}
+                    className="pointer-events-none"
+                  />
+                  <div
+                    className="h-2 w-2 rounded-full shrink-0"
+                    style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
+                  />
+                  <span className="truncate">{cat}</span>
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex gap-1">
-            {GRANULARITIES.map((g) => (
-              <Button
-                key={g.value}
-                variant={initialGranularity === g.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setGranularity(g.value)}
-              >
-                {g.label}
-              </Button>
-            ))}
-          </div>
-
-          {initialGranularity === "month" && (
-            <div className="flex items-center gap-1 ml-auto">
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setYear(initialYear - 1)}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="min-w-[4rem] text-center text-sm font-semibold tabular-nums">
-                {initialYear}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={initialYear >= (data.year ?? initialYear)}
-                onClick={() => setYear(initialYear + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
             </div>
-          )}
+          </PopoverContent>
+        </Popover>
 
-          <div className="ml-auto">
-            <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
+        <Select value={metric} onValueChange={(v) => setMetric(v as CategoryMetricKey)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {METRIC_KEYS.map((k) => (
+              <SelectItem key={k} value={k}>
+                {METRICS[k].label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="flex gap-1">
+          {GRANULARITIES.map((g) => (
+            <Button
+              key={g.value}
+              variant={initialGranularity === g.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setGranularity(g.value)}
+            >
+              {g.label}
+            </Button>
+          ))}
+        </div>
+
+        {initialGranularity === "month" && (
+          <div className="flex items-center gap-1 ml-auto">
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setYear(initialYear - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="min-w-[4rem] text-center text-sm font-semibold font-mono tabular-nums text-stone-900 dark:text-stone-50">
+              {initialYear}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              disabled={initialYear >= (data.year ?? initialYear)}
+              onClick={() => setYear(initialYear + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        <div className="ml-auto">
+          <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
+        </div>
+      </div>
 
       {/* Chart */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-bold">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+          <h3 className={COLUMN_HEADER}>
             {isSingle ? `${visibleCategories[0]} — ${metricCfg.label}` : `${metricCfg.label} by ${groupLabel}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+          </h3>
+        </div>
+        <div className="px-4 py-3">
           <ChartContainer config={chartConfig} className="h-[350px] w-full">
             <BarChart data={isSingle ? singleChartData : multiChartData}>
               <CartesianGrid vertical={false} />
@@ -364,9 +360,9 @@ export function CategoryDeepDive({
                   if (isSingle) {
                     const val = payload[0].value as number;
                     return (
-                      <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl">
-                        <p className="font-medium">{label}</p>
-                        <p className="text-foreground font-mono font-medium tabular-nums mt-0.5">
+                      <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
+                        <p className="font-medium text-stone-900 dark:text-stone-50">{label}</p>
+                        <p className="text-stone-900 dark:text-stone-50 font-mono font-medium tabular-nums mt-0.5">
                           {metricCfg.format(val)}
                         </p>
                       </div>
@@ -375,8 +371,8 @@ export function CategoryDeepDive({
                   // Stacked tooltip — show each category
                   const total = payload.reduce((s, p) => s + (p.value as number || 0), 0);
                   return (
-                    <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl min-w-[160px]">
-                      <p className="font-medium mb-1.5">{label}</p>
+                    <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md min-w-[160px]">
+                      <p className="font-medium text-stone-900 dark:text-stone-50 mb-1.5">{label}</p>
                       {payload.filter((p) => (p.value as number) > 0).reverse().map((p) => {
                         const catIdx = catKeys.indexOf(p.dataKey as string);
                         const catName = catIdx >= 0 ? data.categories[catIdx] : (p.dataKey as string);
@@ -384,18 +380,18 @@ export function CategoryDeepDive({
                         <div key={p.dataKey as string} className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-1.5">
                             <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: p.fill }} />
-                            <span className="text-muted-foreground">{catName}</span>
+                            <span className="text-stone-500 dark:text-stone-400">{catName}</span>
                           </div>
-                          <span className="font-mono font-medium tabular-nums">
+                          <span className="font-mono font-medium tabular-nums text-stone-900 dark:text-stone-50">
                             {metricCfg.format(p.value as number)}
                           </span>
                         </div>
                         );
                       })}
                       {metricCfg.aggregate === "sum" && payload.length > 1 && (
-                        <div className="flex justify-between gap-3 mt-1 pt-1 border-t border-border/50 font-medium">
-                          <span>Total</span>
-                          <span className="font-mono tabular-nums">{metricCfg.format(total)}</span>
+                        <div className="flex justify-between gap-3 mt-1 pt-1 border-t border-stone-200 dark:border-stone-800 font-medium">
+                          <span className="text-stone-900 dark:text-stone-50">Total</span>
+                          <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">{metricCfg.format(total)}</span>
                         </div>
                       )}
                     </div>
@@ -427,101 +423,90 @@ export function CategoryDeepDive({
                       className="h-2 w-2 rounded-full shrink-0"
                       style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }}
                     />
-                    <span className="text-muted-foreground">{cat}</span>
+                    <span className="text-stone-500 dark:text-stone-400">{cat}</span>
                   </div>
                 );
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Data table */}
-      <Card className="py-0 gap-0">
-        <CardHeader className="bg-stone-800 dark:bg-stone-900 px-5 py-3">
-          <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-stone-100">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+          <h3 className={COLUMN_HEADER}>
             {isSingle ? visibleCategories[0] : `${metricCfg.label} by ${groupLabel}`} — {periodLabel}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            {!isSingle ? (
-              // Multi-column table: one column per visible category
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                    <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
-                      Period
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          {!isSingle ? (
+            // Multi-column table: one column per visible category
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+                  <th className={`px-4 py-2 ${SECTION_LABEL}`}>Period</th>
+                  {visibleCategories.map((cat) => (
+                    <th key={cat} className={`px-3 py-2 text-right ${SECTION_LABEL} whitespace-nowrap`}>
+                      {cat}
                     </th>
-                    {visibleCategories.map((cat) => (
-                      <th
-                        key={cat}
-                        className="pb-2 pr-3 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400 whitespace-nowrap"
-                      >
-                        {cat}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.buckets.map((bucket) => (
-                    <tr key={bucket.key}>
-                      <td className="py-2 pr-4 font-medium whitespace-nowrap">{bucket.label}</td>
-                      {visibleCategories.map((cat) => (
-                        <td key={cat} className="py-2 pr-3 text-right tabular-nums">
-                          {metricCfg.format(bucket.categories[cat]?.[metric] ?? 0)}
-                        </td>
-                      ))}
-                    </tr>
                   ))}
-                  <tr className="border-t border-stone-200 dark:border-stone-700 font-semibold">
-                    <td className="py-2 pr-4">
-                      {metricCfg.aggregate === "sum" ? "Total" : "Average"}
-                    </td>
+                </tr>
+              </thead>
+              <tbody>
+                {data.buckets.map((bucket) => (
+                  <tr key={bucket.key} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                    <td className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-50 whitespace-nowrap">{bucket.label}</td>
                     {visibleCategories.map((cat) => (
-                      <td key={cat} className="py-2 pr-3 text-right tabular-nums">
-                        {metricCfg.format(computeTotal(cat))}
+                      <td key={cat} className="px-3 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                        {metricCfg.format(bucket.categories[cat]?.[metric] ?? 0)}
                       </td>
                     ))}
                   </tr>
-                </tbody>
-              </table>
-            ) : (
-              // Single category table
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
-                    <th className="pb-2 pr-4 pt-4 text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
-                      Period
-                    </th>
-                    <th className="pb-2 pt-4 text-right text-[11px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
-                      {metricCfg.label}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.buckets.map((bucket) => (
-                    <tr key={bucket.key}>
-                      <td className="py-2 pr-4 font-medium">{bucket.label}</td>
-                      <td className="py-2 text-right tabular-nums">
-                        {metricCfg.format(bucket.categories[visibleCategories[0]]?.[metric] ?? 0)}
-                      </td>
-                    </tr>
+                ))}
+                <tr className="bg-stone-50 dark:bg-stone-900/40 border-t border-stone-200 dark:border-stone-800 font-semibold">
+                  <td className="px-4 py-2.5 text-sm text-stone-900 dark:text-stone-50">
+                    {metricCfg.aggregate === "sum" ? "Total" : "Average"}
+                  </td>
+                  {visibleCategories.map((cat) => (
+                    <td key={cat} className="px-3 py-2.5 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {metricCfg.format(computeTotal(cat))}
+                    </td>
                   ))}
-                  <tr className="border-t border-stone-200 dark:border-stone-700 font-semibold">
-                    <td className="py-2 pr-4">
-                      {metricCfg.aggregate === "sum" ? "Total" : "Average"}
-                    </td>
-                    <td className="py-2 text-right tabular-nums">
-                      {metricCfg.format(computeTotal(visibleCategories[0]))}
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            // Single category table
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+                  <th className={`px-4 py-2 ${SECTION_LABEL}`}>Period</th>
+                  <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>{metricCfg.label}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.buckets.map((bucket) => (
+                  <tr key={bucket.key} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                    <td className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-50">{bucket.label}</td>
+                    <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                      {metricCfg.format(bucket.categories[visibleCategories[0]]?.[metric] ?? 0)}
                     </td>
                   </tr>
-                </tbody>
-              </table>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                ))}
+                <tr className="bg-stone-50 dark:bg-stone-900/40 border-t border-stone-200 dark:border-stone-800 font-semibold">
+                  <td className="px-4 py-2.5 text-sm text-stone-900 dark:text-stone-50">
+                    {metricCfg.aggregate === "sum" ? "Total" : "Average"}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
+                    {metricCfg.format(computeTotal(visibleCategories[0]))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

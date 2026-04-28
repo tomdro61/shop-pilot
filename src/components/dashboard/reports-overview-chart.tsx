@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { COLUMN_HEADER } from "@/components/ui/section-card";
 import { formatCurrency } from "@/lib/utils/format";
 
 const chartConfig: ChartConfig = {
@@ -22,11 +22,11 @@ interface ReportsOverviewChartProps {
 
 export function ReportsOverviewChart({ data }: ReportsOverviewChartProps) {
   return (
-    <Card className="transition-colors hover:bg-stone-100 dark:hover:bg-stone-800/50">
-      <CardHeader className="pb-1">
-        <CardTitle className="text-sm font-bold">Revenue — Last 6 Months</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40">
+      <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+        <h3 className={COLUMN_HEADER}>Revenue — Last 6 Months</h3>
+      </div>
+      <div className="px-4 py-3">
         <ChartContainer config={chartConfig} className="h-[200px] w-full">
           <BarChart data={data}>
             <CartesianGrid vertical={false} />
@@ -47,9 +47,9 @@ export function ReportsOverviewChart({ data }: ReportsOverviewChartProps) {
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
-                  <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-xs shadow-xl">
-                    <p className="font-medium">{label}</p>
-                    <p className="text-foreground font-mono font-medium tabular-nums mt-0.5">
+                  <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
+                    <p className="font-medium text-stone-900 dark:text-stone-50">{label}</p>
+                    <p className="text-stone-900 dark:text-stone-50 font-mono font-medium tabular-nums mt-0.5">
                       {formatCurrency(payload[0].value as number)}
                     </p>
                   </div>
@@ -59,7 +59,7 @@ export function ReportsOverviewChart({ data }: ReportsOverviewChartProps) {
             <Bar dataKey="value" fill="var(--color-value)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ChartContainer>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
