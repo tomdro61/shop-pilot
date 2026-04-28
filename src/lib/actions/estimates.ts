@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireManager } from "@/lib/auth";
 import {
   estimateLineItemSchema,
   prepareEstimateLineItemData,
@@ -14,26 +15,27 @@ import type { EstimateLineItemFormData } from "@/lib/validators/estimate";
 import crypto from "crypto";
 
 export async function createEstimateFromJob(jobId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
-  // Check for existing estimate
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("estimates")
     .select("id")
     .eq("job_id", jobId)
     .maybeSingle();
 
-  if (existing) {
-    return { error: "An estimate already exists for this job" };
-  }
+  if (existingError) return { error: existingError.message };
+  if (existing) return { error: "An estimate already exists for this job" };
 
-  // Get job line items to copy and current settings
-  const [{ data: lineItems }, settings] = await Promise.all([
+  const [{ data: lineItems, error: lineItemsError }, settings] = await Promise.all([
     supabase.from("job_line_items").select("*").eq("job_id", jobId),
     getShopSettings(),
   ]);
 
-  // Create estimate with current tax rate from settings
+  if (lineItemsError) return { error: lineItemsError.message };
+
   const { data: estimate, error } = await supabase
     .from("estimates")
     .insert({
@@ -46,7 +48,6 @@ export async function createEstimateFromJob(jobId: string) {
 
   if (error) return { error: error.message };
 
-  // Copy line items
   if (lineItems && lineItems.length > 0) {
     const estimateLineItems = lineItems.map((li) => ({
       estimate_id: estimate.id,
@@ -58,7 +59,22 @@ export async function createEstimateFromJob(jobId: string) {
       category: li.category,
     }));
 
-    await supabase.from("estimate_line_items").insert(estimateLineItems);
+    const { error: copyError } = await supabase
+      .from("estimate_line_items")
+      .insert(estimateLineItems);
+
+    if (copyError) {
+      const { error: rollbackError } = await supabase
+        .from("estimates")
+        .delete()
+        .eq("id", estimate.id);
+
+      return {
+        error: rollbackError
+          ? `Failed to copy line items and rollback failed (estimate ${estimate.id} may need manual cleanup): ${copyError.message}`
+          : `Failed to copy line items: ${copyError.message}`,
+      };
+    }
   }
 
   revalidatePath(`/jobs/${jobId}`);
