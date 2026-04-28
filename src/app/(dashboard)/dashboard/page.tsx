@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +23,7 @@ export const metadata = {
   title: "Dashboard | ShopPilot",
 };
 
-const getDashboardData = unstable_cache(async () => {
+async function getDashboardData() {
   const supabase = createAdminClient();
   const today = todayET();
 
@@ -112,6 +111,18 @@ const getDashboardData = unstable_cache(async () => {
       .lte("date", monthEnd),
   ]);
 
+  if (activeJobsResult.error) throw new Error(`Failed to load active jobs: ${activeJobsResult.error.message}`);
+  if (monthCompletedResult.error) throw new Error(`Failed to load this month's completed jobs: ${monthCompletedResult.error.message}`);
+  if (lastWeekCompletedResult.error) throw new Error(`Failed to load last week's completed jobs: ${lastWeekCompletedResult.error.message}`);
+  if (lastMonthCompletedResult.error) throw new Error(`Failed to load last month's completed jobs: ${lastMonthCompletedResult.error.message}`);
+  if (inspectionRangeResult.error) throw new Error(`Failed to load inspection counts: ${inspectionRangeResult.error.message}`);
+  if (newQuoteCountResult.error) throw new Error(`Failed to load quote request count: ${newQuoteCountResult.error.message}`);
+  if (unpaidJobsResult.error) throw new Error(`Failed to load unpaid jobs: ${unpaidJobsResult.error.message}`);
+  if (pendingEstimatesResult.error) throw new Error(`Failed to load pending estimates: ${pendingEstimatesResult.error.message}`);
+  if (dviReadyResult.error) throw new Error(`Failed to load DVI count: ${dviReadyResult.error.message}`);
+  if (parkingLeadCountResult.error) throw new Error(`Failed to load parking lead count: ${parkingLeadCountResult.error.message}`);
+  if (manualIncomeRangeResult.error) throw new Error(`Failed to load manual income: ${manualIncomeRangeResult.error.message}`);
+
   const activeJobs = activeJobsResult.data || [];
   const monthCompleted = monthCompletedResult.data || [];
 
@@ -173,9 +184,9 @@ const getDashboardData = unstable_cache(async () => {
     stats: {
       todayRevenue: sumJobRevenue(todayCompleted) + sumInspectionRev(inspToday) + sumManualIncome(manualIncomeToday),
       weeklyRevenue: weekJobRevenue + sumInspectionRev(inspWeek) + sumManualIncome(manualIncomeWeek),
-      lastWeekRevenue: sumJobRevenue(lastWeekCompletedResult.data) + sumInspectionRev(inspLastWeek) + sumManualIncome(manualIncomeLastWeek),
+      lastWeekRevenue: sumJobRevenue(lastWeekCompletedResult.data || []) + sumInspectionRev(inspLastWeek) + sumManualIncome(manualIncomeLastWeek),
       monthlyRevenue: sumJobRevenue(monthCompleted) + sumInspectionRev(inspMonth) + sumManualIncome(manualIncomeMonth),
-      lastMonthRevenue: sumJobRevenue(lastMonthCompletedResult.data) + sumInspectionRev(inspLastMonth) + sumManualIncome(manualIncomeLastMonth),
+      lastMonthRevenue: sumJobRevenue(lastMonthCompletedResult.data || []) + sumInspectionRev(inspLastMonth) + sumManualIncome(manualIncomeLastMonth),
       avgTicketWeek: weekJobCount > 0 ? weekJobRevenue / weekJobCount : 0,
       weekTicketCount: weekJobCount,
       unpaidJobCount: unpaidJobs.length,
@@ -205,7 +216,7 @@ const getDashboardData = unstable_cache(async () => {
     newQuoteRequests: newQuoteCountResult.count || 0,
     parkingServiceLeadCount: parkingLeadCountResult.count || 0,
   };
-}, ["dashboard-stats"], { revalidate: 30 });
+}
 
 function pctChange(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
@@ -255,6 +266,7 @@ function OpsCard({
   today,
   week,
   month,
+  todaySub,
   weekSub,
   monthSub,
 }: {
@@ -262,6 +274,7 @@ function OpsCard({
   today: number;
   week: number;
   month: number;
+  todaySub?: string;
   weekSub?: string;
   monthSub?: string;
 }) {
@@ -273,6 +286,9 @@ function OpsCard({
           {today}
           <span className="text-xs text-stone-500 dark:text-stone-400 font-sans font-normal ml-1.5">today</span>
         </div>
+        {todaySub && (
+          <div className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">{todaySub}</div>
+        )}
       </div>
       <dl className="grid grid-cols-2 divide-x divide-stone-100 dark:divide-stone-800/60">
         <div className="px-4 py-2">
@@ -568,6 +584,7 @@ export default async function DashboardPage() {
               today={ops.stateToday}
               week={ops.stateWeek}
               month={ops.stateMonth}
+              todaySub={formatCurrencyWhole(ops.stateToday * INSPECTION_RATE_STATE)}
               weekSub={formatCurrencyWhole(ops.stateWeek * INSPECTION_RATE_STATE)}
               monthSub={formatCurrencyWhole(ops.stateMonth * INSPECTION_RATE_STATE)}
             />
@@ -576,6 +593,7 @@ export default async function DashboardPage() {
               today={ops.tncToday}
               week={ops.tncWeek}
               month={ops.tncMonth}
+              todaySub={formatCurrencyWhole(ops.tncToday * INSPECTION_RATE_TNC)}
               weekSub={formatCurrencyWhole(ops.tncWeek * INSPECTION_RATE_TNC)}
               monthSub={formatCurrencyWhole(ops.tncMonth * INSPECTION_RATE_TNC)}
             />
