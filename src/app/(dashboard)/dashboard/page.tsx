@@ -162,7 +162,6 @@ async function getDashboardData() {
     j.date_finished !== null && j.date_finished >= weekStart && j.date_finished <= weekEnd
   );
   const weekJobRevenue = sumJobRevenue(weekCompleted);
-  const weekJobCount = weekCompleted.length;
 
   const unpaidJobs = (unpaidJobsResult.data || []).map(j => ({
     ...j,
@@ -187,8 +186,6 @@ async function getDashboardData() {
       lastWeekRevenue: sumJobRevenue(lastWeekCompletedResult.data || []) + sumInspectionRev(inspLastWeek) + sumManualIncome(manualIncomeLastWeek),
       monthlyRevenue: sumJobRevenue(monthCompleted) + sumInspectionRev(inspMonth) + sumManualIncome(manualIncomeMonth),
       lastMonthRevenue: sumJobRevenue(lastMonthCompletedResult.data || []) + sumInspectionRev(inspLastMonth) + sumManualIncome(manualIncomeLastMonth),
-      avgTicketWeek: weekJobCount > 0 ? weekJobRevenue / weekJobCount : 0,
-      weekTicketCount: weekJobCount,
       unpaidJobCount: unpaidJobs.length,
     },
     ops: {
@@ -546,10 +543,19 @@ export default async function DashboardPage() {
         <SectionTitle
           num="01"
           title="Revenue & pacing"
-          sub="this week · this month · avg ticket · outstanding"
+          sub="today · this week · this month · outstanding"
         />
         <div className="space-y-3">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard
+              label="Today"
+              value={stats.todayRevenue}
+              sub={
+                ops.jobsClosedToday > 0
+                  ? `${ops.jobsClosedToday} closed today`
+                  : "no jobs closed yet"
+              }
+            />
             <KpiCard
               label="This week"
               value={stats.weeklyRevenue}
@@ -561,11 +567,6 @@ export default async function DashboardPage() {
               value={stats.monthlyRevenue}
               changePct={monthChange}
               sub="vs last month"
-            />
-            <KpiCard
-              label="Avg ticket"
-              value={stats.avgTicketWeek}
-              sub={`${stats.weekTicketCount} tickets this week`}
             />
             <KpiCard
               label="Outstanding A/R"
