@@ -1,7 +1,6 @@
 "use server";
 
-import { unstable_cache } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { todayET } from "@/lib/utils";
 
 // ── Types ───────────────────────────────────────────────
@@ -117,9 +116,8 @@ export interface InboxData {
 
 // ── Full data fetch for /inbox page ─────────────────────
 
-export const getInboxData = unstable_cache(
-  async (): Promise<InboxData> => {
-  const supabase = createAdminClient();
+export async function getInboxData(): Promise<InboxData> {
+  const supabase = await createClient();
   const today = todayET();
 
   const [
@@ -172,6 +170,13 @@ export const getInboxData = unstable_cache(
       .is("specials_sent_at", null)
       .order("drop_off_date", { ascending: true }),
   ]);
+
+  if (unpaidResult.error) throw new Error(`Failed to load unpaid jobs: ${unpaidResult.error.message}`);
+  if (dviResult.error) throw new Error(`Failed to load DVI queue: ${dviResult.error.message}`);
+  if (estimateResult.error) throw new Error(`Failed to load pending estimates: ${estimateResult.error.message}`);
+  if (quoteResult.error) throw new Error(`Failed to load quote requests: ${quoteResult.error.message}`);
+  if (parkingLeadResult.error) throw new Error(`Failed to load parking service leads: ${parkingLeadResult.error.message}`);
+  if (parkingSpecialsResult.error) throw new Error(`Failed to load parking specials: ${parkingSpecialsResult.error.message}`);
 
   // Process unpaid jobs — sum line item totals
   const unpaidJobs: InboxUnpaidJob[] = (unpaidResult.data || []).map((j) => ({
@@ -240,15 +245,12 @@ export const getInboxData = unstable_cache(
     counts,
     today,
   };
-  },
-  ["inbox-data"],
-  { revalidate: 30 },
-);
+}
 
 // ── Lightweight count for sidebar badge ─────────────────
 
 export async function getInboxTotalCount(): Promise<number> {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   const [unpaid, dvi, estimates, quotes, leads] = await Promise.all([
     supabase
@@ -275,6 +277,19 @@ export async function getInboxTotalCount(): Promise<number> {
       .not("services_interested", "eq", "{}")
       .in("status", ["reserved", "checked_in"]),
   ]);
+
+  // Fail-soft: this drives the sidebar badge across all dashboard routes; throwing
+  // would crash the entire dashboard layout. A wrong badge count is acceptable;
+  // a broken layout is not. Log so failures are surfaced via console / future Sentry.
+  const errors = [unpaid.error, dvi.error, estimates.error, quotes.error, leads.error].filter(
+    (e): e is NonNullable<typeof e> => e != null
+  );
+  if (errors.length > 0) {
+    console.error(
+      "[getInboxTotalCount] one or more count queries failed",
+      errors.map((e) => e.message)
+    );
+  }
 
   return (unpaid.count || 0) + (dvi.count || 0) + (estimates.count || 0) + (quotes.count || 0) + (leads.count || 0);
 }
