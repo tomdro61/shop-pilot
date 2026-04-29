@@ -78,7 +78,7 @@ export function ShopFloorColumn({ status, jobs, today }: ShopFloorColumnProps) {
   return (
     <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
       <div aria-hidden className={cn("h-[3px] w-full", ACCENT_BAR[config.tone])} />
-      <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100 dark:border-stone-800">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 dark:border-stone-800">
         <div className="flex items-center gap-2 min-w-0">
           <span
             className={cn(
@@ -124,7 +124,7 @@ function JobCard({ job, today }: { job: ShopFloorJob; today: string }) {
   return (
     <ClickableRow
       href={`/jobs/${job.id}`}
-      className="flex gap-2 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
+      className="flex gap-2 px-4 py-2.5 border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
     >
       <div className="min-w-0 flex-1 space-y-0.5">
         <div className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400 truncate">

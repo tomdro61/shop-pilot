@@ -7,6 +7,7 @@ import { DaysBadge } from "@/components/ui/days-badge";
 import { ClickableRow } from "@/components/ui/clickable-row";
 import { CustomerLink } from "@/components/ui/customer-link";
 import { cn } from "@/lib/utils";
+import { getInitials } from "@/lib/utils/format";
 import { SectionHeader } from "@/components/dashboard/section-header";
 import {
   OPEN_LOOP_CATEGORIES,
@@ -55,7 +56,7 @@ export function OpenLoops({ loops, maxVisible = 6 }: OpenLoopsProps) {
       />
 
       <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
-      <div className="flex items-center gap-1.5 px-4 py-2 border-b border-stone-100 dark:border-stone-800 overflow-x-auto">
+      <div className="flex items-center gap-1.5 px-4 py-2 border-b border-stone-200 dark:border-stone-800 overflow-x-auto">
         <FilterChip
           active={filter === "all"}
           label="All"
@@ -90,7 +91,7 @@ export function OpenLoops({ loops, maxVisible = 6 }: OpenLoopsProps) {
       </div>
 
       {overflow > 0 && (
-        <div className="px-4 py-2 border-t border-stone-100 dark:border-stone-800 text-right">
+        <div className="px-4 py-2 border-t border-stone-200 dark:border-stone-800 text-right">
           <span className="text-xs text-stone-500 dark:text-stone-400">
             +{overflow} more in this view
           </span>
@@ -137,51 +138,53 @@ function FilterChip({
 
 function OpenLoopRow({ loop }: { loop: OpenLoop }) {
   const category = OPEN_LOOP_CATEGORIES[loop.category];
+  const Icon = category.icon;
 
   return (
     <ClickableRow
       href={loop.href}
-      className="flex items-center gap-3 px-4 h-12 border-b border-stone-100 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
+      className="flex items-center gap-3 px-4 h-14 border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
     >
       <span
         className={cn(
-          "text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider whitespace-nowrap shrink-0",
+          "inline-flex items-center gap-1.5 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider whitespace-nowrap shrink-0 w-[96px] justify-center",
           category.activeChipClass
         )}
       >
+        <Icon className="h-3 w-3" />
         {category.shortLabel}
       </span>
-      <div className="flex items-center gap-1.5 min-w-0 w-44 shrink-0">
+      <span className="w-7 h-7 rounded-md grid place-items-center bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900 text-[10px] font-bold flex-none">
+        {loop.customerName ? getInitials(loop.customerName) : "?"}
+      </span>
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
         {loop.customerName ? (
           loop.customerId ? (
             <CustomerLink
               customerId={loop.customerId}
               stopPropagation
-              className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate hover:underline"
+              className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate hover:underline shrink-0"
             >
               {loop.customerName}
             </CustomerLink>
           ) : (
-            <span className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+            <span className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate shrink-0">
               {loop.customerName}
             </span>
           )
         ) : (
-          <span className="text-sm font-medium text-stone-400 dark:text-stone-500 truncate italic">
+          <span className="text-sm font-semibold text-stone-400 dark:text-stone-500 truncate italic shrink-0">
             New contact
           </span>
         )}
         {loop.vehicleLabel && (
-          <>
-            <span className="text-stone-300 dark:text-stone-700 shrink-0">·</span>
-            <span className="text-xs text-stone-500 dark:text-stone-400 truncate">
-              {loop.vehicleLabel}
-            </span>
-          </>
+          <span className="text-xs text-stone-500 dark:text-stone-400 shrink-0">
+            · {loop.vehicleLabel}
+          </span>
         )}
-      </div>
-      <div className="flex-1 min-w-0 text-sm text-stone-600 dark:text-stone-300 truncate">
-        {loop.summary}
+        <span className="text-xs text-stone-600 dark:text-stone-300 truncate min-w-0">
+          {loop.summary}
+        </span>
       </div>
       <DaysBadge
         days={loop.ageDays}
@@ -190,6 +193,26 @@ function OpenLoopRow({ loop }: { loop: OpenLoop }) {
         format="label"
         className="shrink-0"
       />
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        className="text-xs text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:underline underline-offset-2 shrink-0"
+      >
+        Snooze
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        className="text-xs text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:underline underline-offset-2 shrink-0"
+      >
+        Dismiss
+      </button>
       <Link
         href={loop.href}
         onClick={(e) => e.stopPropagation()}

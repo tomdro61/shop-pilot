@@ -104,12 +104,14 @@ export default function DashboardLoading() {
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3 px-4 h-12 border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+                className="flex items-center gap-3 px-4 h-14 border-b border-stone-200 dark:border-stone-800 last:border-b-0"
               >
-                <Bar className="h-5 w-20 rounded-full" />
-                <Bar className="h-4 w-32" />
-                <Bar className="h-3.5 flex-1 max-w-md" />
+                <Bar className="h-6 w-24 rounded-full" />
+                <Bar className="h-7 w-7 rounded-md" />
+                <Bar className="h-4 flex-1 max-w-[420px]" />
                 <Bar className="h-5 w-24 rounded-full" />
+                <Bar className="h-3 w-12" />
+                <Bar className="h-3 w-12" />
                 <Bar className="h-7 w-16 rounded-md" />
               </div>
             ))}

@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react";
+import { Bell, ClipboardCheck, DollarSign, FileText, Package } from "lucide-react";
 import { daysBetween } from "@/lib/utils";
 
 export type OpenLoopCategory =
@@ -28,9 +30,10 @@ interface AgingTier {
 interface CategoryConfig extends AgingTier {
   label: string;
   shortLabel: string;
+  icon: LucideIcon;
   /** Tailwind dot color for filter chips. */
   dotClass: string;
-  /** Tailwind classes for the active filter chip. */
+  /** Tailwind classes for the active filter chip + the row icon tile. */
   activeChipClass: string;
 }
 
@@ -38,6 +41,7 @@ export const OPEN_LOOP_CATEGORIES: Record<OpenLoopCategory, CategoryConfig> = {
   payment_due: {
     label: "Payment Due",
     shortLabel: "Payment",
+    icon: DollarSign,
     warnAt: 3,
     overdueAt: 7,
     dotClass: "bg-emerald-500",
@@ -47,6 +51,7 @@ export const OPEN_LOOP_CATEGORIES: Record<OpenLoopCategory, CategoryConfig> = {
   estimate: {
     label: "Estimates",
     shortLabel: "Estimate",
+    icon: FileText,
     warnAt: 3,
     overdueAt: 7,
     dotClass: "bg-blue-500",
@@ -56,6 +61,7 @@ export const OPEN_LOOP_CATEGORIES: Record<OpenLoopCategory, CategoryConfig> = {
   dvi: {
     label: "DVIs",
     shortLabel: "DVI",
+    icon: ClipboardCheck,
     warnAt: 1,
     overdueAt: 3,
     dotClass: "bg-violet-500",
@@ -65,6 +71,7 @@ export const OPEN_LOOP_CATEGORIES: Record<OpenLoopCategory, CategoryConfig> = {
   follow_up: {
     label: "Follow-ups",
     shortLabel: "Follow-up",
+    icon: Bell,
     warnAt: 2,
     overdueAt: 5,
     dotClass: "bg-indigo-500",
@@ -74,6 +81,7 @@ export const OPEN_LOOP_CATEGORIES: Record<OpenLoopCategory, CategoryConfig> = {
   parts: {
     label: "Parts",
     shortLabel: "Parts",
+    icon: Package,
     warnAt: 3,
     overdueAt: 7,
     dotClass: "bg-amber-500",

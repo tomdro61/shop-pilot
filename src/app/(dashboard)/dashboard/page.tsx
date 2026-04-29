@@ -338,17 +338,28 @@ export default async function DashboardPage() {
   if (totalJobs > 0) statusLineParts.push(`${totalJobs} on the floor`);
   if (overdueLoops > 0) statusLineParts.push(`${overdueLoops} loop${overdueLoops === 1 ? "" : "s"} overdue`);
 
-  const parkingContent =
+  const parkingMetrics =
     parking.dropOffsToday === 0 && parking.pickupsToday === 0
-      ? "No activity today"
-      : `${parking.dropOffsToday} drop-off${parking.dropOffsToday === 1 ? "" : "s"} · ${parking.pickupsToday} pickup${parking.pickupsToday === 1 ? "" : "s"}`;
+      ? []
+      : [
+          { value: parking.dropOffsToday, label: "Drop-offs" },
+          { value: parking.pickupsToday, label: "Pickups" },
+        ];
 
-  const awaitingContent =
+  const awaitingMetrics =
     awaitingPayment.count === 0
-      ? "All caught up"
-      : `${awaitingPayment.count} job${awaitingPayment.count === 1 ? "" : "s"} · ${formatCurrencyWhole(awaitingPayment.total)} owed${
-          awaitingPayment.oldestDays > 0 ? ` · oldest ${awaitingPayment.oldestDays}d` : ""
-        }`;
+      ? []
+      : [
+          { value: awaitingPayment.count, label: "Jobs" },
+          {
+            value: formatCurrencyWhole(awaitingPayment.total),
+            label: "Owed",
+            tone: "red" as const,
+          },
+          ...(awaitingPayment.oldestDays > 0
+            ? [{ value: `${awaitingPayment.oldestDays}d`, label: "Oldest" }]
+            : []),
+        ];
 
   return (
     <DashboardShell
@@ -453,7 +464,8 @@ export default async function DashboardPage() {
           tone="blue"
           title="Parking"
           tag="TODAY"
-          content={parkingContent}
+          metrics={parkingMetrics}
+          emptyMessage="No activity today"
           href="/parking"
           muted={parking.dropOffsToday === 0 && parking.pickupsToday === 0}
         />
@@ -462,7 +474,8 @@ export default async function DashboardPage() {
           tone="red"
           title="Awaiting Payment"
           tag="COMPLETE · UNPAID"
-          content={awaitingContent}
+          metrics={awaitingMetrics}
+          emptyMessage="All caught up"
           href="/jobs?status=complete&payment_status=unpaid"
           muted={awaitingPayment.count === 0}
         />
