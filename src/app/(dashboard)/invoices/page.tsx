@@ -101,7 +101,7 @@ export default async function InvoicesPage({
                       <td className="px-3 py-2 align-middle">
                         {customerName ? (
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900 text-[11px] font-semibold">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900 text-[11px] font-semibold">
                               {getInitials(customerName)}
                             </div>
                             {customerLink ? (

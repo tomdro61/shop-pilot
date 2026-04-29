@@ -7,16 +7,19 @@ export const JOB_STATUS_ORDER: JobStatus[] = [
   "complete",
 ];
 
-export const JOB_STATUS_LABELS: Record<string, string> = {
+// `paid` is included alongside JobStatus for backward compat with pre-migration data.
+export type JobStatusKey = JobStatus | "paid";
+
+export const JOB_STATUS_LABELS: Record<JobStatusKey, string> = {
   not_started: "Not Started",
   waiting_for_parts: "Waiting for Parts",
   in_progress: "In Progress",
   complete: "Complete",
-  paid: "Paid", // backwards compat for pre-migration data
+  paid: "Paid",
 };
 
 export const JOB_STATUS_COLORS: Record<
-  string,
+  JobStatusKey,
   { bg: string; text: string }
 > = {
   not_started: {
@@ -35,7 +38,7 @@ export const JOB_STATUS_COLORS: Record<
     bg: "bg-emerald-100 dark:bg-emerald-950",
     text: "text-emerald-700 dark:text-emerald-400",
   },
-  paid: { // backwards compat for pre-migration data
+  paid: {
     bg: "bg-emerald-100 dark:bg-emerald-950",
     text: "text-emerald-700 dark:text-emerald-400",
   },
@@ -43,7 +46,7 @@ export const JOB_STATUS_COLORS: Record<
 
 // Saturated accent strip color per job status. Used for column top strips
 // (jobs board view) and per-card left accents (job-card).
-export const JOB_STATUS_BAR: Record<string, string> = {
+export const JOB_STATUS_BAR: Record<JobStatusKey, string> = {
   not_started: "bg-red-500",
   waiting_for_parts: "bg-amber-500",
   in_progress: "bg-blue-500",
@@ -72,8 +75,8 @@ export const PAYMENT_STATUS_COLORS: Record<
     text: "text-blue-700 dark:text-blue-400",
   },
   paid: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   waived: {
     bg: "bg-stone-100 dark:bg-stone-800",
@@ -135,12 +138,12 @@ export const ESTIMATE_STATUS_COLORS: Record<
     text: "text-stone-500 dark:text-stone-400",
   },
   sent: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   approved: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   declined: {
     bg: "bg-red-100 dark:bg-red-950",
@@ -168,8 +171,8 @@ export const INVOICE_STATUS_COLORS: Record<
     text: "text-blue-700 dark:text-blue-400",
   },
   paid: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
 };
 

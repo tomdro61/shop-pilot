@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatVehicle } from "@/lib/utils/format";
+import { JOB_STATUS_BAR, type JobStatusKey } from "@/lib/constants";
 
 type JobRow = {
   id: string;
@@ -218,13 +219,6 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
   );
 }
 
-const STATUS_DOT_COLORS: Record<string, string> = {
-  not_started: "bg-red-500",
-  waiting_for_parts: "bg-amber-500",
-  in_progress: "bg-blue-500",
-  complete: "bg-green-500",
-};
-
 function CalendarJobEntry({ job, expanded }: { job: JobRow; expanded?: boolean }) {
   const customerName = job.customers
     ? job.customers.last_name
@@ -237,7 +231,7 @@ function CalendarJobEntry({ job, expanded }: { job: JobRow; expanded?: boolean }
       className="group flex items-center gap-1 rounded px-1 py-0.5 text-[11px] leading-tight hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
     >
       <span
-        className={`h-1.5 w-1.5 shrink-0 rounded-md ${STATUS_DOT_COLORS[job.status] ?? "bg-stone-400"}`}
+        className={`h-1.5 w-1.5 shrink-0 rounded-md ${JOB_STATUS_BAR[job.status as JobStatusKey] ?? "bg-stone-400"}`}
       />
       <span className="truncate font-medium text-stone-700 dark:text-stone-300">
         {customerName}

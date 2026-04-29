@@ -213,8 +213,16 @@ export function JobsListView({ jobs }: JobsListViewProps) {
               return (
                 <tr
                   key={row.id}
+                  role="link"
+                  tabIndex={0}
                   onClick={() => router.push(`/jobs/${row.original.id}`)}
-                  className={`cursor-pointer border-b border-stone-200 dark:border-stone-800 last:border-b-0 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/50`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`/jobs/${row.original.id}`);
+                    }
+                  }}
+                  className={`cursor-pointer border-b border-stone-200 dark:border-stone-800 last:border-b-0 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-2 align-middle">
@@ -237,8 +245,16 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           return (
             <div
               key={job.id}
+              role="link"
+              tabIndex={0}
               onClick={() => router.push(`/jobs/${job.id}`)}
-              className={`cursor-pointer px-3 py-2.5 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push(`/jobs/${job.id}`);
+                }
+              }}
+              className={`cursor-pointer px-3 py-2.5 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset`}
             >
               <div className="flex items-center justify-between gap-2">
                 <div onClick={(e) => e.stopPropagation()}>

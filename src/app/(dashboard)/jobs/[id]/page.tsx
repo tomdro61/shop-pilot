@@ -131,7 +131,7 @@ export default async function JobDetailPage({
               {customer ? (
                 <>
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-md grid place-items-center text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900 flex-none">
+                    <div className="w-10 h-10 rounded-md grid place-items-center text-sm font-semibold bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900 flex-none">
                       {getInitials(formatCustomerName(customer))}
                     </div>
                     <div className="min-w-0">
