@@ -30,6 +30,7 @@ import { CustomerTextFieldEditor } from "@/components/dashboard/customer-text-fi
 import { CustomerNotesEditor } from "@/components/dashboard/customer-notes-editor";
 import { CustomerTypeEditor } from "@/components/dashboard/customer-type-editor";
 import { SectionTitle } from "@/components/ui/section-title";
+import { PageShell } from "@/components/layout/page-shell";
 import { ArrowLeft, Plus, DollarSign } from "lucide-react";
 import type { JobStatus, PaymentStatus, ParkingStatus, Vehicle } from "@/types";
 
@@ -166,9 +167,9 @@ export default async function CustomerDetailPage({
   const showVehicleFilter = vehicles.length > 1;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
+    <PageShell>
 
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
         <Link href="/customers">
           <Button variant="ghost" size="sm" className="-ml-3">
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
@@ -188,7 +189,7 @@ export default async function CustomerDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
 
-        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
           <div className="px-5 lg:px-6 py-5 flex items-start gap-4">
             <div className="w-14 h-14 rounded-md grid place-items-center text-base font-semibold bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900 flex-none">
               {getInitials(customerName)}
@@ -225,7 +226,7 @@ export default async function CustomerDetailPage({
           </div>
 
           <dl>
-            <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-100 dark:border-stone-800/60">
+            <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-200 dark:border-stone-800">
               <dt className={SECTION_LABEL}>Phone</dt>
               <dd className="min-w-0 text-sm">
                 <CustomerTextFieldEditor
@@ -248,7 +249,7 @@ export default async function CustomerDetailPage({
                 </CustomerTextFieldEditor>
               </dd>
             </div>
-            <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-100 dark:border-stone-800/60">
+            <div className="grid grid-cols-[100px_1fr] items-center px-5 lg:px-6 py-2.5 border-b border-stone-200 dark:border-stone-800">
               <dt className={SECTION_LABEL}>Email</dt>
               <dd className="min-w-0 text-sm">
                 <CustomerTextFieldEditor
@@ -298,11 +299,11 @@ export default async function CustomerDetailPage({
           </div>
         </section>
 
-        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-          <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-5 py-3 border-b border-stone-100 dark:border-stone-800/60`}>
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+          <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-5 py-3 border-b border-stone-200 dark:border-stone-800`}>
             <DollarSign className="h-3 w-3" /> Financial Snapshot
           </div>
-          <div className="px-5 py-4 border-b border-stone-100 dark:border-stone-800/60">
+          <div className="px-5 py-4 border-b border-stone-200 dark:border-stone-800">
             <div className={SECTION_LABEL}>Lifetime spend</div>
             <div className="font-mono tabular-nums text-[26px] font-bold text-stone-900 dark:text-stone-50 leading-tight mt-1">
               {formatCurrencyWhole(lifetimeSpend)}
@@ -312,7 +313,7 @@ export default async function CustomerDetailPage({
             </div>
           </div>
 
-          <dl className="grid grid-cols-2 divide-x divide-stone-100 dark:divide-stone-800/60 border-b border-stone-100 dark:border-stone-800/60">
+          <dl className="grid grid-cols-2 divide-x divide-stone-200 dark:divide-stone-800 border-b border-stone-200 dark:border-stone-800">
             <div className="px-5 py-3 flex flex-col gap-0.5">
               <dt className={SECTION_LABEL}>Last visit</dt>
               <dd className="font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">
@@ -325,13 +326,13 @@ export default async function CustomerDetailPage({
                 {totalJobs > 0 ? formatCurrencyWhole(avgRO) : <span className="text-stone-400 font-normal font-sans">—</span>}
               </dd>
             </div>
-            <div className="px-5 py-3 flex flex-col gap-0.5 border-t border-stone-100 dark:border-stone-800/60">
+            <div className="px-5 py-3 flex flex-col gap-0.5 border-t border-stone-200 dark:border-stone-800">
               <dt className={SECTION_LABEL}>Open jobs</dt>
               <dd className="font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">
                 {openJobs}
               </dd>
             </div>
-            <div className="px-5 py-3 flex flex-col gap-0.5 border-t border-stone-100 dark:border-stone-800/60">
+            <div className="px-5 py-3 flex flex-col gap-0.5 border-t border-stone-200 dark:border-stone-800">
               <dt className={SECTION_LABEL}>Vehicles</dt>
               <dd className="font-mono tabular-nums text-sm font-semibold text-stone-900 dark:text-stone-50">
                 {vehicles.length}
@@ -361,7 +362,6 @@ export default async function CustomerDetailPage({
 
       <section className="pt-2">
         <SectionTitle
-          num="01"
           title="Vehicles"
           sub={`${vehicles.length} on file`}
           action={<VehicleSectionAddButton customerId={id} />}
@@ -371,7 +371,6 @@ export default async function CustomerDetailPage({
 
       <section className="pt-2">
         <SectionTitle
-          num="02"
           title="Job history"
           sub={
             <span>
@@ -419,7 +418,7 @@ export default async function CustomerDetailPage({
             </>
           }
         />
-        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
           {displayJobs.length === 0 ? (
             <div className="px-4 py-10 text-center">
               <p className="text-sm text-stone-500 dark:text-stone-400">
@@ -455,7 +454,7 @@ export default async function CustomerDetailPage({
                     return (
                       <tr
                         key={job.id}
-                        className="relative border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
+                        className="relative border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
                       >
                         <td className="relative px-4 py-3 align-top">
                           <span
@@ -516,8 +515,8 @@ export default async function CustomerDetailPage({
 
       {parkingReservations.length > 0 && (
         <section className="pt-2">
-          <SectionTitle num="03" title="Parking" sub={`${parkingReservations.length} reservation${parkingReservations.length === 1 ? "" : "s"}`} />
-          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+          <SectionTitle title="Parking" sub={`${parkingReservations.length} reservation${parkingReservations.length === 1 ? "" : "s"}`} />
+          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
             {parkingReservations.map((res) => {
               const status = res.status as ParkingStatus;
               const colors = PARKING_STATUS_COLORS[status];
@@ -525,7 +524,7 @@ export default async function CustomerDetailPage({
                 <Link
                   key={res.id}
                   href={`/parking/${res.id}`}
-                  className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
+                  className="flex items-center justify-between px-4 py-2.5 border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
@@ -552,6 +551,6 @@ export default async function CustomerDetailPage({
           </div>
         </section>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -32,8 +32,10 @@ import {
   formatCustomerName,
   formatRONumber,
   formatDateLong,
+  formatCurrencyWhole,
   getInitials,
 } from "@/lib/utils/format";
+import { PageShell } from "@/components/layout/page-shell";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
 import { ArrowLeft, Printer, User as UserIcon, Truck, ClipboardList } from "lucide-react";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
@@ -74,9 +76,9 @@ export default async function JobDetailPage({
 
   return (
     <>
-      <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-5 lg:space-y-6">
+      <PageShell className="pb-24">
 
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
           <Link href="/jobs">
             <Button variant="ghost" size="sm" className="-ml-3">
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
@@ -97,17 +99,42 @@ export default async function JobDetailPage({
           </div>
         </div>
 
-        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
           <div className="px-5 lg:px-6 py-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
-                  {job.ro_number ? formatRONumber(job.ro_number) : "—"}
-                  <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
-                  Opened {formatDateLong(job.date_received) ?? "—"}
-                </div>
-                <div className="mt-1.5">
-                  <JobTitleEditor jobId={id} value={job.title} />
+                <JobTitleEditor jobId={id} value={job.title} />
+                <div className="mt-3 flex items-stretch gap-x-5">
+                  <div>
+                    <div className="font-mono tabular-nums text-base font-bold text-stone-900 dark:text-stone-50 leading-none">
+                      {formatRONumber(job.ro_number)}
+                    </div>
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                      RO Number
+                    </div>
+                  </div>
+                  <span aria-hidden className="self-stretch w-px bg-stone-300 dark:bg-stone-700" />
+                  <div>
+                    <div className="font-mono tabular-nums text-base font-bold text-stone-900 dark:text-stone-50 leading-none">
+                      {formatDateLong(job.date_received) ?? "—"}
+                    </div>
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                      Opened
+                    </div>
+                  </div>
+                  {grandTotal > 0 && (
+                    <>
+                      <span aria-hidden className="self-stretch w-px bg-stone-300 dark:bg-stone-700" />
+                      <div>
+                        <div className="font-mono tabular-nums text-base font-bold text-stone-900 dark:text-stone-50 leading-none">
+                          {formatCurrencyWhole(grandTotal)}
+                        </div>
+                        <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                          Total
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="shrink-0">
@@ -116,7 +143,7 @@ export default async function JobDetailPage({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-100 dark:divide-stone-800/60">
+          <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-200 dark:divide-stone-800">
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
               <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
                 <UserIcon className="h-3 w-3" /> Customer
@@ -253,8 +280,8 @@ export default async function JobDetailPage({
           </div>
         </section>
 
-        <section className="pt-2">
-          <SectionTitle num="01" title="Progress" />
+        <section>
+          <SectionTitle title="Progress" />
           <JobProgressStepper
             currentStatus={job.status as JobStatus}
             dateReceived={job.date_received}
@@ -262,23 +289,22 @@ export default async function JobDetailPage({
           />
         </section>
 
-        <section className="pt-2">
+        <section>
           <SectionTitle
-            num="02"
             title="Line items"
             action={<LineItemsAddButton jobId={id} settings={settings} presets={presets} />}
           />
           <LineItemsList jobId={id} lineItems={lineItems} settings={settings} />
         </section>
 
-        <section className="pt-2">
-          <SectionTitle num="03" title="Inspection" />
+        <section>
+          <SectionTitle title="Inspection" />
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <DviSection jobId={id} inspection={dviInspection as any} />
         </section>
 
-        <section className="pt-2">
-          <SectionTitle num="04" title="Estimate & invoice" />
+        <section>
+          <SectionTitle title="Estimate & invoice" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <EstimateSection jobId={id} estimate={estimate} />
             <InvoiceSection
@@ -291,7 +317,7 @@ export default async function JobDetailPage({
             />
           </div>
         </section>
-      </div>
+      </PageShell>
 
       <JobPaymentFooter
         jobId={id}

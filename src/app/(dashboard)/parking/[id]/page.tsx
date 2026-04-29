@@ -20,6 +20,7 @@ import { CreateJobButton } from "@/components/parking/create-job-button";
 import { CustomerLink } from "@/components/ui/customer-link";
 import { SectionTitle } from "@/components/ui/section-title";
 import { SECTION_LABEL } from "@/components/ui/section-card";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   formatCustomerName,
   formatPhone,
@@ -37,7 +38,7 @@ import {
 } from "lucide-react";
 import type { ParkingStatus } from "@/types";
 
-const TILE = "bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm";
+const TILE = "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card";
 
 export async function generateMetadata({
   params,
@@ -99,7 +100,7 @@ export default async function ParkingDetailPage({
   const nextNum = () => String(sectionNum++).padStart(2, "0");
 
   return (
-    <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-24 lg:pb-12 space-y-5 lg:space-y-6">
+    <PageShell className="pb-24 lg:pb-12">
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
@@ -129,7 +130,7 @@ export default async function ParkingDetailPage({
       </div>
 
       {/* Hero card */}
-      <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
         {/* Header — meta line + title + status/type pills */}
         <div className="px-5 lg:px-6 py-5">
           <div className="flex items-start justify-between gap-3">
@@ -170,7 +171,7 @@ export default async function ParkingDetailPage({
         </div>
 
         {/* 3-column data strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-100 dark:divide-stone-800/60 border-t border-stone-100 dark:border-stone-800/60">
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-200 dark:divide-stone-800 border-t border-stone-200 dark:border-stone-800">
           {/* Customer */}
           <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
             <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
@@ -250,7 +251,7 @@ export default async function ParkingDetailPage({
               pickUpTime={reservation.pick_up_time}
             />
             {(reservation.departing_flight || reservation.arriving_flight) && (
-              <dl className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0 pt-2 border-t border-stone-100 dark:border-stone-800/60">
+              <dl className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0 pt-2 border-t border-stone-200 dark:border-stone-800">
                 {reservation.departing_flight && (
                   <>
                     <dt className={SECTION_LABEL}>
@@ -406,6 +407,6 @@ export default async function ParkingDetailPage({
           customerEmail={reservation.email}
         />
       </section>
-    </div>
+    </PageShell>
   );
 }
