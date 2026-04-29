@@ -1,6 +1,11 @@
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { JobCard } from "./job-card";
-import { JOB_STATUS_ORDER, JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/lib/constants";
+import {
+  JOB_STATUS_ORDER,
+  JOB_STATUS_LABELS,
+  JOB_STATUS_COLORS,
+  JOB_STATUS_BAR,
+} from "@/lib/constants";
 import type { JobStatus } from "@/types";
 
 type JobRow = {
@@ -69,9 +74,10 @@ function BoardColumn({
 
   return (
     <div className={className}>
-      <div className="h-full rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900 overflow-hidden flex flex-col">
+      <div className="h-full rounded-md border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900 overflow-hidden flex flex-col">
+        <div aria-hidden className={`h-[3px] w-full ${JOB_STATUS_BAR[status]}`} />
         <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/60">
-          <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${colors.bg} ${colors.text}`}>
+          <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider ${colors.bg} ${colors.text}`}>
             {JOB_STATUS_LABELS[status]}
           </span>
           <span className="font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
@@ -80,7 +86,7 @@ function BoardColumn({
         </div>
         <div className="flex-1 p-2 space-y-2">
           {jobs.length === 0 ? (
-            <div className="flex items-center justify-center rounded-lg border border-dashed border-stone-300 dark:border-stone-700 py-6">
+            <div className="flex items-center justify-center rounded-md border border-dashed border-stone-300 dark:border-stone-700 py-6">
               <p className="text-xs text-stone-400 dark:text-stone-500">Empty</p>
             </div>
           ) : (

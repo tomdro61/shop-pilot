@@ -32,13 +32,23 @@ export const JOB_STATUS_COLORS: Record<
     text: "text-blue-700 dark:text-blue-400",
   },
   complete: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   paid: { // backwards compat for pre-migration data
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
+};
+
+// Saturated accent strip color per job status. Used for column top strips
+// (jobs board view) and per-card left accents (job-card).
+export const JOB_STATUS_BAR: Record<string, string> = {
+  not_started: "bg-red-500",
+  waiting_for_parts: "bg-amber-500",
+  in_progress: "bg-blue-500",
+  complete: "bg-emerald-500",
+  paid: "bg-emerald-500",
 };
 
 // Payment Status

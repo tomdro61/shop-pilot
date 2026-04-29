@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatPhone, formatCustomerName, getInitials } from "@/lib/utils/format";
 import { CUSTOMER_TYPE_COLORS } from "@/lib/constants";
-import { SECTION_LABEL, COLUMN_HEADER } from "@/components/ui/section-card";
+import { COLUMN_HEADER } from "@/components/ui/section-card";
 
 interface CustomerListItem {
   id: string;
@@ -32,7 +32,7 @@ function TypeChip({ type }: { type: string | null }) {
 export function CustomerList({ customers, totalCount }: CustomerListProps) {
   if (customers.length === 0) {
     return (
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm py-12 text-center">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card py-12 text-center">
         <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No customers found</p>
         <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your search or add a new customer</p>
       </div>
@@ -42,10 +42,10 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
   return (
     <>
       {/* Desktop: dense table */}
-      <div className="hidden lg:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <div className="hidden lg:block bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-sidebar border-b border-stone-200 dark:border-stone-800">
+            <tr className="bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
               <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Name</th>
               <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Email</th>
               <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Phone</th>
@@ -58,11 +58,11 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
               return (
               <tr
                 key={customer.id}
-                className="border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-100 dark:hover:bg-stone-800/40"
+                className="border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50"
               >
                 <td className="px-3 py-2">
                   <Link href={`/customers/${customer.id}`} className="flex items-center gap-2 min-w-0">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900 text-[11px] font-semibold">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900 text-[11px] font-semibold">
                       {getInitials(customerName)}
                     </div>
                     <span className="text-sm font-medium text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 truncate">
@@ -87,8 +87,8 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
       </div>
 
       {/* Mobile: dense stacked rows */}
-      <div className="lg:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
-        <div className={`px-3 py-2 bg-sidebar border-b border-stone-200 dark:border-stone-800 ${COLUMN_HEADER}`}>
+      <div className="lg:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
+        <div className={`px-3 py-2 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800 ${COLUMN_HEADER}`}>
           {(totalCount ?? customers.length).toLocaleString()} customers
         </div>
         {customers.map((customer) => {
@@ -97,9 +97,9 @@ export function CustomerList({ customers, totalCount }: CustomerListProps) {
           <Link
             key={customer.id}
             href={`/customers/${customer.id}`}
-            className="flex items-center gap-2 px-3 py-2.5 hover:bg-stone-100 dark:hover:bg-stone-800/40 transition-colors"
+            className="flex items-center gap-2 px-3 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900 text-[11px] font-semibold">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900 text-[11px] font-semibold">
               {getInitials(customerName)}
             </div>
             <div className="min-w-0 flex-1">

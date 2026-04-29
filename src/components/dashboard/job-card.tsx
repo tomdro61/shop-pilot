@@ -9,17 +9,9 @@ import {
   formatCurrencyWhole,
   getInitials,
 } from "@/lib/utils/format";
-import { DVI_STATUS_LABELS, DVI_STATUS_COLORS } from "@/lib/constants";
+import { DVI_STATUS_LABELS, DVI_STATUS_COLORS, JOB_STATUS_BAR } from "@/lib/constants";
 import { Car, Calendar } from "lucide-react";
 import type { JobStatus, DviStatus } from "@/types";
-
-const STATUS_BAR_COLORS: Record<string, string> = {
-  not_started: "bg-red-500",
-  waiting_for_parts: "bg-amber-500",
-  in_progress: "bg-blue-500",
-  complete: "bg-green-500",
-  paid: "bg-green-500",
-};
 
 interface JobCardProps {
   job: {
@@ -50,7 +42,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
     (sum, li) => sum + (li.total ?? 0),
     0
   );
-  const accentBar = STATUS_BAR_COLORS[job.status] ?? "bg-stone-300";
+  const accentBar = JOB_STATUS_BAR[job.status] ?? "bg-stone-300";
   const dviRaw = job.dvi_inspections;
   const dviStatus = (Array.isArray(dviRaw) ? dviRaw[0]?.status : dviRaw?.status) as
     | DviStatus
@@ -59,7 +51,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-lg bg-card border border-stone-200 dark:border-stone-800 shadow-card transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40 cursor-pointer"
+      className="relative overflow-hidden rounded-md bg-card border border-stone-200 dark:border-stone-800 shadow-card transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40 cursor-pointer"
       onClick={() => router.push(`/jobs/${job.id}`)}
     >
       <span className={`absolute inset-y-0 left-0 w-1 ${accentBar}`} aria-hidden />

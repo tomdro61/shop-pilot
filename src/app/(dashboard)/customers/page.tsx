@@ -5,6 +5,7 @@ import { CustomerSearch } from "@/components/forms/customer-search";
 import { CustomerTypeFilter } from "@/components/dashboard/customer-type-filter";
 import { CustomerList } from "@/components/dashboard/customer-list";
 import { CustomerPagination } from "@/components/dashboard/customer-pagination";
+import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -22,7 +23,7 @@ export default async function CustomersPage({
   const { data: customers, totalCount } = await getCustomers(search, type, page);
 
   return (
-    <div className="p-4 lg:p-6 space-y-3">
+    <PageShell>
       <div className="flex flex-wrap items-center gap-2">
         <Suspense>
           <CustomerSearch />
@@ -43,6 +44,6 @@ export default async function CustomersPage({
       </div>
       <CustomerList customers={customers} totalCount={totalCount} />
       <CustomerPagination totalCount={totalCount} page={page} pageSize={50} />
-    </div>
+    </PageShell>
   );
 }

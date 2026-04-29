@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
+import { PageShell } from "@/components/layout/page-shell";
 
 interface DashboardShellProps {
   greeting: string;
@@ -16,7 +17,7 @@ export function DashboardShell({
   children,
 }: DashboardShellProps) {
   return (
-    <div className="max-w-[1400px] mx-auto px-4 lg:px-6 py-4 lg:py-5 space-y-4">
+    <PageShell>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <h1 className="text-base lg:text-lg font-semibold text-stone-900 dark:text-stone-50 truncate">
@@ -43,6 +44,6 @@ export function DashboardShell({
         </div>
       </div>
       {children}
-    </div>
+    </PageShell>
   );
 }
