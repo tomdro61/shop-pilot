@@ -1,5 +1,15 @@
 # ShopPilot - AI-Powered Shop Management System
 
+## Authoritative companion docs
+
+- **[`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)** — design tokens, component primitives, layout patterns. Owns everything visual. Read this before making UI changes; do **not** redocument design rules in CLAUDE.md.
+- **[`../SHOPPILOT_ROADMAP.md`](../SHOPPILOT_ROADMAP.md)** — master roadmap: strategy, OS architecture, feature phases (0–6), agent platform, costs, metrics. Predecessor docs archived in `../archive/`.
+- **[`UI-AUDIT.md`](./UI-AUDIT.md)** — running list of UI consistency findings. Mark closed as fixed.
+- **[`REVIEW-FINDINGS.md`](./REVIEW-FINDINGS.md)** — running list of code-review findings.
+- **[`PROGRESS.md`](./PROGRESS.md)** — session log. Read at start of every new session.
+
+The OS-feel of ShopPilot (Open Loops, Customer Spine, Estimate-as-separate-from-Job) is defined in §3 of the master roadmap. Phase 0 is the foundation refactor.
+
 ## What We're Building
 
 ShopPilot is a custom shop management system for Broadway Motors, an independent auto repair shop in Revere, MA. It replaces a fragmented Notion + Wix + manual workflow with a single AI-first platform. The defining feature is a conversational AI assistant (Claude API with function calling) that lets the shop manager run the entire operation — customers, jobs, estimates, invoices, payments, messaging — from their phone via voice or text commands, without touching a laptop.
@@ -267,7 +277,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 32:** Stripe Terminal fully operational (WisePOS E registered, walk-in customer, payment status auto-update). Reporting suite: Trends Explorer (`/reports/trends`), Service Mix Deep-Dive (`/reports/service-mix`), Tech Scoreboard (`/reports/tech`). Shared trend bucketing infrastructure. Preset catalog search filtered by category. Inspection revenue exclusion expanded to match user's categories.
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
-- **Design system:** Stitch design language — Inter font, cool gray + blue palette, oklch color system. Page bg `oklch(0.955 0.002 260)` (cool blue-gray, hue 260), white card surfaces with `shadow-card`. Tailwind `stone-*` classes are still used for borders/text since they read as a quiet neutral against the cool background, but the dominant page feel is cool gray, not warm. All status badges use borderless pills (`text-[10px] font-black px-2 py-1 rounded-full uppercase`) with `-100/-950` tinted backgrounds (normalized across all status types). All buttons, inputs, and selects are `rounded-full` (pill-shaped) globally via base components. Input/select fields use `bg-stone-50` for contrast against white cards. Line items have flat rows with color accent bars (blue=labor, amber=parts). Dashboard alerts use accent-bordered tinted cards (`border-l-4`). Kanban board columns use warm tan background (`oklch(0.94 0.008 75)`).
+- **Design system:** Stitch design language — Inter font, oklch palette, `rounded-md` canonical, `shadow-card` token, color semantics anchored on emerald/amber/red/blue/violet/stone. Layout patterns include structured metric chunks, 3px top accent strips, line-items-as-grouped-sections, Open Loops single-line rows, customer = violet identity. **Full spec lives in [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) — that's the authoritative source.** This file should NOT accumulate design tokens; update DESIGN_SYSTEM.md instead.
 - **Service categorization:** Line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
 - Stripe invoicing + estimate builder with public approval page fully working (live mode). Estimates can be deleted and recreated to pick up updated job line items. Estimate line items carry categories and are grouped by service category on both internal and customer-facing views.
 - Stripe Terminal: server-driven WisePOS E integration, fully operational. 3 API routes (`/api/terminal/pay`, `/status`, `/cancel`), TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI + presets. Reader registered ("Front-desk 1"), auto-marks jobs as paid on card tap. Walk-in sentinel customer (`00000000-...`) for Quick Pay jobs. `stripe_payment_intent_id` column on jobs. `terminal` value in `payment_method` enum.
@@ -325,7 +335,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 - **Environment variables** — all secrets in `.env.local`, never committed. Use `NEXT_PUBLIC_` prefix only for client-safe values.
 - **Git** — conventional commits (feat:, fix:, chore:, etc.). Work on the `staging` branch. Push feature changes to `staging` first so they can be validated before merging to `master`. Only merge to `master` when the user explicitly asks.
 - **Mobile-first** — design for phone screens first, then expand to desktop
-- **Front-end design / UI changes** — ALWAYS invoke the front-end design skill (`/front-end-design` or whichever slash-skill is configured for visual/design work) before making visual changes, restructuring layouts, or proposing redesigns. The skill exists specifically to give design decisions structure — don't freelance the visuals. If the task touches component layout, typography, color, spacing, or visual composition, the skill is in scope.
+- **Front-end design / UI changes** — ALWAYS invoke the front-end design skill (`/front-end-design` or whichever slash-skill is configured for visual/design work) before making visual changes, restructuring layouts, or proposing redesigns. The skill exists specifically to give design decisions structure — don't freelance the visuals. If the task touches component layout, typography, color, spacing, or visual composition, the skill is in scope. Read [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) first for the canonical tokens and patterns.
 
 ## Review Workflow (read this — required, not optional)
 
@@ -365,9 +375,9 @@ These are the recurring failure modes from `REVIEW-FINDINGS.md`. Treat them as h
 - Don't add `unstable_cache` for low-traffic internal-tool data — the staleness/invalidation cost outweighs the perf gain
 
 **UI primitives:**
-- Any `<div onClick>` MUST have `role`, `tabIndex={0}`, AND `onKeyDown` for Enter/Space — keyboard nav is not optional
-- Buttons, inputs, selects: `rounded-full` (per Stitch design system); inputs use `bg-stone-50`
+- Any `<div onClick>` MUST have `role`, `tabIndex={0}`, AND `onKeyDown` for Enter/Space — keyboard nav is not optional. Use the `ClickableRow` primitive whenever possible.
 - Don't use `<div>` for things that should be `<a>` or `<button>` — semantic HTML first
+- All design tokens (border radius, color, shadow, status badges, hover bg) live in [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) — read that for the canonical rules, don't redocument them here
 
 **Forms:**
 - Always `value={field.value ?? ""}` on text inputs/textareas; never bare `{...field}` (avoids controlled/uncontrolled flip)
