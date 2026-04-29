@@ -95,38 +95,44 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
 
   const categoryNames = Object.keys(categoryGroups);
 
+  if (lineItems.length === 0) {
+    return (
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden px-4 py-10 text-center">
+        <p className="text-sm text-stone-500 dark:text-stone-400">
+          No line items yet. Tap Add to get started.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-      {lineItems.length === 0 ? (
-        <div className="px-4 py-10 text-center">
-          <p className="text-sm text-stone-500 dark:text-stone-400">
-            No line items yet. Tap Add to get started.
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Category groups */}
-          {categoryNames.map((catName) => {
-            const items = categoryGroups[catName];
-            const catTotal = items.reduce((sum, li) => sum + (li.total || 0), 0);
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+      {/* Category groups — sections within one container */}
+      {categoryNames.map((catName, catIdx) => {
+        const items = categoryGroups[catName];
+        const catTotal = items.reduce((sum, li) => sum + (li.total || 0), 0);
+        const isFirst = catIdx === 0;
 
-            return (
-              <div key={catName}>
-                {/* Category header */}
-                <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/40">
-                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-                    {catName}
-                  </h4>
-                  <span className="font-mono tabular-nums text-xs font-medium text-indigo-700 dark:text-indigo-300">
-                    {formatCurrency(catTotal)}
-                  </span>
-                </div>
+        return (
+          <div key={catName}>
+            <div
+              className={cn(
+                "flex items-center justify-between gap-3 px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800",
+                !isFirst && "border-t-2"
+              )}
+            >
+              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400 truncate">
+                {catName}
+              </h4>
+              <span className="font-mono tabular-nums text-xs font-semibold text-stone-700 dark:text-stone-300 shrink-0">
+                {formatCurrency(catTotal)}
+              </span>
+            </div>
 
-                {/* Rows */}
-                {items.map((item) => (
+            {items.map((item) => (
                   <div
                     key={item.id}
-                    className="group relative flex items-start gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60"
+                    className="group relative flex items-start gap-3 px-4 py-3 border-b border-stone-200 dark:border-stone-800"
                   >
                     <span
                       aria-hidden
@@ -201,61 +207,59 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
             );
           })}
 
-          {/* Totals */}
-          <div className="px-4 py-3 border-t border-stone-200 dark:border-stone-800">
-            <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-xs">
-              {totals.laborTotal > 0 && (
-                <>
-                  <dt className="text-stone-500 dark:text-stone-400 justify-self-end">Labor</dt>
-                  <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
-                    {formatCurrency(totals.laborTotal)}
-                  </dd>
-                </>
-              )}
-              {totals.partsTotal > 0 && (
-                <>
-                  <dt className="text-stone-500 dark:text-stone-400 justify-self-end">Parts</dt>
-                  <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
-                    {formatCurrency(totals.partsTotal)}
-                  </dd>
-                </>
-              )}
-              {totals.shopSuppliesEnabled && totals.shopSupplies > 0 && (
-                <>
-                  <dt className="text-stone-500 dark:text-stone-400 justify-self-end">Shop Supplies</dt>
-                  <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
-                    {formatCurrency(totals.shopSupplies)}
-                  </dd>
-                </>
-              )}
-              {totals.hazmatEnabled && totals.hazmat > 0 && (
-                <>
-                  <dt className="text-stone-500 dark:text-stone-400 justify-self-end">{totals.hazmatLabel}</dt>
-                  <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
-                    {formatCurrency(totals.hazmat)}
-                  </dd>
-                </>
-              )}
-              {totals.taxAmount > 0 && (
-                <>
-                  <dt className="text-stone-500 dark:text-stone-400 justify-self-end">
-                    Tax ({(totals.taxRate * 100).toFixed(2)}%)
-                  </dt>
-                  <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
-                    {formatCurrency(totals.taxAmount)}
-                  </dd>
-                </>
-              )}
-            </dl>
-            <div className="mt-2 pt-2 border-t border-stone-200 dark:border-stone-700 flex items-baseline justify-between">
-              <span className={SECTION_LABEL}>Total</span>
-              <span className="font-mono tabular-nums text-base font-semibold text-stone-900 dark:text-stone-50">
-                {formatCurrency(totals.grandTotal)}
-              </span>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Totals — same card, separated by a stronger top border */}
+      <div className="px-4 py-3 bg-stone-50/60 dark:bg-stone-900/40 border-t-2 border-stone-200 dark:border-stone-800">
+        <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-xs">
+          {totals.laborTotal > 0 && (
+            <>
+              <dt className="text-stone-500 dark:text-stone-400 justify-self-end">Labor</dt>
+              <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                {formatCurrency(totals.laborTotal)}
+              </dd>
+            </>
+          )}
+          {totals.partsTotal > 0 && (
+            <>
+              <dt className="text-stone-500 dark:text-stone-400 justify-self-end">Parts</dt>
+              <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                {formatCurrency(totals.partsTotal)}
+              </dd>
+            </>
+          )}
+          {totals.shopSuppliesEnabled && totals.shopSupplies > 0 && (
+            <>
+              <dt className="text-stone-500 dark:text-stone-400 justify-self-end">Shop Supplies</dt>
+              <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                {formatCurrency(totals.shopSupplies)}
+              </dd>
+            </>
+          )}
+          {totals.hazmatEnabled && totals.hazmat > 0 && (
+            <>
+              <dt className="text-stone-500 dark:text-stone-400 justify-self-end">{totals.hazmatLabel}</dt>
+              <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                {formatCurrency(totals.hazmat)}
+              </dd>
+            </>
+          )}
+          {totals.taxAmount > 0 && (
+            <>
+              <dt className="text-stone-500 dark:text-stone-400 justify-self-end">
+                Tax ({(totals.taxRate * 100).toFixed(2)}%)
+              </dt>
+              <dd className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                {formatCurrency(totals.taxAmount)}
+              </dd>
+            </>
+          )}
+        </dl>
+        <div className="mt-2 pt-2 border-t border-stone-200 dark:border-stone-700 flex items-baseline justify-between">
+          <span className={SECTION_LABEL}>Total</span>
+          <span className="font-mono tabular-nums text-base font-semibold text-stone-900 dark:text-stone-50">
+            {formatCurrency(totals.grandTotal)}
+          </span>
+        </div>
+      </div>
 
       {/* Edit form */}
       {editItem && (

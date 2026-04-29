@@ -76,7 +76,7 @@ export default async function JobDetailPage({
 
   return (
     <>
-      <PageShell className="pb-24">
+      <PageShell maxWidth="max-w-6xl" className="pb-24">
 
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
           <Link href="/jobs">

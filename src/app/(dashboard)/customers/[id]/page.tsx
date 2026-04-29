@@ -167,7 +167,7 @@ export default async function CustomerDetailPage({
   const showVehicleFilter = vehicles.length > 1;
 
   return (
-    <PageShell>
+    <PageShell maxWidth="max-w-6xl">
 
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
         <Link href="/customers">

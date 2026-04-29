@@ -100,7 +100,7 @@ export default async function ParkingDetailPage({
   const nextNum = () => String(sectionNum++).padStart(2, "0");
 
   return (
-    <PageShell className="pb-24 lg:pb-12">
+    <PageShell maxWidth="max-w-6xl" className="pb-24 lg:pb-12">
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
