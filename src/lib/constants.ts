@@ -266,6 +266,15 @@ export const PARKING_LOTS = [
   "Boston Logan Valet",
 ];
 
+// Lots where staff actively manages reservations (check-in, check-out, key
+// handoff). APB1/APB2 are self-park so they don't need daily prep — by default
+// the Today view groups Broadway Motors + Valet together as "Managed Lots".
+export const MANAGED_PARKING_LOTS = ["Broadway Motors", "Boston Logan Valet"];
+
+// Sentinel value used by the lot filter to mean "Managed Lots combined".
+// Resolves to MANAGED_PARKING_LOTS when used as the lot param.
+export const MANAGED_LOTS_FILTER = "managed" as const;
+
 // ── Quote Requests ──────────────────────────────────────────────
 
 export const QUOTE_REQUEST_STATUS_ORDER: QuoteRequestStatus[] = [

@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PARKING_LOTS } from "@/lib/constants";
+import { PARKING_LOTS, MANAGED_LOTS_FILTER } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -23,7 +23,7 @@ export function ParkingTabs() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") || "today";
-  const currentLot = searchParams.get("lot") || "Broadway Motors";
+  const currentLot = searchParams.get("lot") || MANAGED_LOTS_FILTER;
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -72,12 +72,13 @@ export function ParkingTabs() {
           <SelectValue placeholder="All Lots" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Lots</SelectItem>
+          <SelectItem value={MANAGED_LOTS_FILTER}>Managed Lots (Broadway + Valet)</SelectItem>
           {PARKING_LOTS.map((lot) => (
             <SelectItem key={lot} value={lot}>
               {lot}
             </SelectItem>
           ))}
+          <SelectItem value="all">All Lots</SelectItem>
         </SelectContent>
       </Select>
     </div>

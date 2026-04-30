@@ -12,6 +12,7 @@ import { ParkingAllView } from "@/components/parking/parking-all-view";
 import { ParkingServiceLeads } from "@/components/parking/parking-service-leads";
 import { ParkingCalendarView } from "@/components/parking/parking-calendar-view";
 import { PageShell } from "@/components/layout/page-shell";
+import { MANAGED_LOTS_FILTER } from "@/lib/constants";
 import type { ParkingStatus } from "@/types";
 
 export const metadata = {
@@ -38,7 +39,7 @@ export default async function ParkingPage({
 }) {
   const params = await searchParams;
   const tab = params.tab || "today";
-  const lot = params.lot || "Broadway Motors";
+  const lot = params.lot || MANAGED_LOTS_FILTER;
   const page = parseInt(params.page || "1", 10) || 1;
 
   if (tab === "today") {

@@ -5,12 +5,21 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { todayET } from "@/lib/utils";
+import { MANAGED_LOTS_FILTER, MANAGED_PARKING_LOTS } from "@/lib/constants";
 import type { ParkingStatus } from "@/types";
 import { findOrCreateParkingVehicle } from "@/lib/parking-vehicle";
 
 // ── Fetch reservations with filters ─────────────────────────────
 
 const PAGE_SIZE = 50;
+
+// Resolve the lot filter param to either a single lot, an array of lots
+// (for the "Managed Lots" combined view), or undefined (all lots).
+function resolveLotFilter(lot?: string): string | string[] | undefined {
+  if (!lot) return undefined;
+  if (lot === MANAGED_LOTS_FILTER) return MANAGED_PARKING_LOTS;
+  return lot;
+}
 
 export async function getParkingReservations(filters?: {
   search?: string;
@@ -42,7 +51,12 @@ export async function getParkingReservations(filters?: {
     query = query.eq("status", filters.status);
   }
   if (filters?.lot) {
-    query = query.eq("lot", filters.lot);
+    const resolved = resolveLotFilter(filters.lot);
+    if (Array.isArray(resolved)) {
+      query = query.in("lot", resolved);
+    } else if (resolved) {
+      query = query.eq("lot", resolved);
+    }
   }
   if (filters?.dateFrom) {
     query = query.gte("drop_off_date", filters.dateFrom);
@@ -118,7 +132,12 @@ export async function getParkingCalendarCounts({
     .gte("pick_up_date", from);
 
   if (lot) {
-    query = query.eq("lot", lot);
+    const resolved = resolveLotFilter(lot);
+    if (Array.isArray(resolved)) {
+      query = query.in("lot", resolved);
+    } else if (resolved) {
+      query = query.eq("lot", resolved);
+    }
   }
 
   const { data, error } = await query;
@@ -159,10 +178,16 @@ export async function getParkingDashboard(lot?: string) {
   const supabase = await createClient();
   const today = todayET();
 
-  function applyLotFilter<T extends { eq: (col: string, val: string) => T }>(
-    q: T
-  ): T {
-    return lot ? q.eq("lot", lot) : q;
+  const resolved = resolveLotFilter(lot);
+  function applyLotFilter<
+    T extends {
+      eq: (col: string, val: string) => T;
+      in: (col: string, vals: string[]) => T;
+    }
+  >(q: T): T {
+    if (resolved === undefined) return q;
+    if (Array.isArray(resolved)) return q.in("lot", resolved);
+    return q.eq("lot", resolved);
   }
 
   // Compute tomorrow from today's ET date string to avoid double timezone conversion
