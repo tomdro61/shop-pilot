@@ -95,10 +95,11 @@ export function CatalogList({ items, categories }: CatalogListProps) {
               key={t}
               type="button"
               onClick={() => setTypeFilter(t)}
+              aria-pressed={typeFilter === t}
               className={cn(
                 "text-[10px] font-black px-3 py-1.5 rounded-md uppercase transition-colors",
                 typeFilter === t
-                  ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
+                  ? "bg-stone-200 text-stone-900 shadow-card dark:bg-stone-700 dark:text-stone-50"
                   : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700"
               )}
             >
@@ -108,7 +109,7 @@ export function CatalogList({ items, categories }: CatalogListProps) {
         </div>
       </div>
 
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
         {filtered.length === 0 ? (
           <div className="px-4 py-10 text-center">
             <p className="text-sm text-stone-500 dark:text-stone-400">

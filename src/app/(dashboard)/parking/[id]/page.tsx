@@ -33,9 +33,11 @@ import {
   Clock,
   KeyRound,
   Plane,
+  StickyNote,
   Truck,
   User as UserIcon,
 } from "lucide-react";
+import { TONE_CLASSES } from "@/lib/ui/alert-tone";
 import type { ParkingStatus } from "@/types";
 
 const TILE = "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card";
@@ -96,9 +98,6 @@ export default async function ParkingDetailPage({
   const isTerminal = status === "checked_out" || status === "no_show" || status === "cancelled";
   const currentIdx = status === "reserved" ? 0 : status === "checked_in" ? 1 : 2;
 
-  let sectionNum = 1;
-  const nextNum = () => String(sectionNum++).padStart(2, "0");
-
   return (
     <PageShell width="wide" className="pb-24 lg:pb-12">
 
@@ -154,12 +153,12 @@ export default async function ParkingDetailPage({
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {reservation.parking_type === "shuttle" && (
-                <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400">
+                <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
                   Shuttle
                 </span>
               )}
               {reservation.parking_type === "valet" && (
-                <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400">
+                <span className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400">
                   Valet
                 </span>
               )}
@@ -174,8 +173,13 @@ export default async function ParkingDetailPage({
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-200 dark:divide-stone-800 border-t border-stone-200 dark:border-stone-800">
           {/* Customer */}
           <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
-            <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
-              <UserIcon className="h-3 w-3" /> Customer
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-6 h-6 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.violet.tile}`}
+              >
+                <UserIcon className="h-3 w-3" />
+              </span>
+              <span className={SECTION_LABEL}>Customer</span>
             </div>
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-md grid place-items-center text-sm font-semibold bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900 flex-none">
@@ -226,8 +230,11 @@ export default async function ParkingDetailPage({
 
           {/* Vehicle (editable) */}
           <div className="px-5 py-5 flex flex-col gap-3 min-w-0">
-            <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
-              <Truck className="h-3 w-3" /> Vehicle
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
+                <Truck className="h-3 w-3" />
+              </span>
+              <span className={SECTION_LABEL}>Vehicle</span>
             </div>
             <ParkingVehicleForm
               id={reservation.id}
@@ -240,8 +247,13 @@ export default async function ParkingDetailPage({
 
           {/* Trip (editable) */}
           <div className="px-5 py-5 flex flex-col gap-3 min-w-0">
-            <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
-              <Clock className="h-3 w-3" /> Trip
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-6 h-6 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.indigo.tile}`}
+              >
+                <Clock className="h-3 w-3" />
+              </span>
+              <span className={SECTION_LABEL}>Trip</span>
             </div>
             <ParkingDatesForm
               id={reservation.id}
@@ -281,21 +293,31 @@ export default async function ParkingDetailPage({
           </div>
         </div>
 
-        {/* Staff notes — yellow notepad block */}
-        <div className="bg-yellow-50 dark:bg-yellow-950/30 border-t border-yellow-200 dark:border-yellow-900 px-5 lg:px-6 pt-3 pb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+        {/* Staff notes — alert-card pattern */}
+        <div className="relative bg-amber-50 dark:bg-amber-950/20 border-t border-amber-200 dark:border-amber-900 px-5 lg:px-6 pt-4 pb-4">
+          <span
+            aria-hidden
+            className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r bg-amber-500"
+          />
+          <div className="flex items-center gap-2 mb-2 pl-1">
+            <span
+              className={`w-6 h-6 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.amber.tile}`}
+            >
+              <StickyNote className="h-3 w-3" />
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-200">
               Staff Notes
             </span>
           </div>
-          <ParkingNotesForm id={reservation.id} staffNotes={reservation.staff_notes} />
+          <div className="pl-1">
+            <ParkingNotesForm id={reservation.id} staffNotes={reservation.staff_notes} />
+          </div>
         </div>
       </section>
 
       {/* Status stepper */}
       <section className="pt-2">
-        <SectionTitle num={nextNum()} title="Status" />
+        <SectionTitle title="Status" />
         <div className={`${TILE} overflow-hidden`}>
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-200 dark:divide-stone-800">
             {STEPPER.map((step, idx) => {
@@ -313,7 +335,7 @@ export default async function ParkingDetailPage({
                           ? "bg-emerald-600 text-white"
                           : current
                             ? "bg-blue-600 text-white"
-                            : "bg-card border border-stone-200 dark:border-stone-700"
+                            : "bg-card border border-stone-200 dark:border-stone-800"
                       }`}
                     >
                       {done && <Check className="w-3 h-3" strokeWidth={3} />}
@@ -340,7 +362,7 @@ export default async function ParkingDetailPage({
 
       {/* Service interests */}
       <section className="pt-2">
-        <SectionTitle num={nextNum()} title="Service interests" />
+        <SectionTitle title="Service interests" />
         <div className={`${TILE} px-4 py-4`}>
           <ParkingServicesForm
             id={reservation.id}
@@ -353,7 +375,7 @@ export default async function ParkingDetailPage({
       {/* Key Pickup (conditional) */}
       {reservation.status === "checked_out" && (
         <section className="pt-2">
-          <SectionTitle num={nextNum()} title="Key pickup" />
+          <SectionTitle title="Key pickup" />
           <div className={`${TILE} px-4 py-4`}>
             {reservation.lock_box_number ? (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
@@ -386,7 +408,7 @@ export default async function ParkingDetailPage({
       {/* Valet assignments (conditional) */}
       {reservation.parking_type === "valet" && (
         <section className="pt-2">
-          <SectionTitle num={nextNum()} title="Valet assignments" />
+          <SectionTitle title="Valet assignments" />
           <div className={`${TILE} px-4 py-4`}>
             <ParkingValetForm
               id={reservation.id}
@@ -399,7 +421,7 @@ export default async function ParkingDetailPage({
 
       {/* Invoices */}
       <section className="pt-2">
-        <SectionTitle num={nextNum()} title="Invoices" />
+        <SectionTitle title="Invoices" />
         <ParkingInvoiceSection
           reservationId={reservation.id}
           invoices={invoices}

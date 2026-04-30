@@ -31,7 +31,8 @@ import { CustomerNotesEditor } from "@/components/dashboard/customer-notes-edito
 import { CustomerTypeEditor } from "@/components/dashboard/customer-type-editor";
 import { SectionTitle } from "@/components/ui/section-title";
 import { PageShell } from "@/components/layout/page-shell";
-import { ArrowLeft, Plus, DollarSign } from "lucide-react";
+import { ArrowLeft, Plus, DollarSign, StickyNote } from "lucide-react";
+import { TONE_CLASSES } from "@/lib/ui/alert-tone";
 import type { JobStatus, PaymentStatus, ParkingStatus, Vehicle } from "@/types";
 
 const JOBS_DISPLAY_LIMIT = 20;
@@ -288,20 +289,35 @@ export default async function CustomerDetailPage({
             </div>
           </dl>
 
-          <div className="bg-yellow-50 dark:bg-yellow-950/30 border-t border-yellow-200 dark:border-yellow-900 px-5 lg:px-6 pt-3 pb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+          <div className="relative bg-amber-50 dark:bg-amber-950/20 border-t border-amber-200 dark:border-amber-900 px-5 lg:px-6 pt-4 pb-4">
+            <span
+              aria-hidden
+              className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r bg-amber-500"
+            />
+            <div className="flex items-center gap-2 mb-2 pl-1">
+              <span
+                className={`w-6 h-6 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.amber.tile}`}
+              >
+                <StickyNote className="h-3 w-3" />
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-200">
                 Notes
               </span>
             </div>
-            <CustomerNotesEditor customerId={id} value={customer.notes} />
+            <div className="pl-1">
+              <CustomerNotesEditor customerId={id} value={customer.notes} />
+            </div>
           </div>
         </section>
 
         <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
-          <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-5 py-3 border-b border-stone-200 dark:border-stone-800`}>
-            <DollarSign className="h-3 w-3" /> Financial Snapshot
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-stone-200 dark:border-stone-800">
+            <span
+              className={`w-6 h-6 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.emerald.tile}`}
+            >
+              <DollarSign className="h-3 w-3" />
+            </span>
+            <span className={SECTION_LABEL}>Financial Snapshot</span>
           </div>
           <div className="px-5 py-4 border-b border-stone-200 dark:border-stone-800">
             <div className={SECTION_LABEL}>Lifetime spend</div>
@@ -387,7 +403,7 @@ export default async function CustomerDetailPage({
                     href={`/customers/${id}`}
                     className={`inline-flex items-center h-6 px-2 rounded text-[11px] font-medium transition-colors ${
                       !vehicleFilter || vehicleFilter === "all"
-                        ? "bg-card text-stone-900 dark:text-stone-50 shadow-sm"
+                        ? "bg-card text-stone-900 dark:text-stone-50 shadow-card"
                         : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
                     }`}
                   >
@@ -399,7 +415,7 @@ export default async function CustomerDetailPage({
                       href={`/customers/${id}?vehicle=${v.id}`}
                       className={`inline-flex items-center gap-1.5 h-6 px-2 rounded text-[11px] font-medium transition-colors ${
                         vehicleFilter === v.id
-                          ? "bg-card text-stone-900 dark:text-stone-50 shadow-sm"
+                          ? "bg-card text-stone-900 dark:text-stone-50 shadow-card"
                           : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
                       }`}
                     >

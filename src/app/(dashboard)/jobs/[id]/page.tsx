@@ -37,7 +37,8 @@ import {
 } from "@/lib/utils/format";
 import { PageShell } from "@/components/layout/page-shell";
 import { JobPaymentFooter } from "@/components/dashboard/job-payment-footer";
-import { ArrowLeft, Printer, User as UserIcon, Truck, ClipboardList } from "lucide-react";
+import { ArrowLeft, Printer, User as UserIcon, Truck, ClipboardList, StickyNote } from "lucide-react";
+import { TONE_CLASSES } from "@/lib/ui/alert-tone";
 import type { JobStatus, PaymentStatus, PaymentMethod, Customer, Vehicle, JobLineItem, User as UserType } from "@/types";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -145,8 +146,13 @@ export default async function JobDetailPage({
 
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-stone-200 dark:divide-stone-800">
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
-              <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
-                <UserIcon className="h-3 w-3" /> Customer
+              <div className="flex items-center gap-2">
+                <span
+                  className={`w-6 h-6 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.violet.tile}`}
+                >
+                  <UserIcon className="h-3 w-3" />
+                </span>
+                <span className={SECTION_LABEL}>Customer</span>
                 <span className="ml-auto">
                   <JobCustomerEditor
                     jobId={id}
@@ -204,8 +210,11 @@ export default async function JobDetailPage({
             </div>
 
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
-              <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
-                <Truck className="h-3 w-3" /> Vehicle
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
+                  <Truck className="h-3 w-3" />
+                </span>
+                <span className={SECTION_LABEL}>Vehicle</span>
                 <span className="ml-auto">
                   <JobVehicleEditor
                     jobId={id}
@@ -248,8 +257,13 @@ export default async function JobDetailPage({
             </div>
 
             <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
-              <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
-                <ClipboardList className="h-3 w-3" /> Details
+              <div className="flex items-center gap-2">
+                <span
+                  className={`w-6 h-6 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.indigo.tile}`}
+                >
+                  <ClipboardList className="h-3 w-3" />
+                </span>
+                <span className={SECTION_LABEL}>Details</span>
               </div>
               <JobTechEditor jobId={id} currentTech={tech} techs={technicians} />
               <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
@@ -269,14 +283,24 @@ export default async function JobDetailPage({
             </div>
           </div>
 
-          <div className="bg-yellow-50 dark:bg-yellow-950/30 border-t border-yellow-200 dark:border-yellow-900 px-5 lg:px-6 pt-3 pb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+          <div className="relative bg-amber-50 dark:bg-amber-950/20 border-t border-amber-200 dark:border-amber-900 px-5 lg:px-6 pt-4 pb-4">
+            <span
+              aria-hidden
+              className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r bg-amber-500"
+            />
+            <div className="flex items-center gap-2 mb-2 pl-1">
+              <span
+                className={`w-6 h-6 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.amber.tile}`}
+              >
+                <StickyNote className="h-3 w-3" />
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-200">
                 Notes
               </span>
             </div>
-            <JobNotesEditor jobId={id} value={job.notes} />
+            <div className="pl-1">
+              <JobNotesEditor jobId={id} value={job.notes} />
+            </div>
           </div>
         </section>
 

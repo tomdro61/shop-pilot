@@ -48,7 +48,8 @@ import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER } from "@/lib/constants";
 import { formatCustomerName, formatCurrency, getInitials } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Plus, Car, Search, X } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Car, Search, X, UserPlus, ClipboardList } from "lucide-react";
+import { TONE_CLASSES } from "@/lib/ui/alert-tone";
 import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, JobStatus } from "@/types";
 
 interface JobFormProps {
@@ -90,7 +91,7 @@ function PresetSearchPicker({
           className="pl-9"
         />
       </div>
-      <div className="max-h-48 overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
+      <div className="max-h-48 overflow-y-auto rounded-md border border-stone-200 dark:border-stone-800">
         {filtered.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">No presets match</p>
         ) : (
@@ -309,29 +310,33 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 
-        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-
-          {/* Customer */}
-          <div className="p-5 border-b border-stone-200 dark:border-stone-800">
-            <div className="flex items-center justify-between mb-3">
-              <span className={SECTION_LABEL}>Customer</span>
-              <Link
-                href="/customers/new"
-                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-                New customer
-              </Link>
+        {/* Customer */}
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+          <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-stone-200 dark:border-stone-800">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className={`w-7 h-7 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.violet.tile}`}>
+                <UserPlus className="h-3.5 w-3.5" />
+              </span>
+              <h3 className="text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-50">Customer</h3>
             </div>
+            <Link
+              href="/customers/new"
+              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              New customer
+            </Link>
+          </header>
+          <div className="p-5">
             <FormField
               control={form.control}
               name="customer_id"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   {selectedCustomer ? (
-                    <div className="flex items-center gap-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
+                    <div className="flex items-center gap-3 rounded-md border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                         {getInitials(formatCustomerName(selectedCustomer))}
                       </div>
@@ -411,29 +416,36 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
               )}
             />
           </div>
+        </section>
 
-          {/* Vehicle */}
-          <div className="p-5 border-b border-stone-200 dark:border-stone-800">
-            <div className="flex items-center justify-between mb-3">
-              <span className={SECTION_LABEL}>Vehicle</span>
-              {selectedCustomerId && (
-                <button
-                  type="button"
-                  onClick={() => setVehicleAddOpen(true)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-                >
-                  <Plus className="h-3 w-3" />
-                  Add vehicle
-                </button>
-              )}
+        {/* Vehicle */}
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+          <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-stone-200 dark:border-stone-800">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-7 h-7 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
+                <Car className="h-3.5 w-3.5" />
+              </span>
+              <h3 className="text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-50">Vehicle</h3>
             </div>
+            {selectedCustomerId && (
+              <button
+                type="button"
+                onClick={() => setVehicleAddOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Add vehicle
+              </button>
+            )}
+          </header>
+          <div className="p-5">
             <FormField
               control={form.control}
               name="vehicle_id"
               render={({ field }) => (
                 <FormItem>
                   {selectedVehicle ? (
-                    <div className="flex items-center gap-3 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
+                    <div className="flex items-center gap-3 rounded-md border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300">
                         <Car className="h-4 w-4" />
                       </div>
@@ -476,13 +488,19 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
               )}
             />
           </div>
+        </section>
 
-          {/* Job details */}
-          <div className="p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className={SECTION_LABEL}>Job details</span>
+        {/* Job details */}
+        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+          <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-stone-200 dark:border-stone-800">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className={`w-7 h-7 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.indigo.tile}`}>
+                <ClipboardList className="h-3.5 w-3.5" />
+              </span>
+              <h3 className="text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-50">Job details</h3>
             </div>
-
+          </header>
+          <div className="p-5 space-y-4">
             <FormField
               control={form.control}
               name="title"
@@ -527,7 +545,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                         0
                       );
                       return (
-                        <div key={presetId} className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
+                        <div key={presetId} className="flex items-center gap-2 rounded-md border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950 px-3 py-2">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-blue-700 dark:text-blue-400 truncate">{selected.name}</p>
                             <p className="text-xs text-blue-600/70 dark:text-blue-400/70 truncate">

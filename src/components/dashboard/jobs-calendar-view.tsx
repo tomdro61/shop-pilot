@@ -119,22 +119,24 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
             {headerLabel}
           </h3>
-          <div className="flex rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden text-xs">
+          <div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1 text-xs">
             <button
-              className={`px-2.5 py-1 transition-colors ${
+              aria-pressed={mode === "month"}
+              className={`rounded px-2.5 py-1 font-medium transition-colors ${
                 mode === "month"
-                  ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
-                  : "bg-white text-stone-600 hover:bg-stone-100 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
+                  ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
+                  : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
               }`}
               onClick={() => setMode("month")}
             >
               Month
             </button>
             <button
-              className={`px-2.5 py-1 transition-colors ${
+              aria-pressed={mode === "week"}
+              className={`rounded px-2.5 py-1 font-medium transition-colors ${
                 mode === "week"
-                  ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
-                  : "bg-white text-stone-600 hover:bg-stone-100 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
+                  ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
+                  : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
               }`}
               onClick={() => setMode("week")}
             >

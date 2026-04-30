@@ -43,15 +43,16 @@ export function ParkingTabs() {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Tabs — bordered segmented control with high-contrast active state */}
-      <div className="flex gap-0.5 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-0.5 self-start">
+      <div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1 self-start">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => updateParams({ tab: tab.value === "today" ? "" : tab.value })}
+            aria-pressed={currentTab === tab.value}
             className={cn(
               "rounded px-3 py-1.5 text-xs font-medium transition-colors",
               currentTab === tab.value
-                ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
+                ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
                 : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
             )}
           >
@@ -67,7 +68,7 @@ export function ParkingTabs() {
       >
         <SelectTrigger
           size="sm"
-          className="w-full sm:w-[220px] bg-card border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 shadow-none"
+          className="w-full sm:w-[220px] bg-card border-stone-200 dark:border-stone-800 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 shadow-none"
         >
           <SelectValue placeholder="All Lots" />
         </SelectTrigger>
