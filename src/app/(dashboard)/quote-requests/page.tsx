@@ -1,5 +1,6 @@
 import { getQuoteRequests } from "@/lib/actions/quote-requests";
 import { QuoteRequestList } from "@/components/quote-requests/quote-request-list";
+import { PageShell } from "@/components/layout/page-shell";
 import type { QuoteRequestStatus } from "@/types";
 
 export const metadata = {
@@ -19,8 +20,8 @@ export default async function QuoteRequestsPage({
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
-      <div className="py-2">
+    <PageShell width="wide">
+      <div>
         <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
           Quote Requests
         </h1>
@@ -29,6 +30,6 @@ export default async function QuoteRequestsPage({
         </p>
       </div>
       <QuoteRequestList quoteRequests={quoteRequests} />
-    </div>
+    </PageShell>
   );
 }

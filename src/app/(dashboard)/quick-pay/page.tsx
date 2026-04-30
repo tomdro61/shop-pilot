@@ -1,5 +1,6 @@
 import { QuickPayForm } from "@/components/dashboard/quick-pay-form";
 import { getPresets } from "@/lib/actions/presets";
+import { PageShell } from "@/components/layout/page-shell";
 import type { PresetLineItem } from "@/types";
 
 export const metadata = {
@@ -16,8 +17,8 @@ export default async function QuickPayPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto px-4 lg:px-6 pb-24 space-y-5 lg:space-y-6">
-      <div className="py-2">
+    <PageShell width="narrow" className="pb-24">
+      <div>
         <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
           Quick Pay
         </h1>
@@ -27,6 +28,6 @@ export default async function QuickPayPage() {
       </div>
 
       <QuickPayForm presets={presetsWithTotals} />
-    </div>
+    </PageShell>
   );
 }
