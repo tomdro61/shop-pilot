@@ -5,6 +5,7 @@ import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { TaxYearPicker } from "@/components/dashboard/tax-year-picker";
 import { CustomerTypeNav } from "@/components/dashboard/customer-type-nav";
 import { nowET } from "@/lib/utils";
+import { PageShell } from "@/components/layout/page-shell";
 
 export const metadata = {
   title: "Tax Summary | ShopPilot",
@@ -27,7 +28,7 @@ export default async function TaxReportPage({
   const currentMonth = isCurrentYear ? now.getMonth() : 11;
 
   return (
-    <div>
+    <PageShell>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-stone-500 dark:text-stone-400">
           Monthly taxable sales and MA sales tax collected (<span className="font-mono tabular-nums">{taxPct}%</span>)
@@ -66,14 +67,14 @@ export default async function TaxReportPage({
       </div>
 
       {/* Monthly Breakdown Table */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+        <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <h3 className={COLUMN_HEADER}>Monthly Breakdown — {year}</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+              <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
                 <th className={`px-4 py-2 ${SECTION_LABEL}`}>Month</th>
                 <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Total Revenue</th>
                 <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Taxable Amt</th>
@@ -89,7 +90,7 @@ export default async function TaxReportPage({
                 return (
                   <tr
                     key={row.monthNum}
-                    className={`border-b border-stone-100 dark:border-stone-800/60 ${
+                    className={`border-b border-stone-200 dark:border-stone-800 ${
                       isFuture ? "text-stone-300 dark:text-stone-700" : "hover:bg-stone-50 dark:hover:bg-stone-800/40"
                     }`}
                   >
@@ -130,6 +131,6 @@ export default async function TaxReportPage({
           </table>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

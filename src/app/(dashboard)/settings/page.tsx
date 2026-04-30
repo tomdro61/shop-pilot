@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HardHat, ClipboardList, DollarSign, Tag, ChevronRight, BookOpen } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
 
 export const metadata = {
   title: "Settings | ShopPilot",
@@ -40,8 +41,8 @@ const settingsItems = [
 
 export default function SettingsPage() {
   return (
-    <div className="max-w-2xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
-      <div className="py-2">
+    <PageShell maxWidth="max-w-2xl">
+      <div>
         <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
           Settings
         </h1>
@@ -50,12 +51,12 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
         {settingsItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="flex items-center gap-3 px-4 py-3 border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900">
               <item.icon className="h-4 w-4" />
@@ -72,6 +73,6 @@ export default function SettingsPage() {
           </Link>
         ))}
       </div>
-    </div>
+    </PageShell>
   );
 }

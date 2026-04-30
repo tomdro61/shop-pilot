@@ -8,6 +8,7 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { ReportsOverviewChart } from "@/components/dashboard/reports-overview-chart";
+import { PageShell } from "@/components/layout/page-shell";
 
 export const metadata = {
   title: "Reports | ShopPilot",
@@ -52,7 +53,7 @@ export default async function ReportsOverviewPage() {
     .sort((a, b) => b.revenue - a.revenue);
 
   return (
-    <div>
+    <PageShell>
       {/* Row 1 — Money KPIs */}
       <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Link href="/reports/trends?metric=revenue&granularity=month">
@@ -136,13 +137,13 @@ export default async function ReportsOverviewPage() {
       {/* Row 4 — Mini tables */}
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Top Categories */}
-        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+          <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
             <h3 className={COLUMN_HEADER}>Top Categories (This Month)</h3>
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+              <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
                 <th className={`px-4 py-2 ${SECTION_LABEL}`}>Category</th>
                 <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Revenue</th>
                 <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Margin</th>
@@ -153,7 +154,7 @@ export default async function ReportsOverviewPage() {
                 <tr><td colSpan={3} className="px-4 py-4 text-center text-stone-500 dark:text-stone-400">No data</td></tr>
               ) : (
                 topCategories.map((cat) => (
-                  <tr key={cat.category} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                  <tr key={cat.category} className="border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50">
                     <td className="px-4 py-2">
                       <Link href={`/reports/service-mix?category=${encodeURIComponent(cat.category)}&granularity=month`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
                         {cat.category}
@@ -173,13 +174,13 @@ export default async function ReportsOverviewPage() {
         </div>
 
         {/* Tech Summary */}
-        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+          <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
             <h3 className={COLUMN_HEADER}>Tech Summary (This Month)</h3>
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+              <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
                 <th className={`px-4 py-2 ${SECTION_LABEL}`}>Tech</th>
                 <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Revenue</th>
                 <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Jobs</th>
@@ -190,7 +191,7 @@ export default async function ReportsOverviewPage() {
                 <tr><td colSpan={3} className="px-4 py-4 text-center text-stone-500 dark:text-stone-400">No data</td></tr>
               ) : (
                 techSummary.map((tech) => (
-                  <tr key={tech.name} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                  <tr key={tech.name} className="border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50">
                     <td className="px-4 py-2">
                       <Link href={`/reports/tech?category=${encodeURIComponent(tech.name)}&granularity=month`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
                         {tech.name}
@@ -209,6 +210,6 @@ export default async function ReportsOverviewPage() {
           </table>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

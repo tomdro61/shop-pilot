@@ -6,6 +6,7 @@ import { HorizontalBarChart } from "@/components/dashboard/horizontal-bar-chart"
 import { ReportsToolbar } from "@/components/dashboard/reports-toolbar";
 import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
+import { PageShell } from "@/components/layout/page-shell";
 
 export const metadata = {
   title: "Revenue Overview | ShopPilot",
@@ -53,7 +54,7 @@ export default async function RevenueReportPage({
   const inspectionPct = totalRevenue > 0 ? Math.round((inspectionRevenue / totalRevenue) * 100) : 0;
 
   return (
-    <div>
+    <PageShell>
       <div className="mb-6">
         <Suspense fallback={null}>
           <ReportsToolbar basePath="/reports/revenue" showExport />
@@ -137,14 +138,14 @@ export default async function RevenueReportPage({
 
       {/* Service Profitability */}
       {profitability.length > 0 && (
-        <div className="mt-6 bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+        <div className="mt-6 bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+          <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
             <h3 className={COLUMN_HEADER}>Service Profitability ({resolved.label})</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-stone-100 dark:border-stone-800/60 text-left">
+                <tr className="border-b border-stone-200 dark:border-stone-800 text-left">
                   <th className={`px-4 py-2 ${SECTION_LABEL}`}>Category</th>
                   <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Revenue</th>
                   <th className={`px-4 py-2 text-right ${SECTION_LABEL}`}>Parts Cost</th>
@@ -155,7 +156,7 @@ export default async function RevenueReportPage({
               </thead>
               <tbody>
                 {profitability.map((row) => (
-                  <tr key={row.category} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                  <tr key={row.category} className="border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50">
                     <td className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-50">{row.category}</td>
                     <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
                       {formatCurrency(row.revenue)}
@@ -182,6 +183,6 @@ export default async function RevenueReportPage({
         </div>
       )}
 
-    </div>
+    </PageShell>
   );
 }

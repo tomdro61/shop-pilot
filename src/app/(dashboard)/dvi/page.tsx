@@ -8,11 +8,12 @@ import { CreateDviDialog } from "@/components/dvi/create-dvi-dialog";
 import { CustomerLink } from "@/components/ui/customer-link";
 import { ClickableRow } from "@/components/ui/clickable-row";
 import { SECTION_LABEL } from "@/components/ui/section-card";
+import { PageShell } from "@/components/layout/page-shell";
 import type { DviStatus } from "@/types";
 
 export const metadata = { title: "DVI | ShopPilot" };
 
-const TILE = "bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm";
+const TILE = "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card";
 
 function SectionHeader({ title, count }: { title: string; count?: number }) {
   return (
@@ -43,7 +44,7 @@ export default async function DviJobListPage({
   ]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
+    <PageShell maxWidth="max-w-4xl">
       <div className="flex flex-wrap items-end justify-between gap-2 py-2">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
@@ -275,6 +276,6 @@ export default async function DviJobListPage({
           </div>
         </section>
       )}
-    </div>
+    </PageShell>
   );
 }

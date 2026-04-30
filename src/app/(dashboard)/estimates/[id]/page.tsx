@@ -7,6 +7,7 @@ import { EstimateLineItemsList, EstimateLineItemsAddButton } from "@/components/
 import { EstimateActions } from "@/components/dashboard/estimate-actions";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { SectionTitle } from "@/components/ui/section-title";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   ESTIMATE_STATUS_LABELS,
   ESTIMATE_STATUS_COLORS,
@@ -74,7 +75,7 @@ export default async function EstimateDetailPage({
   const isDraft = status === "draft";
 
   return (
-    <div className="max-w-6xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
+    <PageShell maxWidth="max-w-6xl">
 
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
         {job ? (
@@ -89,7 +90,7 @@ export default async function EstimateDetailPage({
         )}
       </div>
 
-      <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+      <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
         <div className="px-5 lg:px-6 py-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -111,7 +112,7 @@ export default async function EstimateDetailPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-stone-100 dark:divide-stone-800/60 border-t border-stone-100 dark:border-stone-800/60">
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-stone-200 dark:divide-stone-800 border-t border-stone-200 dark:border-stone-800">
           <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
             <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
               <UserIcon className="h-3 w-3" /> Customer
@@ -190,7 +191,7 @@ export default async function EstimateDetailPage({
         </div>
 
         {(estimate.sent_at || estimate.approved_at || estimate.declined_at) && (
-          <div className="px-5 lg:px-6 py-3 border-t border-stone-100 dark:border-stone-800/60 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+          <div className="px-5 lg:px-6 py-3 border-t border-stone-200 dark:border-stone-800 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
             {estimate.sent_at && (
               <span>
                 <span className={SECTION_LABEL}>Sent</span>{" "}
@@ -221,7 +222,6 @@ export default async function EstimateDetailPage({
 
       <section className="pt-2">
         <SectionTitle
-          num="01"
           title="Line items"
           action={isDraft ? <EstimateLineItemsAddButton estimateId={id} /> : undefined}
         />
@@ -234,7 +234,7 @@ export default async function EstimateDetailPage({
       </section>
 
       <section className="pt-2">
-        <SectionTitle num="02" title="Actions" />
+        <SectionTitle title="Actions" />
         <EstimateActions
           estimateId={id}
           jobId={job?.id || ""}
@@ -242,6 +242,6 @@ export default async function EstimateDetailPage({
           approvalToken={estimate.approval_token}
         />
       </section>
-    </div>
+    </PageShell>
   );
 }

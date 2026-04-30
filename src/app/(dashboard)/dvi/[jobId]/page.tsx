@@ -9,8 +9,9 @@ import { SECTION_LABEL } from "@/components/ui/section-card";
 import { ArrowLeft, Car, StickyNote, ClipboardCheck, Eye } from "lucide-react";
 import type { Vehicle, DviStatus, JobStatus } from "@/types";
 import { StartInspectionButton } from "@/components/dvi/start-inspection-button";
+import { PageShell } from "@/components/layout/page-shell";
 
-const TILE = "bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm";
+const TILE = "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card";
 
 export async function generateMetadata({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
@@ -45,7 +46,7 @@ export default async function DviJobDetailPage({
   const jobStatusColors = JOB_STATUS_COLORS[job.status as JobStatus];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 lg:px-6 pb-12 space-y-5 lg:space-y-6">
+    <PageShell maxWidth="max-w-4xl">
       <div className="py-2">
         <Link href="/dvi">
           <Button variant="ghost" size="sm" className="-ml-3">
@@ -169,6 +170,6 @@ export default async function DviJobDetailPage({
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

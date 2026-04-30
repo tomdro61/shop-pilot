@@ -7,6 +7,7 @@ import { InvoiceSearch } from "./invoice-search";
 import { InvoiceStatusFilter } from "./invoice-status-filter";
 import { COLUMN_HEADER } from "@/components/ui/section-card";
 import { formatCurrencyWhole, formatDate, getInitials } from "@/lib/utils/format";
+import { PageShell } from "@/components/layout/page-shell";
 import type { InvoiceStatus } from "@/types";
 
 export const metadata = {
@@ -28,7 +29,7 @@ export default async function InvoicesPage({
   const invoices = await getInvoices(status, search);
 
   return (
-    <div className="p-4 lg:p-6 space-y-3">
+    <PageShell>
       <div className="flex flex-wrap items-center gap-2">
         <Suspense>
           <InvoiceSearch />
@@ -42,17 +43,17 @@ export default async function InvoicesPage({
       </div>
 
       {invoices.length === 0 ? (
-        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm py-12 text-center">
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card py-12 text-center">
           <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No invoices found</p>
           <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">Try adjusting your filters</p>
         </div>
       ) : (
         <>
           {/* Desktop: dense table */}
-          <div className="hidden md:block bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+          <div className="hidden md:block bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-sidebar border-b border-stone-200 dark:border-stone-800">
+                <tr className="bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
                   <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Customer</th>
                   <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Vehicle</th>
                   <th className={`text-left px-3 py-2 ${COLUMN_HEADER}`}>Job</th>
@@ -96,7 +97,7 @@ export default async function InvoicesPage({
                   return (
                     <tr
                       key={invoice.id}
-                      className={`border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 border-l-2 ${STATUS_BORDER[invoiceStatus]} hover:bg-stone-50 dark:hover:bg-stone-800/40`}
+                      className={`border-b border-stone-200 dark:border-stone-800 last:border-b-0 border-l-2 ${STATUS_BORDER[invoiceStatus]} hover:bg-stone-50 dark:hover:bg-stone-800/50`}
                     >
                       <td className="px-3 py-2 align-middle">
                         {customerName ? (
@@ -168,7 +169,7 @@ export default async function InvoicesPage({
           </div>
 
           {/* Mobile: dense stacked rows */}
-          <div className="md:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden divide-y divide-stone-100 dark:divide-stone-800/60">
+          <div className="md:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
             {invoices.map((invoice) => {
               const job = invoice.jobs as {
                 id: string;
@@ -201,7 +202,7 @@ export default async function InvoicesPage({
                 <Link
                   key={invoice.id}
                   href={href}
-                  className={`block px-3 py-2.5 border-l-2 ${STATUS_BORDER[invoiceStatus]} hover:bg-stone-50 dark:hover:bg-stone-800/40`}
+                  className={`block px-3 py-2.5 border-l-2 ${STATUS_BORDER[invoiceStatus]} hover:bg-stone-50 dark:hover:bg-stone-800/50`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
@@ -225,6 +226,6 @@ export default async function InvoicesPage({
           </div>
         </>
       )}
-    </div>
+    </PageShell>
   );
 }
