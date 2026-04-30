@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/utils/format";
 const chartConfig: ChartConfig = {
   value: {
     label: "Revenue",
-    color: "oklch(0.55 0.15 250)",
+    color: "var(--chart-primary)",
   },
 };
 
@@ -22,8 +22,8 @@ interface ReportsOverviewChartProps {
 
 export function ReportsOverviewChart({ data }: ReportsOverviewChartProps) {
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40">
-      <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
+      <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
         <h3 className={COLUMN_HEADER}>Revenue — Last 6 Months</h3>
       </div>
       <div className="px-4 py-3">

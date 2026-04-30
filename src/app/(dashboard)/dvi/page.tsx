@@ -44,7 +44,7 @@ export default async function DviJobListPage({
   ]);
 
   return (
-    <PageShell maxWidth="max-w-4xl">
+    <PageShell width="narrow">
       <div className="flex flex-wrap items-end justify-between gap-2 py-2">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">

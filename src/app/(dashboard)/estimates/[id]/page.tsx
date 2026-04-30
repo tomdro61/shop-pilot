@@ -29,8 +29,8 @@ import type {
 
 const ESTIMATE_DOT: Record<EstimateStatus, string> = {
   draft: "bg-stone-400",
-  sent: "bg-green-500",
-  approved: "bg-green-500",
+  sent: "bg-emerald-500",
+  approved: "bg-emerald-500",
   declined: "bg-red-500",
 };
 
@@ -75,7 +75,7 @@ export default async function EstimateDetailPage({
   const isDraft = status === "draft";
 
   return (
-    <PageShell maxWidth="max-w-6xl">
+    <PageShell width="wide">
 
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
         {job ? (

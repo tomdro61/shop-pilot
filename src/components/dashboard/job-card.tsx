@@ -12,8 +12,6 @@ import {
 import {
   DVI_STATUS_LABELS,
   DVI_STATUS_COLORS,
-  JOB_STATUS_BAR,
-  type JobStatusKey,
 } from "@/lib/constants";
 import { Car, Calendar } from "lucide-react";
 import type { JobStatus, DviStatus } from "@/types";
@@ -47,7 +45,6 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
     (sum, li) => sum + (li.total ?? 0),
     0
   );
-  const accentBar = JOB_STATUS_BAR[job.status as JobStatusKey] ?? "bg-stone-300";
   const dviRaw = job.dvi_inspections;
   const dviStatus = (Array.isArray(dviRaw) ? dviRaw[0]?.status : dviRaw?.status) as
     | DviStatus
@@ -67,9 +64,7 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
         }
       }}
     >
-      <span className={`absolute inset-y-0 left-0 w-1 ${accentBar}`} aria-hidden />
-
-      <div className="pl-3.5 pr-3 py-3 space-y-2.5">
+      <div className="px-3 py-3 space-y-2.5">
         {/* Header — customer name + status pill */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">

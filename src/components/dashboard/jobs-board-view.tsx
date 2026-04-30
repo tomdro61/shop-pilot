@@ -1,12 +1,25 @@
+import { CircleDashed, Package, Wrench, CheckCircle2 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { JobCard } from "./job-card";
-import {
-  JOB_STATUS_ORDER,
-  JOB_STATUS_LABELS,
-  JOB_STATUS_COLORS,
-  JOB_STATUS_BAR,
-} from "@/lib/constants";
+import { ACCENT_BAR, ACCENT_ICON_TINT, type Accent } from "@/components/ui/mini-status-card";
+import { JOB_STATUS_ORDER, JOB_STATUS_LABELS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/types";
+
+const STATUS_TONE: Record<JobStatus, Accent> = {
+  not_started: "stone",
+  waiting_for_parts: "amber",
+  in_progress: "blue",
+  complete: "green",
+};
+
+const STATUS_ICON: Record<JobStatus, LucideIcon> = {
+  not_started: CircleDashed,
+  waiting_for_parts: Package,
+  in_progress: Wrench,
+  complete: CheckCircle2,
+};
 
 type JobRow = {
   id: string;
@@ -70,19 +83,30 @@ function BoardColumn({
   jobs: JobRow[];
   className?: string;
 }) {
-  const colors = JOB_STATUS_COLORS[status];
+  const tone = STATUS_TONE[status];
+  const Icon = STATUS_ICON[status];
 
   return (
     <div className={className}>
       <div className="h-full rounded-md border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900 overflow-hidden flex flex-col">
-        <div aria-hidden className={`h-[3px] w-full ${JOB_STATUS_BAR[status]}`} />
+        <div aria-hidden className={`h-[3px] w-full ${ACCENT_BAR[tone]}`} />
         <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/60">
-          <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wider ${colors.bg} ${colors.text}`}>
-            {JOB_STATUS_LABELS[status]}
-          </span>
-          <span className="font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
-            {jobs.length}
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className={cn(
+                "w-6 h-6 rounded-md grid place-items-center border flex-none",
+                ACCENT_ICON_TINT[tone]
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
+              {JOB_STATUS_LABELS[status]}
+            </span>
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 tabular-nums">
+              {jobs.length}
+            </span>
+          </div>
         </div>
         <div className="flex-1 p-2 space-y-2">
           {jobs.length === 0 ? (

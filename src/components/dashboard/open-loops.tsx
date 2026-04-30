@@ -195,21 +195,27 @@ function OpenLoopRow({ loop }: { loop: OpenLoop }) {
       />
       <button
         type="button"
+        disabled
+        aria-disabled
+        title="Coming soon"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
         }}
-        className="text-xs text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:underline underline-offset-2 shrink-0"
+        className="text-xs text-stone-400 dark:text-stone-500 cursor-not-allowed shrink-0"
       >
         Snooze
       </button>
       <button
         type="button"
+        disabled
+        aria-disabled
+        title="Coming soon"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
         }}
-        className="text-xs text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:underline underline-offset-2 shrink-0"
+        className="text-xs text-stone-400 dark:text-stone-500 cursor-not-allowed shrink-0"
       >
         Dismiss
       </button>

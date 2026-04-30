@@ -44,8 +44,8 @@ export const JOB_STATUS_COLORS: Record<
   },
 };
 
-// Saturated accent strip color per job status. Used for column top strips
-// (jobs board view) and per-card left accents (job-card).
+// Saturated accent dot color per job status. Used for status dots in
+// status-select dropdown and the calendar view.
 export const JOB_STATUS_BAR: Record<JobStatusKey, string> = {
   not_started: "bg-red-500",
   waiting_for_parts: "bg-amber-500",

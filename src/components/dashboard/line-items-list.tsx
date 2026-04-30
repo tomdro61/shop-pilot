@@ -388,7 +388,7 @@ function PresetsTab({
           className="pl-9"
         />
       </div>
-      <div className="max-h-[60vh] overflow-y-auto rounded-lg border border-stone-200 dark:border-stone-700">
+      <div className="max-h-[60vh] overflow-y-auto rounded-md border border-stone-200 dark:border-stone-700">
         {filtered.length === 0 ? (
           <p className="py-4 text-center text-sm text-stone-500 dark:text-stone-400">No presets match</p>
         ) : (
@@ -403,7 +403,7 @@ function PresetsTab({
                 key={preset.id}
                 type="button"
                 onClick={() => handleSelect(preset)}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors border-b border-stone-200 dark:border-stone-800 last:border-b-0"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{preset.name}</p>
@@ -520,14 +520,14 @@ function CatalogTab({
           categoryNames.map((catName) => (
             <div key={catName} className="mb-3">
               <p className={`${SECTION_LABEL} mb-1 px-1`}>{catName}</p>
-              <div className="rounded-lg border border-stone-200 dark:border-stone-700">
+              <div className="rounded-md border border-stone-200 dark:border-stone-700">
                 {grouped[catName].map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     disabled={adding === item.id}
                     onClick={() => handleAdd(item)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors border-b border-stone-100 dark:border-stone-800 last:border-b-0 disabled:opacity-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors border-b border-stone-200 dark:border-stone-800 last:border-b-0 disabled:opacity-50"
                   >
                     <div
                       className={cn(

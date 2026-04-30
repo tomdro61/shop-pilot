@@ -90,13 +90,13 @@ export const OPEN_LOOP_CATEGORIES: Record<OpenLoopCategory, CategoryConfig> = {
   },
 };
 
-export const OPEN_LOOP_CATEGORY_ORDER: readonly OpenLoopCategory[] = [
+export const OPEN_LOOP_CATEGORY_ORDER = [
   "payment_due",
   "estimate",
   "dvi",
   "follow_up",
   "parts",
-];
+] as const satisfies readonly OpenLoopCategory[];
 
 type CustomerSummary = { id: string; first_name: string; last_name: string };
 type VehicleSummary = { year: number | null; make: string | null; model: string | null };

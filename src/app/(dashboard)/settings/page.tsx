@@ -41,7 +41,7 @@ const settingsItems = [
 
 export default function SettingsPage() {
   return (
-    <PageShell maxWidth="max-w-2xl">
+    <PageShell width="tight">
       <div>
         <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
           Settings

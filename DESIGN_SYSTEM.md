@@ -181,16 +181,20 @@ Applies to: job status, payment status, estimate/invoice status, loop category, 
 
 ### `PageShell` — `src/components/layout/page-shell.tsx`
 
-The canonical page container. `max-w` + `px` + `py` + `space-y-4`.
+The canonical page container. `max-w` + `px` + `py` + `space-y-4`. Width is a typed enum (`PageWidth`), not a free-form string.
 
 ```tsx
-<PageShell>{...}</PageShell>          // default: max-w-[1400px] (dashboard, list pages)
-<PageShell maxWidth="max-w-6xl">      // detail pages (job, customer, parking, estimate)
+<PageShell>{...}</PageShell>             // default: max-w-[1400px] (dashboard, list pages)
+<PageShell width="wide">                 // max-w-6xl — detail pages (job, customer, parking, estimate)
+<PageShell width="narrow">               // max-w-4xl — DVI list/detail
+<PageShell width="tight">                // max-w-2xl — settings nav, narrow forms
 ```
 
 Width rule:
-- **Dashboard, jobs list, customers list, reports, settings list** → `max-w-[1400px]` (default)
-- **Detail pages** (single record) → `max-w-6xl` (~1152px)
+- **Dashboard, jobs list, customers list, reports, settings list** → `width="default"` (= `max-w-[1400px]`)
+- **Detail pages** (single record) → `width="wide"` (= `max-w-6xl`, ~1152px)
+- **DVI list + detail** → `width="narrow"` (= `max-w-4xl`)
+- **Settings nav** → `width="tight"` (= `max-w-2xl`)
 
 `p-4 lg:p-6` page wrapping is **deprecated** — pages should wrap in `PageShell`.
 
@@ -446,7 +450,7 @@ Same `bg-{tone}-100 text-{tone}-700` pattern. All `paid`/`approved`/`sent` (posi
 type Accent = "green" | "amber" | "blue" | "red" | "indigo" | "stone";
 ```
 
-(Note: `green` is the legacy enum value — the rendered class is `bg-emerald-500` etc. Do not introduce raw `green-*` Tailwind classes.)
+The `"green"` enum value is a **legacy alias** — `ACCENT_BAR["green"]` resolves to `bg-emerald-500`, `ACCENT_ICON_TINT["green"]` resolves to `bg-emerald-50 text-emerald-700` etc. New code may pass `"green"` via the `Accent` type (it's the canonical positive tone), but **never** hand-roll `bg-green-*` / `text-green-*` Tailwind classes — those are banned per §2 because they produce a different shade than `emerald` and break the "one green family" rule.
 
 Three companion maps (also exported):
 - **`ACCENT_BAR`** — `bg-{tone}-500` saturated strip (used for `MiniStatusCard` left accent)

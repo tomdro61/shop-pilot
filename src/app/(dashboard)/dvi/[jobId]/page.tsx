@@ -46,7 +46,7 @@ export default async function DviJobDetailPage({
   const jobStatusColors = JOB_STATUS_COLORS[job.status as JobStatus];
 
   return (
-    <PageShell maxWidth="max-w-4xl">
+    <PageShell width="narrow">
       <div className="py-2">
         <Link href="/dvi">
           <Button variant="ghost" size="sm" className="-ml-3">
