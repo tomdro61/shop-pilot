@@ -29,17 +29,17 @@ export function SectionHeader({
   action,
 }: SectionHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-3 mb-3">
-      <div className="flex items-center gap-2 min-w-0">
+    <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex items-center gap-2.5 min-w-0">
         <span
           className={cn(
-            "w-6 h-6 rounded-md grid place-items-center border flex-none",
+            "w-8 h-8 rounded-md grid place-items-center border flex-none",
             ACCENT_ICON_TINT[iconTone]
           )}
         >
-          <Icon className="h-3.5 w-3.5" />
+          <Icon className="h-4 w-4" />
         </span>
-        <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-50">{title}</h2>
+        <h2 className="text-base font-bold tracking-tight text-stone-900 dark:text-stone-50">{title}</h2>
         {typeof count === "number" && (
           <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 tabular-nums">
             {count}

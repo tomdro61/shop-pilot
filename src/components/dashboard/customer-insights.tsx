@@ -24,8 +24,8 @@ const GRANULARITIES: { value: Granularity; label: string }[] = [
 ];
 
 const chartConfig: ChartConfig = {
-  new: { label: "New Customers", color: "oklch(0.60 0.15 155)" },
-  returning: { label: "Returning Customers", color: "oklch(0.55 0.15 250)" },
+  new: { label: "New Customers", color: "var(--chart-positive)" },
+  returning: { label: "Returning Customers", color: "var(--chart-primary)" },
 };
 
 interface CustomerInsightsProps {

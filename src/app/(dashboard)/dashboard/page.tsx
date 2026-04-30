@@ -11,8 +11,6 @@ import {
   AlertCircle,
   ClipboardCheck,
   CheckCircle2,
-  ParkingCircle,
-  DollarSign,
   LayoutGrid,
 } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
@@ -20,14 +18,15 @@ import { formatCurrencyWhole } from "@/lib/utils/format";
 import { todayET, daysBetween, nowET } from "@/lib/utils";
 import { sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
 import { resolveDateRange } from "@/lib/utils/date-range";
+import { hasPendingService } from "@/lib/utils/parking";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { KpiCompactCard } from "@/components/dashboard/kpi-compact-card";
-import { SubHeaderCard } from "@/components/dashboard/sub-header-card";
-import { OpenLoops } from "@/components/dashboard/open-loops";
+import { ActionCenter } from "@/components/dashboard/action-center";
 import { SectionHeader } from "@/components/dashboard/section-header";
 import { ShopFloorColumn } from "@/components/dashboard/shop-floor-column";
 import { buildOpenLoops, countOverdue } from "@/lib/dashboard/open-loops";
+import { getOpenTasks } from "@/lib/actions/tasks";
 
 export const metadata = {
   title: "Dashboard | ShopPilot",
@@ -134,14 +133,13 @@ async function getDashboardData() {
     supabase
       .from("parking_reservations")
       .select(
-        "id, first_name, last_name, customer_id, make, model, services_interested, drop_off_date"
+        "id, first_name, last_name, customer_id, make, model, services_interested, services_completed, drop_off_date"
       )
       .not("services_interested", "eq", "{}")
-      .not("drop_off_date", "is", null)
       .in("status", ["reserved", "checked_in"]),
     supabase
       .from("parking_reservations")
-      .select("id, status, drop_off_date, pick_up_date")
+      .select("id, status, drop_off_date, pick_up_date, lock_box_number")
       .or(`drop_off_date.eq.${today},pick_up_date.eq.${today}`),
     supabase
       .from("jobs")
@@ -199,6 +197,7 @@ async function getDashboardData() {
   const inProgress = activeJobsWithTotals.filter((j) => j.status === "in_progress");
   const waitingForParts = activeJobsWithTotals.filter((j) => j.status === "waiting_for_parts");
   const notStarted = activeJobsWithTotals.filter((j) => j.status === "not_started");
+  const unassignedJobsCount = activeJobsWithTotals.filter((j) => !j.assigned_tech).length;
 
   const inspectionRows = inspectionRangeResult.data || [];
   function sumInspectionRev(rows: typeof inspectionRows) {
@@ -258,9 +257,20 @@ async function getDashboardData() {
   const dropOffsToday = parkingToday.filter(
     (r) => r.drop_off_date === today && r.status === "reserved"
   ).length;
-  const pickupsToday = parkingToday.filter(
-    (r) => r.pick_up_date === today && r.status === "checked_in"
+  // Pickups today = anyone whose pickup date is today and who has at least
+  // dropped off. Prepared = either already picked up (checked_out) or key
+  // is in a lockbox awaiting self-checkout.
+  const pickupsTodayList = parkingToday.filter(
+    (r) =>
+      r.pick_up_date === today &&
+      (r.status === "checked_in" || r.status === "checked_out")
+  );
+  const pickupsToday = pickupsTodayList.length;
+  const pickupsPreparedToday = pickupsTodayList.filter(
+    (r) => r.status === "checked_out" || r.lock_box_number != null
   ).length;
+
+  const openParkingLeads = (parkingLeadsResult.data ?? []).filter(hasPendingService);
 
   const openLoops = buildOpenLoops({
     today,
@@ -268,7 +278,7 @@ async function getDashboardData() {
     pendingEstimates,
     newQuoteRequests: newQuoteRequestsResult.data || [],
     readyDvis: readyDvisResult.data || [],
-    parkingLeads: parkingLeadsResult.data || [],
+    parkingLeads: openParkingLeads,
     agedWaitingForParts: agedWaitingForPartsResult.data || [],
   });
 
@@ -302,8 +312,16 @@ async function getDashboardData() {
       jobsClosedMonth: monthCompleted.length,
     },
     shopFloor: { notStarted, waitingForParts, inProgress },
-    parking: { dropOffsToday, pickupsToday },
+    parking: { dropOffsToday, pickupsToday, pickupsPreparedToday },
     awaitingPayment: { count: unpaidJobs.length, total: totalOutstanding, oldestDays: oldestUnpaidDays },
+    needsAttention: {
+      unassignedJobs: unassignedJobsCount,
+      quoteRequests: (newQuoteRequestsResult.data ?? []).length,
+      pendingEstimates: (pendingEstimatesResult.data ?? []).length,
+      readyDvis: (readyDvisResult.data ?? []).length,
+      parkingLeads: openParkingLeads.length,
+      agedParts: (agedWaitingForPartsResult.data ?? []).length,
+    },
     openLoops,
   };
 }
@@ -321,13 +339,17 @@ function getGreeting(): string {
 }
 
 export default async function DashboardPage() {
-  const [user, data] = await Promise.all([getCurrentUser(), getDashboardData()]);
+  const [user, data, tasks] = await Promise.all([
+    getCurrentUser(),
+    getDashboardData(),
+    getOpenTasks(),
+  ]);
   const today = todayET();
 
   const firstName = user?.name?.split(" ")[0] ?? null;
   const greeting = firstName ? `${getGreeting()}, ${firstName}` : getGreeting();
 
-  const { stats, ops, shopFloor, parking, awaitingPayment, openLoops } = data;
+  const { stats, ops, shopFloor, parking, awaitingPayment, needsAttention, openLoops } = data;
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
   const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);
 
@@ -337,29 +359,6 @@ export default async function DashboardPage() {
   const statusLineParts: string[] = [];
   if (totalJobs > 0) statusLineParts.push(`${totalJobs} on the floor`);
   if (overdueLoops > 0) statusLineParts.push(`${overdueLoops} loop${overdueLoops === 1 ? "" : "s"} overdue`);
-
-  const parkingMetrics =
-    parking.dropOffsToday === 0 && parking.pickupsToday === 0
-      ? []
-      : [
-          { value: parking.dropOffsToday, label: "Drop-offs" },
-          { value: parking.pickupsToday, label: "Pickups" },
-        ];
-
-  const awaitingMetrics =
-    awaitingPayment.count === 0
-      ? []
-      : [
-          { value: awaitingPayment.count, label: "Jobs" },
-          {
-            value: formatCurrencyWhole(awaitingPayment.total),
-            label: "Owed",
-            tone: "red" as const,
-          },
-          ...(awaitingPayment.oldestDays > 0
-            ? [{ value: `${awaitingPayment.oldestDays}d`, label: "Oldest" }]
-            : []),
-        ];
 
   return (
     <DashboardShell
@@ -388,116 +387,104 @@ export default async function DashboardPage() {
         </>
       }
     >
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard
-          title="Today's Revenue"
-          value={formatCurrencyWhole(stats.todayRevenue)}
-          icon={Calendar}
-          tone="green"
-          subtitle={ops.jobsClosedToday > 0 ? `${ops.jobsClosedToday} closed today` : "no jobs closed yet"}
-        />
-        <KpiCard
-          title="This Week"
-          value={formatCurrencyWhole(stats.weeklyRevenue)}
-          icon={TrendingUp}
-          tone="blue"
-          changePercent={weekChange}
-          changeLabel="vs last week"
-        />
-        <KpiCard
-          title="This Month"
-          value={formatCurrencyWhole(stats.monthlyRevenue)}
-          icon={CalendarDays}
-          tone="indigo"
-          changePercent={monthChange}
-          changeLabel="vs last month"
-        />
-        <KpiCard
-          title="Outstanding A/R"
-          value={formatCurrencyWhole(awaitingPayment.total)}
-          icon={AlertCircle}
-          tone={awaitingPayment.count > 0 ? "amber" : "stone"}
-          subtitle={
-            awaitingPayment.count > 0
-              ? `${awaitingPayment.count} unpaid · ${awaitingPayment.oldestDays}d oldest`
-              : "all caught up"
-          }
-        />
-      </div>
+      <div className="space-y-8">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard
+              title="Today's Revenue"
+              value={formatCurrencyWhole(stats.todayRevenue)}
+              icon={Calendar}
+              tone="green"
+              subtitle={ops.jobsClosedToday > 0 ? `${ops.jobsClosedToday} closed today` : "no jobs closed yet"}
+            />
+            <KpiCard
+              title="This Week"
+              value={formatCurrencyWhole(stats.weeklyRevenue)}
+              icon={TrendingUp}
+              tone="blue"
+              changePercent={weekChange}
+              changeLabel="vs last week"
+            />
+            <KpiCard
+              title="This Month"
+              value={formatCurrencyWhole(stats.monthlyRevenue)}
+              icon={CalendarDays}
+              tone="indigo"
+              changePercent={monthChange}
+              changeLabel="vs last month"
+            />
+            <KpiCard
+              title="Outstanding A/R"
+              value={formatCurrencyWhole(awaitingPayment.total)}
+              icon={AlertCircle}
+              tone={awaitingPayment.count > 0 ? "amber" : "stone"}
+              subtitle={
+                awaitingPayment.count > 0
+                  ? `${awaitingPayment.count} unpaid · ${awaitingPayment.oldestDays}d oldest`
+                  : "all caught up"
+              }
+            />
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <KpiCompactCard
-          label="State Inspections"
-          icon={ClipboardCheck}
-          tone="stone"
-          today={ops.stateToday}
-          todaySub={formatCurrencyWhole(ops.stateToday * INSPECTION_RATE_STATE)}
-          week={ops.stateWeek}
-          weekSub={formatCurrencyWhole(ops.stateWeek * INSPECTION_RATE_STATE)}
-          month={ops.stateMonth}
-          monthSub={formatCurrencyWhole(ops.stateMonth * INSPECTION_RATE_STATE)}
-        />
-        <KpiCompactCard
-          label="TNC Inspections"
-          icon={ClipboardCheck}
-          tone="stone"
-          today={ops.tncToday}
-          todaySub={formatCurrencyWhole(ops.tncToday * INSPECTION_RATE_TNC)}
-          week={ops.tncWeek}
-          weekSub={formatCurrencyWhole(ops.tncWeek * INSPECTION_RATE_TNC)}
-          month={ops.tncMonth}
-          monthSub={formatCurrencyWhole(ops.tncMonth * INSPECTION_RATE_TNC)}
-        />
-        <KpiCompactCard
-          label="Jobs Closed"
-          icon={CheckCircle2}
-          tone="stone"
-          today={ops.jobsClosedToday}
-          week={ops.jobsClosedWeek}
-          month={ops.jobsClosedMonth}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <SubHeaderCard
-          icon={ParkingCircle}
-          tone="blue"
-          title="Parking"
-          tag="TODAY"
-          metrics={parkingMetrics}
-          emptyMessage="No activity today"
-          href="/parking"
-          muted={parking.dropOffsToday === 0 && parking.pickupsToday === 0}
-        />
-        <SubHeaderCard
-          icon={DollarSign}
-          tone="red"
-          title="Awaiting Payment"
-          tag="COMPLETE · UNPAID"
-          metrics={awaitingMetrics}
-          emptyMessage="All caught up"
-          href="/jobs?status=complete&payment_status=unpaid"
-          muted={awaitingPayment.count === 0}
-        />
-      </div>
-
-      <OpenLoops loops={openLoops} maxVisible={6} />
-
-      <section>
-        <SectionHeader
-          icon={LayoutGrid}
-          iconTone="stone"
-          title="Shop Floor"
-          count={totalJobs}
-          actionLabel="View all"
-          actionHref="/jobs"
-        />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <ShopFloorColumn status="not_started" jobs={shopFloor.notStarted} today={today} />
-          <ShopFloorColumn status="waiting_for_parts" jobs={shopFloor.waitingForParts} today={today} />
-          <ShopFloorColumn status="in_progress" jobs={shopFloor.inProgress} today={today} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <KpiCompactCard
+              label="State Inspections"
+              icon={ClipboardCheck}
+              tone="stone"
+              today={ops.stateToday}
+              todaySub={formatCurrencyWhole(ops.stateToday * INSPECTION_RATE_STATE)}
+              week={ops.stateWeek}
+              weekSub={formatCurrencyWhole(ops.stateWeek * INSPECTION_RATE_STATE)}
+              month={ops.stateMonth}
+              monthSub={formatCurrencyWhole(ops.stateMonth * INSPECTION_RATE_STATE)}
+            />
+            <KpiCompactCard
+              label="TNC Inspections"
+              icon={ClipboardCheck}
+              tone="stone"
+              today={ops.tncToday}
+              todaySub={formatCurrencyWhole(ops.tncToday * INSPECTION_RATE_TNC)}
+              week={ops.tncWeek}
+              weekSub={formatCurrencyWhole(ops.tncWeek * INSPECTION_RATE_TNC)}
+              month={ops.tncMonth}
+              monthSub={formatCurrencyWhole(ops.tncMonth * INSPECTION_RATE_TNC)}
+            />
+            <KpiCompactCard
+              label="Jobs Closed"
+              icon={CheckCircle2}
+              tone="stone"
+              today={ops.jobsClosedToday}
+              week={ops.jobsClosedWeek}
+              month={ops.jobsClosedMonth}
+            />
+          </div>
         </div>
-      </section>
+
+        <div className="border-t border-stone-200 dark:border-stone-800 pt-7">
+          <ActionCenter
+            tasks={tasks}
+            parking={parking}
+            awaitingPayment={awaitingPayment}
+            needsAttention={needsAttention}
+          />
+        </div>
+
+        <section className="border-t border-stone-200 dark:border-stone-800 pt-7">
+          <SectionHeader
+            icon={LayoutGrid}
+            iconTone="stone"
+            title="Shop Floor"
+            count={totalJobs}
+            actionLabel="View all"
+            actionHref="/jobs"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <ShopFloorColumn status="not_started" jobs={shopFloor.notStarted} today={today} />
+            <ShopFloorColumn status="waiting_for_parts" jobs={shopFloor.waitingForParts} today={today} />
+            <ShopFloorColumn status="in_progress" jobs={shopFloor.inProgress} today={today} />
+          </div>
+        </section>
+      </div>
     </DashboardShell>
   );
 }

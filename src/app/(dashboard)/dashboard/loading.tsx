@@ -131,9 +131,12 @@ export default function DashboardLoading() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {Array.from({ length: 3 }).map((_, col) => (
-            <CardShell key={col}>
+            <div
+              key={col}
+              className="rounded-md border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900 overflow-hidden flex flex-col"
+            >
               <div aria-hidden className="h-[3px] w-full bg-stone-200/70 dark:bg-stone-800/70" />
-              <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100 dark:border-stone-800">
+              <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/60">
                 <div className="flex items-center gap-2">
                   <Bar className="h-6 w-6" />
                   <Bar className="h-3.5 w-28" />
@@ -141,11 +144,11 @@ export default function DashboardLoading() {
                 </div>
                 <Bar className="h-3 w-14" />
               </div>
-              <div>
+              <div className="flex-1 p-2 space-y-2">
                 {Array.from({ length: 3 }).map((_, j) => (
                   <div
                     key={j}
-                    className="flex items-start gap-2 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800 last:border-b-0"
+                    className="flex items-start gap-2 px-3 py-2.5 bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card"
                   >
                     <div className="flex-1 space-y-1">
                       <Bar className="h-3.5 w-28" />
@@ -156,7 +159,7 @@ export default function DashboardLoading() {
                   </div>
                 ))}
               </div>
-            </CardShell>
+            </div>
           ))}
         </div>
       </div>

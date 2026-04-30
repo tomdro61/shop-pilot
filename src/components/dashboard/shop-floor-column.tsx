@@ -76,9 +76,9 @@ export function ShopFloorColumn({ status, jobs, today }: ShopFloorColumnProps) {
   const Icon = config.icon;
 
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+    <div className="h-full rounded-md border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900 overflow-hidden flex flex-col">
       <div aria-hidden className={cn("h-[3px] w-full", ACCENT_BAR[config.tone])} />
-      <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 dark:border-stone-800">
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/60">
         <div className="flex items-center gap-2 min-w-0">
           <span
             className={cn(
@@ -102,17 +102,15 @@ export function ShopFloorColumn({ status, jobs, today }: ShopFloorColumnProps) {
           View all
         </Link>
       </div>
-      {jobs.length === 0 ? (
-        <div className="px-4 py-10 text-center text-xs text-stone-400 dark:text-stone-500">
-          None
-        </div>
-      ) : (
-        <div>
-          {jobs.map((job) => (
-            <JobCard key={job.id} job={job} today={today} />
-          ))}
-        </div>
-      )}
+      <div className="flex-1 p-2 space-y-2">
+        {jobs.length === 0 ? (
+          <div className="flex items-center justify-center rounded-md border border-dashed border-stone-300 dark:border-stone-700 py-6">
+            <p className="text-xs text-stone-400 dark:text-stone-500">None</p>
+          </div>
+        ) : (
+          jobs.map((job) => <JobCard key={job.id} job={job} today={today} />)
+        )}
+      </div>
     </div>
   );
 }
@@ -124,7 +122,7 @@ function JobCard({ job, today }: { job: ShopFloorJob; today: string }) {
   return (
     <ClickableRow
       href={`/jobs/${job.id}`}
-      className="flex gap-2 px-4 py-2.5 border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
+      className="flex gap-2 px-3 py-2.5 bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
     >
       <div className="min-w-0 flex-1 space-y-0.5">
         <div className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400 truncate">

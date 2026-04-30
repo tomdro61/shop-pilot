@@ -1014,6 +1014,41 @@ export type Database = {
           },
         ]
       }
+      tasks: {
+        Row: {
+          id: string
+          user_id: string | null
+          title: string
+          status: string
+          created_at: string
+          resolved_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          title: string
+          status?: string
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          title?: string
+          status?: string
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       shop_settings: {
         Row: {
           created_at: string

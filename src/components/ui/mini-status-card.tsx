@@ -1,6 +1,13 @@
 import * as React from "react";
 
-export type Accent = "green" | "amber" | "blue" | "red" | "indigo" | "stone";
+export type Accent =
+  | "green"
+  | "amber"
+  | "blue"
+  | "red"
+  | "indigo"
+  | "violet"
+  | "stone";
 
 export const ACCENT_BAR: Record<Accent, string> = {
   green: "bg-emerald-500",
@@ -8,6 +15,7 @@ export const ACCENT_BAR: Record<Accent, string> = {
   blue: "bg-blue-500",
   red: "bg-red-500",
   indigo: "bg-indigo-500",
+  violet: "bg-violet-500",
   stone: "bg-stone-300 dark:bg-stone-700",
 };
 
@@ -22,6 +30,8 @@ export const ACCENT_ICON_TINT: Record<Accent, string> = {
     "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900",
   indigo:
     "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900",
+  violet:
+    "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900",
   stone:
     "bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800",
 };
@@ -32,6 +42,7 @@ export const ACCENT_PILL: Record<Accent, string> = {
   blue: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
   red: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
   indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400",
+  violet: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-400",
   stone: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300",
 };
 
