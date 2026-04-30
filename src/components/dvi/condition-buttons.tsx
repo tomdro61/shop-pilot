@@ -15,8 +15,8 @@ const CONDITIONS: {
     value: "good",
     label: "Good",
     icon: Check,
-    activeClass: "bg-green-500 text-white ring-green-500",
-    inactiveClass: "text-green-600 ring-stone-200 dark:ring-stone-700 hover:bg-green-50 dark:hover:bg-green-950",
+    activeClass: "bg-emerald-500 text-white ring-emerald-500",
+    inactiveClass: "text-emerald-600 ring-stone-200 dark:ring-stone-700 hover:bg-emerald-50 dark:hover:bg-emerald-950",
   },
   {
     value: "monitor",

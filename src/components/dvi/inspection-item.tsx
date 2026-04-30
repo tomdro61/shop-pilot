@@ -53,10 +53,10 @@ export const InspectionItem = forwardRef<HTMLDivElement, InspectionItemProps>(
       <div
         ref={ref}
         data-result-id={resultId}
-        className={`rounded-lg p-3 transition-all ${
+        className={`rounded-md p-3 transition-all ${
           isHighlighted
             ? "ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
-            : "bg-stone-100/50 dark:bg-stone-800/30"
+            : "bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800"
         }`}
       >
         {/* Item name + condition buttons */}
@@ -76,6 +76,7 @@ export const InspectionItem = forwardRef<HTMLDivElement, InspectionItemProps>(
           <button
             type="button"
             onClick={() => setShowNote(!showNote)}
+            aria-pressed={showNote}
             className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase transition-colors ${
               showNote || note
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
@@ -88,6 +89,7 @@ export const InspectionItem = forwardRef<HTMLDivElement, InspectionItemProps>(
           <button
             type="button"
             onClick={() => setShowPhotos(!showPhotos)}
+            aria-pressed={showPhotos || photos.length > 0}
             className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase transition-colors ${
               showPhotos || photos.length > 0
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400"
@@ -109,7 +111,7 @@ export const InspectionItem = forwardRef<HTMLDivElement, InspectionItemProps>(
               placeholder="Add a note..."
               rows={2}
               disabled={disabled}
-              className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-2 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full rounded-md border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-3 py-2 text-sm placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
           </div>
         )}

@@ -3,15 +3,22 @@ import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
 import { getInspectionForJob } from "@/lib/actions/dvi";
 import { formatVehicle, formatRONumber } from "@/lib/utils/format";
-import { DVI_STATUS_LABELS, DVI_STATUS_COLORS, JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/lib/constants";
+import {
+  DVI_STATUS_LABELS,
+  DVI_STATUS_COLORS,
+  JOB_STATUS_LABELS,
+  JOB_STATUS_COLORS,
+} from "@/lib/constants";
 import { Button } from "@/components/ui/button";
-import { SECTION_LABEL } from "@/components/ui/section-card";
 import { ArrowLeft, Car, StickyNote, ClipboardCheck, Eye } from "lucide-react";
 import type { Vehicle, DviStatus, JobStatus } from "@/types";
 import { StartInspectionButton } from "@/components/dvi/start-inspection-button";
 import { PageShell } from "@/components/layout/page-shell";
+import { TONE_CLASSES } from "@/lib/ui/alert-tone";
 
 const TILE = "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card";
+const CARD_LABEL =
+  "text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-300";
 
 export async function generateMetadata({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
@@ -41,13 +48,15 @@ export default async function DviJobDetailPage({
 
   // Count rated items for progress
   const totalItems = inspection?.dvi_results?.length ?? 0;
-  const ratedItems = inspection?.dvi_results?.filter((r: { condition: string | null }) => r.condition !== null).length ?? 0;
+  const ratedItems =
+    inspection?.dvi_results?.filter((r: { condition: string | null }) => r.condition !== null)
+      .length ?? 0;
 
   const jobStatusColors = JOB_STATUS_COLORS[job.status as JobStatus];
 
   return (
     <PageShell width="narrow">
-      <div className="py-2">
+      <div>
         <Link href="/dvi">
           <Button variant="ghost" size="sm" className="-ml-3">
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
@@ -56,13 +65,13 @@ export default async function DviJobDetailPage({
         </Link>
       </div>
 
-      {/* Header */}
+      {/* Page header — RO + title + job status */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
             {job.ro_number ? formatRONumber(job.ro_number) : "Job Detail"}
           </div>
-          <h1 className="mt-1.5 text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50 truncate">
+          <h1 className="mt-1 text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50 truncate">
             {job.title || "Job"}
           </h1>
         </div>
@@ -76,9 +85,13 @@ export default async function DviJobDetailPage({
       {/* Vehicle */}
       {vehicle && (
         <div className={`${TILE} p-4`}>
-          <div className="flex items-center gap-1.5 mb-2">
-            <Car className="h-3 w-3 text-stone-400" />
-            <p className={SECTION_LABEL}>Vehicle</p>
+          <div className="flex items-center gap-2 mb-2.5">
+            <span
+              className={`w-7 h-7 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.indigo.tile}`}
+            >
+              <Car className="h-3.5 w-3.5" />
+            </span>
+            <p className={CARD_LABEL}>Vehicle</p>
           </div>
           <p className="text-base font-semibold text-stone-900 dark:text-stone-50">
             {formatVehicle(vehicle)}
@@ -89,30 +102,46 @@ export default async function DviJobDetailPage({
               <span className="font-mono tabular-nums">VIN: {vehicle.vin}</span>
             )}
             {job.mileage_in && (
-              <span className="font-mono tabular-nums">{job.mileage_in.toLocaleString()} mi</span>
+              <span className="font-mono tabular-nums">
+                {job.mileage_in.toLocaleString()} mi
+              </span>
             )}
           </div>
         </div>
       )}
 
-      {/* Notes */}
+      {/* Primary Complaint — alert-card style */}
       {job.notes && (
-        <div className="rounded-lg bg-stone-50 dark:bg-stone-900/50 border border-stone-200 dark:border-stone-800 border-l-4 border-l-blue-500 p-4">
-          <div className="flex items-center gap-1.5 mb-1">
-            <StickyNote className="h-3 w-3 text-stone-400" />
-            <p className={SECTION_LABEL}>Primary Complaint</p>
+        <div
+          className={`relative rounded-md border p-4 shadow-card ${TONE_CLASSES.blue.card}`}
+        >
+          <span
+            aria-hidden
+            className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-r ${TONE_CLASSES.blue.bar}`}
+          />
+          <div className="flex items-center gap-2 mb-2 pl-1">
+            <span
+              className={`w-7 h-7 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.blue.tile}`}
+            >
+              <StickyNote className="h-3.5 w-3.5" />
+            </span>
+            <p className={CARD_LABEL}>Primary Complaint</p>
           </div>
-          <p className="text-sm text-stone-900 dark:text-stone-50 leading-relaxed italic whitespace-pre-wrap">
+          <p className="pl-1 text-sm text-stone-900 dark:text-stone-50 leading-relaxed italic whitespace-pre-wrap">
             {job.notes}
           </p>
         </div>
       )}
 
-      {/* DVI Action */}
+      {/* Inspection */}
       <div className={`${TILE} p-5`}>
-        <div className="flex items-center gap-1.5 mb-3">
-          <ClipboardCheck className="h-3 w-3 text-stone-400" />
-          <p className={SECTION_LABEL}>Vehicle Inspection</p>
+        <div className="flex items-center gap-2 mb-3">
+          <span
+            className={`w-7 h-7 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.violet.tile}`}
+          >
+            <ClipboardCheck className="h-3.5 w-3.5" />
+          </span>
+          <p className={CARD_LABEL}>Vehicle Inspection</p>
           {dviStatus && (
             <span
               className={`ml-auto text-[10px] font-black px-2 py-1 rounded-md uppercase ${DVI_STATUS_COLORS[dviStatus].bg} ${DVI_STATUS_COLORS[dviStatus].text}`}
@@ -141,7 +170,9 @@ export default async function DviJobDetailPage({
               <div className="h-2 rounded-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-blue-600 transition-all"
-                  style={{ width: totalItems > 0 ? `${(ratedItems / totalItems) * 100}%` : "0%" }}
+                  style={{
+                    width: totalItems > 0 ? `${(ratedItems / totalItems) * 100}%` : "0%",
+                  }}
                 />
               </div>
             </div>
@@ -155,11 +186,12 @@ export default async function DviJobDetailPage({
         ) : (
           <div className="text-center py-2">
             <p className="text-sm text-stone-500 dark:text-stone-400 mb-3">
-              Inspection {dviStatus === "approved"
+              Inspection{" "}
+              {dviStatus === "approved"
                 ? "approved by customer"
                 : dviStatus === "sent"
-                ? "sent to customer"
-                : "completed"}
+                  ? "sent to customer"
+                  : "completed"}
             </p>
             <Link href={`/dvi/${jobId}/inspect`}>
               <Button variant="outline">

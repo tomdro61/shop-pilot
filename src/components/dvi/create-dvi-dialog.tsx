@@ -339,7 +339,7 @@ export function CreateDviDialog() {
                         type="button"
                         onClick={() => handleSelectVehicle(v.id)}
                         disabled={isPending}
-                        className="w-full text-left rounded-lg border border-stone-200 dark:border-stone-700 p-3 text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors disabled:opacity-50"
+                        className="w-full text-left rounded-md border border-stone-200 dark:border-stone-800 p-3 text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors disabled:opacity-50"
                       >
                         <span className="font-medium">
                           {formatVehicle(v) || "Unknown Vehicle"}
@@ -397,7 +397,7 @@ export function CreateDviDialog() {
 
           {/* Loading overlay */}
           {isPending && (
-            <div className="absolute inset-0 bg-white/50 dark:bg-stone-950/50 flex items-center justify-center rounded-lg">
+            <div className="absolute inset-0 bg-white/50 dark:bg-stone-950/50 flex items-center justify-center rounded-md">
               <Loader2 className="h-6 w-6 animate-spin text-stone-400" />
             </div>
           )}
