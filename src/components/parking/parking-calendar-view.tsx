@@ -65,7 +65,7 @@ export function ParkingCalendarView({
   const monthIdx = monthStart.getMonth();
 
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-stone-200 dark:border-stone-800">
         <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
@@ -121,7 +121,7 @@ export function ParkingCalendarView({
           }
 
           const baseCell =
-            "relative min-h-[70px] sm:min-h-[88px] border-b border-r border-stone-100 dark:border-stone-800/60 px-1.5 py-1.5 sm:px-2 sm:py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40";
+            "relative min-h-[70px] sm:min-h-[88px] border-b border-r border-stone-200 dark:border-stone-800 px-1.5 py-1.5 sm:px-2 sm:py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50";
 
           const cellClass = `${baseCell} ${heat} ${
             inMonth

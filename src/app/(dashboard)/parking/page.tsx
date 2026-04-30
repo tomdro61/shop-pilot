@@ -11,6 +11,7 @@ import { ParkingTodayView } from "@/components/parking/parking-today-view";
 import { ParkingAllView } from "@/components/parking/parking-all-view";
 import { ParkingServiceLeads } from "@/components/parking/parking-service-leads";
 import { ParkingCalendarView } from "@/components/parking/parking-calendar-view";
+import { PageShell } from "@/components/layout/page-shell";
 import type { ParkingStatus } from "@/types";
 
 export const metadata = {
@@ -50,24 +51,24 @@ export default async function ParkingPage({
       lockBoxCodes[lb.box_number] = lb.code;
     }
     return (
-      <div className="p-4 lg:p-10 space-y-6">
+      <PageShell>
         <Suspense>
           <ParkingTabs />
         </Suspense>
         <ParkingTodayView data={dashboard} lockBoxCodes={lockBoxCodes} />
-      </div>
+      </PageShell>
     );
   }
 
   if (tab === "services") {
     const dashboard = await getParkingDashboard(lot);
     return (
-      <div className="p-4 lg:p-10 space-y-6">
+      <PageShell>
         <Suspense>
           <ParkingTabs />
         </Suspense>
         <ParkingServiceLeads reservations={dashboard.serviceLeads} />
-      </div>
+      </PageShell>
     );
   }
 
@@ -101,7 +102,7 @@ export default async function ParkingPage({
     });
 
     return (
-      <div className="p-4 lg:p-10 space-y-6">
+      <PageShell>
         <Suspense>
           <ParkingTabs />
         </Suspense>
@@ -111,7 +112,7 @@ export default async function ParkingPage({
           counts={counts}
           lot={lot}
         />
-      </div>
+      </PageShell>
     );
   }
 
@@ -129,7 +130,7 @@ export default async function ParkingPage({
   });
 
   return (
-    <div className="p-4 lg:p-10 space-y-6">
+    <PageShell>
       <Suspense>
         <ParkingTabs />
       </Suspense>
@@ -139,6 +140,6 @@ export default async function ParkingPage({
         totalPages={result.totalPages}
         total={result.total}
       />
-    </div>
+    </PageShell>
   );
 }

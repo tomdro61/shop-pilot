@@ -1,8 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function ParkingLoading() {
   return (
-    <div className="p-4 lg:p-10 space-y-5">
+    <PageShell>
       {/* Tabs skeleton */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Skeleton className="h-10 w-72" />
@@ -12,7 +13,7 @@ export default function ParkingLoading() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-[76px] rounded-lg" />
+          <Skeleton key={i} className="h-[76px] rounded-md" />
         ))}
       </div>
 
@@ -22,11 +23,11 @@ export default function ParkingLoading() {
           <Skeleton className="h-5 w-40" />
           <div className="space-y-2">
             {[...Array(3)].map((_, j) => (
-              <Skeleton key={j} className="h-16 rounded-lg" />
+              <Skeleton key={j} className="h-16 rounded-md" />
             ))}
           </div>
         </div>
       ))}
-    </div>
+    </PageShell>
   );
 }

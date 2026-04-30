@@ -39,7 +39,7 @@ export function ParkingCardActions({
     return (
       <Badge
         variant="secondary"
-        className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 border-0 text-xs"
+        className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-0 text-xs"
       >
         Prepared
       </Badge>

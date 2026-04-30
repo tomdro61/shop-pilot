@@ -109,8 +109,8 @@ export function ParkingInvoiceSection({
   }
 
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-stone-100 dark:border-stone-800/60">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+      <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-stone-200 dark:border-stone-800">
         <h3 className={SECTION_LABEL}>Invoices</h3>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -171,14 +171,14 @@ export function ParkingInvoiceSection({
                 Add Line Item
               </Button>
               {total > 0 && (
-                <div className="flex justify-between border-t border-stone-100 dark:border-stone-800/60 pt-2 text-sm">
+                <div className="flex justify-between border-t border-stone-200 dark:border-stone-800 pt-2 text-sm">
                   <span className={SECTION_LABEL}>Total</span>
                   <span className="font-mono tabular-nums font-semibold text-stone-900 dark:text-stone-50">
                     {formatCurrency(total)}
                   </span>
                 </div>
               )}
-              <div className="space-y-3 border-t border-stone-100 dark:border-stone-800/60 pt-3">
+              <div className="space-y-3 border-t border-stone-200 dark:border-stone-800 pt-3">
                 <div className="flex items-start gap-3">
                   <Checkbox
                     id="parking-send-text"

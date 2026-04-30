@@ -218,7 +218,7 @@ export function ParkingAllView({
       {/* List */}
       <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
       {reservations.length === 0 ? (
-        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm p-8 text-center">
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card p-8 text-center">
           <p className="text-sm text-stone-500 dark:text-stone-400">
             No reservations found.
           </p>

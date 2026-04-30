@@ -27,7 +27,7 @@ function KPICard({
   accent?: string;
 }) {
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm flex items-center gap-3 p-4">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card flex items-center gap-3 p-4">
       <div
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${accent || "bg-stone-100 dark:bg-stone-800"}`}
       >

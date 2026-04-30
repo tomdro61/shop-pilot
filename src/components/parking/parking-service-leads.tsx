@@ -53,8 +53,16 @@ export function ParkingServiceLeads({
           return (
             <div
               key={r.id}
+              role="link"
+              tabIndex={0}
               onClick={() => router.push(`/parking/${r.id}`)}
-              className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm cursor-pointer transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push(`/parking/${r.id}`);
+                }
+              }}
+              className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card cursor-pointer transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
