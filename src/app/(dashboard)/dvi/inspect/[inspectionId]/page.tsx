@@ -57,22 +57,27 @@ export default async function StandaloneInspectPage({
 
   return (
     <div className="mx-auto max-w-2xl p-4">
-      {/* Send to Customer + Delete controls for completed inspections */}
-      {isCompleted && (
-        <div className="mb-6 space-y-3">
-          {inspection.status === "completed" && (
-            <SendDviSection inspectionId={inspection.id} results={results} />
-          )}
-          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm p-4 flex items-center justify-between">
-            <p className="text-sm text-stone-500 dark:text-stone-400">Delete this inspection and all its data</p>
-            <DeleteDviButton inspectionId={inspection.id} />
-          </div>
+      {/* Send to Customer (only after inspection is completed) */}
+      {inspection.status === "completed" && (
+        <div className="mb-6">
+          <SendDviSection inspectionId={inspection.id} results={results} />
         </div>
       )}
 
+      {/* Delete control — always available. The button has its own
+          confirm-dialog so destructive intent is gated there. Showing it
+          in any status lets the manager clean up orphan/test inspections
+          (e.g. an in_progress DVI whose underlying job was deleted). */}
+      <div className="mb-6 bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card p-4 flex items-center justify-between">
+        <p className="text-sm text-stone-500 dark:text-stone-400">
+          Delete this inspection and all its data
+        </p>
+        <DeleteDviButton inspectionId={inspection.id} />
+      </div>
+
       <InspectionForm
         inspectionId={inspection.id}
-        backUrl={isCompleted ? "/dvi" : `/dvi/inspect/${inspection.id}`}
+        backUrl="/dvi"
         results={results}
         photoUrls={photoUrls}
         customerName={customerName}
