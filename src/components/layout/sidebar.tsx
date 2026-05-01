@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Inbox, Users, Wrench, BarChart3, MessageCircle, ClipboardCheck, Settings, CircleDollarSign, PlaneLanding, Receipt, FileQuestion, Search } from "lucide-react";
+import { LayoutDashboard, Inbox, Users, Wrench, ClipboardCheck, CircleDollarSign, PlaneLanding, FileQuestion, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -22,28 +22,24 @@ const navGroups: NavGroup[] = [
     label: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/inbox", label: "Inbox", icon: Inbox },
+      { href: "/quick-pay", label: "Quick Pay", icon: CircleDollarSign },
+      { href: "/inspections", label: "Inspections", icon: ClipboardCheck },
     ],
   },
   {
     label: "Work",
     items: [
+      { href: "/inbox", label: "Inbox", icon: Inbox },
       { href: "/jobs", label: "Jobs", icon: Wrench },
       { href: "/customers", label: "Customers", icon: Users },
       { href: "/dvi", label: "DVI", icon: Search, techVisible: true },
-      { href: "/inspections", label: "Inspections", icon: ClipboardCheck },
-      { href: "/parking", label: "Parking", icon: PlaneLanding, techVisible: true },
-      { href: "/quick-pay", label: "Quick Pay", icon: CircleDollarSign },
-      { href: "/invoices", label: "Invoices", icon: Receipt },
       { href: "/quote-requests", label: "Quotes", icon: FileQuestion },
     ],
   },
   {
-    label: "Tools",
+    label: "Parking",
     items: [
-      { href: "/reports", label: "Reports", icon: BarChart3 },
-      { href: "/settings", label: "Settings", icon: Settings },
-      { href: "/chat", label: "AI Assistant", icon: MessageCircle },
+      { href: "/parking", label: "Parking", icon: PlaneLanding, techVisible: true },
     ],
   },
 ];

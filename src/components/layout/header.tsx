@@ -8,12 +8,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import { LogOut, Wrench, Sun, Moon, Monitor, Settings, BarChart3, Receipt, ClipboardCheck, FileQuestion, Search } from "lucide-react";
+import { LogOut, Wrench, Sun, Moon, Monitor, Settings, BarChart3, Receipt, MessageCircle, FileQuestion, Search } from "lucide-react";
 import type { User } from "@/types";
 
 const pageTitles: Record<string, string> = {
@@ -97,17 +98,24 @@ export function Header({ user }: { user: User | null }) {
               {user.name}
             </div>
           )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/dvi")}>
-            <Search className="mr-2 h-4 w-4" />
-            DVI
-          </DropdownMenuItem>
           {user?.role !== "tech" && (
             <>
-              <DropdownMenuItem onClick={() => router.push("/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
+              <DropdownMenuSeparator className="lg:hidden" />
+              <DropdownMenuLabel className="lg:hidden text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Quick Access
+              </DropdownMenuLabel>
+              <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/dvi")}>
+                <Search className="mr-2 h-4 w-4" />
+                DVI
               </DropdownMenuItem>
+              <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/quote-requests")}>
+                <FileQuestion className="mr-2 h-4 w-4" />
+                Quotes
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Admin & Utilities
+              </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => router.push("/reports")}>
                 <BarChart3 className="mr-2 h-4 w-4" />
                 Reports
@@ -116,20 +124,20 @@ export function Header({ user }: { user: User | null }) {
                 <Receipt className="mr-2 h-4 w-4" />
                 Invoices
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/inspections")}>
-                <ClipboardCheck className="mr-2 h-4 w-4" />
-                Inspections
+              <DropdownMenuItem onClick={() => router.push("/chat")}>
+                <MessageCircle className="mr-2 h-4 w-4" />
+                AI Assistant
               </DropdownMenuItem>
-              <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/quote-requests")}>
-                <FileQuestion className="mr-2 h-4 w-4" />
-                Quotes
+              <DropdownMenuItem onClick={() => router.push("/settings")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
               </DropdownMenuItem>
             </>
           )}
           <DropdownMenuSeparator />
-          <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <DropdownMenuLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Theme
-          </div>
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setTheme("light")}>
             <Sun className="mr-2 h-4 w-4" />
             Light
