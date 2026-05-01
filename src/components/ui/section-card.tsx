@@ -9,12 +9,12 @@ export const SECTION_LABEL =
   "text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-300";
 
 /**
- * Heavier variant for column/section HEADER rows. Headers sit on the
- * navy sidebar color (bg-sidebar) -- this class is paired with that
- * dark strip, so the text is light.
+ * Heavier variant for column/section HEADER rows. Pairs with the
+ * canonical light header strip (bg-stone-50 dark:bg-stone-900/60) — same
+ * idiom as table theads and section-card titles across the redesigned UI.
  */
 export const COLUMN_HEADER =
-  "text-[11px] font-bold uppercase tracking-wider text-white";
+  "text-[11px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300";
 
 interface SectionCardProps {
   title: React.ReactNode;
@@ -37,8 +37,8 @@ export function SectionCard({
   className = "",
 }: SectionCardProps) {
   return (
-    <div className={`bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden ${className}`}>
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+    <div className={`bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden ${className}`}>
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
         <div className="min-w-0">
           <h3 className={`flex items-center gap-1.5 ${COLUMN_HEADER}`}>
             {title}
