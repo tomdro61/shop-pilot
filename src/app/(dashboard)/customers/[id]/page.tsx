@@ -38,11 +38,11 @@ import type { JobStatus, PaymentStatus, ParkingStatus, Vehicle } from "@/types";
 const JOBS_DISPLAY_LIMIT = 20;
 const VEHICLE_DOT_PALETTE = [
   "bg-blue-500",
-  "bg-orange-500",
+  "bg-amber-500",
   "bg-violet-500",
   "bg-emerald-500",
-  "bg-rose-500",
-  "bg-amber-500",
+  "bg-red-500",
+  "bg-indigo-500",
 ];
 
 function vehicleDotClass(index: number): string {

@@ -64,7 +64,7 @@ export function CustomerTextFieldEditor({
         <button
           onClick={save}
           disabled={saving}
-          className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
         >
           <Check className="h-3.5 w-3.5" />
         </button>

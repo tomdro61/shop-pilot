@@ -140,7 +140,7 @@ export function CustomerInsights({
         <KpiCard
           title="Avg Visits / Customer"
           value={String(data.avgVisitsPerCustomer)}
-          accentColor="purple"
+          accentColor="blue"
         />
       </div>
 
@@ -238,7 +238,7 @@ export function CustomerInsights({
                 </tr>
               ) : (
                 data.topCustomers.map((c, i) => (
-                  <tr key={c.id} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                  <tr key={c.id} className="border-b border-stone-100 dark:border-stone-800/60 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/50">
                     <td className="px-4 py-2 font-mono tabular-nums text-sm text-stone-500 dark:text-stone-400">{i + 1}</td>
                     <td className="px-4 py-2 text-sm font-medium">
                       <Link href={`/customers/${c.id}`} className="text-blue-600 dark:text-blue-400 hover:underline">

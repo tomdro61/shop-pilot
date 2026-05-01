@@ -104,7 +104,7 @@ function NavItemLink({
     <Link
       href={item.href}
       className={cn(
-        "group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
+        "group relative flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-150",
         isActive
           ? "bg-white/[0.08] text-white font-semibold ring-1 ring-inset ring-white/10"
           : "text-stone-400 hover:bg-white/[0.04] hover:text-stone-100"
