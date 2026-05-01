@@ -281,7 +281,7 @@ export async function completeInspection(inspectionId: string) {
   const supabase = await createClient();
 
   // Fetch results + inspection info in parallel
-  const [{ data: results }, { data: inspection }] = await Promise.all([
+  const [resultsRes, inspectionRes] = await Promise.all([
     supabase
       .from("dvi_results")
       .select("id, condition")
@@ -295,8 +295,13 @@ export async function completeInspection(inspectionId: string) {
       .single(),
   ]);
 
+  if (resultsRes.error) return { error: `Failed to load DVI results: ${resultsRes.error.message}` };
+  if (inspectionRes.error || !inspectionRes.data) return { error: "Inspection not found" };
+  const results = resultsRes.data;
+  const inspection = inspectionRes.data;
+
   // Verify all items are rated
-  const unrated = (results ?? []).filter((r) => r.condition === null);
+  const unrated = results.filter((r) => r.condition === null);
   if (unrated.length > 0) {
     return { error: `${unrated.length} item(s) still need to be rated` };
   }
@@ -445,8 +450,8 @@ export async function getTechJobs() {
 // ── Delete ──────────────────────────────────────────────────
 
 export async function deleteInspection(inspectionId: string) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Not authenticated" };
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
   const supabase = await createClient();
 

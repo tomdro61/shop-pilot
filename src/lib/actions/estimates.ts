@@ -127,6 +127,9 @@ export async function getEstimateByToken(token: string) {
 }
 
 export async function sendEstimate(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   // Verify it's a draft and get job/customer info for SMS
@@ -199,6 +202,9 @@ export async function sendEstimate(id: string) {
 }
 
 export async function resendEstimate(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data: estimate, error: fetchError } = await supabase
@@ -430,6 +436,9 @@ export async function declineEstimate(token: string) {
 }
 
 export async function deleteEstimate(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data: estimate, error: fetchError } = await supabase
@@ -463,6 +472,9 @@ export async function deleteEstimate(id: string) {
 // Estimate Line Item CRUD (only allowed when estimate is draft)
 
 export async function createEstimateLineItem(formData: EstimateLineItemFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = estimateLineItemSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -497,6 +509,9 @@ export async function updateEstimateLineItem(
   id: string,
   formData: EstimateLineItemFormData
 ) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = estimateLineItemSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -529,6 +544,9 @@ export async function updateEstimateLineItem(
 }
 
 export async function deleteEstimateLineItem(id: string, estimateId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   // Verify estimate is draft

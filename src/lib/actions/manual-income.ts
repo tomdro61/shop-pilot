@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 // ── Types ────────────────────────────────────────────────────
@@ -89,6 +90,9 @@ export async function createManualIncome(input: {
   customer_id?: string | null;
   notes?: string | null;
 }) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
   const { error } = await supabase.from("manual_income").insert({
     date: input.date,
@@ -117,6 +121,9 @@ export async function updateManualIncome(
     notes?: string | null;
   }
 ) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("manual_income")
@@ -129,6 +136,9 @@ export async function updateManualIncome(
 }
 
 export async function deleteManualIncome(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("manual_income")

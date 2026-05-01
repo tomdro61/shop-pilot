@@ -243,6 +243,17 @@ export async function getParkingDashboard(lot?: string) {
       ).order("drop_off_date", { ascending: true }),
     ]);
 
+  if (arrivalsResult.error)
+    throw new Error(`Failed to load arrivals: ${arrivalsResult.error.message}`);
+  if (pickupsResult.error)
+    throw new Error(`Failed to load pickups: ${pickupsResult.error.message}`);
+  if (tomorrowPickupsResult.error)
+    throw new Error(`Failed to load tomorrow pickups: ${tomorrowPickupsResult.error.message}`);
+  if (currentlyParkedResult.error)
+    throw new Error(`Failed to load currently parked: ${currentlyParkedResult.error.message}`);
+  if (serviceLeadsResult.error)
+    throw new Error(`Failed to load service leads: ${serviceLeadsResult.error.message}`);
+
   return {
     arrivals: arrivalsResult.data || [],
     pickups: pickupsResult.data || [],
@@ -399,7 +410,7 @@ export async function updateReservation(
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update(data)

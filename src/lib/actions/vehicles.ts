@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { vehicleSchema, prepareVehicleData } from "@/lib/validators/vehicle";
 import { revalidatePath } from "next/cache";
 import type { VehicleFormData } from "@/lib/validators/vehicle";
@@ -32,6 +33,9 @@ export async function getVehicle(id: string) {
 }
 
 export async function createVehicle(formData: VehicleFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = vehicleSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -51,6 +55,9 @@ export async function createVehicle(formData: VehicleFormData) {
 }
 
 export async function updateVehicle(id: string, formData: VehicleFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = vehicleSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -71,6 +78,9 @@ export async function updateVehicle(id: string, formData: VehicleFormData) {
 }
 
 export async function deleteVehicle(id: string, customerId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("vehicles").delete().eq("id", id);

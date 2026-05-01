@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireManager } from "@/lib/auth";
 import { toE164 } from "@/lib/quo/format";
 import { sendSMS, isQuoConfigured } from "@/lib/quo/client";
 import { getPhoneNumber, type PhoneLine } from "@/lib/quo/routing";
@@ -17,6 +18,9 @@ export async function sendCustomerSMS({
   jobId?: string;
   line?: PhoneLine;
 }) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   // Look up customer phone
@@ -83,6 +87,9 @@ export async function sendCustomerSMS({
 }
 
 export async function sendVehicleReadySMS(jobId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data: job, error: jobError } = await supabase
@@ -115,6 +122,9 @@ export async function sendVehicleReadySMS(jobId: string) {
 }
 
 export async function sendParkingSpecialsSMS(reservationId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data: reservation, error: resError } = await supabase

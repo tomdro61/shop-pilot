@@ -168,6 +168,9 @@ export async function updateCustomerFields(id: string, patch: CustomerFieldPatch
 }
 
 export async function createCustomer(formData: CustomerFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = customerSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -188,6 +191,9 @@ export async function createCustomer(formData: CustomerFormData) {
 }
 
 export async function updateCustomer(id: string, formData: CustomerFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = customerSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
