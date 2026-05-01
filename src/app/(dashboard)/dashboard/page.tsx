@@ -25,7 +25,7 @@ import { KpiCompactCard } from "@/components/dashboard/kpi-compact-card";
 import { ActionCenter } from "@/components/dashboard/action-center";
 import { SectionHeader } from "@/components/dashboard/section-header";
 import { ShopFloorColumn } from "@/components/dashboard/shop-floor-column";
-import { buildOpenLoops, countOverdue } from "@/lib/dashboard/open-loops";
+import { buildOpenLoops } from "@/lib/dashboard/open-loops";
 import { getOpenTasks } from "@/lib/actions/tasks";
 
 export const metadata = {
@@ -356,16 +356,17 @@ export default async function DashboardPage() {
   const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);
 
   const totalJobs = shopFloor.notStarted.length + shopFloor.waitingForParts.length + shopFloor.inProgress.length;
-  const overdueLoops = countOverdue(openLoops);
-
-  const statusLineParts: string[] = [];
-  if (totalJobs > 0) statusLineParts.push(`${totalJobs} on the floor`);
-  if (overdueLoops > 0) statusLineParts.push(`${overdueLoops} loop${overdueLoops === 1 ? "" : "s"} overdue`);
+  const todayLabel = new Date(today + "T12:00:00").toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   return (
     <DashboardShell
       greeting={greeting}
-      statusLine={statusLineParts.length > 0 ? <span>{statusLineParts.join(" · ")}</span> : null}
+      statusLine={<span>{todayLabel}</span>}
       actions={
         <>
           <Link href="/jobs/new">
@@ -456,6 +457,7 @@ export default async function DashboardPage() {
 
         <div className="border-t border-stone-200 dark:border-stone-800 pt-7">
           <ActionCenter
+            today={today}
             tasks={tasks}
             parking={parking}
             awaitingPayment={awaitingPayment}

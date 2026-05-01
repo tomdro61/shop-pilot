@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   Inbox,
-  ParkingCircle,
   DollarSign,
   Plus,
   Check,
@@ -49,6 +48,7 @@ interface NeedsAttention {
 }
 
 interface ActionCenterProps {
+  today: string;
   tasks: Task[];
   parking: ParkingActivity;
   awaitingPayment: AwaitingPayment;
@@ -56,6 +56,7 @@ interface ActionCenterProps {
 }
 
 export function ActionCenter({
+  today,
   tasks,
   parking,
   awaitingPayment,
@@ -93,7 +94,7 @@ export function ActionCenter({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <NeedsAttentionCards attention={needsAttention} />
         </div>
-        <GlanceCard parking={parking} awaitingPayment={awaitingPayment} />
+        <GlanceCard today={today} parking={parking} awaitingPayment={awaitingPayment} />
       </div>
 
       {/* Tasks — full width below */}
@@ -381,35 +382,55 @@ function TaskRow({ task }: { task: Task }) {
 // ─── Glance — Parking + Awaiting Payment ───────────────────────
 
 function GlanceCard({
+  today,
   parking,
   awaitingPayment,
 }: {
+  today: string;
   parking: ParkingActivity;
   awaitingPayment: AwaitingPayment;
 }) {
   return (
     <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden flex flex-col">
-      <ParkingBlock parking={parking} />
+      <ParkingBlock today={today} parking={parking} />
       <div className="border-t border-stone-200 dark:border-stone-800" />
       <AwaitingPaymentBlock awaitingPayment={awaitingPayment} />
     </div>
   );
 }
 
-function ParkingBlock({ parking }: { parking: ParkingActivity }) {
+function CalendarTile({ today }: { today: string }) {
+  // T12:00:00 anchor avoids UTC midnight rolling back to yesterday.
+  const date = new Date(today + "T12:00:00");
+  const weekday = date.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+  const day = date.getDate();
+  return (
+    <div
+      aria-hidden
+      className="flex flex-col items-stretch w-9 rounded-md border border-blue-200 dark:border-blue-900 overflow-hidden flex-none"
+    >
+      <span className="text-center text-[8px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 leading-none py-0.5">
+        {weekday}
+      </span>
+      <span className="text-center text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50 bg-card dark:bg-stone-900 leading-none py-1">
+        {day}
+      </span>
+    </div>
+  );
+}
+
+function ParkingBlock({ today, parking }: { today: string; parking: ParkingActivity }) {
   const empty = parking.dropOffsToday === 0 && parking.pickupsToday === 0;
   return (
     <Link
       href="/parking"
       className="group block flex-1 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
     >
-      <div className="flex items-center gap-2 mb-2.5">
-        <span className="w-6 h-6 rounded-md grid place-items-center border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900 flex-none">
-          <ParkingCircle className="h-3.5 w-3.5" />
-        </span>
+      <div className="flex items-center justify-between gap-2.5 mb-2.5">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors">
           Parking · Today
         </span>
+        <CalendarTile today={today} />
       </div>
       {empty ? (
         <p className="text-sm text-stone-400 dark:text-stone-500">No activity today</p>
