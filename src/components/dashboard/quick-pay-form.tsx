@@ -266,6 +266,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
       toast.error("Enter an amount");
       return;
     }
+    if (state !== "input") return;
 
     setState("processing");
 

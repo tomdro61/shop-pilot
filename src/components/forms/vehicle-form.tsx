@@ -230,6 +230,7 @@ export function VehicleForm({
                       placeholder="Any notes about this vehicle..."
                       rows={2}
                       {...field}
+                      value={field.value ?? ""}
                     />
                   </FormControl>
                   <FormMessage />

@@ -192,15 +192,17 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
     fetchDefaultCustomer();
   }, [defaultCustomerId, job?.customers]);
 
-  // Search customers
+  // Search customers — debounced + abortable
   useEffect(() => {
-    async function searchCustomers() {
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
       const supabase = createClient();
       let query = supabase
         .from("customers")
         .select("id, first_name, last_name, phone")
         .order("last_name")
-        .limit(20);
+        .limit(20)
+        .abortSignal(controller.signal);
 
       if (customerSearch) {
         const words = customerSearch.trim().split(/\s+/);
@@ -217,7 +219,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
       }
 
       const { data } = await query;
-      if (data) {
+      if (data && !controller.signal.aborted) {
         setCustomers(prev => {
           // Keep the pinned customer in the list even if not in search results
           const pinId = pinnedCustomerId;
@@ -227,8 +229,12 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
           return existing ? [existing, ...data] : data;
         });
       }
-    }
-    searchCustomers();
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [customerSearch, pinnedCustomerId]);
 
   // Load vehicles for selected customer
@@ -692,6 +698,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                       placeholder="Customer requests, symptoms, special instructions…"
                       rows={3}
                       {...field}
+                      value={field.value ?? ""}
                     />
                   </FormControl>
                   <FormMessage />
