@@ -19,8 +19,8 @@ interface HorizontalBarChartProps {
 
 export function HorizontalBarChart({ title, data }: HorizontalBarChartProps) {
   return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-      <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+      <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
         <h3 className={COLUMN_HEADER}>{title}</h3>
       </div>
       {data.length === 0 ? (

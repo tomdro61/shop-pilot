@@ -4,8 +4,10 @@ import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { TaxYearPicker } from "@/components/dashboard/tax-year-picker";
 import { CustomerTypeNav } from "@/components/dashboard/customer-type-nav";
+import { ReportsNav } from "@/components/dashboard/reports-nav";
 import { nowET } from "@/lib/utils";
 import { PageShell } from "@/components/layout/page-shell";
+import { Receipt } from "lucide-react";
 
 export const metadata = {
   title: "Tax Summary | ShopPilot",
@@ -29,14 +31,26 @@ export default async function TaxReportPage({
 
   return (
     <PageShell>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-stone-500 dark:text-stone-400">
-          Monthly taxable sales and MA sales tax collected (<span className="font-mono tabular-nums">{taxPct}%</span>)
-        </p>
-        <div className="flex items-center gap-3">
-          <CustomerTypeNav />
-          <TaxYearPicker currentYear={year} />
+      <div className="flex items-center gap-2.5">
+        <span className="w-8 h-8 rounded-md grid place-items-center border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900 flex-none">
+          <Receipt className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-base lg:text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
+            Tax Summary
+          </h1>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Monthly taxable sales and MA sales tax (
+            <span className="font-mono tabular-nums">{taxPct}%</span>) by year.
+          </p>
         </div>
+      </div>
+
+      <ReportsNav />
+
+      <div className="mb-6 flex flex-wrap items-center justify-end gap-3">
+        <CustomerTypeNav />
+        <TaxYearPicker currentYear={year} />
       </div>
 
       {/* KPI Cards */}
@@ -120,7 +134,7 @@ export default async function TaxReportPage({
                 <td className="px-4 py-2.5 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
                   {formatCurrency(data.ytd.taxableAmount)}
                 </td>
-                <td className="px-4 py-2.5 text-right font-mono tabular-nums text-sm text-purple-600 dark:text-purple-400">
+                <td className="px-4 py-2.5 text-right font-mono tabular-nums text-sm text-violet-600 dark:text-violet-400">
                   {formatCurrency(data.ytd.taxCollected)}
                 </td>
                 <td className="px-4 py-2.5 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">

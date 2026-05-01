@@ -4,9 +4,11 @@ import { resolveDateRange } from "@/lib/utils/date-range";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { HorizontalBarChart } from "@/components/dashboard/horizontal-bar-chart";
 import { ReportsToolbar } from "@/components/dashboard/reports-toolbar";
+import { ReportsNav } from "@/components/dashboard/reports-nav";
 import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { PageShell } from "@/components/layout/page-shell";
+import { DollarSign } from "lucide-react";
 
 export const metadata = {
   title: "Revenue Overview | ShopPilot",
@@ -55,6 +57,22 @@ export default async function RevenueReportPage({
 
   return (
     <PageShell>
+      <div className="flex items-center gap-2.5">
+        <span className="w-8 h-8 rounded-md grid place-items-center border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900 flex-none">
+          <DollarSign className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-base lg:text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
+            Revenue Overview
+          </h1>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Top-line money in and where it comes from.
+          </p>
+        </div>
+      </div>
+
+      <ReportsNav />
+
       <div className="mb-6">
         <Suspense fallback={null}>
           <ReportsToolbar basePath="/reports/revenue" showExport />
@@ -171,7 +189,7 @@ export default async function RevenueReportPage({
                     <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
                       {formatCurrency(row.grossProfit)}
                     </td>
-                    <td className={`px-4 py-2 text-right font-mono tabular-nums text-sm font-medium ${row.margin >= 50 ? "text-green-600 dark:text-green-400" : row.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                    <td className={`px-4 py-2 text-right font-mono tabular-nums text-sm font-medium ${row.margin >= 50 ? "text-emerald-600 dark:text-emerald-400" : row.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
                       {row.hasEstimatedCosts && <span className="text-stone-400 dark:text-stone-500">~</span>}
                       {row.margin.toFixed(1)}%
                     </td>

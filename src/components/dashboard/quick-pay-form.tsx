@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle2, XCircle, Delete, Search, X } from "lucide-react";
 import { createQuickPayJob } from "@/lib/actions/terminal";
 import { formatCurrency } from "@/lib/utils/format";
+import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
+import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 2000;
 const ERROR_BACKOFF_MS = 3000;
@@ -39,6 +41,10 @@ function QuickPayPresetPicker({
     (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
   );
 
+  const quickPresets = presets.filter(
+    (p) => p.category && INSPECTION_CATEGORIES.has(p.category)
+  );
+
   const selected = selectedPresetId ? presets.find((p) => p.id === selectedPresetId) : null;
 
   return (
@@ -46,6 +52,40 @@ function QuickPayPresetPicker({
       <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
         Quick Services
       </p>
+
+      {quickPresets.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {quickPresets.map((preset) => {
+            const active = selectedPresetId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onSelect(preset)}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex items-center gap-2 h-9 px-3 rounded-md border text-sm font-medium transition-colors",
+                  active
+                    ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-900 dark:text-blue-300"
+                    : "bg-card border-stone-200 text-stone-700 hover:bg-stone-50 dark:bg-stone-900 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-800/60"
+                )}
+              >
+                <span>{preset.name}</span>
+                <span
+                  className={cn(
+                    "font-mono tabular-nums text-xs",
+                    active
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-stone-500 dark:text-stone-400"
+                  )}
+                >
+                  {formatCurrency(preset.total)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {selected ? (
         <div className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">

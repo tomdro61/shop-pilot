@@ -47,7 +47,7 @@ export function ReportsOverviewChart({ data }: ReportsOverviewChartProps) {
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
-                  <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
+                  <div className="rounded-md border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
                     <p className="font-medium text-stone-900 dark:text-stone-50">{label}</p>
                     <p className="text-stone-900 dark:text-stone-50 font-mono font-medium tabular-nums mt-0.5">
                       {formatCurrency(payload[0].value as number)}

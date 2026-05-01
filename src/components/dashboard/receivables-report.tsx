@@ -62,7 +62,7 @@ export function ReceivablesReport({ data, initialCustomerType = "all" }: Receiva
       </div>
 
       {/* Filters */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card flex flex-wrap items-center gap-3 px-4 py-3">
         <CustomerTypePills value={initialCustomerType} onChange={setCustomerType} />
         <div className="flex gap-1">
           {(["all", "unpaid", "invoiced"] as PaymentFilter[]).map((p) => (
@@ -82,8 +82,8 @@ export function ReceivablesReport({ data, initialCustomerType = "all" }: Receiva
       </div>
 
       {/* Outstanding Jobs Table */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+        <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <h3 className={COLUMN_HEADER}>Outstanding Jobs</h3>
         </div>
         <div className="overflow-x-auto">
@@ -146,8 +146,8 @@ export function ReceivablesReport({ data, initialCustomerType = "all" }: Receiva
 
       {/* Fleet A/R Aging */}
       {data.fleetAccounts.length > 0 && (
-        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+        <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+          <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
             <h3 className={COLUMN_HEADER}>Fleet A/R Aging</h3>
           </div>
           <div className="overflow-x-auto">

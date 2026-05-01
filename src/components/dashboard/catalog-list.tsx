@@ -65,31 +65,17 @@ export function CatalogList({ items, categories }: CatalogListProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold tracking-tight text-stone-900 dark:text-stone-50">
-          Parts & Labor Catalog
-          <span className="ml-2 font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
-            {items.length}
-          </span>
-        </h2>
-        <Button size="sm" onClick={() => setAddOpen(true)}>
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Add Item</span>
-          <span className="sm:hidden">Add</span>
-        </Button>
-      </div>
-
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 pointer-events-none" />
           <Input
             placeholder="Search catalog…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 bg-card border-stone-200 dark:bg-stone-900 dark:border-stone-800"
           />
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1 self-start">
           {(["all", "labor", "part"] as TypeFilter[]).map((t) => (
             <button
               key={t}
@@ -97,16 +83,21 @@ export function CatalogList({ items, categories }: CatalogListProps) {
               onClick={() => setTypeFilter(t)}
               aria-pressed={typeFilter === t}
               className={cn(
-                "text-[10px] font-black px-3 py-1.5 rounded-md uppercase transition-colors",
+                "rounded px-3 py-1.5 text-xs font-medium transition-colors capitalize",
                 typeFilter === t
-                  ? "bg-stone-200 text-stone-900 shadow-card dark:bg-stone-700 dark:text-stone-50"
-                  : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700"
+                  ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
+                  : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
               )}
             >
-              {t === "all" ? "All" : t}
+              {t}
             </button>
           ))}
         </div>
+        <Button size="sm" onClick={() => setAddOpen(true)} className="sm:ml-1">
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Add Item</span>
+          <span className="sm:hidden">Add</span>
+        </Button>
       </div>
 
       <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
@@ -119,13 +110,20 @@ export function CatalogList({ items, categories }: CatalogListProps) {
             </p>
           </div>
         ) : (
-          categoryNames.map((catName) => (
+          categoryNames.map((catName, catIdx) => {
+            const isFirst = catIdx === 0;
+            return (
             <div key={catName}>
-              <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/40">
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+              <div
+                className={cn(
+                  "flex items-center justify-between gap-3 px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800",
+                  !isFirst && "border-t-2"
+                )}
+              >
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-stone-600 dark:text-stone-400 truncate">
                   {catName}
                 </h4>
-                <span className="font-mono tabular-nums text-xs font-medium text-indigo-700 dark:text-indigo-300">
+                <span className="font-mono tabular-nums text-xs font-semibold text-stone-700 dark:text-stone-300 shrink-0">
                   {grouped[catName].length}
                 </span>
               </div>
@@ -133,7 +131,7 @@ export function CatalogList({ items, categories }: CatalogListProps) {
               {grouped[catName].map((item) => (
                 <div
                   key={item.id}
-                  className="group relative flex items-start gap-3 px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/60"
+                  className="group relative flex items-start gap-3 px-4 py-2.5 border-b border-stone-200 dark:border-stone-800 last:border-b-0"
                 >
                   <span
                     aria-hidden
@@ -186,7 +184,8 @@ export function CatalogList({ items, categories }: CatalogListProps) {
                 </div>
               ))}
             </div>
-          ))
+            );
+          })
         )}
       </div>
 

@@ -81,7 +81,7 @@ export function CustomerInsights({
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card flex flex-wrap items-center gap-3 px-4 py-3">
         <div className="flex gap-1">
           {GRANULARITIES.map((g) => (
             <Button
@@ -145,8 +145,8 @@ export function CustomerInsights({
       </div>
 
       {/* New vs Returning Chart */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+        <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <h3 className={COLUMN_HEADER}>New vs Returning Customers</h3>
         </div>
         <div className="px-4 py-3">
@@ -171,7 +171,7 @@ export function CustomerInsights({
                   const retVal = (payload.find((p) => p.dataKey === "returning")?.value as number) || 0;
                   const total = newVal + retVal;
                   return (
-                    <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md min-w-[140px]">
+                    <div className="rounded-md border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md min-w-[140px]">
                       <p className="font-medium text-stone-900 dark:text-stone-50 mb-1">{label}</p>
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-1.5">
@@ -213,8 +213,8 @@ export function CustomerInsights({
       </div>
 
       {/* Top Customers Table */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+        <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <h3 className={COLUMN_HEADER}>Top Customers — {periodLabel}</h3>
         </div>
         <div className="overflow-x-auto">

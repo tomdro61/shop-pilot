@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HardHat, ClipboardList, DollarSign, Tag, ChevronRight, BookOpen } from "lucide-react";
+import { HardHat, ClipboardList, DollarSign, Tag, ChevronRight, BookOpen, Settings } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 
 export const metadata = {
@@ -42,13 +42,18 @@ const settingsItems = [
 export default function SettingsPage() {
   return (
     <PageShell width="tight">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
-          Settings
-        </h1>
-        <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
-          Shop configuration and management
-        </p>
+      <div className="flex items-center gap-2.5">
+        <span className="w-8 h-8 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
+          <Settings className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-base lg:text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
+            Settings
+          </h1>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Shop configuration and management.
+          </p>
+        </div>
       </div>
 
       <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">

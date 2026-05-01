@@ -8,7 +8,9 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { COLUMN_HEADER, SECTION_LABEL } from "@/components/ui/section-card";
 import { formatCurrency, formatCurrencyWhole } from "@/lib/utils/format";
 import { ReportsOverviewChart } from "@/components/dashboard/reports-overview-chart";
+import { ReportsNav } from "@/components/dashboard/reports-nav";
 import { PageShell } from "@/components/layout/page-shell";
+import { BarChart3 } from "lucide-react";
 
 export const metadata = {
   title: "Reports | ShopPilot",
@@ -54,6 +56,22 @@ export default async function ReportsOverviewPage() {
 
   return (
     <PageShell>
+      <div className="flex items-center gap-2.5">
+        <span className="w-8 h-8 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
+          <BarChart3 className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-base lg:text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
+            Reports
+          </h1>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Overview of shop performance.
+          </p>
+        </div>
+      </div>
+
+      <ReportsNav />
+
       {/* Row 1 — Money KPIs */}
       <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Link href="/reports/trends?metric=revenue&granularity=month">
@@ -163,7 +181,7 @@ export default async function ReportsOverviewPage() {
                     <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
                       {formatCurrency(cat.revenue)}
                     </td>
-                    <td className={`px-4 py-2 text-right font-mono tabular-nums text-sm font-medium ${cat.margin >= 50 ? "text-green-600 dark:text-green-400" : cat.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                    <td className={`px-4 py-2 text-right font-mono tabular-nums text-sm font-medium ${cat.margin >= 50 ? "text-emerald-600 dark:text-emerald-400" : cat.margin >= 30 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
                       {cat.margin.toFixed(1)}%
                     </td>
                   </tr>

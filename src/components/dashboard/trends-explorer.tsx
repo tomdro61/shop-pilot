@@ -151,7 +151,7 @@ export function TrendsExplorer({
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card flex flex-wrap items-center gap-3 px-4 py-3">
         <Select value={metric} onValueChange={(v) => setMetric(v as MetricKey)}>
           <SelectTrigger className="w-[220px]">
             <SelectValue />
@@ -209,8 +209,8 @@ export function TrendsExplorer({
       </div>
 
       {/* Chart */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+        <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <h3 className={COLUMN_HEADER}>{metricCfg.label}</h3>
         </div>
         <div className="px-4 py-3">
@@ -239,7 +239,7 @@ export function TrendsExplorer({
                   if (!active || !payload?.length) return null;
                   const val = payload[0].value as number;
                   return (
-                    <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
+                    <div className="rounded-md border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
                       <p className="font-medium text-stone-900 dark:text-stone-50">{label}</p>
                       <p className="text-stone-900 dark:text-stone-50 font-mono font-medium tabular-nums mt-0.5">
                         {metricCfg.format(val)}
@@ -259,8 +259,8 @@ export function TrendsExplorer({
       </div>
 
       {/* Data table */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+        <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <h3 className={COLUMN_HEADER}>
             {metricCfg.label} — {initialGranularity === "month" ? initialYear : initialGranularity === "week" ? "Last 12 Weeks" : "Last 30 Days"}
           </h3>

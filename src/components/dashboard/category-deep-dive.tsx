@@ -231,7 +231,7 @@ export function CategoryDeepDive({
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card flex flex-wrap items-center gap-3 px-4 py-3">
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="w-[200px] justify-between text-left font-normal">
@@ -251,7 +251,7 @@ export function CategoryDeepDive({
               />
               <span className="font-medium">{allLabel}</span>
             </button>
-            <div className="my-1 border-t border-stone-200 dark:border-stone-700" />
+            <div className="my-1 border-t border-stone-200 dark:border-stone-800" />
             <div className="max-h-[240px] overflow-y-auto">
               {data.categories.map((cat, idx) => (
                 <button
@@ -327,8 +327,8 @@ export function CategoryDeepDive({
       </div>
 
       {/* Chart */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+        <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <h3 className={COLUMN_HEADER}>
             {isSingle ? `${visibleCategories[0]} — ${metricCfg.label}` : `${metricCfg.label} by ${groupLabel}`}
           </h3>
@@ -360,7 +360,7 @@ export function CategoryDeepDive({
                   if (isSingle) {
                     const val = payload[0].value as number;
                     return (
-                      <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
+                      <div className="rounded-md border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md">
                         <p className="font-medium text-stone-900 dark:text-stone-50">{label}</p>
                         <p className="text-stone-900 dark:text-stone-50 font-mono font-medium tabular-nums mt-0.5">
                           {metricCfg.format(val)}
@@ -371,7 +371,7 @@ export function CategoryDeepDive({
                   // Stacked tooltip — show each category
                   const total = payload.reduce((s, p) => s + (p.value as number || 0), 0);
                   return (
-                    <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md min-w-[160px]">
+                    <div className="rounded-md border border-stone-200 dark:border-stone-800 bg-card px-3 py-2 text-xs shadow-md min-w-[160px]">
                       <p className="font-medium text-stone-900 dark:text-stone-50 mb-1.5">{label}</p>
                       {payload.filter((p) => (p.value as number) > 0).reverse().map((p) => {
                         const catIdx = catKeys.indexOf(p.dataKey as string);
@@ -433,8 +433,8 @@ export function CategoryDeepDive({
       </div>
 
       {/* Data table */}
-      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 bg-sidebar border-b border-stone-200 dark:border-stone-800">
+      <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+        <div className="px-4 py-2.5 bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <h3 className={COLUMN_HEADER}>
             {isSingle ? visibleCategories[0] : `${metricCfg.label} by ${groupLabel}`} — {periodLabel}
           </h3>

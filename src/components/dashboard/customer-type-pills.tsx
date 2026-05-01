@@ -17,16 +17,18 @@ export function CustomerTypePills({
   onChange: (type: string) => void;
 }) {
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1 self-start">
       {CUSTOMER_TYPES.map((t) => (
         <button
           key={t.value}
+          type="button"
           onClick={() => onChange(t.value)}
+          aria-pressed={value === t.value}
           className={cn(
-            "rounded-md px-3 py-1.5 text-xs font-bold transition-colors",
+            "rounded px-3 py-1.5 text-xs font-medium transition-colors",
             value === t.value
-              ? "bg-blue-600 text-white shadow-sm"
-              : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"
+              ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
+              : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
           )}
         >
           {t.label}
