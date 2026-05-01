@@ -2384,3 +2384,47 @@ c2faf2c  feat(ui): primary blue oklch refresh + Button routes through --primary
 70e40c9  feat(ui): shared Tone palette + ActionResult shape + parking helper + Vitest
 907c71d  docs: archive predecessor design-system docs
 ```
+
+## Session 33 (continued) — 2026-04-30 — Pre-merge fix sweep
+
+After running `/scoped-review merge` (full sweep, 8 reviewers in parallel) on `git diff master...HEAD`, the review surfaced **10 Critical findings** plus a long tail of Highs/Mediums. Closed all 10 Criticals plus 7 Tier-1 Highs before merge, following the documented plan→implement→focused-review loop one cluster at a time.
+
+### Clusters closed
+
+| Cluster | File | Findings | Notes |
+|---|---|---|---|
+| A | `parking.ts` | 9 mutations using `createAdminClient()` with no auth gate | Highest exposure — admin client bypasses RLS, so the action-level gate was the only line of defense. Added `requireManager()` to all 9 plus a comment explaining why `createAdminClient()` is still used. |
+| B | `dvi.ts` | 6 auth gates + sendInspection partial-write + deleteInspection storage cleanup + 2× `.single()` error checks | Tech-accessible mutations (rate items, complete, reopen, start) use `getCurrentUser()`; sendInspection uses `requireManager()` since it sends SMS/email to customer. Recommendations `Promise.all` now aborts before marking inspection sent if any update errored. |
+| C | `estimates.ts` | approveEstimate orphan invoices + deleteEstimate cleanup + 3 line-item draft checks | Public token-based endpoint, no auth gate. Three writes after Stripe customer creation now check error. customers.update logs + continues; invoices.insert and estimates.update return error with the orphaned Stripe invoice ID for manual reconciliation. |
+| D | `inbox.ts` | 2 read functions had no auth gate | `getInboxData` throws on auth fail; `getInboxTotalCount` returns 0 to preserve sidebar fail-soft semantics. |
+| E | `jobs.ts` | getJobs() category-filter + search-filter swallowed query errors | Both branches now throw with descriptive prefixes, matching the existing throw-on-error pattern at the bottom of the function. |
+| F | `customers.ts` | deleteCustomer count check + searchCustomersForPicker injection/swallowed errors | The count check was the highest data-loss risk: a failed count query let the delete proceed, taking the customer's job history with it. Sanitization for `.or()` filter strips `,()` chars before interpolation. |
+| G | `invoices.ts` | existingInvoice check + customers.update for stripe_customer_id + 2 auth gates | Without the existingInvoice error check, a failed dup-check let the function proceed to create a duplicate Stripe invoice → customer billed twice. Auth gates added on createInvoiceFromJob + createParkingInvoice. |
+| H | `jobs.ts` | 6 mutation auth gates | Defense-in-depth (RLS already enforces at DB layer); strict CLAUDE.md compliance. createJob, updateJob, updateJobStatus, updateJobDateFinished, deleteJob, recordPayment. |
+
+### Numbers
+- 26 server-action functions newly gated with `requireManager()` or `getCurrentUser()`.
+- 13 Supabase queries that previously dropped errors now destructure + handle them.
+- 1 user-input sanitization (`.or()` filter injection prevention).
+- 1 Promise.all partial-write path corrected (sendInspection recommendations).
+- 1 storage-cleanup error path now logged.
+
+### Behavior changes
+- Some previously-silent failures now surface as toast errors / page error boundaries. Intended.
+- Tech users (if any) lose access to gated mutations per the project role model. If any function should be tech-accessible, swap to a `requireStaff()` helper.
+
+### Deferred for follow-up (Tier 2/3 from full-sweep)
+- Fire-and-forget SMS/email chains (`dvi.ts`, `estimates.ts`, `invoices.ts`) — only `.catch(console.error)`. Visible in Vercel logs only.
+- Design-system token drift (`rounded-lg`/`shadow-sm` in ~10 reports/dashboard components, `purple-*` on dead `action-center-card.tsx`).
+- `ActionResult<T>` conditional needs `[T] extends [void]` for reliable narrowing.
+- `inbox.ts` `as string` + `(dvi: any)` casts (pre-existing).
+- `Tone` (alert-tone.ts) vs `Accent` (mini-status-card.tsx) palette overlap with `green` vs `emerald` naming drift.
+- Code simplification: `DaysBadge` duplicated in 3 files; `openLoops` shim ~360 lines but only `countOverdue` consumed; `searchCustomers` in job-form lacks debounce + AbortController.
+- Form correctness: quote-request handlers no `catch` (try/finally only); job-form/customer-form submit no try/catch.
+- Dead component `action-center-card.tsx` (zero importers).
+- 4 rotting comments naming consumers / referencing transitional state.
+- `unpaidJobsResult` query unbounded.
+- The `.or()` filter injection sanitization should also be applied to the pre-existing sites in `getCustomers` (out of scope for this round).
+
+### Verdict
+All Criticals + agreed Tier-1 Highs verified clean by per-cluster focused agent reviews. Branch is ready for the final cumulative verification pass + browser smoke test before merging staging→master.
