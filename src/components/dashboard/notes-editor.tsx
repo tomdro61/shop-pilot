@@ -1,11 +1,9 @@
 "use client";
 
-import { useInlineEditor } from "@/hooks/use-inline-editor";
+import { useInlineEditor, type SaveResult } from "@/hooks/use-inline-editor";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil } from "lucide-react";
-
-type SaveResult = { error?: unknown } | { success: true };
 
 interface NotesEditorProps {
   value: string | null;

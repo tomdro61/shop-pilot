@@ -323,8 +323,7 @@ export default async function JobDetailPage({
 
         <section>
           <SectionTitle title="Inspection" />
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <DviSection jobId={id} inspection={dviInspection as any} />
+          <DviSection jobId={id} inspection={dviInspection} />
         </section>
 
         <section>

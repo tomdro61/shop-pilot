@@ -59,9 +59,6 @@ async function getDashboardData() {
 
   const [
     activeJobsResult,
-    monthCompletedResult,
-    lastWeekCompletedResult,
-    lastMonthCompletedResult,
     inspectionRangeResult,
     newQuoteRequestsResult,
     unpaidJobsResult,
@@ -71,7 +68,7 @@ async function getDashboardData() {
     parkingTodayResult,
     agedWaitingForPartsResult,
     manualIncomeRangeResult,
-    yearCompletedResult,
+    completedJobsRangeResult,
   ] = await Promise.all([
     supabase
       .from("jobs")
@@ -79,24 +76,6 @@ async function getDashboardData() {
         "id, ro_number, status, title, assigned_tech, date_received, users!jobs_assigned_tech_fkey(name), customers(id, first_name, last_name), vehicles(year, make, model), job_line_items(total)"
       )
       .in("status", ["not_started", "in_progress", "waiting_for_parts"]),
-    supabase
-      .from("jobs")
-      .select("id, date_finished, payment_status, job_line_items(total, category)")
-      .eq("status", "complete")
-      .gte("date_finished", monthStart)
-      .lte("date_finished", monthEnd),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total, category)")
-      .eq("status", "complete")
-      .gte("date_finished", lastWeekStart)
-      .lte("date_finished", lastWeekEnd),
-    supabase
-      .from("jobs")
-      .select("id, job_line_items(total, category)")
-      .eq("status", "complete")
-      .gte("date_finished", lastMonthStart)
-      .lte("date_finished", lastMonthEnd),
     supabase
       .from("daily_inspection_counts")
       .select("date, state_count, tnc_count")
@@ -161,18 +140,12 @@ async function getDashboardData() {
       .from("jobs")
       .select("id, date_finished, job_line_items(total, category)")
       .eq("status", "complete")
-      .gte("date_finished", yearStart)
+      .gte("date_finished", inspectionRangeStart)
       .lte("date_finished", monthEnd),
   ]);
 
   if (activeJobsResult.error)
     throw new Error(`Failed to load active jobs: ${activeJobsResult.error.message}`);
-  if (monthCompletedResult.error)
-    throw new Error(`Failed to load this month's completed jobs: ${monthCompletedResult.error.message}`);
-  if (lastWeekCompletedResult.error)
-    throw new Error(`Failed to load last week's completed jobs: ${lastWeekCompletedResult.error.message}`);
-  if (lastMonthCompletedResult.error)
-    throw new Error(`Failed to load last month's completed jobs: ${lastMonthCompletedResult.error.message}`);
   if (inspectionRangeResult.error)
     throw new Error(`Failed to load inspection counts: ${inspectionRangeResult.error.message}`);
   if (newQuoteRequestsResult.error)
@@ -191,12 +164,23 @@ async function getDashboardData() {
     throw new Error(`Failed to load aged waiting-for-parts jobs: ${agedWaitingForPartsResult.error.message}`);
   if (manualIncomeRangeResult.error)
     throw new Error(`Failed to load manual income: ${manualIncomeRangeResult.error.message}`);
-  if (yearCompletedResult.error)
-    throw new Error(`Failed to load year-to-date completed jobs: ${yearCompletedResult.error.message}`);
+  if (completedJobsRangeResult.error)
+    throw new Error(`Failed to load completed jobs: ${completedJobsRangeResult.error.message}`);
 
   const activeJobs = activeJobsResult.data || [];
-  const monthCompleted = monthCompletedResult.data || [];
-  const yearCompleted = yearCompletedResult.data || [];
+  const completedJobs = completedJobsRangeResult.data || [];
+  const monthCompleted = completedJobs.filter(
+    (j) => j.date_finished !== null && j.date_finished >= monthStart && j.date_finished <= monthEnd
+  );
+  const lastMonthCompleted = completedJobs.filter(
+    (j) => j.date_finished !== null && j.date_finished >= lastMonthStart && j.date_finished <= lastMonthEnd
+  );
+  const lastWeekCompleted = completedJobs.filter(
+    (j) => j.date_finished !== null && j.date_finished >= lastWeekStart && j.date_finished <= lastWeekEnd
+  );
+  const yearCompleted = completedJobs.filter(
+    (j) => j.date_finished !== null && j.date_finished >= yearStart && j.date_finished <= monthEnd
+  );
 
   const activeJobsWithTotals = activeJobs.map((j) => ({
     ...j,
@@ -247,8 +231,8 @@ async function getDashboardData() {
     (e) => e.date >= yearStart && e.date <= monthEnd
   );
 
-  const todayCompleted = monthCompleted.filter((j) => j.date_finished === today);
-  const weekCompleted = monthCompleted.filter(
+  const todayCompleted = completedJobs.filter((j) => j.date_finished === today);
+  const weekCompleted = completedJobs.filter(
     (j) => j.date_finished !== null && j.date_finished >= weekStart && j.date_finished <= weekEnd
   );
 
@@ -305,13 +289,13 @@ async function getDashboardData() {
       weeklyRevenue:
         sumJobRevenue(weekCompleted) + sumInspectionRev(inspWeek) + sumManualIncome(manualIncomeWeek),
       lastWeekRevenue:
-        sumJobRevenue(lastWeekCompletedResult.data || []) +
+        sumJobRevenue(lastWeekCompleted) +
         sumInspectionRev(inspLastWeek) +
         sumManualIncome(manualIncomeLastWeek),
       monthlyRevenue:
         sumJobRevenue(monthCompleted) + sumInspectionRev(inspMonth) + sumManualIncome(manualIncomeMonth),
       lastMonthRevenue:
-        sumJobRevenue(lastMonthCompletedResult.data || []) +
+        sumJobRevenue(lastMonthCompleted) +
         sumInspectionRev(inspLastMonth) +
         sumManualIncome(manualIncomeLastMonth),
       yearRevenue:

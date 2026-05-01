@@ -242,9 +242,20 @@ export async function getInboxData(): Promise<InboxData> {
     total: ((j.job_line_items as { total: number }[]) || []).reduce((s, li) => s + (li.total || 0), 0),
   }));
 
-  // Process DVIs — count conditions, strip raw results
-  const dvisReady: InboxDvi[] = ((dviResult.data || []) as any[]).map((dvi: any) => {
-    const results = (dvi.dvi_results ?? []) as { condition: string | null }[];
+  // Process DVIs — count conditions, strip raw results.
+  // The select string uses `as string` to bypass PostgREST FK ambiguity, so the
+  // row shape comes back as `unknown` — narrow it via a typed projection here.
+  type DviRow = {
+    id: string;
+    completed_at: string | null;
+    job_id: string | null;
+    customers: CustomerJoin | null;
+    vehicles: VehicleJoin | null;
+    jobs: JobJoin | null;
+    dvi_results: { condition: string | null }[] | null;
+  };
+  const dvisReady: InboxDvi[] = ((dviResult.data ?? []) as unknown as DviRow[]).map((dvi) => {
+    const results = dvi.dvi_results ?? [];
     const counts = { monitor: 0, attention: 0 };
     for (const r of results) {
       if (r.condition === "monitor") counts.monitor++;
@@ -254,9 +265,9 @@ export async function getInboxData(): Promise<InboxData> {
       id: dvi.id,
       completed_at: dvi.completed_at,
       job_id: dvi.job_id,
-      customers: dvi.customers as CustomerJoin | null,
-      vehicles: dvi.vehicles as VehicleJoin | null,
-      jobs: dvi.jobs as JobJoin | null,
+      customers: dvi.customers,
+      vehicles: dvi.vehicles,
+      jobs: dvi.jobs,
       ...counts,
     };
   });

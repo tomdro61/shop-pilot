@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-type SaveResult = { error?: unknown } | { success: true };
+export type SaveResult = { error: string } | { success: boolean } | { data: unknown };
 
 export function useInlineEditor<D>(initial: D) {
   const router = useRouter();
@@ -35,9 +35,9 @@ export function useInlineEditor<D>(initial: D) {
 
     try {
       const result = await runSave();
-      if ("error" in result && result.error) {
+      if ("error" in result) {
         if (mountedRef.current) {
-          toast.error(typeof result.error === "string" ? result.error : errorFallback);
+          toast.error(result.error || errorFallback);
         }
         return false;
       }
