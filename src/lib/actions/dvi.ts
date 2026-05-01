@@ -275,6 +275,8 @@ export async function updateResult(
 }
 
 export async function completeInspection(inspectionId: string) {
+  // Techs perform inspections, so this stays at tech-level auth.
+  // Sending to the customer (sendInspection) requires manager.
   const user = await getCurrentUser();
   if (!user) return { error: "Not authenticated" };
 

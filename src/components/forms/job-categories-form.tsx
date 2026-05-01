@@ -141,7 +141,7 @@ export function JobCategoriesForm({ categories: initial }: JobCategoriesFormProp
                   autoFocus
                 />
                 <Button variant="ghost" size="icon-xs" onClick={confirmEdit} title="Confirm">
-                  <Check className="h-3 w-3 text-green-600" />
+                  <Check className="h-3 w-3 text-emerald-600" />
                 </Button>
                 <Button variant="ghost" size="icon-xs" onClick={cancelEdit} title="Cancel">
                   <X className="h-3 w-3 text-stone-400" />

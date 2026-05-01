@@ -213,8 +213,8 @@ export const PARKING_STATUS_COLORS: Record<
     text: "text-blue-700 dark:text-blue-400",
   },
   checked_in: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   checked_out: {
     bg: "bg-stone-100 dark:bg-stone-800",
@@ -304,8 +304,8 @@ export const QUOTE_REQUEST_STATUS_COLORS: Record<
     text: "text-amber-700 dark:text-amber-400",
   },
   converted: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   closed: {
     bg: "bg-stone-100 dark:bg-stone-800",
@@ -335,12 +335,12 @@ export const DVI_STATUS_COLORS: Record<DviStatus, { bg: string; text: string }> 
     text: "text-blue-700 dark:text-blue-400",
   },
   completed: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   sent: {
-    bg: "bg-purple-100 dark:bg-purple-950",
-    text: "text-purple-700 dark:text-purple-400",
+    bg: "bg-indigo-100 dark:bg-indigo-950",
+    text: "text-indigo-700 dark:text-indigo-400",
   },
   approved: {
     bg: "bg-emerald-100 dark:bg-emerald-950",
@@ -359,9 +359,9 @@ export const DVI_CONDITION_COLORS: Record<
   { bg: string; text: string; border: string }
 > = {
   good: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
-    border: "border-green-500",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
+    border: "border-emerald-500",
   },
   monitor: {
     bg: "bg-amber-100 dark:bg-amber-950",

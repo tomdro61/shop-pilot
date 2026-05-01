@@ -346,7 +346,7 @@ export function LineItemForm({
                 {formatCurrency(total)}
               </span>
               {marginPct !== null && (
-                <span className={`ml-2 text-sm font-medium ${marginPct >= 30 ? "text-green-600 dark:text-green-400" : marginPct >= 15 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                <span className={`ml-2 text-sm font-medium ${marginPct >= 30 ? "text-emerald-600 dark:text-emerald-400" : marginPct >= 15 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
                   ({marginPct.toFixed(1)}% margin)
                 </span>
               )}

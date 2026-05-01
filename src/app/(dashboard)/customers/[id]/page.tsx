@@ -64,12 +64,12 @@ function jobTotal(job: JobRow): number {
   return job.job_line_items.reduce((s, li) => s + (li.total ?? 0), 0);
 }
 
-type AccentTone = "blue" | "amber" | "green" | "stone";
+type AccentTone = "blue" | "amber" | "emerald" | "stone";
 
 function accentFor(job: JobRow): AccentTone {
   if (job.status === "in_progress" || job.status === "waiting_for_parts") return "blue";
   if (job.status === "complete") {
-    if (job.payment_status === "paid") return "green";
+    if (job.payment_status === "paid") return "emerald";
     if (job.payment_status === "waived") return "stone";
     return "amber";
   }
@@ -79,7 +79,7 @@ function accentFor(job: JobRow): AccentTone {
 const ACCENT_BAR: Record<AccentTone, string> = {
   blue: "bg-blue-500",
   amber: "bg-amber-500",
-  green: "bg-emerald-500",
+  emerald: "bg-emerald-500",
   stone: "bg-stone-300 dark:bg-stone-700",
 };
 

@@ -426,7 +426,7 @@ export async function deleteReservation(id: string) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .delete()

@@ -88,7 +88,7 @@ function QuickPayPresetPicker({
       )}
 
       {selected ? (
-        <div className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
           <span className="flex-1 text-sm font-bold text-blue-700 dark:text-blue-400">
             {selected.name}
           </span>
@@ -115,7 +115,7 @@ function QuickPayPresetPicker({
             className="pl-9"
           />
           {dropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+            <div className="absolute z-50 mt-1 w-full rounded-md border border-stone-200 bg-card shadow-card dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
               {filtered.length === 0 ? (
                 <p className="py-3 text-center text-sm text-stone-500 dark:text-stone-400">No presets match</p>
               ) : (
