@@ -3,6 +3,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { todayET } from "@/lib/utils";
 import { MANAGED_LOTS_FILTER, MANAGED_PARKING_LOTS } from "@/lib/constants";
@@ -253,9 +254,15 @@ export async function getParkingDashboard(lot?: string) {
 
 // ── Check in ────────────────────────────────────────────────────
 
-export async function checkInReservation(id: string) {
-  const supabase = createAdminClient();
+// Admin client is used across these mutations because the parking_reservations
+// RLS policies don't grant authenticated updates by default — the role gate
+// is enforced at the action level via requireManager() instead.
 
+export async function checkInReservation(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({
@@ -273,8 +280,10 @@ export async function checkInReservation(id: string) {
 // ── Undo check in (back to reserved) ────────────────────────────
 
 export async function undoCheckIn(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({
@@ -292,8 +301,10 @@ export async function undoCheckIn(id: string) {
 // ── Check out ───────────────────────────────────────────────────
 
 export async function checkOutReservation(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({
@@ -311,8 +322,10 @@ export async function checkOutReservation(id: string) {
 // ── Undo check out (back to checked in) ─────────────────────────
 
 export async function undoCheckOut(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({
@@ -330,8 +343,10 @@ export async function undoCheckOut(id: string) {
 // ── Mark no-show ────────────────────────────────────────────────
 
 export async function markNoShow(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({ status: "no_show" as const })
@@ -346,8 +361,10 @@ export async function markNoShow(id: string) {
 // ── Cancel ──────────────────────────────────────────────────────
 
 export async function cancelReservation(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({ status: "cancelled" as const })
@@ -379,8 +396,10 @@ export async function updateReservation(
     departure_valet?: string | null;
   }
 ) {
-  const supabase = await createClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update(data)
@@ -393,8 +412,10 @@ export async function updateReservation(
 }
 
 export async function deleteReservation(id: string) {
-  const supabase = await createClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("parking_reservations")
     .delete()
@@ -408,6 +429,9 @@ export async function deleteReservation(id: string) {
 // ── Prepare new job from reservation (find or create vehicle) ──
 
 export async function prepareJobFromReservation(reservationId: string): Promise<{ url: string } | { error: string }> {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = createAdminClient();
 
   const { data: res, error } = await supabase

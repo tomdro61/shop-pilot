@@ -4,6 +4,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/actions/auth";
+import { requireManager } from "@/lib/auth";
 import { findOrCreateParkingVehicle } from "@/lib/parking-vehicle";
 import { todayET } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
@@ -260,8 +261,10 @@ export async function updateResult(
   resultId: string,
   update: { condition?: "good" | "monitor" | "attention" | null; note?: string | null }
 ) {
-  const supabase = await createClient();
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("dvi_results")
     .update(update)
@@ -272,6 +275,9 @@ export async function updateResult(
 }
 
 export async function completeInspection(inspectionId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
   const supabase = await createClient();
 
   // Fetch results + inspection info in parallel
@@ -375,15 +381,19 @@ export async function completeInspection(inspectionId: string) {
 }
 
 export async function reopenInspection(inspectionId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
   const supabase = await createClient();
 
   // Only reopen if not sent
-  const { data: inspection } = await supabase
+  const { data: inspection, error: fetchError } = await supabase
     .from("dvi_inspections")
     .select("status, job_id")
     .eq("id", inspectionId)
     .single();
 
+  if (fetchError) return { error: fetchError.message };
   if (!inspection) return { error: "Inspection not found" };
   if (inspection.status === "sent" || inspection.status === "approved") {
     return { error: "Cannot reopen an inspection that's been sent to the customer" };
@@ -441,12 +451,13 @@ export async function deleteInspection(inspectionId: string) {
   const supabase = await createClient();
 
   // Fetch inspection to verify it exists and get photo paths
-  const { data: inspection } = await supabase
+  const { data: inspection, error: fetchError } = await supabase
     .from("dvi_inspections")
     .select("id, job_id, dvi_results(dvi_photos(storage_path))")
     .eq("id", inspectionId)
     .single();
 
+  if (fetchError) return { error: fetchError.message };
   if (!inspection) return { error: "Inspection not found" };
 
   // Collect photo storage paths for cleanup
@@ -457,9 +468,16 @@ export async function deleteInspection(inspectionId: string) {
     }
   }
 
-  // Delete photos from storage
+  // Delete photos from storage. Best-effort: log on failure but proceed —
+  // the DB delete cascades to dvi_results/dvi_photos rows regardless. A
+  // storage failure leaves orphan files but doesn't break the user flow.
   if (photoPaths.length > 0) {
-    await supabase.storage.from("dvi-photos").remove(photoPaths);
+    const { error: storageError } = await supabase.storage
+      .from("dvi-photos")
+      .remove(photoPaths);
+    if (storageError) {
+      console.error("[deleteInspection] storage cleanup failed:", storageError, photoPaths);
+    }
   }
 
   // Delete inspection (cascades to dvi_results and dvi_photos via FK)
@@ -489,15 +507,23 @@ export async function sendInspection(
     customerNote?: string;
   }
 ) {
+  // Manager-only — this sends an SMS/email to the customer with recommendations
+  // and pricing, which is communication + billing-adjacent.
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const token = crypto.randomUUID();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const dviUrl = `${appUrl}/inspect/${token}`;
 
-  // Update recommended items if in recommendations mode
+  // Update recommended items if in recommendations mode. Each update is
+  // checked individually — if any fails, abort BEFORE marking the inspection
+  // sent so the customer doesn't receive an SMS pointing at un-persisted
+  // recommendations.
   if (options.mode === "recommendations" && options.recommendedItems) {
-    await Promise.all(
+    const results = await Promise.all(
       options.recommendedItems.map((item) =>
         supabase
           .from("dvi_results")
@@ -509,6 +535,10 @@ export async function sendInspection(
           .eq("id", item.resultId)
       )
     );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      return { error: `Could not persist recommendations: ${failed.error.message}` };
+    }
   }
 
   // Update inspection status
@@ -1051,6 +1081,9 @@ export async function getPendingDviRequestCount(): Promise<number> {
 }
 
 export async function startParkingDvi(reservationId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
   const supabase = await createClient();
 
   // Fetch reservation
@@ -1115,6 +1148,9 @@ export async function startWalkinDvi(params: {
   color?: string | null;
   licensePlate?: string | null;
 }) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
   let vehicleId: string | null | undefined = params.vehicleId;
 
   if (!vehicleId) {

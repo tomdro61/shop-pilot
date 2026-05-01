@@ -43,10 +43,13 @@ export async function getJobs(filters?: {
   if (filters?.category) {
     // Filter jobs that have line items in this category
     const supabaseForCategory = await createClient();
-    const { data: matchingJobs } = await supabaseForCategory
+    const { data: matchingJobs, error: categoryError } = await supabaseForCategory
       .from("job_line_items")
       .select("job_id")
       .eq("category", filters.category);
+    if (categoryError) {
+      throw new Error(`Failed to filter jobs by category: ${categoryError.message}`);
+    }
     const jobIds = [...new Set(matchingJobs?.map((li) => li.job_id) || [])];
     if (jobIds.length === 0) return [];
     query = query.in("id", jobIds);
@@ -67,6 +70,13 @@ export async function getJobs(filters?: {
         .select("id")
         .or(`make.ilike.%${searchLower}%,model.ilike.%${searchLower}%`),
     ]);
+
+    if (customerResult.error) {
+      throw new Error(`Failed to search customers: ${customerResult.error.message}`);
+    }
+    if (vehicleResult.error) {
+      throw new Error(`Failed to search vehicles: ${vehicleResult.error.message}`);
+    }
 
     const customerIds = customerResult.data?.map(c => c.id) || [];
     const vehicleIds = vehicleResult.data?.map(v => v.id) || [];
@@ -111,6 +121,9 @@ export const getJob = cache(async (id: string) => {
 });
 
 export async function createJob(formData: JobFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = jobSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -131,6 +144,9 @@ export async function createJob(formData: JobFormData) {
 }
 
 export async function updateJob(id: string, formData: JobFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = jobSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -153,6 +169,9 @@ export async function updateJob(id: string, formData: JobFormData) {
 }
 
 export async function updateJobStatus(id: string, status: JobStatus) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const updateData: Record<string, unknown> = { status };
@@ -226,6 +245,9 @@ export async function updateJobFields(id: string, patch: JobFieldPatch) {
 }
 
 export async function updateJobDateFinished(id: string, dateFinished: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -242,6 +264,9 @@ export async function updateJobDateFinished(id: string, dateFinished: string) {
 }
 
 export async function deleteJob(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("jobs").delete().eq("id", id);
@@ -274,6 +299,9 @@ export async function recordPayment(
   paymentMethod: PaymentMethod,
   paymentStatus: PaymentStatus = "paid"
 ) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase

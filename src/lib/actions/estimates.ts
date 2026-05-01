@@ -317,10 +317,20 @@ export async function approveEstimate(token: string) {
     });
     stripeCustomerId = stripeCustomer.id;
 
-    await supabase
+    const { error: customerUpdateError } = await supabase
       .from("customers")
       .update({ stripe_customer_id: stripeCustomerId })
       .eq("id", job.customers.id);
+    if (customerUpdateError) {
+      // Non-fatal: the Stripe customer exists; we just failed to record its
+      // ID locally. Future invoice creation will create a duplicate Stripe
+      // customer until this is reconciled. Surface to logs for manual fix.
+      console.error(
+        "[approveEstimate] failed to save stripe_customer_id locally:",
+        customerUpdateError,
+        { customerId: job.customers.id, stripeCustomerId }
+      );
+    }
   }
 
   // Create Stripe invoice with current shop settings
@@ -335,23 +345,51 @@ export async function approveEstimate(token: string) {
         hasEmail: !!job.customers.email,
       });
 
-    // Insert invoice record (draft — staff sends manually when ready)
-    await supabase.from("invoices").insert({
-      job_id: job.id,
-      stripe_invoice_id: stripeInvoiceId,
-      stripe_hosted_invoice_url: hostedInvoiceUrl,
-      status: "draft",
-      amount: amountDue / 100,
-    });
+    // Insert invoice record (draft — staff sends manually when ready).
+    // Critical: Stripe invoice was just created. If this insert fails, the
+    // customer is billed in Stripe but we have no local record of it.
+    // Surface the error so the manager can manually reconcile (Stripe
+    // dashboard → void invoice, or run the insert by hand).
+    const { error: invoiceInsertError } = await supabase
+      .from("invoices")
+      .insert({
+        job_id: job.id,
+        stripe_invoice_id: stripeInvoiceId,
+        stripe_hosted_invoice_url: hostedInvoiceUrl,
+        status: "draft",
+        amount: amountDue / 100,
+      });
+    if (invoiceInsertError) {
+      console.error(
+        "[approveEstimate] orphan Stripe invoice — local insert failed:",
+        invoiceInsertError,
+        { stripeInvoiceId, jobId: job.id }
+      );
+      return {
+        error: `Stripe invoice was created (${stripeInvoiceId}) but could not be saved locally. Please contact support to reconcile.`,
+      };
+    }
 
-    // Mark estimate as approved
-    await supabase
+    // Mark estimate as approved. If this fails, Stripe customer + invoice
+    // exist and the local invoice row exists, but the estimate stays "sent".
+    // Surface so the manager can manually update the estimate status.
+    const { error: estimateUpdateError } = await supabase
       .from("estimates")
       .update({
         status: "approved",
         approved_at: new Date().toISOString(),
       })
       .eq("id", estimate.id);
+    if (estimateUpdateError) {
+      console.error(
+        "[approveEstimate] estimate status update failed:",
+        estimateUpdateError,
+        { estimateId: estimate.id }
+      );
+      return {
+        error: `Invoice was saved but the estimate status could not be updated. Please mark the estimate approved manually.`,
+      };
+    }
 
     revalidatePath(`/estimates/${estimate.id}`);
     revalidatePath(`/jobs/${job.id}`);
@@ -407,7 +445,11 @@ export async function deleteEstimate(id: string) {
   }
 
   // Delete estimate line items first, then the estimate
-  await supabase.from("estimate_line_items").delete().eq("estimate_id", id);
+  const { error: lineItemsError } = await supabase
+    .from("estimate_line_items")
+    .delete()
+    .eq("estimate_id", id);
+  if (lineItemsError) return { error: lineItemsError.message };
 
   const { error } = await supabase.from("estimates").delete().eq("id", id);
 
@@ -429,12 +471,13 @@ export async function createEstimateLineItem(formData: EstimateLineItemFormData)
   const supabase = await createClient();
 
   // Verify estimate is draft
-  const { data: estimate } = await supabase
+  const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select("id, status, job_id")
     .eq("id", parsed.data.estimate_id)
     .single();
 
+  if (fetchError) return { error: fetchError.message };
   if (!estimate) return { error: "Estimate not found" };
   if (estimate.status !== "draft") return { error: "Can only add items to draft estimates" };
 
@@ -462,12 +505,13 @@ export async function updateEstimateLineItem(
   const supabase = await createClient();
 
   // Verify estimate is draft
-  const { data: estimate } = await supabase
+  const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select("id, status")
     .eq("id", parsed.data.estimate_id)
     .single();
 
+  if (fetchError) return { error: fetchError.message };
   if (!estimate) return { error: "Estimate not found" };
   if (estimate.status !== "draft") return { error: "Can only edit items on draft estimates" };
 
@@ -488,12 +532,13 @@ export async function deleteEstimateLineItem(id: string, estimateId: string) {
   const supabase = await createClient();
 
   // Verify estimate is draft
-  const { data: estimate } = await supabase
+  const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select("id, status")
     .eq("id", estimateId)
     .single();
 
+  if (fetchError) return { error: fetchError.message };
   if (!estimate) return { error: "Estimate not found" };
   if (estimate.status !== "draft") return { error: "Can only delete items from draft estimates" };
 

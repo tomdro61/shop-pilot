@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { todayET } from "@/lib/utils";
 import { hasPendingService } from "@/lib/utils/parking";
 
@@ -143,6 +144,9 @@ export interface InboxData {
 // ── Full data fetch for /inbox page ─────────────────────
 
 export async function getInboxData(): Promise<InboxData> {
+  const auth = await requireManager();
+  if (!auth.ok) throw new Error(auth.error);
+
   const supabase = await createClient();
   const today = todayET();
 
@@ -330,6 +334,12 @@ export async function getInboxData(): Promise<InboxData> {
 // ── Lightweight count for sidebar badge ─────────────────
 
 export async function getInboxTotalCount(): Promise<number> {
+  // Auth-failure returns 0 to match the existing fail-soft pattern below —
+  // a wrong-but-zero badge beats a thrown exception that crashes the
+  // dashboard layout (this runs on every dashboard route render).
+  const auth = await requireManager();
+  if (!auth.ok) return 0;
+
   const supabase = await createClient();
   const today = todayET();
   const agedCutoff = new Date(today + "T12:00:00");

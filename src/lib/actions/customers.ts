@@ -69,13 +69,20 @@ export async function searchCustomersForPicker(
         .ilike("first_name", `%${words[0]}%`)
         .ilike("last_name", `%${words.slice(1).join(" ")}%`);
     } else {
+      // Strip PostgREST .or() syntax chars (, () ) from user input before
+      // interpolation. A search for "Smith, John" or "(555) 123" would
+      // otherwise corrupt the filter and either error out or match wrong rows.
+      const safe = trimmed.replace(/[,()]/g, " ");
       q = q.or(
-        `first_name.ilike.%${trimmed}%,last_name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`
+        `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,phone.ilike.%${safe}%`
       );
     }
   }
 
-  const { data } = await q;
+  const { data, error } = await q;
+  if (error) {
+    throw new Error(`Failed to search customers: ${error.message}`);
+  }
   const results = data ?? [];
 
   if (includeIds.length === 0) return results;
@@ -83,10 +90,13 @@ export async function searchCustomersForPicker(
   const missing = includeIds.filter((id) => !results.some((r) => r.id === id));
   if (missing.length === 0) return results;
 
-  const { data: pinned } = await supabase
+  const { data: pinned, error: pinnedError } = await supabase
     .from("customers")
     .select("id, first_name, last_name, phone")
     .in("id", missing);
+  if (pinnedError) {
+    throw new Error(`Failed to load pinned customers: ${pinnedError.message}`);
+  }
 
   return [...(pinned ?? []), ...results];
 }
@@ -200,14 +210,23 @@ export async function updateCustomer(id: string, formData: CustomerFormData) {
 }
 
 export async function deleteCustomer(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
-  // Check for active jobs
-  const { count } = await supabase
+  // Check for active jobs. The error MUST be checked — if this query fails
+  // (network, RLS, transient DB), count is null and the guard would let the
+  // delete proceed, taking the customer's full job history with it.
+  const { count, error: countError } = await supabase
     .from("jobs")
     .select("id", { count: "exact", head: true })
     .eq("customer_id", id)
     .in("status", ["not_started", "waiting_for_parts", "in_progress"]);
+
+  if (countError) {
+    return { error: `Could not verify active jobs: ${countError.message}` };
+  }
 
   if (count && count > 0) {
     return { error: "Cannot delete customer with active jobs" };

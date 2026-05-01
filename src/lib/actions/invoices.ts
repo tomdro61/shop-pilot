@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { createStripeInvoice, createParkingStripeInvoice } from "@/lib/stripe/create-invoice";
 import { getShopSettings } from "@/lib/actions/settings";
@@ -51,6 +52,9 @@ export async function createInvoiceFromJob(
   jobId: string,
   options?: { sendText?: boolean; sendEmail?: boolean }
 ) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const sendText = options?.sendText ?? false;
   const sendEmail = options?.sendEmail ?? false;
 
@@ -73,13 +77,18 @@ export async function createInvoiceFromJob(
     return { error: "Job must be complete before creating an invoice" };
   }
 
-  // Check for existing invoice
-  const { data: existingInvoice } = await supabase
+  // Check for existing invoice. The error MUST be checked — if this query
+  // fails, existingInvoice is null and the guard passes, leading to a
+  // duplicate Stripe invoice for the same job (customer billed twice).
+  const { data: existingInvoice, error: existingError } = await supabase
     .from("invoices")
     .select("id")
     .eq("job_id", jobId)
     .maybeSingle();
 
+  if (existingError) {
+    return { error: `Could not check for existing invoice: ${existingError.message}` };
+  }
   if (existingInvoice) {
     return { error: "An invoice already exists for this job" };
   }
@@ -149,10 +158,20 @@ export async function createInvoiceFromJob(
     });
     stripeCustomerId = stripeCustomer.id;
 
-    await supabase
+    const { error: customerUpdateError } = await supabase
       .from("customers")
       .update({ stripe_customer_id: stripeCustomerId })
       .eq("id", customer.id);
+    if (customerUpdateError) {
+      // Non-fatal: the Stripe customer exists; we just failed to record its
+      // ID locally. Future invoice creation will create a duplicate Stripe
+      // customer until this is reconciled. Log loudly for manual fix.
+      console.error(
+        "[createInvoiceFromJob] failed to save stripe_customer_id locally:",
+        customerUpdateError,
+        { customerId: customer.id, stripeCustomerId }
+      );
+    }
   }
 
   // Create Stripe invoice with current shop settings
@@ -320,6 +339,9 @@ export async function createParkingInvoice(
   lineItems: { description: string; amount: number }[],
   options?: { sendText?: boolean; sendEmail?: boolean }
 ) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const sendText = options?.sendText ?? false;
   const sendEmail = options?.sendEmail ?? false;
 
