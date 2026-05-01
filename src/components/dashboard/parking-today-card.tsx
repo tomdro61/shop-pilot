@@ -59,16 +59,30 @@ export function ParkingTodayCard({
           </div>
           <span aria-hidden className="self-stretch w-px bg-stone-300 dark:bg-stone-700" />
           <div className="flex flex-col">
-            <span className="font-mono tabular-nums text-2xl font-bold text-stone-900 dark:text-stone-50 leading-none">
-              {parking.pickupsToday}
-            </span>
-            <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-              Pickups
-            </span>
-            {parking.pickupsToday > 0 && (
-              <span className="mt-1 font-mono tabular-nums text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                {parking.pickupsPreparedToday}/{parking.pickupsToday} prepared
-              </span>
+            {parking.pickupsToday > 0 ? (
+              <>
+                <span
+                  className={
+                    parking.pickupsPreparedToday >= parking.pickupsToday
+                      ? "font-mono tabular-nums text-2xl font-bold text-emerald-600 dark:text-emerald-400 leading-none"
+                      : "font-mono tabular-nums text-2xl font-bold text-red-600 dark:text-red-400 leading-none"
+                  }
+                >
+                  {parking.pickupsPreparedToday}/{parking.pickupsToday}
+                </span>
+                <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                  Prepared / Pickups
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-mono tabular-nums text-2xl font-bold text-stone-900 dark:text-stone-50 leading-none">
+                  0
+                </span>
+                <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                  Pickups
+                </span>
+              </>
             )}
           </div>
         </div>

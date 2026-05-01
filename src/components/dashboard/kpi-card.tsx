@@ -1,4 +1,3 @@
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SECTION_LABEL } from "@/components/ui/section-card";
@@ -60,49 +59,44 @@ export function KpiCard({
         !useIconVariant && accentColor && `border-l-4 ${accentBorderMap[accentColor]}`
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {useIconVariant && Icon && (
-            <span
-              className={cn(
-                "w-8 h-8 rounded-md grid place-items-center border flex-none",
-                ACCENT_ICON_TINT[tone ?? "stone"]
-              )}
-            >
-              <Icon className="h-4 w-4" />
-            </span>
-          )}
-          <p className={cn(SECTION_LABEL, "truncate")}>{title}</p>
-        </div>
-        {changePercent !== null && (
+      <div className="flex items-center gap-2 min-w-0">
+        {useIconVariant && Icon && (
           <span
             className={cn(
-              "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums shrink-0",
-              changePercent > 0
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                : changePercent < 0
-                  ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
-                  : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+              "w-8 h-8 rounded-md grid place-items-center border flex-none",
+              ACCENT_ICON_TINT[tone ?? "stone"]
             )}
           >
-            {changePercent > 0 ? (
-              <TrendingUp className="h-3 w-3" />
-            ) : changePercent < 0 ? (
-              <TrendingDown className="h-3 w-3" />
-            ) : (
-              <Minus className="h-3 w-3" />
-            )}
-            {changePercent > 0 ? "+" : ""}
-            {changePercent.toFixed(0)}%
+            <Icon className="h-4 w-4" />
           </span>
         )}
+        <p className={cn(SECTION_LABEL, "truncate")}>{title}</p>
       </div>
       <p className="mt-2 font-mono tabular-nums text-2xl lg:text-[28px] font-bold tracking-tight text-stone-900 dark:text-stone-50 leading-none">
         {value}
       </p>
-      {(subtitle || changeLabel) && (
+      {(subtitle || (changePercent !== null && changeLabel)) && (
         <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
-          {subtitle ?? changeLabel}
+          {subtitle ?? (
+            <>
+              {changePercent !== null && (
+                <span
+                  className={cn(
+                    "font-mono tabular-nums font-semibold",
+                    changePercent > 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : changePercent < 0
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-stone-500 dark:text-stone-400"
+                  )}
+                >
+                  {changePercent > 0 ? "+" : ""}
+                  {changePercent.toFixed(0)}%
+                </span>
+              )}
+              {changeLabel && <span className="ml-1">{changeLabel}</span>}
+            </>
+          )}
         </p>
       )}
     </div>
