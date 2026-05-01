@@ -487,6 +487,162 @@ Default to `bg-stone-50 dark:bg-stone-900/60` for inputs in filter contexts (sea
 
 ---
 
+## 18. Alert Card Pattern (Session 33)
+
+The canonical "needs attention" surface. Used by:
+- Dashboard Action Center alert cards (Unassigned, Quote Requests, Estimates Sent, DVIs Ready, Parking Leads, Aged Parts)
+- Detail-page Notes blocks (job, customer, parking — amber tone)
+- DVI detail page Primary Complaint (blue tone)
+- DVI list page Parking DVI Requests (emerald tone)
+- Customer-facing /inspect manager note (blue tone)
+
+### Anatomy
+
+```
+┌──────────────────────────────────────────────┐
+│ [3px ▌ tone strip]                           │
+│  ▌ ┌──┐  bold count  small label text  →     │
+│  ▌ │ic│  descriptor sentence in muted text   │
+│  ▌ └──┘                                      │
+└──────────────────────────────────────────────┘
+   ↑      ↑                                  ↑
+   |      |                                  |
+   3px    bordered icon tile (9x9)        ChevronRight
+   accent (or 7x7 in compact contexts)    (when card is a link)
+   strip
+```
+
+### Tone palette — `src/lib/ui/alert-tone.ts`
+
+```ts
+export type Tone = "amber" | "blue" | "indigo" | "violet" | "emerald" | "red";
+
+export const TONE_CLASSES: Record<Tone, {
+  tile: string;   // bordered icon tile bg + text + border
+  bar:  string;   // 3px left strip color
+  card: string;   // soft tinted bg + border + hover
+  count: string;  // heavier text color for the number
+  chip: string;   // active-state filter chip bg + border + text
+}>;
+```
+
+Single source of truth. Don't inline tone class strings — import from `@/lib/ui/alert-tone`. The same six-member union backs both the dashboard alert cards and the inbox/quote-request filter chips.
+
+### Markup template
+
+```tsx
+<Link href={...} className={cn(
+  "group relative flex h-full items-center gap-3 rounded-md border px-4 py-3.5 shadow-card transition-colors",
+  TONE_CLASSES[tone].card
+)}>
+  <span aria-hidden className={cn("absolute left-0 top-3 bottom-3 w-[3px] rounded-r", TONE_CLASSES[tone].bar)} />
+  <span className={cn("w-9 h-9 rounded-md grid place-items-center border flex-none", TONE_CLASSES[tone].tile)}>
+    <Icon className="h-4 w-4" />
+  </span>
+  <div className="flex-1 min-w-0">
+    <div className="flex items-baseline gap-2">
+      <span className={cn("font-mono tabular-nums text-xl font-bold leading-none", TONE_CLASSES[tone].count)}>{count}</span>
+      <span className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">{label}</span>
+    </div>
+    <p className="mt-1 text-xs text-stone-600 dark:text-stone-400 truncate">{descriptor}</p>
+  </div>
+  <ChevronRight className="h-4 w-4 text-stone-400 dark:text-stone-500 group-hover:text-stone-700 flex-none" />
+</Link>
+```
+
+`h-full` matters when alert cards sit in a grid alongside a taller sibling (Glance card in the Action Center) — without it, the bottom of the alert grid won't line up.
+
+### Notes block variant (job / customer / parking detail)
+
+Same idiom but rendered inline as a section within a card (no Link, no chevron). 3px amber strip + bordered amber `StickyNote` icon tile (6x6) + amber-tinted bg. **Never** use `bg-yellow-*` — the design system uses amber for warnings, period.
+
+---
+
+## 19. Segmented controls (Session 33)
+
+Used for view switchers (parking tabs, jobs calendar mode toggle, catalog type filter).
+
+### Pattern
+
+Container: bordered, white card, `p-1` (4px) so the active button gets visible white-space framing.
+Inactive: text-only, no fill.
+Active: `bg-stone-100` light / `bg-stone-800` dark + `shadow-card` lift + `aria-pressed`.
+
+```tsx
+<div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1">
+  {tabs.map((tab) => (
+    <button
+      key={tab.value}
+      onClick={() => setTab(tab.value)}
+      aria-pressed={active}
+      className={cn(
+        "rounded px-3 py-1.5 text-xs font-medium transition-colors",
+        active
+          ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
+          : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
+      )}
+    >
+      {tab.label}
+    </button>
+  ))}
+</div>
+```
+
+**Never** use the dark-navy inverted active state (`bg-stone-900 text-white`). Soft tint + lift, always. `aria-pressed` always.
+
+### Filter pill variant (inbox, quote requests)
+
+Free-floating pills with their own borders, used when the tab set is dynamic or content is type-keyed:
+
+```tsx
+<button className={cn(
+  "inline-flex items-center gap-1.5 h-8 px-3 rounded-md border text-sm font-medium",
+  active
+    ? "bg-stone-100 border-stone-300 text-stone-900 dark:bg-stone-800 dark:border-stone-800 dark:text-stone-50"
+    : "bg-card border-stone-200 text-stone-600 hover:bg-stone-50 dark:bg-stone-900 dark:border-stone-800 dark:text-stone-400 dark:hover:bg-stone-800/60"
+)}>
+  ...
+</button>
+```
+
+When the chip is associated with a tone (Unassigned=amber, Quotes=blue, etc.), use `TONE_CLASSES[tone].chip` for the active state instead of the neutral stone fill.
+
+---
+
+## 20. Sidebar (Session 33)
+
+The sidebar uses a fixed dark navy bg in both light and dark modes (`#0F172A`). Active state is a Linear-style elevated treatment — **never** a colored fill.
+
+### Active item
+
+```tsx
+isActive
+  ? "bg-white/[0.08] text-white font-semibold ring-1 ring-inset ring-white/10"
+  : "text-stone-400 hover:bg-white/[0.04] hover:text-stone-100"
+```
+
+Plus a 3px white left-edge strip on the active item (absolute-positioned span):
+
+```tsx
+{isActive && (
+  <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-white" />
+)}
+```
+
+The combination (semi-transparent white fill + inset white ring + white edge strip) makes "you are here" obvious without bringing in the primary blue. **Reserve the new oklch primary blue for action buttons.**
+
+### Count pills
+
+```tsx
+<span className="ml-auto ... rounded-full bg-stone-200 dark:bg-stone-200 px-1.5 text-[10px] font-semibold text-stone-900 dark:text-stone-900">
+  {badge}
+</span>
+```
+
+High-contrast light pill on the dark sidebar bg, no blue.
+
+---
+
 ## 17. Anti-patterns (things this system rejects)
 
 - ❌ `bg-green-*` for "complete" or "paid" → use `bg-emerald-*` (one green family)
@@ -500,9 +656,12 @@ Default to `bg-stone-50 dark:bg-stone-900/60` for inputs in filter contexts (sea
 - ❌ Run-on metadata text "3 drop-offs · 0 pickups · oldest 12 days" → structured metric chunks
 - ❌ Customer avatar in `bg-blue-*` → use `bg-violet-*` (customer = violet)
 - ❌ Big colored panel chrome on column headers → small icon tile + thin top strip + neutral header
-- ❌ "Action Center" / "Inbox" terminology → consolidated into "Open Loops"
 - ❌ Local copies of color maps → import `JOB_STATUS_BAR` / `JOB_STATUS_COLORS` from `constants.ts`
-- ❌ Hand-rolled `bg-{tone}-50 text-{tone}-700 border-{tone}-200 …` → use `ACCENT_ICON_TINT[tone]`
+- ❌ Hand-rolled `bg-{tone}-50 text-{tone}-700 border-{tone}-200 …` → use `ACCENT_ICON_TINT[tone]` (mini-status-card family) or `TONE_CLASSES[tone]` (alert-card family from `lib/ui/alert-tone.ts`)
+- ❌ `bg-yellow-*` for note/warning blocks → use the alert-card pattern with amber tone (3px amber strip + bordered amber tile)
+- ❌ `bg-stone-900 text-white` inverted active state on segmented controls → soft `bg-stone-100 + shadow-card` lift
+- ❌ `bg-blue-600` active state in the sidebar → `bg-white/[0.08]` + ring + white left-edge strip (reserve the primary blue for action buttons)
+- ❌ `sky-*` / `purple-*` / `orange-*` / `rose-*` Tailwind families → stick to the canonical six tones (amber/blue/indigo/violet/emerald/red) plus stone/neutral
 - ❌ Two greens, two stones, two blues — pick one and stick with it
 - ❌ Free-form `className` overrides on layout primitives that punch through their invariants
 

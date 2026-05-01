@@ -2252,3 +2252,135 @@ A saved catalog of individual parts and labor items for fast job building. Disti
 - `src/components/dashboard/quick-pay-form.tsx` — onBlur dropdown close
 - `src/app/(dashboard)/reports/page.tsx` — Trends Explorer + Service Mix + Tech Scoreboard live cards
 - `src/lib/actions/terminal.ts` — pass category to Quick Pay line items
+
+## Session 33 — 2026-04-29/30 — UI dial-in, Action Center, Tasks, design system consolidation
+
+Massive UI dial-in pass that gates the staging→master merge. Phase 0 architectural items (open_loops table, agent_tasks, audit_log, Vercel Cron, estimate decoupling) remain — this session was scoped to the UI consistency pass.
+
+### What was completed
+
+**New shared infrastructure**
+- `src/lib/ui/alert-tone.ts` — single source of truth for the alert/needs-attention tone vocabulary (`amber | blue | indigo | violet | emerald | red`). Co-locates class strings for `tile`, `bar`, `card`, `count`, `chip` per tone. Replaces parallel palette records that were drifting across action-center.tsx and inbox-list.tsx.
+- `src/lib/actions/_types.ts` — discriminated-union `ActionResult<T>` for new server actions. Older actions still use `{ success | error }`; migrate opportunistically rather than in one sweep.
+- `src/lib/utils/parking.ts` — `hasPendingService(reservation)` helper. Single source of truth for "this parking lead still needs follow-up." Used by dashboard alert count, inbox section count, and sidebar badge. Resolved a discrepancy where the dashboard counted leads with all services already completed.
+- Vitest 4.1 + coverage-v8 wired up. `src/lib/utils/parking.test.ts` is the first test suite (7 cases for `hasPendingService`).
+
+**Tasks scratchpad (new feature)**
+- `tasks` table — id, title, status (open/resolved), created_at, resolved_at, user_id (nullable). RLS for authenticated reads + authenticated mutations.
+- Migration `supabase/migrations/20260429000000_tasks.sql` (applied to remote).
+- `src/lib/actions/tasks.ts` — getOpenTasks (graceful for non-managers, returns []), createTask (hard-fails on missing profile), resolveTask + deleteTask (zero-row check returns "Task not found"). All mutations use `revalidatePath("/", "layout")` so the sidebar inbox badge updates across navigations.
+- Tasks UI in the new Action Center on the dashboard.
+
+**Dashboard restructure**
+- `src/components/dashboard/action-center.tsx` (new) replaces the old Open Loops list with three zones:
+  - Tasks card (full width on its own row)
+  - Glance card on the right (Parking · Today + Awaiting Payment, fixed 300px)
+  - 2-column needs-attention alert-card grid on the left (`h-full` so it stretches to match Glance height)
+- 6 alert types: Unassigned (amber), Quote Requests (blue), Estimates Sent (indigo), DVIs Ready (violet), Parking Leads (emerald), Aged Parts (red). Each links to `/inbox?tab=...`.
+- Parking · Today now reports an "X/Y prepared" line under Pickups, where prepared = `checked_out` OR `lock_box_number != null`. Pickups total counts both checked_in and checked_out for today.
+- Parking Today card scoped to `MANAGED_PARKING_LOTS` only (Broadway Motors + Boston Logan Valet) — APB1/APB2/etc. no longer inflate the count.
+- Quick Pay button → emerald filled (was outline). Money/completed semantic, distinct from the New Job primary button.
+- DashboardShell: removed the non-functional Search bar from the header.
+
+**Inbox redesign**
+- `src/components/dashboard/inbox-list.tsx` rewrite. Page header bordered icon tile + dynamic "X items pending" subtitle. Type-accent filter chips (matches alert-card tones). Section cards use the canonical `rounded-md + shadow-card + ul.divide-y` idiom.
+- `src/lib/actions/inbox.ts` adds queries for `unassignedJobs` (active jobs with no tech) and `agedParts` (waiting_for_parts > 3 days). `getInboxTotalCount` fetches parking-lead rows so it can apply `hasPendingService` and stay in sync with the inbox section count.
+
+**DVI suite alignment** (`/dvi`, `/dvi/[jobId]`, `/inspect/[token]`, layout, all 11 dvi components)
+- List page: violet ClipboardCheck header tile + dynamic pending subtitle. Sections use shared SectionHeader with tone colors per type. Parking DVI Requests use the 3px alert-card pattern. Standalone DVIs and Recent Inspections wrap in section cards with row dividers.
+- Detail page: bordered icon tiles (indigo Vehicle, blue Primary Complaint, violet Inspection). Primary Complaint converted from `border-l-4` to 3px alert-card pattern.
+- Customer-facing /inspect/[token]: layout header gets a blue Wrench brand tile. Manager note converted to alert-card style with MessageSquare tile. Already-serviced state uses 3px stone strip + emerald check tile. InspectionSummary's dark `bg-stone-800` category headers replaced with clean white card headers + hairline row dividers.
+- InspectionForm components: CategorySection accordion uses soft-tint header + aria-expanded chevron, count chip switches between emerald (complete) and stone. InspectionProgress: `bg-green-500` → `bg-emerald-500`. ConditionButtons: green-* → emerald-* on Good. Photo components: rounded-lg → rounded-md, dark borders to stone-800.
+
+**Detail pages** (job, customer, parking)
+- Notes blocks: `bg-yellow-50` → alert-card pattern (3px amber strip + bordered amber StickyNote tile + amber-tinted bg). Yellow-* tokens removed; design system uses amber for warnings.
+- Customer / Vehicle / Trip / Details column headers: bare 3x3 icons replaced with 6x6 bordered icon tiles using tone colors (violet customer, stone vehicle, indigo trip/details).
+- customers/[id]: Financial Snapshot sub-header → emerald bordered icon tile; vehicle-filter pills `shadow-sm` → `shadow-card`.
+- parking/[id]: Shuttle badge `sky-*` → `blue-*`; Valet badge `purple-*` → `indigo-*` (canonical, distinct). Status stepper border `dark:stone-700` → `-stone-800`. Section numbering ("01 Status" etc.) dropped.
+
+**Segmented controls** (parking-tabs, jobs-calendar mode toggle, catalog type filter)
+- Active state: `bg-stone-900 text-white` inversion → soft `bg-stone-100 + shadow-card` lift, matching the rest of the app's restrained language.
+- Container padding `p-0.5` → `p-1` so the active button gets visible white-space framing.
+- `aria-pressed` added on every toggle button.
+
+**Forms** (create customer, create job)
+- /customers/new: switched to PageShell, violet UserPlus icon tile + bold title pattern. Wrapper card `rounded-lg shadow-sm` → `rounded-md shadow-card`.
+- /jobs/new: same treatment with indigo Wrench icon tile, `width="wide"`.
+- job-form: single big section card split into three independent cards (Customer / Vehicle / Job details), each with its own bordered icon-tile header. Outer `space-y-4` → `space-y-5`. 5 token violations swept.
+
+**Quote requests redesign**
+- Page header: bordered blue MessageSquareQuote icon tile + bold title + tightened subtitle.
+- Filter chips: `bg-blue-600 text-white` inversion → inbox FilterChip pattern (bordered `bg-stone-100` active, `bg-card` outlined inactive, `aria-pressed`).
+- **Default filter is now "new"** — no status param → server filters to "new" and the New chip renders active. `?status=all` explicitly disables filtering.
+- Search input: `bg-card` override so it pops on the page.
+- Quote cards rebuilt: violet bordered avatar tile, tone-graduated age badge (today / 3d / 7d) with full timestamp tooltip, monospace contact line, blue tone-tinted service pills, bordered MessageBlock surface, cleaner action row (Convert primary + Open in Quo + Delete trash). Double-submit guards on handleStatusChange and handleDelete.
+
+**Sidebar polish**
+- Active item: `bg-blue-600` → `bg-white/[0.08]` + `ring-1 ring-inset ring-white/10` + 3px white left-edge strip. Reserves the new oklch primary blue for buttons; sidebar uses a navy-elevated treatment with a clear "you are here" indicator.
+- Hover: `bg-sidebar-accent` → `bg-white/[0.04]` (less prominent than active).
+- Count pills (Inbox 18, DVI 2, Quotes 1): `bg-blue-600` → `bg-stone-200 text-stone-900` in both modes. High-contrast light pill on dark sidebar, no blue.
+
+**Primary blue refresh**
+- `globals.css --primary` light: `oklch(0.55 0.2 252)` → `oklch(0.55 0.18 255)` (slightly muted, slightly cooler hue). `--ring` matched. Dark mode hue update for consistency.
+- `Button` default variant: `bg-blue-600/dark:bg-blue-500` hardcoded → `bg-primary text-primary-foreground hover:bg-primary/90` (canonical shadcn pattern). Every default-variant button now inherits the central token; future tweaks one-line.
+
+**Review process**
+- Six-cluster fix list closed pre-merge (1 Critical + 6 High + 4 Medium findings) with focused review verifying each cluster.
+- Final review pass on the full session diff caught 2 High issues in the quote requests rewrite (double-submit guards + token), both fixed.
+
+### Files
+
+**New files**
+- `src/lib/ui/alert-tone.ts`
+- `src/lib/actions/_types.ts`
+- `src/lib/actions/tasks.ts`
+- `src/lib/utils/parking.ts`
+- `src/lib/utils/parking.test.ts`
+- `src/components/dashboard/action-center.tsx`
+- `vitest.config.ts`
+- `supabase/migrations/20260429000000_tasks.sql`
+
+**Modified (40+)**
+- All DVI components in `src/components/dvi/` plus the 4 DVI page routes
+- `src/app/(dashboard)/dashboard/page.tsx` + `loading.tsx` + `dashboard-shell.tsx`
+- `src/app/(dashboard)/{customers,jobs,parking}/[id]/page.tsx` + the matching `/new/page.tsx`
+- `src/app/(dashboard)/quote-requests/page.tsx` + `src/components/quote-requests/quote-request-list.tsx`
+- `src/components/dashboard/inbox-list.tsx`, `section-header.tsx`, `customer-insights.tsx`, `shop-floor-column.tsx`, `catalog-list.tsx`, `jobs-calendar-view.tsx`
+- `src/components/parking/parking-tabs.tsx`
+- `src/components/forms/job-form.tsx`
+- `src/components/layout/sidebar.tsx`
+- `src/components/ui/{button,mini-status-card}.tsx`
+- `src/lib/actions/inbox.ts`
+- `src/app/inspect/[token]/page.tsx` + `layout.tsx`
+- `src/app/globals.css`, `src/types/supabase.ts`
+- `package.json`, `package-lock.json` (vitest)
+
+**Deleted (3)**
+- `SHOPPILOT_DESIGN_SYSTEM.md`, `STYLE_PATTERNS.md`, `UI_REFRESH_GUIDE.md` — predecessor docs superseded by `DESIGN_SYSTEM.md`.
+
+### What's not done yet
+
+- Phase 0 architectural items still open: `open_loops` table, `agent_tasks` table, `audit_log` table, Vercel Cron infrastructure, estimate-decoupling refactor, customer detail page spine layout (tabs).
+- `src/components/chat/chat-message.tsx` still has yellow-* tokens (only place left in the app).
+- F2 (deferred from the prior fix list): `green` → `emerald` rename across 12 `Accent`-using files in `mini-status-card.tsx` consumers.
+- M4/M5 (deferred): InboxCounts/NeedsAttention overlap, denormalized `total`.
+- M6: Sentry rollout still TODO.
+
+### What's next
+
+- Final scoped-review (full sweep) before merging staging→master.
+- Browser smoke test on staging.
+- Then merge.
+
+### Commits (8 themed)
+
+```
+82f07bb  style(dashboard): sidebar active polish, parking managed-lots, search removed, Quick Pay emerald
+c2faf2c  feat(ui): primary blue oklch refresh + Button routes through --primary
+2918936  feat(quote-requests): redesign list with new card layout and default to new filter
+750fd3f  style(ui): apply design system to detail pages, segmented controls, and forms
+29f32e1  feat(dvi): align suite to design system
+4b6c27d  feat(dashboard): action center + inbox redesign
+70e40c9  feat(ui): shared Tone palette + ActionResult shape + parking helper + Vitest
+907c71d  docs: archive predecessor design-system docs
+```

@@ -85,13 +85,13 @@ Local dashboard `KpiCard` has no border-l accent and uses `text-[22px] font-semi
 
 **Fix:** Adopt `shadow-card` everywhere; deprecate inline `shadow-sm` for cards.
 
-## UI-8 — Sidebar nav active state too loud in light mode
+## UI-8 — Sidebar nav active state too loud in light mode ✅ RESOLVED (Session 33)
 
-**File:** `sidebar.tsx:113`
+**File:** `sidebar.tsx`
 
-`bg-blue-600 dark:bg-stone-700 text-white font-semibold`. After the recent dark-mode → stone refactor, light-mode blue is now the only saturated chrome on the page edge — it shouts. Dark mode is restrained; light mode isn't.
+`bg-blue-600 dark:bg-stone-700 text-white font-semibold`. After the recent dark-mode → stone refactor, light-mode blue was the only saturated chrome on the page edge — it shouted.
 
-**Fix:** Calm the light-mode active state to a stone tone (`bg-stone-100 text-stone-900` or similar) so both modes read as restrained. OR commit to brand-blue and update dark mode back to blue.
+**Fix shipped (commit 82f07bb):** Active item now uses `bg-white/[0.08]` + `ring-1 ring-inset ring-white/10` + a 3px white left-edge strip. Hover (non-active) uses `bg-white/[0.04]`. Count pills changed from `bg-blue-600` to `bg-stone-200 text-stone-900` (high-contrast light pill on dark sidebar). Reserves the primary blue for action buttons; sidebar reads as Linear-style elevated treatment instead of a saturated panel. See DESIGN_SYSTEM.md §20.
 
 ## UI-9 — Dashboard Shop Floor columns each have different colored header strips ✅ RESOLVED
 
