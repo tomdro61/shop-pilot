@@ -16,19 +16,39 @@ import {
   QUOTE_REQUEST_STATUS_LABELS,
 } from "@/lib/constants";
 import { updateQuoteRequestStatus, deleteQuoteRequest } from "@/lib/actions/quote-requests";
-import { Search, Phone, Mail, Car, MessageSquare, ExternalLink, Wrench, Trash2 } from "lucide-react";
+import {
+  Search,
+  Phone,
+  Mail,
+  Car,
+  ExternalLink,
+  Wrench,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
 import type { QuoteRequest, QuoteRequestStatus } from "@/types";
 
 const filterTabs: { value: string; label: string }[] = [
-  { value: "", label: "All" },
+  { value: "all", label: "All" },
   ...QUOTE_REQUEST_STATUS_ORDER.map((s) => ({
     value: s,
     label: QUOTE_REQUEST_STATUS_LABELS[s],
   })),
 ];
+
+function ageDays(createdAt: string): number {
+  const now = Date.now();
+  const then = new Date(createdAt).getTime();
+  return Math.max(0, Math.floor((now - then) / (1000 * 60 * 60 * 24)));
+}
+
+function ageBadgeClass(days: number): string {
+  if (days >= 7) return "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400";
+  if (days >= 3) return "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400";
+  return "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400";
+}
 
 export function QuoteRequestList({
   quoteRequests,
@@ -38,10 +58,13 @@ export function QuoteRequestList({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchInput, setSearchInput] = useState(searchParams.get("search") || "");
-  const currentStatus = searchParams.get("status") || "";
+  // No status param → default landing on "new". "all" sentinel = no filter.
+  const currentStatus = searchParams.get("status") || "new";
   const [isPending, startTransition] = useTransition();
   const searchParamsRef = useRef(searchParams);
-  searchParamsRef.current = searchParams;
+  useEffect(() => {
+    searchParamsRef.current = searchParams;
+  }, [searchParams]);
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -72,40 +95,45 @@ export function QuoteRequestList({
   }, [searchInput, updateParams]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative sm:max-w-xs flex-1">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400 pointer-events-none" />
           <Input
             placeholder="Search quotes..."
-            className="pl-11 h-10 text-sm"
+            className="pl-9 h-10 text-sm bg-card border-stone-200 dark:bg-stone-900 dark:border-stone-800"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
-        <div className="flex gap-1 flex-wrap">
-          {filterTabs.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => updateParams({ status: tab.value })}
-              className={cn(
-                "rounded-full px-3.5 py-1.5 text-xs font-bold transition-colors",
-                currentStatus === tab.value
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2">
+          {filterTabs.map((tab) => {
+            const active = currentStatus === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => updateParams({ status: tab.value })}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex items-center h-8 px-3 rounded-md border text-sm font-medium transition-colors",
+                  active
+                    ? "bg-stone-100 border-stone-300 text-stone-900 dark:bg-stone-800 dark:border-stone-800 dark:text-stone-50"
+                    : "bg-card border-stone-200 text-stone-600 hover:bg-stone-50 dark:bg-stone-900 dark:border-stone-800 dark:text-stone-400 dark:hover:bg-stone-800/60"
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* List */}
       <div className={isPending ? "opacity-50 transition-opacity duration-150" : ""}>
         {quoteRequests.length === 0 ? (
-          <div className="bg-card rounded-xl shadow-card p-8 text-center">
+          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card p-8 text-center">
             <p className="text-sm text-stone-500 dark:text-stone-400">
               No quote requests found.
             </p>
@@ -133,11 +161,11 @@ function MessageBlock({ message }: { message: string }) {
   }, [message]);
 
   return (
-    <div className="mb-4 rounded-lg bg-stone-50 dark:bg-stone-800/50 px-4 py-3">
+    <div className="rounded-md bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800 px-4 py-3">
       <p
         ref={textRef}
         className={cn(
-          "text-sm italic text-stone-500 dark:text-stone-400",
+          "text-sm italic text-stone-700 dark:text-stone-300",
           !expanded && "line-clamp-3"
         )}
       >
@@ -147,7 +175,7 @@ function MessageBlock({ message }: { message: string }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+          className="mt-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
         >
           {expanded ? "Show less" : "Show more"}
         </button>
@@ -160,8 +188,11 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const status = qr.status as QuoteRequestStatus;
+  const days = ageDays(qr.created_at);
 
-  const vehicle = [qr.vehicle_year, qr.vehicle_make, qr.vehicle_model].filter(Boolean).join(" ");
+  const vehicle = [qr.vehicle_year, qr.vehicle_make, qr.vehicle_model]
+    .filter(Boolean)
+    .join(" ");
   const date = new Date(qr.created_at).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -172,28 +203,38 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
   const initials = `${qr.first_name?.[0] ?? ""}${qr.last_name?.[0] ?? ""}`.toUpperCase();
 
   async function handleStatusChange(newStatus: string) {
+    if (isUpdating) return;
     setIsUpdating(true);
-    const result = await updateQuoteRequestStatus(qr.id, newStatus as QuoteRequestStatus);
-    setIsUpdating(false);
-    if ("error" in result) {
-      toast.error(result.error);
-    } else {
-      toast.success(`Status updated to ${QUOTE_REQUEST_STATUS_LABELS[newStatus as QuoteRequestStatus]}`);
+    try {
+      const result = await updateQuoteRequestStatus(qr.id, newStatus as QuoteRequestStatus);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success(
+          `Status updated to ${QUOTE_REQUEST_STATUS_LABELS[newStatus as QuoteRequestStatus]}`
+        );
+      }
+      router.refresh();
+    } finally {
+      setIsUpdating(false);
     }
-    router.refresh();
   }
 
   async function handleDelete() {
+    if (isUpdating) return;
     if (!confirm(`Delete quote request from ${qr.first_name} ${qr.last_name}?`)) return;
     setIsUpdating(true);
-    const result = await deleteQuoteRequest(qr.id);
-    setIsUpdating(false);
-    if ("error" in result) {
-      toast.error(result.error);
-    } else {
-      toast.success("Quote request deleted");
+    try {
+      const result = await deleteQuoteRequest(qr.id);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success("Quote request deleted");
+      }
+      router.refresh();
+    } finally {
+      setIsUpdating(false);
     }
-    router.refresh();
   }
 
   const convertUrl = qr.customer_id
@@ -203,111 +244,127 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
   return (
     <div
       className={cn(
-        "bg-card rounded-xl shadow-card px-6 py-5 transition-opacity",
+        "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden transition-opacity",
         isUpdating && "opacity-50"
       )}
     >
-      {/* Header: Avatar + Name/Date + Status */}
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950 text-xs font-bold text-blue-700 dark:text-blue-400">
+      {/* Header — avatar + name/contact + age + status */}
+      <header className="flex items-start justify-between gap-3 px-5 py-4 border-b border-stone-200 dark:border-stone-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-xs font-bold uppercase tracking-wider bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900">
             {initials}
           </div>
-          <div>
-            <p className="text-sm font-bold text-stone-900 dark:text-stone-50">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
               {qr.first_name} {qr.last_name}
             </p>
-            <p className="text-[11px] uppercase tracking-widest text-stone-400 dark:text-stone-500">
-              Submission <span className="normal-case tracking-normal">{date}</span>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+              {qr.phone && (
+                <span className="inline-flex items-center gap-1 font-mono tabular-nums">
+                  <Phone className="h-3 w-3" />
+                  {qr.phone}
+                </span>
+              )}
+              {qr.email && (
+                <span className="inline-flex items-center gap-1 truncate">
+                  <Mail className="h-3 w-3" />
+                  {qr.email}
+                </span>
+              )}
             </p>
           </div>
         </div>
-        <Select value={status} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-auto h-8 text-xs border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 shadow-none gap-1.5 px-3">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {QUOTE_REQUEST_STATUS_ORDER.map((s) => (
-              <SelectItem key={s} value={s} className="text-xs">
-                {QUOTE_REQUEST_STATUS_LABELS[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Contact */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-stone-500 dark:text-stone-400 mb-4">
-        {qr.email && (
-          <span className="flex items-center gap-1.5">
-            <Mail className="h-3.5 w-3.5" />
-            {qr.email}
-          </span>
-        )}
-        <span className="flex items-center gap-1.5">
-          <Phone className="h-3.5 w-3.5" />
-          {qr.phone}
-        </span>
-      </div>
-
-      {/* Vehicle + Services */}
-      {(vehicle || qr.services.length > 0) && (
-        <div className="flex items-center justify-between gap-3 mb-4">
-          {vehicle && (
-            <div className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
-              <Car className="h-4 w-4 text-stone-400 dark:text-stone-500" />
-              {vehicle}
-            </div>
-          )}
-          {qr.services.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {qr.services.map((s) => (
-                <span
-                  key={s}
-                  className="text-[10px] font-black px-2 py-1 rounded-full uppercase bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400"
-                >
-                  {s}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Message */}
-      {qr.message && (
-        <MessageBlock message={qr.message} />
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-3">
-        {status !== "converted" && (
-          <Link href={convertUrl}>
-            <Button size="sm">
-              <Wrench className="mr-1.5 h-3.5 w-3.5" />
-              Convert to Job
-            </Button>
-          </Link>
-        )}
-
-        {qr.quo_contact_id && (
-          <a
-            href={`https://my.quo.com/inbox/PNq6UNTzCW/c/${qr.quo_contact_id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            title={date}
+            className={cn(
+              "inline-flex items-center font-mono tabular-nums px-1.5 py-0.5 rounded text-[11px] font-medium whitespace-nowrap",
+              ageBadgeClass(days)
+            )}
           >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Open in Quo
-          </a>
+            {days === 0 ? "today" : `${days}d`}
+          </span>
+          <Select value={status} onValueChange={handleStatusChange} disabled={isUpdating}>
+            <SelectTrigger className="w-auto h-8 text-xs gap-1.5 px-3">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {QUOTE_REQUEST_STATUS_ORDER.map((s) => (
+                <SelectItem key={s} value={s} className="text-xs">
+                  {QUOTE_REQUEST_STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </header>
+
+      {/* Body */}
+      <div className="px-5 py-4 space-y-4">
+        {/* Vehicle + services */}
+        {(vehicle || qr.services.length > 0) && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {vehicle ? (
+              <div className="inline-flex items-center gap-2">
+                <span className="w-7 h-7 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
+                  <Car className="h-3.5 w-3.5" />
+                </span>
+                <span className="text-sm font-medium text-stone-900 dark:text-stone-50">
+                  {vehicle}
+                </span>
+              </div>
+            ) : (
+              <span />
+            )}
+            {qr.services.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {qr.services.map((s) => (
+                  <span
+                    key={s}
+                    className="text-[10px] font-black px-2 py-1 rounded-md uppercase bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
-        <button
-          onClick={handleDelete}
-          className="ml-auto text-stone-300 dark:text-stone-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        {/* Customer note */}
+        {qr.message && <MessageBlock message={qr.message} />}
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 pt-1">
+          {status !== "converted" && (
+            <Link href={convertUrl}>
+              <Button size="sm">
+                <Wrench className="mr-1.5 h-3.5 w-3.5" />
+                Convert to Job
+              </Button>
+            </Link>
+          )}
+          {qr.quo_contact_id && (
+            <a
+              href={`https://my.quo.com/inbox/PNq6UNTzCW/c/${qr.quo_contact_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open in Quo
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isUpdating}
+            aria-label="Delete quote request"
+            className="ml-auto text-stone-400 dark:text-stone-500 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

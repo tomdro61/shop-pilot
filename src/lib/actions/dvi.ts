@@ -4,6 +4,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/actions/auth";
+import { requireManager } from "@/lib/auth";
 import { findOrCreateParkingVehicle } from "@/lib/parking-vehicle";
 import { todayET } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
@@ -260,8 +261,10 @@ export async function updateResult(
   resultId: string,
   update: { condition?: "good" | "monitor" | "attention" | null; note?: string | null }
 ) {
-  const supabase = await createClient();
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("dvi_results")
     .update(update)
@@ -272,10 +275,15 @@ export async function updateResult(
 }
 
 export async function completeInspection(inspectionId: string) {
+  // Techs perform inspections, so this stays at tech-level auth.
+  // Sending to the customer (sendInspection) requires manager.
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
   const supabase = await createClient();
 
   // Fetch results + inspection info in parallel
-  const [{ data: results }, { data: inspection }] = await Promise.all([
+  const [resultsRes, inspectionRes] = await Promise.all([
     supabase
       .from("dvi_results")
       .select("id, condition")
@@ -289,8 +297,13 @@ export async function completeInspection(inspectionId: string) {
       .single(),
   ]);
 
+  if (resultsRes.error) return { error: `Failed to load DVI results: ${resultsRes.error.message}` };
+  if (inspectionRes.error || !inspectionRes.data) return { error: "Inspection not found" };
+  const results = resultsRes.data;
+  const inspection = inspectionRes.data;
+
   // Verify all items are rated
-  const unrated = (results ?? []).filter((r) => r.condition === null);
+  const unrated = results.filter((r) => r.condition === null);
   if (unrated.length > 0) {
     return { error: `${unrated.length} item(s) still need to be rated` };
   }
@@ -375,17 +388,23 @@ export async function completeInspection(inspectionId: string) {
 }
 
 export async function reopenInspection(inspectionId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
   const supabase = await createClient();
 
   // Only reopen if not sent
-  const { data: inspection } = await supabase
+  const { data: inspection, error: fetchError } = await supabase
     .from("dvi_inspections")
     .select("status, job_id")
     .eq("id", inspectionId)
     .single();
 
+  if (fetchError) return { error: fetchError.message };
   if (!inspection) return { error: "Inspection not found" };
-  if (inspection.status === "sent") return { error: "Cannot reopen a sent inspection" };
+  if (inspection.status === "sent" || inspection.status === "approved") {
+    return { error: "Cannot reopen an inspection that's been sent to the customer" };
+  }
 
   const { error } = await supabase
     .from("dvi_inspections")
@@ -433,18 +452,19 @@ export async function getTechJobs() {
 // ── Delete ──────────────────────────────────────────────────
 
 export async function deleteInspection(inspectionId: string) {
-  const user = await getCurrentUser();
-  if (!user) return { error: "Not authenticated" };
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
   const supabase = await createClient();
 
   // Fetch inspection to verify it exists and get photo paths
-  const { data: inspection } = await supabase
+  const { data: inspection, error: fetchError } = await supabase
     .from("dvi_inspections")
     .select("id, job_id, dvi_results(dvi_photos(storage_path))")
     .eq("id", inspectionId)
     .single();
 
+  if (fetchError) return { error: fetchError.message };
   if (!inspection) return { error: "Inspection not found" };
 
   // Collect photo storage paths for cleanup
@@ -455,9 +475,16 @@ export async function deleteInspection(inspectionId: string) {
     }
   }
 
-  // Delete photos from storage
+  // Delete photos from storage. Best-effort: log on failure but proceed —
+  // the DB delete cascades to dvi_results/dvi_photos rows regardless. A
+  // storage failure leaves orphan files but doesn't break the user flow.
   if (photoPaths.length > 0) {
-    await supabase.storage.from("dvi-photos").remove(photoPaths);
+    const { error: storageError } = await supabase.storage
+      .from("dvi-photos")
+      .remove(photoPaths);
+    if (storageError) {
+      console.error("[deleteInspection] storage cleanup failed:", storageError, photoPaths);
+    }
   }
 
   // Delete inspection (cascades to dvi_results and dvi_photos via FK)
@@ -487,15 +514,23 @@ export async function sendInspection(
     customerNote?: string;
   }
 ) {
+  // Manager-only — this sends an SMS/email to the customer with recommendations
+  // and pricing, which is communication + billing-adjacent.
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const token = crypto.randomUUID();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const dviUrl = `${appUrl}/inspect/${token}`;
 
-  // Update recommended items if in recommendations mode
+  // Update recommended items if in recommendations mode. Each update is
+  // checked individually — if any fails, abort BEFORE marking the inspection
+  // sent so the customer doesn't receive an SMS pointing at un-persisted
+  // recommendations.
   if (options.mode === "recommendations" && options.recommendedItems) {
-    await Promise.all(
+    const results = await Promise.all(
       options.recommendedItems.map((item) =>
         supabase
           .from("dvi_results")
@@ -507,6 +542,10 @@ export async function sendInspection(
           .eq("id", item.resultId)
       )
     );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      return { error: `Could not persist recommendations: ${failed.error.message}` };
+    }
   }
 
   // Update inspection status
@@ -636,6 +675,7 @@ export async function approveRecommendations(
     .single();
 
   if (fetchErr || !inspection) return { error: "Inspection not found" };
+  if (inspection.status === "approved") return { error: "This approval has already been processed" };
   if (inspection.status !== "sent") return { error: "Inspection is not in sent status" };
   if (inspection.send_mode !== "recommendations") return { error: "Inspection was not sent with recommendations" };
 
@@ -650,13 +690,39 @@ export async function approveRecommendations(
     vehicles: { year: number | null; make: string | null; model: string | null } | null;
   } | null;
 
-  // If no job linked, auto-create one for the standalone DVI
-  if (!jobId) {
-    if (!inspection.customer_id) return { error: "No customer linked to this inspection" };
+  if (!jobId && !inspection.customer_id) {
+    return { error: "No customer linked to this inspection" };
+  }
 
-    // Fetch customer/vehicle separately (PostgREST doesn't resolve late-added FKs on dvi_inspections)
+  if (jobId && (job?.status === "complete" || job?.payment_status === "paid")) {
+    return { error: "This job has already been completed" };
+  }
+
+  const { data: results, error: resultsErr } = await admin
+    .from("dvi_results")
+    .select("id, item_name, category_name, recommended_description, recommended_price")
+    .in("id", selectedResultIds)
+    .eq("inspection_id", inspection.id);
+
+  if (resultsErr) return { error: resultsErr.message };
+  if (!results || results.length === 0) return { error: "No items selected" };
+
+  // Atomic lock — flip status sent → approved. Concurrent submitters fail this update
+  // and exit cleanly, preventing duplicate line-item inserts on customer double-tap.
+  const { data: locked, error: lockErr } = await admin
+    .from("dvi_inspections")
+    .update({ status: "approved" })
+    .eq("id", inspection.id)
+    .eq("status", "sent")
+    .select("id")
+    .maybeSingle();
+
+  if (lockErr) return { error: lockErr.message };
+  if (!locked) return { error: "This approval has already been processed" };
+
+  if (!jobId) {
     const [{ data: custData }, { data: vehData }] = await Promise.all([
-      admin.from("customers").select("id, first_name, last_name").eq("id", inspection.customer_id).single(),
+      admin.from("customers").select("id, first_name, last_name").eq("id", inspection.customer_id!).single(),
       inspection.vehicle_id
         ? admin.from("vehicles").select("year, make, model").eq("id", inspection.vehicle_id).single()
         : Promise.resolve({ data: null }),
@@ -665,7 +731,7 @@ export async function approveRecommendations(
     const { data: newJob, error: jobErr } = await admin
       .from("jobs")
       .insert({
-        customer_id: inspection.customer_id,
+        customer_id: inspection.customer_id!,
         vehicle_id: inspection.vehicle_id,
         status: "not_started",
         title: "DVI Recommended Services",
@@ -676,13 +742,33 @@ export async function approveRecommendations(
       .select("id, status, payment_status, ro_number")
       .single();
 
-    if (jobErr || !newJob) return { error: "Failed to create job for recommendations" };
+    if (jobErr || !newJob) {
+      const { error: rbErr } = await admin
+        .from("dvi_inspections")
+        .update({ status: "sent" })
+        .eq("id", inspection.id);
+      if (rbErr) {
+        console.error("[approveRecommendations] rollback failed after job-create error", {
+          inspectionId: inspection.id,
+          jobErr: jobErr?.message,
+          rbErr: rbErr.message,
+        });
+        return { error: "Approval could not be completed. Please contact the shop." };
+      }
+      return { error: "Failed to create job for recommendations. Please try again." };
+    }
 
-    // Link inspection to the new job
-    await admin
+    const { error: linkErr } = await admin
       .from("dvi_inspections")
       .update({ job_id: newJob.id })
       .eq("id", inspection.id);
+    if (linkErr) {
+      console.error("[approveRecommendations] failed to link inspection to new job", {
+        inspectionId: inspection.id,
+        jobId: newJob.id,
+        error: linkErr.message,
+      });
+    }
 
     jobId = newJob.id;
     job = {
@@ -693,21 +779,6 @@ export async function approveRecommendations(
     };
   }
 
-  // Check job is still open
-  if (job?.status === "complete" || job?.payment_status === "paid") {
-    return { error: "This job has already been completed" };
-  }
-
-  // Fetch the selected results
-  const { data: results } = await admin
-    .from("dvi_results")
-    .select("id, item_name, category_name, recommended_description, recommended_price")
-    .in("id", selectedResultIds)
-    .eq("inspection_id", inspection.id);
-
-  if (!results || results.length === 0) return { error: "No items selected" };
-
-  // Create job line items
   const lineItems = results.map((r) => ({
     job_id: jobId!,
     type: "labor" as const,
@@ -721,7 +792,21 @@ export async function approveRecommendations(
     .from("job_line_items")
     .insert(lineItems);
 
-  if (insertErr) return { error: insertErr.message };
+  if (insertErr) {
+    const { error: rbErr } = await admin
+      .from("dvi_inspections")
+      .update({ status: "sent" })
+      .eq("id", inspection.id);
+    if (rbErr) {
+      console.error("[approveRecommendations] rollback failed after line-items insert error", {
+        inspectionId: inspection.id,
+        insertErr: insertErr.message,
+        rbErr: rbErr.message,
+      });
+      return { error: "Approval could not be completed. Please contact the shop." };
+    }
+    return { error: insertErr.message };
+  }
 
   // Compute total
   const total = results.reduce((sum, r) => sum + (Number(r.recommended_price) || 0), 0);
@@ -816,7 +901,7 @@ export async function getStandaloneInspections(showAll = false) {
   // is already checked out/cancelled (car is gone)
   if (showAll && inspections.length > 0) {
     const sentWithParking = inspections.filter(
-      (i) => i.status === "sent" && i.parking_reservation_id
+      (i) => (i.status === "sent" || i.status === "approved") && i.parking_reservation_id
     );
     if (sentWithParking.length > 0) {
       const resIds = sentWithParking.map((i) => i.parking_reservation_id!);
@@ -830,7 +915,7 @@ export async function getStandaloneInspections(showAll = false) {
           .map((r) => r.id)
       );
       inspections = inspections.filter(
-        (i) => !(i.status === "sent" && i.parking_reservation_id && goneIds.has(i.parking_reservation_id))
+        (i) => !((i.status === "sent" || i.status === "approved") && i.parking_reservation_id && goneIds.has(i.parking_reservation_id))
       );
     }
   }
@@ -859,6 +944,79 @@ export async function getStandaloneInspections(showAll = false) {
       created_at: insp.created_at,
       vehicle: insp.vehicle_id ? vehicleMap.get(insp.vehicle_id) ?? null : null,
       customer: insp.customer_id ? customerMap.get(insp.customer_id) ?? null : null,
+      counts: {
+        good: results.filter((r) => r.condition === "good").length,
+        monitor: results.filter((r) => r.condition === "monitor").length,
+        attention: results.filter((r) => r.condition === "attention").length,
+        total: results.length,
+      },
+    };
+  });
+}
+
+// ── Recent Completed/Sent Inspections (DVI history) ──────────
+
+export async function getRecentCompletedInspections(limit = 25) {
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  const { data: inspections, error } = await supabase
+    .from("dvi_inspections")
+    .select(
+      "id, status, created_at, completed_at, customer_id, vehicle_id, job_id, dvi_results(condition)"
+    )
+    .in("status", ["completed", "sent", "approved"])
+    .order("completed_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error || !inspections || inspections.length === 0) return [];
+
+  const jobIds = [...new Set(inspections.map((i) => i.job_id).filter(Boolean))] as string[];
+
+  const { data: jobs } = jobIds.length > 0
+    ? await admin
+        .from("jobs")
+        .select("id, ro_number, customer_id, vehicle_id")
+        .in("id", jobIds)
+    : { data: [] as { id: string; ro_number: number | null; customer_id: string; vehicle_id: string | null }[] };
+
+  const jobMap = new Map((jobs ?? []).map((j) => [j.id, j]));
+
+  // Resolve customer/vehicle either from the inspection directly or via the job
+  const allCustomerIds = [...new Set([
+    ...inspections.map((i) => i.customer_id).filter(Boolean) as string[],
+    ...(jobs ?? []).map((j) => j.customer_id).filter(Boolean) as string[],
+  ])];
+  const allVehicleIds = [...new Set([
+    ...inspections.map((i) => i.vehicle_id).filter(Boolean) as string[],
+    ...(jobs ?? []).map((j) => j.vehicle_id).filter(Boolean) as string[],
+  ])];
+
+  const [customersResult, vehiclesResult] = await Promise.all([
+    allCustomerIds.length > 0
+      ? admin.from("customers").select("id, first_name, last_name").in("id", allCustomerIds)
+      : Promise.resolve({ data: [] as { id: string; first_name: string; last_name: string }[] }),
+    allVehicleIds.length > 0
+      ? admin.from("vehicles").select("id, year, make, model").in("id", allVehicleIds)
+      : Promise.resolve({ data: [] as { id: string; year: number | null; make: string | null; model: string | null }[] }),
+  ]);
+
+  const customerMap = new Map((customersResult.data ?? []).map((c) => [c.id, c]));
+  const vehicleMap = new Map((vehiclesResult.data ?? []).map((v) => [v.id, v]));
+
+  return inspections.map((insp) => {
+    const job = insp.job_id ? jobMap.get(insp.job_id) ?? null : null;
+    const customerId = insp.customer_id ?? job?.customer_id ?? null;
+    const vehicleId = insp.vehicle_id ?? job?.vehicle_id ?? null;
+    const results = (insp.dvi_results ?? []) as { condition: string | null }[];
+    return {
+      id: insp.id,
+      status: insp.status,
+      created_at: insp.created_at,
+      completed_at: insp.completed_at,
+      job: job ? { id: job.id, ro_number: job.ro_number } : null,
+      customer: customerId ? customerMap.get(customerId) ?? null : null,
+      vehicle: vehicleId ? vehicleMap.get(vehicleId) ?? null : null,
       counts: {
         good: results.filter((r) => r.condition === "good").length,
         monitor: results.filter((r) => r.condition === "monitor").length,
@@ -930,6 +1088,9 @@ export async function getPendingDviRequestCount(): Promise<number> {
 }
 
 export async function startParkingDvi(reservationId: string) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
   const supabase = await createClient();
 
   // Fetch reservation
@@ -994,6 +1155,9 @@ export async function startWalkinDvi(params: {
   color?: string | null;
   licensePlate?: string | null;
 }) {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+
   let vehicleId: string | null | undefined = params.vehicleId;
 
   if (!vehicleId) {

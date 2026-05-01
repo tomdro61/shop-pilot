@@ -35,10 +35,10 @@ export function CustomerPagination({ totalCount, page, pageSize }: CustomerPagin
         disabled={page <= 1}
         onClick={() => goToPage(page - 1)}
       >
-        <ChevronLeft className="mr-1 h-4 w-4" />
+        <ChevronLeft className="mr-1 h-3.5 w-3.5" />
         Previous
       </Button>
-      <span className="text-sm text-stone-500 dark:text-stone-400">
+      <span className="text-xs text-stone-500 dark:text-stone-400 font-mono tabular-nums">
         Page {page} of {totalPages}
       </span>
       <Button
@@ -48,7 +48,7 @@ export function CustomerPagination({ totalCount, page, pageSize }: CustomerPagin
         onClick={() => goToPage(page + 1)}
       >
         Next
-        <ChevronRight className="ml-1 h-4 w-4" />
+        <ChevronRight className="ml-1 h-3.5 w-3.5" />
       </Button>
     </div>
   );

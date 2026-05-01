@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireManager } from "@/lib/auth";
 import { toE164 } from "@/lib/quo/format";
 import { sendSMS, isQuoConfigured } from "@/lib/quo/client";
 import { getPhoneNumber, type PhoneLine } from "@/lib/quo/routing";
@@ -17,6 +18,9 @@ export async function sendCustomerSMS({
   jobId?: string;
   line?: PhoneLine;
 }) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   // Look up customer phone
@@ -44,6 +48,7 @@ export async function sendCustomerSMS({
       channel: "sms" as const,
       direction: "out" as const,
       body,
+      status: "sent",
       phone_line: line,
     });
 
@@ -61,11 +66,30 @@ export async function sendCustomerSMS({
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to send SMS";
+
+    // Log a "failed" row so the customer's timeline shows the attempt — mirrors
+    // sendCustomerEmail's behavior. Without this the SMS silently disappears.
+    const { error: insertError } = await supabase.from("messages").insert({
+      customer_id: customerId,
+      job_id: jobId ?? null,
+      channel: "sms" as const,
+      direction: "out" as const,
+      body,
+      status: "failed",
+      phone_line: line,
+    });
+    if (insertError) {
+      console.error("Failed to log failed SMS:", insertError.message);
+    }
+
     return { error: message };
   }
 }
 
 export async function sendVehicleReadySMS(jobId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data: job, error: jobError } = await supabase
@@ -98,6 +122,9 @@ export async function sendVehicleReadySMS(jobId: string) {
 }
 
 export async function sendParkingSpecialsSMS(reservationId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data: reservation, error: resError } = await supabase
@@ -126,18 +153,29 @@ export async function sendParkingSpecialsSMS(reservationId: string) {
     const from = getPhoneNumber("parking");
     const result = await sendSMS({ to: phone, body, from });
 
-    await supabase.from("messages").insert({
+    const { error: insertError } = await supabase.from("messages").insert({
       customer_id: reservation.customer_id,
       channel: "sms" as const,
       direction: "out" as const,
       body,
       phone_line: "parking",
     });
+    if (insertError) {
+      console.error("Failed to log outbound parking specials SMS:", insertError.message);
+    }
 
-    await supabase
+    const { error: stampError } = await supabase
       .from("parking_reservations")
       .update({ specials_sent_at: new Date().toISOString() })
       .eq("id", reservationId);
+    if (stampError) {
+      // SMS already sent — without specials_sent_at the upsell flag never lands, and the
+      // customer can be re-sent the same specials. Log loudly so the inconsistency is visible.
+      console.error(
+        `Failed to mark specials_sent_at for reservation ${reservationId} after SMS sent — duplicate-send possible:`,
+        stampError.message
+      );
+    }
 
     return { data: { sent: true, testMode: result.testMode } };
   } catch (err) {
@@ -188,12 +226,16 @@ export async function logInboundSMS({
 
   const supabase = createAdminClient();
 
-  // Match phone to a customer
-  const { data: customer } = await supabase
+  const { data: customer, error: lookupError } = await supabase
     .from("customers")
     .select("id")
     .eq("phone", phone)
     .maybeSingle();
+
+  if (lookupError) {
+    console.error(`[SMS] Customer lookup failed for inbound from ${phone}:`, lookupError.message);
+    return { error: `Customer lookup failed: ${lookupError.message}` };
+  }
 
   if (!customer) {
     console.log(`[SMS] Inbound from unknown number: ${phone}`);

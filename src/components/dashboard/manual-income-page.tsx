@@ -157,7 +157,7 @@ export function ManualIncomePage({ entries, existingCategories }: ManualIncomePa
                   </tr>
                 ) : (
                   entries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <tr key={entry.id} className="hover:bg-stone-100 dark:hover:bg-stone-800/50">
                       <td className="py-2 pr-4 tabular-nums whitespace-nowrap">
                         {new Date(entry.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </td>

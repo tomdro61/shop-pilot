@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { shopSettingsSchema } from "@/lib/validators/settings";
 import { revalidatePath } from "next/cache";
 import type { ShopSettings, ShopSettingsUpdate } from "@/types";
@@ -23,6 +24,9 @@ export async function getShopSettings(): Promise<ShopSettings | null> {
 export async function updateShopSettings(
   updates: ShopSettingsUpdate
 ): Promise<{ data?: ShopSettings; error?: string }> {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   // Validate
   const parsed = shopSettingsSchema.partial().safeParse(updates);
   if (!parsed.success) {

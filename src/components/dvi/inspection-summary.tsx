@@ -47,56 +47,64 @@ export function InspectionSummary({ results, showRecommendations }: InspectionSu
   return (
     <div className="space-y-4">
       {/* Summary bar */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-2 flex-wrap">
         {(["good", "monitor", "attention"] as const).map((c) => (
           <div
             key={c}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-black uppercase ${DVI_CONDITION_COLORS[c].bg} ${DVI_CONDITION_COLORS[c].text}`}
           >
-            {counts[c]} {DVI_CONDITION_LABELS[c]}
+            <span className="font-mono tabular-nums">{counts[c]}</span>{" "}
+            {DVI_CONDITION_LABELS[c]}
           </div>
         ))}
       </div>
 
       {/* Categories */}
       {categories.map((cat) => (
-        <div key={cat.name} className="rounded-xl bg-card shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
-          <div className="px-4 py-2.5 bg-stone-800 dark:bg-stone-900">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-stone-100">
+        <div
+          key={cat.name}
+          className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden"
+        >
+          <header className="px-4 py-3 border-b border-stone-200 dark:border-stone-800">
+            <h4 className="text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-50">
               {cat.name}
             </h4>
-          </div>
-          <div className="divide-y divide-stone-100 dark:divide-stone-800">
+          </header>
+          <ul className="divide-y divide-stone-200 dark:divide-stone-800">
             {cat.items.map((item) => {
               const condColor = item.condition ? DVI_CONDITION_COLORS[item.condition] : null;
 
               return (
-                <div key={item.id} className="px-4 py-3">
+                <li key={item.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm text-stone-900 dark:text-stone-50">
                       {item.item_name}
                     </span>
                     {item.condition && condColor && (
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 ${condColor.bg} ${condColor.text}`}>
+                      <span
+                        className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase shrink-0 ${condColor.bg} ${condColor.text}`}
+                      >
                         {DVI_CONDITION_LABELS[item.condition]}
                       </span>
                     )}
                   </div>
 
                   {item.note && (
-                    <p className="mt-1 text-xs text-muted-foreground italic">
+                    <p className="mt-1 text-xs text-stone-500 dark:text-stone-400 italic">
                       {item.note}
                     </p>
                   )}
 
                   {showRecommendations && item.is_recommended && (
-                    <div className="mt-1.5 rounded bg-amber-50 dark:bg-amber-950/30 px-2.5 py-1.5 text-xs">
-                      <span className="font-semibold text-amber-700 dark:text-amber-400">
+                    <div className="mt-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 text-xs">
+                      <span className="font-semibold text-amber-800 dark:text-amber-300">
                         Recommended:
                       </span>{" "}
-                      {item.recommended_description}
+                      <span className="text-stone-800 dark:text-stone-200">
+                        {item.recommended_description}
+                      </span>
                       {item.recommended_price != null && (
-                        <span className="ml-1 font-bold">
+                        <span className="ml-1 font-mono tabular-nums font-bold text-stone-900 dark:text-stone-50">
                           — ${Number(item.recommended_price).toFixed(2)}
                         </span>
                       )}
@@ -104,10 +112,10 @@ export function InspectionSummary({ results, showRecommendations }: InspectionSu
                   )}
 
                   <PhotoLightbox photos={item.photos} />
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
       ))}
     </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { PARKING_SERVICE_LABELS, PARKING_STATUS_LABELS, PARKING_STATUS_COLORS } from "@/lib/constants";
+import { formatCustomerName } from "@/lib/utils/format";
+import { CustomerLink } from "@/components/ui/customer-link";
 import { Phone, Mail, Car, Calendar, Check } from "lucide-react";
 import type { ParkingReservation } from "@/types";
 
@@ -28,9 +29,10 @@ export function ParkingServiceLeads({
 }: {
   reservations: ParkingReservation[];
 }) {
+  const router = useRouter();
   if (reservations.length === 0) {
     return (
-      <div className="bg-card rounded-xl shadow-card p-8 text-center">
+      <div className="bg-card rounded-lg shadow-card p-8 text-center">
         <p className="text-sm text-stone-500 dark:text-stone-400">
           No active reservations with service requests.
         </p>
@@ -49,16 +51,29 @@ export function ParkingServiceLeads({
           const statusColors = PARKING_STATUS_COLORS[r.status];
 
           return (
-            <Link key={r.id} href={`/parking/${r.id}`}>
-              <Card className="transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      {/* Name + Status */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
-                          {r.first_name} {r.last_name}
-                        </span>
+            <div
+              key={r.id}
+              role="link"
+              tabIndex={0}
+              onClick={() => router.push(`/parking/${r.id}`)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push(`/parking/${r.id}`);
+                }
+              }}
+              className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card cursor-pointer transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    {/* Name + Status */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-stone-900 dark:text-stone-50">
+                        <CustomerLink customerId={r.customer_id} stopPropagation>
+                          {formatCustomerName(r)}
+                        </CustomerLink>
+                      </span>
                         <Badge
                           variant="secondary"
                           className={`${statusColors.bg} ${statusColors.text} border-0 text-[11px]`}
@@ -123,11 +138,10 @@ export function ParkingServiceLeads({
                       <div className="mt-1 text-[11px] text-stone-400 dark:text-stone-500">
                         {r.lot}
                       </div>
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>

@@ -7,16 +7,19 @@ export const JOB_STATUS_ORDER: JobStatus[] = [
   "complete",
 ];
 
-export const JOB_STATUS_LABELS: Record<string, string> = {
+// `paid` is included alongside JobStatus for backward compat with pre-migration data.
+export type JobStatusKey = JobStatus | "paid";
+
+export const JOB_STATUS_LABELS: Record<JobStatusKey, string> = {
   not_started: "Not Started",
   waiting_for_parts: "Waiting for Parts",
   in_progress: "In Progress",
   complete: "Complete",
-  paid: "Paid", // backwards compat for pre-migration data
+  paid: "Paid",
 };
 
 export const JOB_STATUS_COLORS: Record<
-  string,
+  JobStatusKey,
   { bg: string; text: string }
 > = {
   not_started: {
@@ -32,13 +35,23 @@ export const JOB_STATUS_COLORS: Record<
     text: "text-blue-700 dark:text-blue-400",
   },
   complete: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
-  paid: { // backwards compat for pre-migration data
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+  paid: {
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
+};
+
+// Saturated accent dot color per job status. Used for status dots in
+// status-select dropdown and the calendar view.
+export const JOB_STATUS_BAR: Record<JobStatusKey, string> = {
+  not_started: "bg-red-500",
+  waiting_for_parts: "bg-amber-500",
+  in_progress: "bg-blue-500",
+  complete: "bg-emerald-500",
+  paid: "bg-emerald-500",
 };
 
 // Payment Status
@@ -62,8 +75,8 @@ export const PAYMENT_STATUS_COLORS: Record<
     text: "text-blue-700 dark:text-blue-400",
   },
   paid: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   waived: {
     bg: "bg-stone-100 dark:bg-stone-800",
@@ -125,12 +138,12 @@ export const ESTIMATE_STATUS_COLORS: Record<
     text: "text-stone-500 dark:text-stone-400",
   },
   sent: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   approved: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   declined: {
     bg: "bg-red-100 dark:bg-red-950",
@@ -158,8 +171,8 @@ export const INVOICE_STATUS_COLORS: Record<
     text: "text-blue-700 dark:text-blue-400",
   },
   paid: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
 };
 
@@ -186,6 +199,11 @@ export const PARKING_STATUS_LABELS: Record<ParkingStatus, string> = {
   cancelled: "Cancelled",
 };
 
+export const CUSTOMER_TYPE_COLORS: Record<string, string> = {
+  fleet: "bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-400",
+  parking: "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400",
+};
+
 export const PARKING_STATUS_COLORS: Record<
   ParkingStatus,
   { bg: string; text: string }
@@ -195,8 +213,8 @@ export const PARKING_STATUS_COLORS: Record<
     text: "text-blue-700 dark:text-blue-400",
   },
   checked_in: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   checked_out: {
     bg: "bg-stone-100 dark:bg-stone-800",
@@ -248,6 +266,15 @@ export const PARKING_LOTS = [
   "Boston Logan Valet",
 ];
 
+// Lots where staff actively manages reservations (check-in, check-out, key
+// handoff). APB1/APB2 are self-park so they don't need daily prep — by default
+// the Today view groups Broadway Motors + Valet together as "Managed Lots".
+export const MANAGED_PARKING_LOTS = ["Broadway Motors", "Boston Logan Valet"];
+
+// Sentinel value used by the lot filter to mean "Managed Lots combined".
+// Resolves to MANAGED_PARKING_LOTS when used as the lot param.
+export const MANAGED_LOTS_FILTER = "managed" as const;
+
 // ── Quote Requests ──────────────────────────────────────────────
 
 export const QUOTE_REQUEST_STATUS_ORDER: QuoteRequestStatus[] = [
@@ -277,8 +304,8 @@ export const QUOTE_REQUEST_STATUS_COLORS: Record<
     text: "text-amber-700 dark:text-amber-400",
   },
   converted: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   closed: {
     bg: "bg-stone-100 dark:bg-stone-800",
@@ -292,12 +319,14 @@ export const DVI_STATUS_ORDER: DviStatus[] = [
   "in_progress",
   "completed",
   "sent",
+  "approved",
 ];
 
 export const DVI_STATUS_LABELS: Record<DviStatus, string> = {
   in_progress: "In Progress",
   completed: "Ready to Send",
   sent: "Sent",
+  approved: "Approved",
 };
 
 export const DVI_STATUS_COLORS: Record<DviStatus, { bg: string; text: string }> = {
@@ -306,12 +335,16 @@ export const DVI_STATUS_COLORS: Record<DviStatus, { bg: string; text: string }> 
     text: "text-blue-700 dark:text-blue-400",
   },
   completed: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
   sent: {
-    bg: "bg-purple-100 dark:bg-purple-950",
-    text: "text-purple-700 dark:text-purple-400",
+    bg: "bg-indigo-100 dark:bg-indigo-950",
+    text: "text-indigo-700 dark:text-indigo-400",
+  },
+  approved: {
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
   },
 };
 
@@ -326,9 +359,9 @@ export const DVI_CONDITION_COLORS: Record<
   { bg: string; text: string; border: string }
 > = {
   good: {
-    bg: "bg-green-100 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-400",
-    border: "border-green-500",
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
+    border: "border-emerald-500",
   },
   monitor: {
     bg: "bg-amber-100 dark:bg-amber-950",

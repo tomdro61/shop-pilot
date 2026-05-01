@@ -35,7 +35,7 @@ export function RevenueSparklineCard({
           <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
             {label}
           </p>
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 dark:bg-emerald-400/10">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 dark:bg-emerald-400/10">
             <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
         </div>

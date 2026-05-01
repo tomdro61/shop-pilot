@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { updateReservation } from "@/lib/actions/parking";
 import { Save } from "lucide-react";
 
@@ -39,19 +38,14 @@ export function ParkingNotesForm({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="notes" className="text-xs">
-          Staff Notes
-        </Label>
-        <Textarea
-          id="notes"
-          placeholder="Add notes..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="min-h-[80px] text-sm"
-        />
-      </div>
+    <div className="space-y-2">
+      <Textarea
+        id="notes"
+        placeholder="Add notes…"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        className="min-h-[80px] text-sm bg-transparent border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:border-0 placeholder:text-amber-700/40 dark:placeholder:text-amber-300/30 text-stone-900 dark:text-stone-50"
+      />
 
       {hasChanges && (
         <Button
@@ -61,7 +55,7 @@ export function ParkingNotesForm({
           className="gap-1.5"
         >
           <Save className="h-3.5 w-3.5" />
-          {saving ? "Saving..." : "Save"}
+          {saving ? "Saving…" : "Save"}
         </Button>
       )}
     </div>

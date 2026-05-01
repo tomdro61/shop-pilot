@@ -63,12 +63,14 @@ export function RecommendationApproval({
 
   if (isApproved) {
     return (
-      <div className="rounded-xl bg-green-50 dark:bg-green-950/30 p-6 text-center">
-        <CheckCircle className="mx-auto mb-3 h-10 w-10 text-green-600 dark:text-green-400" />
-        <h3 className="text-lg font-bold text-stone-900 dark:text-stone-50">
+      <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 p-6 text-center shadow-card">
+        <div className="mx-auto w-10 h-10 rounded-full grid place-items-center bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900">
+          <CheckCircle className="h-5 w-5" />
+        </div>
+        <h3 className="mt-3 text-base font-bold tracking-tight text-stone-900 dark:text-stone-50">
           Services Approved
         </h3>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
           {approvalResult?.count} service{approvalResult?.count !== 1 ? "s" : ""} approved
           {approvalResult?.total ? ` — $${approvalResult.total.toFixed(2)}` : ""}.
           We&apos;ll get started right away.
@@ -94,10 +96,10 @@ export function RecommendationApproval({
           return (
             <label
               key={item.id}
-              className={`flex items-start gap-3 rounded-lg border-2 p-3 cursor-pointer transition-colors ${
+              className={`flex items-start gap-3 rounded-md border-2 p-3 cursor-pointer transition-colors ${
                 isSelected
                   ? "border-blue-600 bg-blue-50/50 dark:bg-blue-950/20"
-                  : "border-stone-200 dark:border-stone-700"
+                  : "border-stone-200 dark:border-stone-800"
               }`}
             >
               <input
@@ -112,7 +114,7 @@ export function RecommendationApproval({
                     {item.recommended_description || item.item_name}
                   </span>
                   {condColor && (
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase ${condColor.bg} ${condColor.text}`}>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase ${condColor.bg} ${condColor.text}`}>
                       {item.condition}
                     </span>
                   )}
@@ -130,7 +132,7 @@ export function RecommendationApproval({
       </div>
 
       {/* Total + approve button */}
-      <div className="mt-4 rounded-xl bg-stone-50 dark:bg-stone-800/50 p-4">
+      <div className="mt-4 rounded-md bg-stone-100 dark:bg-stone-800/50 p-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-muted-foreground">
             {selected.size} service{selected.size !== 1 ? "s" : ""} selected

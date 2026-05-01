@@ -2,7 +2,8 @@
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { customerSchema, prepareCustomerData } from "@/lib/validators/customer";
+import { requireManager } from "@/lib/auth";
+import { customerSchema, prepareCustomerData, formatPhoneForStorage } from "@/lib/validators/customer";
 import { revalidatePath } from "next/cache";
 import type { CustomerFormData } from "@/lib/validators/customer";
 
@@ -46,6 +47,60 @@ export async function getCustomers(search?: string, customerType?: string, page 
   return { data: data ?? [], totalCount: count ?? 0 };
 }
 
+export async function searchCustomersForPicker(
+  query: string,
+  options?: { limit?: number; includeIds?: string[] }
+) {
+  const supabase = await createClient();
+  const limit = options?.limit ?? 20;
+  const includeIds = options?.includeIds?.filter(Boolean) ?? [];
+
+  let q = supabase
+    .from("customers")
+    .select("id, first_name, last_name, phone")
+    .order("last_name")
+    .limit(limit);
+
+  const trimmed = query.trim();
+  if (trimmed) {
+    const words = trimmed.split(/\s+/);
+    if (words.length > 1) {
+      q = q
+        .ilike("first_name", `%${words[0]}%`)
+        .ilike("last_name", `%${words.slice(1).join(" ")}%`);
+    } else {
+      // Strip PostgREST .or() syntax chars (, () ) from user input before
+      // interpolation. A search for "Smith, John" or "(555) 123" would
+      // otherwise corrupt the filter and either error out or match wrong rows.
+      const safe = trimmed.replace(/[,()]/g, " ");
+      q = q.or(
+        `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,phone.ilike.%${safe}%`
+      );
+    }
+  }
+
+  const { data, error } = await q;
+  if (error) {
+    throw new Error(`Failed to search customers: ${error.message}`);
+  }
+  const results = data ?? [];
+
+  if (includeIds.length === 0) return results;
+
+  const missing = includeIds.filter((id) => !results.some((r) => r.id === id));
+  if (missing.length === 0) return results;
+
+  const { data: pinned, error: pinnedError } = await supabase
+    .from("customers")
+    .select("id, first_name, last_name, phone")
+    .in("id", missing);
+  if (pinnedError) {
+    throw new Error(`Failed to load pinned customers: ${pinnedError.message}`);
+  }
+
+  return [...(pinned ?? []), ...results];
+}
+
 export const getCustomer = cache(async (id: string) => {
   const supabase = await createClient();
 
@@ -59,7 +114,63 @@ export const getCustomer = cache(async (id: string) => {
   return data;
 });
 
+export type CustomerFieldPatch = Partial<{
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  customer_type: "retail" | "fleet" | "parking";
+  fleet_account: string | null;
+}>;
+
+const EDITABLE_CUSTOMER_KEYS = [
+  "first_name",
+  "last_name",
+  "phone",
+  "email",
+  "address",
+  "notes",
+  "customer_type",
+  "fleet_account",
+] as const satisfies readonly (keyof CustomerFieldPatch)[];
+
+export async function updateCustomerFields(id: string, patch: CustomerFieldPatch) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const update: Record<string, unknown> = {};
+  for (const key of EDITABLE_CUSTOMER_KEYS) {
+    if (!(key in patch)) continue;
+    const raw = patch[key];
+    if (key === "phone") {
+      update[key] = raw ? formatPhoneForStorage(String(raw)) : null;
+      continue;
+    }
+    update[key] = typeof raw === "string" && raw.trim() === "" ? null : raw;
+  }
+
+  if (Object.keys(update).length === 0) return { error: "Nothing to update" };
+
+  if ("first_name" in update && !update.first_name) return { error: "First name is required" };
+  if ("last_name" in update && !update.last_name) return { error: "Last name is required" };
+
+  const { error } = await supabase.from("customers").update(update).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/customers");
+  revalidatePath(`/customers/${id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function createCustomer(formData: CustomerFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = customerSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -80,6 +191,9 @@ export async function createCustomer(formData: CustomerFormData) {
 }
 
 export async function updateCustomer(id: string, formData: CustomerFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = customerSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -102,14 +216,23 @@ export async function updateCustomer(id: string, formData: CustomerFormData) {
 }
 
 export async function deleteCustomer(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
-  // Check for active jobs
-  const { count } = await supabase
+  // Check for active jobs. The error MUST be checked — if this query fails
+  // (network, RLS, transient DB), count is null and the guard would let the
+  // delete proceed, taking the customer's full job history with it.
+  const { count, error: countError } = await supabase
     .from("jobs")
     .select("id", { count: "exact", head: true })
     .eq("customer_id", id)
     .in("status", ["not_started", "waiting_for_parts", "in_progress"]);
+
+  if (countError) {
+    return { error: `Could not verify active jobs: ${countError.message}` };
+  }
 
   if (count && count > 0) {
     return { error: "Cannot delete customer with active jobs" };

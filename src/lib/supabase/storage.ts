@@ -5,6 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUCKET = "dvi-photos";
 const SIGNED_URL_EXPIRY = 60 * 60 * 24 * 7; // 7 days
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+// Base64 encodes 3 bytes per 4 chars, padded up to a multiple of 4. Add slop for whitespace.
+const MAX_PHOTO_BASE64_LENGTH = Math.ceil(MAX_PHOTO_BYTES / 3) * 4 + 16;
 
 export async function uploadDviPhoto(
   inspectionId: string,
@@ -12,18 +15,26 @@ export async function uploadDviPhoto(
   fileBase64: string,
   fileName: string
 ) {
+  if (fileBase64.length > MAX_PHOTO_BASE64_LENGTH) {
+    return { error: "File too large (max 5 MB)" };
+  }
+
+  const buffer = Buffer.from(fileBase64, "base64");
+  if (buffer.byteLength > MAX_PHOTO_BYTES) {
+    return { error: "File too large (max 5 MB)" };
+  }
+
   const supabase = await createClient();
 
-  const ext = fileName.split(".").pop() || "jpg";
+  const rawExt = (fileName.split(".").pop() || "").toLowerCase();
+  const ext = rawExt === "png" ? "png" : "jpg";
+  const contentType = ext === "png" ? "image/png" : "image/jpeg";
   const path = `${inspectionId}/${resultId}/${crypto.randomUUID()}.${ext}`;
-
-  // Decode base64 to buffer
-  const buffer = Buffer.from(fileBase64, "base64");
 
   const { error: uploadErr } = await supabase.storage
     .from(BUCKET)
     .upload(path, buffer, {
-      contentType: `image/${ext === "png" ? "png" : "jpeg"}`,
+      contentType,
       upsert: false,
     });
 

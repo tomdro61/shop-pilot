@@ -113,7 +113,7 @@ export function ParkingServicesForm({
                     type="button"
                     onClick={() => removeService(service)}
                     disabled={isPending}
-                    className="rounded-full p-1 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-400"
+                    className="rounded-md p-1 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-stone-400"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -138,7 +138,7 @@ export function ParkingServicesForm({
                   type="button"
                   onClick={() => addService(service.value)}
                   disabled={isPending}
-                  className="rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-1 text-xs text-stone-600 dark:text-stone-400 hover:bg-violet-50 dark:hover:bg-violet-950 hover:text-violet-700 dark:hover:text-violet-300 hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
+                  className="rounded-md border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-3 py-1 text-xs text-stone-600 dark:text-stone-400 hover:bg-violet-50 dark:hover:bg-violet-950 hover:text-violet-700 dark:hover:text-violet-300 hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
                 >
                   {service.label}
                 </button>

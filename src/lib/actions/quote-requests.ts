@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { QuoteRequestStatus } from "@/types";
 
@@ -57,6 +58,9 @@ export async function getNewQuoteRequestCount() {
 }
 
 export async function updateQuoteRequestStatus(id: string, status: QuoteRequestStatus) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -72,6 +76,9 @@ export async function updateQuoteRequestStatus(id: string, status: QuoteRequestS
 }
 
 export async function deleteQuoteRequest(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase

@@ -9,11 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PARKING_LOTS } from "@/lib/constants";
+import { PARKING_LOTS, MANAGED_LOTS_FILTER } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { value: "today", label: "Today" },
+  { value: "calendar", label: "Calendar" },
   { value: "all", label: "All Reservations" },
   { value: "services", label: "Service Leads" },
 ];
@@ -22,7 +23,7 @@ export function ParkingTabs() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") || "today";
-  const currentLot = searchParams.get("lot") || "Broadway Motors";
+  const currentLot = searchParams.get("lot") || MANAGED_LOTS_FILTER;
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -41,17 +42,18 @@ export function ParkingTabs() {
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Tabs */}
-      <div className="flex gap-1 rounded-xl bg-stone-100 dark:bg-stone-800 p-1">
+      {/* Tabs — bordered segmented control with high-contrast active state */}
+      <div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1 self-start">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => updateParams({ tab: tab.value === "today" ? "" : tab.value })}
+            aria-pressed={currentTab === tab.value}
             className={cn(
-              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              "rounded px-3 py-1.5 text-xs font-medium transition-colors",
               currentTab === tab.value
-                ? "bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-50 shadow-sm"
-                : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300"
+                ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
+                : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
             )}
           >
             {tab.label}
@@ -64,16 +66,20 @@ export function ParkingTabs() {
         value={currentLot || "all"}
         onValueChange={(value) => updateParams({ lot: value === "all" ? "" : value })}
       >
-        <SelectTrigger className="w-full sm:w-[220px] h-10 text-xs">
+        <SelectTrigger
+          size="sm"
+          className="w-full sm:w-[220px] bg-card border-stone-200 dark:border-stone-800 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 shadow-none"
+        >
           <SelectValue placeholder="All Lots" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Lots</SelectItem>
+          <SelectItem value={MANAGED_LOTS_FILTER}>Managed Lots (Broadway + Valet)</SelectItem>
           {PARKING_LOTS.map((lot) => (
             <SelectItem key={lot} value={lot}>
               {lot}
             </SelectItem>
           ))}
+          <SelectItem value="all">All Lots</SelectItem>
         </SelectContent>
       </Select>
     </div>

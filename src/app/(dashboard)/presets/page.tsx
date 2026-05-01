@@ -5,6 +5,7 @@ import { PresetList } from "@/components/dashboard/preset-list";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
+import { PageShell } from "@/components/layout/page-shell";
 
 export const metadata = {
   title: "Job Presets | ShopPilot",
@@ -19,16 +20,16 @@ export default async function PresetsPage() {
   const categories = (settings?.job_categories as string[] | undefined) ?? DEFAULT_JOB_CATEGORIES;
 
   return (
-    <div className="p-4 lg:p-10">
-      <div className="mb-4">
+    <PageShell width="narrow">
+      <div>
         <Link href="/settings">
-          <Button variant="ghost" size="sm" className="mb-2">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Settings
+          <Button variant="ghost" size="sm" className="-ml-3">
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            Settings
           </Button>
         </Link>
       </div>
       <PresetList presets={presets} categories={categories} />
-    </div>
+    </PageShell>
   );
 }

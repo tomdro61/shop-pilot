@@ -1,5 +1,6 @@
 import { getTeamMembers } from "@/lib/actions/team";
 import { TeamList } from "@/components/dashboard/team-list";
+import { PageShell } from "@/components/layout/page-shell";
 
 export const metadata = {
   title: "Team | ShopPilot",
@@ -9,8 +10,8 @@ export default async function TeamPage() {
   const members = await getTeamMembers();
 
   return (
-    <div className="p-4 lg:p-10">
+    <PageShell width="narrow">
       <TeamList members={members} />
-    </div>
+    </PageShell>
   );
 }

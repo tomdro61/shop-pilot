@@ -46,3 +46,15 @@ export function calcInspectionRevenue(counts: {
     totalProfit: stateRevenue - stateCost + tncRevenue,
   };
 }
+
+type ManualIncomeRow = { amount: number; shop_keep_pct: number };
+
+/** Sum manual-income revenue (amount) */
+export function sumManualIncome(entries: ManualIncomeRow[] | null | undefined): number {
+  return entries?.reduce((s, e) => s + (e.amount || 0), 0) || 0;
+}
+
+/** Sum manual-income shop-keep profit (amount × shop_keep_pct / 100) */
+export function sumManualIncomeProfit(entries: ManualIncomeRow[] | null | undefined): number {
+  return entries?.reduce((s, e) => s + (e.amount || 0) * (e.shop_keep_pct || 0) / 100, 0) || 0;
+}

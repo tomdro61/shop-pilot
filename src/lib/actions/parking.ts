@@ -3,14 +3,24 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { todayET } from "@/lib/utils";
+import { MANAGED_LOTS_FILTER, MANAGED_PARKING_LOTS } from "@/lib/constants";
 import type { ParkingStatus } from "@/types";
 import { findOrCreateParkingVehicle } from "@/lib/parking-vehicle";
 
 // ── Fetch reservations with filters ─────────────────────────────
 
 const PAGE_SIZE = 50;
+
+// Resolve the lot filter param to either a single lot, an array of lots
+// (for the "Managed Lots" combined view), or undefined (all lots).
+function resolveLotFilter(lot?: string): string | string[] | undefined {
+  if (!lot) return undefined;
+  if (lot === MANAGED_LOTS_FILTER) return MANAGED_PARKING_LOTS;
+  return lot;
+}
 
 export async function getParkingReservations(filters?: {
   search?: string;
@@ -42,7 +52,12 @@ export async function getParkingReservations(filters?: {
     query = query.eq("status", filters.status);
   }
   if (filters?.lot) {
-    query = query.eq("lot", filters.lot);
+    const resolved = resolveLotFilter(filters.lot);
+    if (Array.isArray(resolved)) {
+      query = query.in("lot", resolved);
+    } else if (resolved) {
+      query = query.eq("lot", resolved);
+    }
   }
   if (filters?.dateFrom) {
     query = query.gte("drop_off_date", filters.dateFrom);
@@ -94,6 +109,56 @@ export async function getParkingReservations(filters?: {
   };
 }
 
+// ── Calendar counts ────────────────────────────────────────────
+
+export type ParkingDayCounts = { dropOffs: number; pickUps: number };
+
+export async function getParkingCalendarCounts({
+  from,
+  to,
+  lot,
+}: {
+  from: string;
+  to: string;
+  lot?: string;
+}): Promise<Record<string, ParkingDayCounts>> {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("parking_reservations")
+    .select("drop_off_date, pick_up_date, status, lot")
+    .in("status", ["reserved", "checked_in", "checked_out"])
+    // Reservation overlaps the visible window: drop ≤ to AND pick ≥ from
+    .lte("drop_off_date", to)
+    .gte("pick_up_date", from);
+
+  if (lot) {
+    const resolved = resolveLotFilter(lot);
+    if (Array.isArray(resolved)) {
+      query = query.in("lot", resolved);
+    } else if (resolved) {
+      query = query.eq("lot", resolved);
+    }
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const counts: Record<string, ParkingDayCounts> = {};
+  for (const r of data ?? []) {
+    if (r.drop_off_date >= from && r.drop_off_date <= to) {
+      const day = (counts[r.drop_off_date] ??= { dropOffs: 0, pickUps: 0 });
+      day.dropOffs += 1;
+    }
+    if (r.pick_up_date >= from && r.pick_up_date <= to) {
+      const day = (counts[r.pick_up_date] ??= { dropOffs: 0, pickUps: 0 });
+      day.pickUps += 1;
+    }
+  }
+
+  return counts;
+}
+
 // ── Get single reservation ──────────────────────────────────────
 
 export const getParkingReservation = cache(async (id: string) => {
@@ -114,10 +179,16 @@ export async function getParkingDashboard(lot?: string) {
   const supabase = await createClient();
   const today = todayET();
 
-  function applyLotFilter<T extends { eq: (col: string, val: string) => T }>(
-    q: T
-  ): T {
-    return lot ? q.eq("lot", lot) : q;
+  const resolved = resolveLotFilter(lot);
+  function applyLotFilter<
+    T extends {
+      eq: (col: string, val: string) => T;
+      in: (col: string, vals: string[]) => T;
+    }
+  >(q: T): T {
+    if (resolved === undefined) return q;
+    if (Array.isArray(resolved)) return q.in("lot", resolved);
+    return q.eq("lot", resolved);
   }
 
   // Compute tomorrow from today's ET date string to avoid double timezone conversion
@@ -172,6 +243,17 @@ export async function getParkingDashboard(lot?: string) {
       ).order("drop_off_date", { ascending: true }),
     ]);
 
+  if (arrivalsResult.error)
+    throw new Error(`Failed to load arrivals: ${arrivalsResult.error.message}`);
+  if (pickupsResult.error)
+    throw new Error(`Failed to load pickups: ${pickupsResult.error.message}`);
+  if (tomorrowPickupsResult.error)
+    throw new Error(`Failed to load tomorrow pickups: ${tomorrowPickupsResult.error.message}`);
+  if (currentlyParkedResult.error)
+    throw new Error(`Failed to load currently parked: ${currentlyParkedResult.error.message}`);
+  if (serviceLeadsResult.error)
+    throw new Error(`Failed to load service leads: ${serviceLeadsResult.error.message}`);
+
   return {
     arrivals: arrivalsResult.data || [],
     pickups: pickupsResult.data || [],
@@ -183,9 +265,15 @@ export async function getParkingDashboard(lot?: string) {
 
 // ── Check in ────────────────────────────────────────────────────
 
-export async function checkInReservation(id: string) {
-  const supabase = createAdminClient();
+// Admin client is used across these mutations because the parking_reservations
+// RLS policies don't grant authenticated updates by default — the role gate
+// is enforced at the action level via requireManager() instead.
 
+export async function checkInReservation(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({
@@ -203,8 +291,10 @@ export async function checkInReservation(id: string) {
 // ── Undo check in (back to reserved) ────────────────────────────
 
 export async function undoCheckIn(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({
@@ -222,8 +312,10 @@ export async function undoCheckIn(id: string) {
 // ── Check out ───────────────────────────────────────────────────
 
 export async function checkOutReservation(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({
@@ -241,8 +333,10 @@ export async function checkOutReservation(id: string) {
 // ── Undo check out (back to checked in) ─────────────────────────
 
 export async function undoCheckOut(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({
@@ -260,8 +354,10 @@ export async function undoCheckOut(id: string) {
 // ── Mark no-show ────────────────────────────────────────────────
 
 export async function markNoShow(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({ status: "no_show" as const })
@@ -276,8 +372,10 @@ export async function markNoShow(id: string) {
 // ── Cancel ──────────────────────────────────────────────────────
 
 export async function cancelReservation(id: string) {
-  const supabase = createAdminClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update({ status: "cancelled" as const })
@@ -309,8 +407,10 @@ export async function updateReservation(
     departure_valet?: string | null;
   }
 ) {
-  const supabase = await createClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .update(data)
@@ -323,8 +423,10 @@ export async function updateReservation(
 }
 
 export async function deleteReservation(id: string) {
-  const supabase = await createClient();
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
 
+  const supabase = createAdminClient();
   const { error } = await supabase
     .from("parking_reservations")
     .delete()
@@ -338,6 +440,9 @@ export async function deleteReservation(id: string) {
 // ── Prepare new job from reservation (find or create vehicle) ──
 
 export async function prepareJobFromReservation(reservationId: string): Promise<{ url: string } | { error: string }> {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = createAdminClient();
 
   const { data: res, error } = await supabase

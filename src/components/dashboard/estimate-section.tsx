@@ -3,17 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { MiniStatusCard, ACCENT_PILL, type Accent } from "@/components/ui/mini-status-card";
 import { createEstimateFromJob, deleteEstimate } from "@/lib/actions/estimates";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
-import {
-  ESTIMATE_STATUS_LABELS,
-  ESTIMATE_STATUS_COLORS,
-} from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/utils/format";
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { ESTIMATE_STATUS_LABELS } from "@/lib/constants";
+import { formatDate } from "@/lib/utils/format";
 import { ClipboardList, ExternalLink } from "lucide-react";
 import type { Estimate, EstimateStatus } from "@/types";
 
@@ -21,6 +16,20 @@ interface EstimateSectionProps {
   jobId: string;
   estimate: Estimate | null;
 }
+
+const STATUS_ACCENT: Record<EstimateStatus, Accent> = {
+  draft: "blue",
+  sent: "amber",
+  approved: "green",
+  declined: "red",
+};
+
+const DATE_LABEL: Record<EstimateStatus, (estimate: Estimate) => string> = {
+  draft: (e) => `Created ${formatDate(e.created_at)}`,
+  sent: (e) => `Sent ${e.sent_at ? formatDate(e.sent_at) : "—"}`,
+  approved: (e) => `Signed ${e.approved_at ? formatDate(e.approved_at) : "—"}`,
+  declined: (e) => `Declined ${e.declined_at ? formatDate(e.declined_at) : "—"}`,
+};
 
 export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
   const [loading, setLoading] = useState(false);
@@ -53,75 +62,70 @@ export function EstimateSection({ jobId, estimate }: EstimateSectionProps) {
     return result;
   }
 
-  const status = estimate?.status as EstimateStatus | undefined;
-  const statusColors = status ? ESTIMATE_STATUS_COLORS[status] : null;
+  if (!estimate) {
+    return (
+      <MiniStatusCard
+        accent="stone"
+        icon={<ClipboardList className="h-4 w-4" />}
+        title={
+          <>
+            <span>Estimate</span>
+            <span className="text-xs font-normal text-stone-500 dark:text-stone-400">
+              Not created
+            </span>
+          </>
+        }
+        meta="Generate from the job's line items"
+        actions={
+          <Button size="sm" onClick={handleCreate} disabled={loading}>
+            <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
+            {loading ? "Creating…" : "Create"}
+          </Button>
+        }
+      />
+    );
+  }
+
+  const status = estimate.status as EstimateStatus;
+  const accent = STATUS_ACCENT[status];
   const canDelete = status === "draft" || status === "sent";
 
   return (
-    <Card className="py-0 gap-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 bg-stone-800 dark:bg-stone-900 px-5 py-3">
-        <CardTitle className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-100">
-          <ClipboardList className="h-3.5 w-3.5" />
-          Estimate
-        </CardTitle>
-        {status && statusColors && (
-          <Badge
-            variant="outline"
-            className={`${statusColors.bg} ${statusColors.text}`}
+    <MiniStatusCard
+      accent={accent}
+      icon={<ClipboardList className="h-4 w-4" />}
+      title={
+        <>
+          <span>Estimate</span>
+          <span
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${ACCENT_PILL[accent]}`}
           >
             {ESTIMATE_STATUS_LABELS[status]}
-          </Badge>
-        )}
-      </CardHeader>
-      <CardContent>
-        {!estimate ? (
-          <div className="flex flex-col items-center gap-3 py-2">
-            <p className="text-sm text-muted-foreground">
-              No estimate yet. Create one from the job&apos;s line items.
-            </p>
-            <Button size="sm" onClick={handleCreate} disabled={loading}>
-              <ClipboardList className="mr-2 h-4 w-4" />
-              {loading ? "Creating..." : "Create Estimate"}
+          </span>
+        </>
+      }
+      meta={<span>{DATE_LABEL[status](estimate)}</span>}
+      actions={
+        <>
+          <a href={`/estimates/${estimate.id}`}>
+            <Button variant="outline" size="sm">
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              View
             </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Created</span>
-              <span>
-                {formatDate(estimate.created_at)}
-              </span>
-            </div>
-            {estimate.sent_at && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Sent</span>
-                <span>
-                  {formatDate(estimate.sent_at)}
-                </span>
-              </div>
-            )}
-            <div className="mt-2 flex gap-2">
-              <a href={`/estimates/${estimate.id}`} className="flex-1">
-                <Button variant="outline" size="sm" className="w-full">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View Estimate
-                </Button>
-              </a>
-              {canDelete && (
-                <DeleteConfirmDialog
-                  title="Delete Estimate"
-                  description={
-                    status === "sent"
-                      ? "This estimate has been sent to the customer. Deleting it will invalidate the approval link. You can create a new one from the job's current line items."
-                      : "This will delete the estimate. You can create a new one from the job's current line items."
-                  }
-                  onConfirm={handleDelete}
-                />
-              )}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          </a>
+          {canDelete && (
+            <DeleteConfirmDialog
+              title="Delete Estimate"
+              description={
+                status === "sent"
+                  ? "This estimate has been sent to the customer. Deleting it will invalidate the approval link. You can create a new one from the job's current line items."
+                  : "This will delete the estimate. You can create a new one from the job's current line items."
+              }
+              onConfirm={handleDelete}
+            />
+          )}
+        </>
+      }
+    />
   );
 }

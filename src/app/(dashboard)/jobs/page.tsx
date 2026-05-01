@@ -7,6 +7,7 @@ import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
 import { JobsListView } from "@/components/dashboard/jobs-list-view";
 import { JobsBoardView } from "@/components/dashboard/jobs-board-view";
 import { JobsCalendarView } from "@/components/dashboard/jobs-calendar-view";
+import { PageShell } from "@/components/layout/page-shell";
 import type { JobStatus, PaymentStatus } from "@/types";
 
 export const metadata = {
@@ -28,7 +29,7 @@ export default async function JobsPage({
   }>;
 }) {
   const params = await searchParams;
-  const view = params.view || "list";
+  const view = params.view || "board";
 
   // Only apply date filter when a range param is explicitly set
   let dateFrom: string | undefined;
@@ -58,21 +59,17 @@ export default async function JobsPage({
   ].sort();
 
   return (
-    <div className="p-4 lg:p-10">
+    <PageShell>
       <Suspense>
         <JobsToolbar categories={allCategories} jobCount={jobs.length} />
       </Suspense>
-
-      <div className="mt-4">
-        {view === "board" ? (
-          <JobsBoardView jobs={jobs} />
-        ) : view === "calendar" ? (
-          <JobsCalendarView jobs={jobs} />
-        ) : (
-          <JobsListView jobs={jobs} />
-        )}
-      </div>
-
-    </div>
+      {view === "board" ? (
+        <JobsBoardView jobs={jobs} />
+      ) : view === "calendar" ? (
+        <JobsCalendarView jobs={jobs} />
+      ) : (
+        <JobsListView jobs={jobs} />
+      )}
+    </PageShell>
   );
 }

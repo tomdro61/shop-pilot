@@ -2,6 +2,7 @@
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
 import { todayET } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
@@ -20,7 +21,7 @@ export async function getJobs(filters?: {
 
   let query = supabase
     .from("jobs")
-    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model), users(id, name), job_line_items(total), dvi_inspections(status)")
+    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model, license_plate), users(id, name), job_line_items(total), dvi_inspections(status)")
     .order("date_received", { ascending: false });
 
   if (filters?.dateFrom) {
@@ -42,10 +43,13 @@ export async function getJobs(filters?: {
   if (filters?.category) {
     // Filter jobs that have line items in this category
     const supabaseForCategory = await createClient();
-    const { data: matchingJobs } = await supabaseForCategory
+    const { data: matchingJobs, error: categoryError } = await supabaseForCategory
       .from("job_line_items")
       .select("job_id")
       .eq("category", filters.category);
+    if (categoryError) {
+      throw new Error(`Failed to filter jobs by category: ${categoryError.message}`);
+    }
     const jobIds = [...new Set(matchingJobs?.map((li) => li.job_id) || [])];
     if (jobIds.length === 0) return [];
     query = query.in("id", jobIds);
@@ -66,6 +70,13 @@ export async function getJobs(filters?: {
         .select("id")
         .or(`make.ilike.%${searchLower}%,model.ilike.%${searchLower}%`),
     ]);
+
+    if (customerResult.error) {
+      throw new Error(`Failed to search customers: ${customerResult.error.message}`);
+    }
+    if (vehicleResult.error) {
+      throw new Error(`Failed to search vehicles: ${vehicleResult.error.message}`);
+    }
 
     const customerIds = customerResult.data?.map(c => c.id) || [];
     const vehicleIds = vehicleResult.data?.map(v => v.id) || [];
@@ -110,6 +121,9 @@ export const getJob = cache(async (id: string) => {
 });
 
 export async function createJob(formData: JobFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = jobSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -130,6 +144,9 @@ export async function createJob(formData: JobFormData) {
 }
 
 export async function updateJob(id: string, formData: JobFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = jobSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -152,6 +169,9 @@ export async function updateJob(id: string, formData: JobFormData) {
 }
 
 export async function updateJobStatus(id: string, status: JobStatus) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const updateData: Record<string, unknown> = { status };
@@ -176,7 +196,58 @@ export async function updateJobStatus(id: string, status: JobStatus) {
   return { success: true };
 }
 
+export type JobFieldPatch = Partial<{
+  title: string | null;
+  notes: string | null;
+  mileage_in: number | null;
+  date_received: string | null;
+  date_finished: string | null;
+  assigned_tech: string | null;
+  customer_id: string;
+  vehicle_id: string | null;
+}>;
+
+const EDITABLE_KEYS = [
+  "title",
+  "notes",
+  "mileage_in",
+  "date_received",
+  "date_finished",
+  "assigned_tech",
+  "customer_id",
+  "vehicle_id",
+] as const satisfies readonly (keyof JobFieldPatch)[];
+
+export async function updateJobFields(id: string, patch: JobFieldPatch) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const update: Record<string, unknown> = {};
+  for (const key of EDITABLE_KEYS) {
+    if (!(key in patch)) continue;
+    const raw = patch[key];
+    update[key] = typeof raw === "string" && raw.trim() === "" ? null : raw;
+  }
+
+  if (Object.keys(update).length === 0) {
+    return { error: "Nothing to update" };
+  }
+
+  const { error } = await supabase.from("jobs").update(update).eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function updateJobDateFinished(id: string, dateFinished: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -193,6 +264,9 @@ export async function updateJobDateFinished(id: string, dateFinished: string) {
 }
 
 export async function deleteJob(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("jobs").delete().eq("id", id);
@@ -225,6 +299,9 @@ export async function recordPayment(
   paymentMethod: PaymentMethod,
   paymentStatus: PaymentStatus = "paid"
 ) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase

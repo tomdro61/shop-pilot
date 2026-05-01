@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { PresetLineItem } from "@/types";
 
@@ -37,6 +38,9 @@ export async function getPreset(id: string) {
 }
 
 export async function createPreset(formData: PresetFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -58,6 +62,9 @@ export async function createPreset(formData: PresetFormData) {
 }
 
 export async function updatePreset(id: string, formData: PresetFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -80,6 +87,9 @@ export async function updatePreset(id: string, formData: PresetFormData) {
 }
 
 export async function deletePreset(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("job_presets").delete().eq("id", id);
@@ -92,6 +102,9 @@ export async function deletePreset(id: string) {
 }
 
 export async function applyPresetToJob(jobId: string, presetId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data: preset, error: presetError } = await supabase

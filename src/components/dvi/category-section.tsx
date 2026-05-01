@@ -23,22 +23,28 @@ export function CategorySection({
   const isComplete = ratedCount === totalCount && totalCount > 0;
 
   return (
-    <div className="rounded-xl bg-card shadow-card ring-1 ring-stone-200/10 dark:ring-stone-700/20 overflow-hidden">
+    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between px-4 py-3 bg-stone-800 dark:bg-stone-900 rounded-t-xl active:bg-stone-700 dark:active:bg-stone-800 transition-colors"
+        aria-expanded={isOpen}
+        className={cn(
+          "flex w-full items-center justify-between gap-3 px-4 py-3 transition-colors",
+          isOpen
+            ? "border-b border-stone-200 dark:border-stone-800"
+            : "hover:bg-stone-50 dark:hover:bg-stone-800/50"
+        )}
       >
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-stone-100">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <h3 className="text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-50 truncate">
             {name}
           </h3>
           <span
             className={cn(
-              "text-[10px] font-black px-2 py-0.5 rounded-full",
+              "text-[10px] font-black px-2 py-0.5 rounded-full uppercase tabular-nums shrink-0",
               isComplete
-                ? "bg-green-500/20 text-green-300"
-                : "bg-stone-600 text-stone-300"
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
             )}
           >
             {ratedCount}/{totalCount}
@@ -46,16 +52,12 @@ export function CategorySection({
         </div>
         <ChevronDown
           className={cn(
-            "h-4 w-4 text-stone-400 transition-transform",
+            "h-4 w-4 text-stone-400 dark:text-stone-500 transition-transform shrink-0",
             isOpen && "rotate-180"
           )}
         />
       </button>
-      {isOpen && (
-        <div className="border-t border-stone-100 dark:border-stone-800 px-3 py-2 space-y-2">
-          {children}
-        </div>
-      )}
+      {isOpen && <div className="px-3 py-2 space-y-2">{children}</div>}
     </div>
   );
 }

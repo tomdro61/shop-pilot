@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle, Delete, Search, X } from "lucide-react";
 import { createQuickPayJob } from "@/lib/actions/terminal";
 import { formatCurrency } from "@/lib/utils/format";
+import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
+import { cn } from "@/lib/utils";
+
+const POLL_INTERVAL_MS = 2000;
+const ERROR_BACKOFF_MS = 3000;
+const MAX_POLL_DURATION_MS = 5 * 60 * 1000;
+const MAX_CONSECUTIVE_ERRORS = 5;
 
 type QuickPayState = "input" | "processing" | "succeeded" | "failed" | "canceled";
 
@@ -35,6 +41,10 @@ function QuickPayPresetPicker({
     (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
   );
 
+  const quickPresets = presets.filter(
+    (p) => p.category && INSPECTION_CATEGORIES.has(p.category)
+  );
+
   const selected = selectedPresetId ? presets.find((p) => p.id === selectedPresetId) : null;
 
   return (
@@ -43,8 +53,42 @@ function QuickPayPresetPicker({
         Quick Services
       </p>
 
+      {quickPresets.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {quickPresets.map((preset) => {
+            const active = selectedPresetId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onSelect(preset)}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex items-center gap-2 h-9 px-3 rounded-md border text-sm font-medium transition-colors",
+                  active
+                    ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-900 dark:text-blue-300"
+                    : "bg-card border-stone-200 text-stone-700 hover:bg-stone-50 dark:bg-stone-900 dark:border-stone-800 dark:text-stone-300 dark:hover:bg-stone-800/60"
+                )}
+              >
+                <span>{preset.name}</span>
+                <span
+                  className={cn(
+                    "font-mono tabular-nums text-xs",
+                    active
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-stone-500 dark:text-stone-400"
+                  )}
+                >
+                  {formatCurrency(preset.total)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {selected ? (
-        <div className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
           <span className="flex-1 text-sm font-bold text-blue-700 dark:text-blue-400">
             {selected.name}
           </span>
@@ -71,15 +115,15 @@ function QuickPayPresetPicker({
             className="pl-9"
           />
           {dropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full rounded-lg border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+            <div className="absolute z-50 mt-1 w-full rounded-md border border-stone-200 bg-card shadow-card dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
               {filtered.length === 0 ? (
-                <p className="py-3 text-center text-sm text-muted-foreground">No presets match</p>
+                <p className="py-3 text-center text-sm text-stone-500 dark:text-stone-400">No presets match</p>
               ) : (
                 filtered.map((preset) => (
                   <button
                     key={preset.id}
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
                     onClick={() => {
                       onSelect(preset);
                       setSearch("");
@@ -110,6 +154,19 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [completedJobId, setCompletedJobId] = useState<string | null>(null);
+
+  const mountedRef = useRef(true);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollStartRef = useRef<number | null>(null);
+  const consecutiveErrorsRef = useRef(0);
+  const cancelingRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
+  }, []);
 
   const amountCents = Math.round(parseFloat(amountStr || "0") * 100);
   const displayAmount = new Intl.NumberFormat("en-US", {
@@ -161,9 +218,23 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   }
 
   const pollStatus = useCallback(async (piId: string) => {
+    if (!mountedRef.current) return;
+
+    if (pollStartRef.current === null) pollStartRef.current = Date.now();
+    if (Date.now() - pollStartRef.current > MAX_POLL_DURATION_MS) {
+      setState("failed");
+      toast.error("Payment timed out — verify status on terminal");
+      return;
+    }
+
     try {
       const res = await fetch(`/api/terminal/status?pi=${piId}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+
+      if (!mountedRef.current) return;
+      if (cancelingRef.current) return;
+      consecutiveErrorsRef.current = 0;
 
       if (data.status === "succeeded") {
         setState("succeeded");
@@ -176,10 +247,17 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
         return;
       }
 
-      // Still processing — poll again
-      setTimeout(() => pollStatus(piId), 2000);
+      pollTimeoutRef.current = setTimeout(() => pollStatus(piId), POLL_INTERVAL_MS);
     } catch {
-      setTimeout(() => pollStatus(piId), 3000);
+      if (!mountedRef.current) return;
+      if (cancelingRef.current) return;
+      consecutiveErrorsRef.current += 1;
+      if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS) {
+        setState("failed");
+        toast.error("Lost connection to terminal — verify payment status");
+        return;
+      }
+      pollTimeoutRef.current = setTimeout(() => pollStatus(piId), ERROR_BACKOFF_MS);
     }
   }, []);
 
@@ -188,6 +266,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
       toast.error("Enter an amount");
       return;
     }
+    if (state !== "input") return;
 
     setState("processing");
 
@@ -220,8 +299,9 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
       }
 
       setPaymentIntentId(data.paymentIntentId);
-      // Start polling
-      setTimeout(() => pollStatus(data.paymentIntentId), 2000);
+      pollStartRef.current = null;
+      consecutiveErrorsRef.current = 0;
+      pollTimeoutRef.current = setTimeout(() => pollStatus(data.paymentIntentId), POLL_INTERVAL_MS);
     } catch {
       setState("failed");
       toast.error("Failed to connect to terminal");
@@ -229,20 +309,39 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   }
 
   async function handleCancel() {
+    if (cancelingRef.current) return;
+    cancelingRef.current = true;
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
     try {
-      await fetch("/api/terminal/cancel", {
+      const res = await fetch("/api/terminal/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paymentIntentId }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Cancel may have failed — verify on terminal");
+        cancelingRef.current = false;
+        return;
+      }
       setState("canceled");
       toast("Payment canceled");
     } catch {
-      toast.error("Failed to cancel");
+      toast.error("Cancel may have failed — verify on terminal");
+      cancelingRef.current = false;
     }
   }
 
   function handleReset() {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
+    pollStartRef.current = null;
+    consecutiveErrorsRef.current = 0;
     setAmountStr("0");
     setNote("");
     setState("input");
@@ -254,15 +353,15 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   // Processing / Success / Failed / Canceled states
   if (state !== "input") {
     return (
-      <Card className="mx-auto max-w-sm">
-        <CardContent className="flex flex-col items-center gap-4 p-8">
-          <p className="text-3xl font-bold tabular-nums">{displayAmount}</p>
+      <div className="mx-auto max-w-sm bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
+        <div className="flex flex-col items-center gap-4 p-8">
+          <p className="font-mono tabular-nums text-3xl font-bold text-stone-900 dark:text-stone-50">{displayAmount}</p>
 
           {state === "processing" && (
             <>
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">
-                Waiting for customer to present card...
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-500" />
+              <p className="text-sm text-stone-500 dark:text-stone-400">
+                Waiting for customer to present card…
               </p>
               <Button variant="outline" onClick={handleCancel}>
                 Cancel
@@ -295,13 +394,13 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
 
           {state === "canceled" && (
             <>
-              <XCircle className="h-12 w-12 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Payment canceled</p>
+              <XCircle className="h-12 w-12 text-stone-400 dark:text-stone-500" />
+              <p className="text-sm text-stone-500 dark:text-stone-400">Payment canceled</p>
               <Button variant="outline" onClick={handleReset}>Start Over</Button>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -309,8 +408,8 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   return (
     <div className="mx-auto max-w-sm space-y-4">
       {/* Amount display */}
-      <div className="rounded-xl border bg-card p-6 text-center">
-        <p className="text-4xl font-bold tabular-nums tracking-tight">
+      <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-card shadow-sm p-6 text-center">
+        <p className="font-mono tabular-nums text-4xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
           {displayAmount}
         </p>
       </div>
@@ -349,7 +448,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
       <Button
         variant="ghost"
         size="sm"
-        className="w-full text-muted-foreground"
+        className="w-full text-stone-500 dark:text-stone-400"
         onClick={handleClear}
       >
         Clear

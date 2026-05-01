@@ -5,6 +5,7 @@ import { CustomerSearch } from "@/components/forms/customer-search";
 import { CustomerTypeFilter } from "@/components/dashboard/customer-type-filter";
 import { CustomerList } from "@/components/dashboard/customer-list";
 import { CustomerPagination } from "@/components/dashboard/customer-pagination";
+import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
@@ -22,30 +23,27 @@ export default async function CustomersPage({
   const { data: customers, totalCount } = await getCustomers(search, type, page);
 
   return (
-    <div className="p-4 lg:p-10 space-y-6">
+    <PageShell>
       <div className="flex flex-wrap items-center gap-2">
         <Suspense>
           <CustomerSearch />
         </Suspense>
-        <div className="hidden md:flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-          <span className="font-bold text-stone-900 dark:text-stone-50">All Customers</span>
-          <span>({totalCount.toLocaleString()})</span>
-        </div>
         <Suspense>
           <CustomerTypeFilter />
         </Suspense>
-        <div className="ml-auto">
-          <Link href="/customers/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Add Customer</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
-          </Link>
-        </div>
+        <span className="hidden md:inline text-xs text-stone-500 dark:text-stone-400 font-mono tabular-nums">
+          {totalCount.toLocaleString()}
+        </span>
+        <Link href="/customers/new" className="ml-auto">
+          <Button size="sm" className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Add Customer</span>
+            <span className="sm:hidden">Add</span>
+          </Button>
+        </Link>
       </div>
       <CustomerList customers={customers} totalCount={totalCount} />
       <CustomerPagination totalCount={totalCount} page={page} pageSize={50} />
-    </div>
+    </PageShell>
   );
 }

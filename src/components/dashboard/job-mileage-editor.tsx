@@ -1,0 +1,81 @@
+"use client";
+
+import { toast } from "sonner";
+import { updateJobFields } from "@/lib/actions/jobs";
+import { useInlineEditor } from "@/hooks/use-inline-editor";
+import { Input } from "@/components/ui/input";
+import { Pencil, Check, X } from "lucide-react";
+
+interface JobMileageEditorProps {
+  jobId: string;
+  value: number | null;
+}
+
+export function JobMileageEditor({ jobId, value }: JobMileageEditorProps) {
+  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(
+    value != null ? String(value) : ""
+  );
+
+  async function save() {
+    const trimmed = draft.trim();
+    let next: number | null = null;
+    if (trimmed !== "") {
+      const parsed = Number(trimmed.replace(/,/g, ""));
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        toast.error("Enter a valid mileage");
+        return;
+      }
+      next = Math.round(parsed);
+    }
+    if (next === value) {
+      setEditing(false);
+      return;
+    }
+    await commit(() => updateJobFields(jobId, { mileage_in: next }), "Mileage saved");
+  }
+
+  if (editing) {
+    return (
+      <span className="inline-flex items-center gap-1">
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            else if (e.key === "Escape") cancel();
+          }}
+          autoFocus
+          disabled={saving}
+          className="h-6 w-[90px] text-xs px-1.5 font-mono tabular-nums"
+        />
+        <button
+          onClick={save}
+          disabled={saving}
+          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+        >
+          <Check className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={cancel}
+          disabled={saving}
+          className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="group inline-flex items-center gap-1 font-mono tabular-nums text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+    >
+      {value != null ? `${value.toLocaleString()} mi` : <span className="text-stone-400 font-sans">Not set</span>}
+      <Pencil className="h-2.5 w-2.5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors" />
+    </button>
+  );
+}

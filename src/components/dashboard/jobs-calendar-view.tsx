@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatVehicle } from "@/lib/utils/format";
+import { JOB_STATUS_BAR, type JobStatusKey } from "@/lib/constants";
 
 type JobRow = {
   id: string;
@@ -118,22 +119,24 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
             {headerLabel}
           </h3>
-          <div className="flex rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden text-xs">
+          <div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1 text-xs">
             <button
-              className={`px-2.5 py-1 transition-colors ${
+              aria-pressed={mode === "month"}
+              className={`rounded px-2.5 py-1 font-medium transition-colors ${
                 mode === "month"
-                  ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
-                  : "bg-white text-stone-600 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
+                  ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
+                  : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
               }`}
               onClick={() => setMode("month")}
             >
               Month
             </button>
             <button
-              className={`px-2.5 py-1 transition-colors ${
+              aria-pressed={mode === "week"}
+              className={`rounded px-2.5 py-1 font-medium transition-colors ${
                 mode === "week"
-                  ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
-                  : "bg-white text-stone-600 hover:bg-stone-50 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
+                  ? "bg-stone-100 text-stone-900 shadow-card dark:bg-stone-800 dark:text-stone-50"
+                  : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
               }`}
               onClick={() => setMode("week")}
             >
@@ -158,7 +161,7 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
         {WEEKDAYS.map((day) => (
           <div
             key={day}
-            className="border-b border-r border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900 px-1 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400"
+            className="border-b border-r border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900 px-1 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400"
           >
             {day}
           </div>
@@ -180,7 +183,7 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
                 mode === "week" ? "min-h-[160px]" : "min-h-[80px] sm:min-h-[100px]"
               } ${
                 !inMonth
-                  ? "bg-stone-50/50 dark:bg-stone-950/50"
+                  ? "bg-stone-100/50 dark:bg-stone-950/50"
                   : "bg-white dark:bg-stone-950"
               }`}
             >
@@ -218,13 +221,6 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
   );
 }
 
-const STATUS_DOT_COLORS: Record<string, string> = {
-  not_started: "bg-red-500",
-  waiting_for_parts: "bg-amber-500",
-  in_progress: "bg-blue-500",
-  complete: "bg-green-500",
-};
-
 function CalendarJobEntry({ job, expanded }: { job: JobRow; expanded?: boolean }) {
   const customerName = job.customers
     ? job.customers.last_name
@@ -237,7 +233,7 @@ function CalendarJobEntry({ job, expanded }: { job: JobRow; expanded?: boolean }
       className="group flex items-center gap-1 rounded px-1 py-0.5 text-[11px] leading-tight hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
     >
       <span
-        className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT_COLORS[job.status] ?? "bg-stone-400"}`}
+        className={`h-1.5 w-1.5 shrink-0 rounded-md ${JOB_STATUS_BAR[job.status as JobStatusKey] ?? "bg-stone-400"}`}
       />
       <span className="truncate font-medium text-stone-700 dark:text-stone-300">
         {customerName}

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireManager } from "@/lib/auth";
 import { teamMemberCreateSchema, teamMemberUpdateSchema } from "@/lib/validators/team";
 import { revalidatePath } from "next/cache";
 import type { TeamMemberCreateData, TeamMemberUpdateData } from "@/lib/validators/team";
@@ -32,6 +33,9 @@ export async function getTechnicians() {
 }
 
 export async function createTeamMember(formData: TeamMemberCreateData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = teamMemberCreateSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -70,6 +74,9 @@ export async function createTeamMember(formData: TeamMemberCreateData) {
 }
 
 export async function updateTeamMember(id: string, formData: TeamMemberUpdateData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = teamMemberUpdateSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -90,6 +97,9 @@ export async function updateTeamMember(id: string, formData: TeamMemberUpdateDat
 }
 
 export async function deleteTeamMember(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   // Fetch the user to get their auth_id before deleting

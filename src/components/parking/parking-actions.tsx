@@ -71,7 +71,7 @@ export function CheckOutButton({
       <Button
         size={size}
         variant="outline"
-        className="gap-1.5 bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900"
+        className="gap-1.5 bg-amber-100 dark:bg-amber-900 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-800"
         onClick={() => setModalOpen(true)}
       >
         <LogOut className="h-3.5 w-3.5" />

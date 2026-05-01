@@ -1,15 +1,23 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SECTION_LABEL } from "@/components/ui/section-card";
+import { ACCENT_ICON_TINT, type Accent } from "@/components/ui/mini-status-card";
 
-interface KpiCardProps {
+type KpiVisual =
+  | { icon: LucideIcon; tone?: Accent; accentColor?: never }
+  | { icon?: never; tone?: never; accentColor?: "blue" | "emerald" | "amber" | "purple" };
+
+type KpiCardProps = {
   title: string;
   value: string;
   subtitle?: string;
   previousValue?: number;
   currentValue?: number;
-  accentColor?: "blue" | "emerald" | "amber" | "purple";
-}
+  /** Override the percent comparison computed from previousValue / currentValue. */
+  changePercent?: number;
+  /** Label displayed under the value when present (e.g. "vs last week"). When omitted, no subtitle row renders even if a delta chip is shown. */
+  changeLabel?: string;
+} & KpiVisual;
 
 const accentBorderMap = {
   blue: "border-l-blue-500",
@@ -25,10 +33,14 @@ export function KpiCard({
   previousValue,
   currentValue,
   accentColor,
+  icon: Icon,
+  tone,
+  changePercent: changePercentProp,
+  changeLabel,
 }: KpiCardProps) {
-  let changePercent: number | null = null;
+  let changePercent: number | null = changePercentProp ?? null;
 
-  if (previousValue !== undefined && currentValue !== undefined) {
+  if (changePercent === null && previousValue !== undefined && currentValue !== undefined) {
     if (previousValue === 0 && currentValue === 0) {
       changePercent = 0;
     } else if (previousValue === 0) {
@@ -38,42 +50,55 @@ export function KpiCard({
     }
   }
 
+  const useIconVariant = Boolean(Icon);
+
   return (
-    <Card className={accentColor ? `border-l-4 ${accentBorderMap[accentColor]}` : undefined}>
-      <CardContent className="p-5">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
-          {title}
+    <div
+      className={cn(
+        "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card p-4",
+        !useIconVariant && accentColor && `border-l-4 ${accentBorderMap[accentColor]}`
+      )}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        {useIconVariant && Icon && (
+          <span
+            className={cn(
+              "w-8 h-8 rounded-md grid place-items-center border flex-none",
+              ACCENT_ICON_TINT[tone ?? "stone"]
+            )}
+          >
+            <Icon className="h-4 w-4" />
+          </span>
+        )}
+        <p className={cn(SECTION_LABEL, "truncate")}>{title}</p>
+      </div>
+      <p className="mt-2 font-mono tabular-nums text-2xl lg:text-[28px] font-bold tracking-tight text-stone-900 dark:text-stone-50 leading-none">
+        {value}
+      </p>
+      {(subtitle || (changePercent !== null && changeLabel)) && (
+        <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
+          {subtitle ?? (
+            <>
+              {changePercent !== null && (
+                <span
+                  className={cn(
+                    "font-mono tabular-nums font-semibold",
+                    changePercent > 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : changePercent < 0
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-stone-500 dark:text-stone-400"
+                  )}
+                >
+                  {changePercent > 0 ? "+" : ""}
+                  {changePercent.toFixed(0)}%
+                </span>
+              )}
+              {changeLabel && <span className="ml-1">{changeLabel}</span>}
+            </>
+          )}
         </p>
-        <p className="mt-2 text-3xl lg:text-4xl font-extrabold tabular-nums tracking-tight text-stone-900 dark:text-stone-50">{value}</p>
-        {subtitle && (
-          <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
-        )}
-        {changePercent !== null && (
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                changePercent > 0
-                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                  : changePercent < 0
-                    ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400"
-                    : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
-              )}
-            >
-              {changePercent > 0 ? (
-                <TrendingUp className="h-3 w-3" />
-              ) : changePercent < 0 ? (
-                <TrendingDown className="h-3 w-3" />
-              ) : (
-                <Minus className="h-3 w-3" />
-              )}
-              {changePercent > 0 ? "+" : ""}
-              {changePercent.toFixed(0)}%
-            </span>
-            <span className="text-xs text-muted-foreground">vs prior</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }

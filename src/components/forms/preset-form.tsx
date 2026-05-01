@@ -229,7 +229,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
                     <button
                       key={item.id}
                       type="button"
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
                       onClick={() => addCatalogItem(item)}
                     >
                       <div
@@ -306,7 +306,7 @@ export function PresetForm({ preset, categories = [], open, onOpenChange }: Pres
           )}
 
           {lineItems.length === 0 && (
-            <div className="rounded-lg border border-dashed border-stone-300 dark:border-stone-700 py-6 text-center">
+            <div className="rounded-lg border border-dashed border-stone-200 dark:border-stone-700 py-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Search the catalog above to add items to this preset
               </p>

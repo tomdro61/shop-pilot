@@ -1,5 +1,15 @@
 # ShopPilot - AI-Powered Shop Management System
 
+## Authoritative companion docs
+
+- **[`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md)** — design tokens, component primitives, layout patterns. Owns everything visual. Read this before making UI changes; do **not** redocument design rules in CLAUDE.md.
+- **[`../SHOPPILOT_ROADMAP.md`](../SHOPPILOT_ROADMAP.md)** — master roadmap: strategy, OS architecture, feature phases (0–6), agent platform, costs, metrics. Predecessor docs archived in `../archive/`.
+- **[`UI-AUDIT.md`](./UI-AUDIT.md)** — running list of UI consistency findings. Mark closed as fixed.
+- **[`REVIEW-FINDINGS.md`](./REVIEW-FINDINGS.md)** — running list of code-review findings.
+- **[`PROGRESS.md`](./PROGRESS.md)** — session log. Read at start of every new session.
+
+The OS-feel of ShopPilot (Open Loops, Customer Spine, Estimate-as-separate-from-Job) is defined in §3 of the master roadmap. Phase 0 is the foundation refactor.
+
 ## What We're Building
 
 ShopPilot is a custom shop management system for Broadway Motors, an independent auto repair shop in Revere, MA. It replaces a fragmented Notion + Wix + manual workflow with a single AI-first platform. The defining feature is a conversational AI assistant (Claude API with function calling) that lets the shop manager run the entire operation — customers, jobs, estimates, invoices, payments, messaging — from their phone via voice or text commands, without touching a laptop.
@@ -265,9 +275,10 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Session 29:** Stitch UI refresh — full design system overhaul (Inter font, pill-shaped controls, warm stone palette, card shadows, dark sidebar), then UI consistency audit (standardized pills, normalized dark mode colors, restyled dashboard alerts, redesigned quote requests and parking detail pages, lockbox info on parking cards)
 **Session 30:** Parts & Labor Catalog — `catalog_items` table with 30 seeded items, catalog management page at `/settings/catalog`, catalog search in line item form + job creation form, "Save to Catalog" button on line items, 3 new AI tools (search_catalog, add_catalog_items_to_job, manage_catalog_item). Also: quote request message expand/collapse.
 **Session 32:** Stripe Terminal fully operational (WisePOS E registered, walk-in customer, payment status auto-update). Reporting suite: Trends Explorer (`/reports/trends`), Service Mix Deep-Dive (`/reports/service-mix`), Tech Scoreboard (`/reports/tech`). Shared trend bucketing infrastructure. Preset catalog search filtered by category. Inspection revenue exclusion expanded to match user's categories.
+**Session 33:** UI dial-in pre-merge gate. New Action Center on dashboard (Tasks scratchpad + Glance + 6 needs-attention alert cards linking to `/inbox?tab=...`). Inbox redesigned with type-accent filter chips. DVI suite (list, detail, customer-facing /inspect, all 11 components) aligned. Detail pages (job, customer, parking) Notes blocks converted to alert-card pattern. Segmented controls swept. Quote requests rebuilt and default to "new" filter. Sidebar active state redesigned with white left-edge strip, no blue. Primary blue refreshed to `oklch(0.55 0.18 255)` and Button routed through `bg-primary`. Quick Pay emerald. Parking · Today scoped to managed lots. Vitest + first test. New shared modules: `lib/ui/alert-tone.ts` (Tone palette), `lib/actions/_types.ts` (ActionResult), `lib/utils/parking.ts` (hasPendingService). Tasks server actions + migration applied to remote.
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
-- **Design system:** Stitch design language — Inter font, warm stone/blue palette, oklch color system. Page bg `oklch(0.99 0.002 75)`, white card surfaces with `shadow-card`. All status badges use borderless pills (`text-[10px] font-black px-2 py-1 rounded-full uppercase`) with `-100/-950` tinted backgrounds (normalized across all status types). All buttons, inputs, and selects are `rounded-full` (pill-shaped) globally via base components. Input/select fields use `bg-stone-50` for contrast against white cards. Line items have flat rows with color accent bars (blue=labor, amber=parts). Dashboard alerts use accent-bordered tinted cards (`border-l-4`). Kanban board columns use warm tan background (`oklch(0.94 0.008 75)`).
+- **Design system:** Stitch design language — Inter font, oklch palette, `rounded-md` canonical, `shadow-card` token, color semantics anchored on emerald/amber/red/blue/violet/stone. Layout patterns include structured metric chunks, 3px top accent strips, line-items-as-grouped-sections, Open Loops single-line rows, customer = violet identity. **Full spec lives in [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) — that's the authoritative source.** This file should NOT accumulate design tokens; update DESIGN_SYSTEM.md instead.
 - **Service categorization:** Line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
 - Stripe invoicing + estimate builder with public approval page fully working (live mode). Estimates can be deleted and recreated to pick up updated job line items. Estimate line items carry categories and are grouped by service category on both internal and customer-facing views.
 - Stripe Terminal: server-driven WisePOS E integration, fully operational. 3 API routes (`/api/terminal/pay`, `/status`, `/cancel`), TerminalPayButton on job detail, Quick Pay page at `/quick-pay` with numpad UI + presets. Reader registered ("Front-desk 1"), auto-marks jobs as paid on card tap. Walk-in sentinel customer (`00000000-...`) for Quick Pay jobs. `stripe_payment_intent_id` column on jobs. `terminal` value in `payment_method` enum.
@@ -277,7 +288,14 @@ Read `PROGRESS.md` first to pick up where we left off.
 - AI Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
 - Job Presets: reusable templates with pre-filled line items, `/presets` management page
 - **Parts & Labor Catalog:** Saved individual parts and labor items with default pricing at `/settings/catalog`. Searchable when adding line items to jobs (both on job detail page and job creation form). "Save to Catalog" button on line items for building up the catalog over time. Case-insensitive duplicate detection. Usage count tracking for popularity sorting. 3 AI tools: `search_catalog`, `add_catalog_items_to_job`, `manage_catalog_item`. Seeded with 30 common auto repair items.
-- Dashboard: sectioned layout (Quick Actions → Revenue with week/month/year comparisons → Needs Attention → Shop Floor → Today's Schedule → Recent Jobs). Revenue cards include inspection revenue from `daily_inspection_counts`; job line items with `category = "Inspection"` are excluded from revenue to prevent double-counting.
+- Dashboard: sectioned layout — slim greeting header, KPI cluster (Today's Revenue / Week / Month / Outstanding A/R + State/TNC/Jobs Closed compact cards), divider, **Action Center** (Tasks scratchpad full-width on top; Glance card on right with Parking · Today + Awaiting Payment; 2-column needs-attention alert grid on left with 6 alert types — Unassigned/Quote Requests/Estimates Sent/DVIs Ready/Parking Leads/Aged Parts — each linking to `/inbox?tab=...`), divider, Shop Floor 3-column kanban. Revenue cards include inspection revenue from `daily_inspection_counts`; job line items with `category = "Inspection"` are excluded from revenue to prevent double-counting. Parking · Today scoped to `MANAGED_PARKING_LOTS` only and reports an "X/Y prepared" line under Pickups (prepared = checked_out OR lock_box_number staged).
+- **Tasks scratchpad:** `tasks` table + `lib/actions/tasks.ts`. Manager-only personal todos surfaced in the Action Center. RLS on `tasks_select_authenticated` is permissive (any authenticated user reads), but `getOpenTasks` returns `[]` for non-managers as the intended UX. Mutations call `revalidatePath("/", "layout")` so the sidebar inbox badge stays fresh.
+- **Inbox** (`/inbox`): single destination for every needs-attention alert from the dashboard. Type-accent filter chips per category (matches the Tone palette: amber Unassigned, blue Quotes, indigo Estimates, violet DVIs, emerald Parking, red Parts/Payments). Section cards with row dividers.
+- **Shared UI modules (Session 33):**
+  - `src/lib/ui/alert-tone.ts` — `Tone` union (`amber|blue|indigo|violet|emerald|red`) + `TONE_CLASSES` Record with `tile`, `bar`, `card`, `count`, `chip` strings. Single source of truth for alert/needs-attention surfaces.
+  - `src/lib/actions/_types.ts` — `ActionResult<T>` discriminated union for new server actions. Older actions still use `{ success | error }`.
+  - `src/lib/utils/parking.ts` — `hasPendingService(reservation)`. Used by dashboard, inbox, and sidebar count.
+  - Vitest test framework wired (`vitest.config.ts`, `npm test`/`test:watch`/`test:coverage`). First suite: `src/lib/utils/parking.test.ts`.
 - **Revenue Reporting:** Shared utility at `src/lib/utils/revenue.ts` — `sumJobRevenue()` excludes inspection-category items (`INSPECTION_CATEGORIES` set: "Inspection", "State Inspection", "TNC Inspection"), `calcInspectionRevenue()` computes inspection revenue/cost/profit. Both dashboard and reports use these. State Inspection cost: $11.50/unit (`INSPECTION_COST_STATE`). Reports show "State Inspection" and "TNC Inspection" as rows in Revenue by Category and Service Profitability.
 - **Reporting Suite:** 5 report pages total:
   - **Revenue Overview** (`/reports/revenue`) — KPI cards, category/tech breakdowns, profitability table, Fleet A/R aging
@@ -325,6 +343,68 @@ Read `PROGRESS.md` first to pick up where we left off.
 - **Environment variables** — all secrets in `.env.local`, never committed. Use `NEXT_PUBLIC_` prefix only for client-safe values.
 - **Git** — conventional commits (feat:, fix:, chore:, etc.). Work on the `staging` branch. Push feature changes to `staging` first so they can be validated before merging to `master`. Only merge to `master` when the user explicitly asks.
 - **Mobile-first** — design for phone screens first, then expand to desktop
+- **Front-end design / UI changes** — ALWAYS invoke the front-end design skill (`/front-end-design` or whichever slash-skill is configured for visual/design work) before making visual changes, restructuring layouts, or proposing redesigns. The skill exists specifically to give design decisions structure — don't freelance the visuals. If the task touches component layout, typography, color, spacing, or visual composition, the skill is in scope. Read [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) first for the canonical tokens and patterns.
+
+## Review Workflow (read this — required, not optional)
+
+A 13-agent review of `staging` (April 2026) found 118 issues that accumulated across many sessions because review wasn't built into the workflow. The full report lives at `REVIEW-FINDINGS.md`. To prevent this from repeating, every change runs through the `/scoped-review` skill at scoped triggers.
+
+**Invoke `/scoped-review` automatically (without being asked) when:**
+
+- A change is "done" and touches **any** of: `src/lib/actions/`, `src/hooks/`, `src/middleware.ts`, `src/lib/auth.ts`, `src/components/ui/`, `src/components/forms/`, `src/lib/utils/`, `src/lib/validators/`, `src/app/api/`
+- A change adds more than ~50 lines or touches more than 3 files
+- A change adds new types, hooks, or generic functions
+- The user is about to commit (`git commit`) — invoke `/review staged` first
+- The user asks to merge `staging` → `master` — invoke `/review merge` first (full sweep)
+
+**Don't invoke for:** typo fixes, doc-only changes, single-line bug fixes, formatting, or anything under ~10 lines.
+
+**The skill picks the agents.** It reads the diff, categorizes the changes, and dispatches only the relevant reviewers in parallel. A 30-line server-action change runs 2 agents. A whole feature runs 3-4. Pre-merge runs all 12. A typo fix runs zero.
+
+**After invoking `/scoped-review`:** address all Critical findings before declaring done. Triage High/Medium with the user. Don't ship a Critical "as a follow-up."
+
+## Anti-patterns to avoid (these are what the review keeps catching)
+
+These are the recurring failure modes from `REVIEW-FINDINGS.md`. Treat them as hard rules during writing, not just review-time checks.
+
+**Server actions that mutate (`src/lib/actions/*`):**
+- MUST call `requireManager()` from `src/lib/auth.ts` at the top, OR have an inline comment explaining why no auth check is needed (e.g., public form endpoint)
+- MUST destructure `{ data, error }` from every Supabase call and check `error` — never `const { data } = await supabase.from(...)`
+- MUST validate foreign-key inputs (`customer_id`, `vehicle_id`, etc.) before writing — don't trust client-supplied UUIDs
+- MUST use `await createClient()` from `@/lib/supabase/server`, NEVER `createAdminClient()` (service role is API-routes-only)
+
+**Error handling:**
+- NEVER `catch { return null }` or `catch { return [] }` — that masks bugs and the UI can't distinguish "no data" from "query failed"
+- NEVER fire-and-forget Promises with only `.catch(console.error)` — surface delivery status to the caller
+- Hooks that wrap async work MUST handle thrown exceptions (try/catch around `await`) — the `{ error }` shape isn't enough
+
+**Caching:**
+- `unstable_cache` invalidation requires `revalidateTag` matching the cache's tag array — `revalidatePath` does NOT bust `unstable_cache` entries
+- Don't add `unstable_cache` for low-traffic internal-tool data — the staleness/invalidation cost outweighs the perf gain
+
+**UI primitives:**
+- Any `<div onClick>` MUST have `role`, `tabIndex={0}`, AND `onKeyDown` for Enter/Space — keyboard nav is not optional. Use the `ClickableRow` primitive whenever possible.
+- Don't use `<div>` for things that should be `<a>` or `<button>` — semantic HTML first
+- All design tokens (border radius, color, shadow, status badges, hover bg) live in [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) — read that for the canonical rules, don't redocument them here
+
+**Forms:**
+- Always `value={field.value ?? ""}` on text inputs/textareas; never bare `{...field}` (avoids controlled/uncontrolled flip)
+- Submit handlers MUST guard against double-submit — `if (isSubmitting) return`
+- Search inputs hitting Supabase MUST debounce (300ms) AND use AbortController for cancellation
+
+**Comments:**
+- Default to writing NO comments
+- Never write JSDoc that names a specific consumer ("first shipped on the X page", "used by Y") — it rots
+- Never restate what well-named code already does — only document non-obvious WHY
+
+**Types:**
+- No `any`. No casts through `unknown` to "fix" type errors — fix the real type
+- Discriminated unions over optional-fields-on-both-arms (`{ ok: true; data } | { ok: false; error }`, not `{ data?, error? }`)
+- Action return types: use a shared `ActionResult<T>` (or equivalent) so the hook layer can rely on the shape
+
+**Dead code:**
+- When deleting a route or feature, also delete the components, server actions, types, and form branches that supported it
+- After heavy refactor churn (multiple reverts), grep for unused state, leftover handlers, and `eslint-disable` comments
 
 ## Useful Commands
 

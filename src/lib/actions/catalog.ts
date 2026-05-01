@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { catalogItemSchema, type CatalogItemFormData } from "@/lib/validators/catalog";
 import { revalidatePath } from "next/cache";
 
@@ -73,6 +74,9 @@ export async function getCatalogItem(id: string) {
 }
 
 export async function createCatalogItem(formData: CatalogItemFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = catalogItemSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -105,6 +109,9 @@ export async function updateCatalogItem(
   id: string,
   formData: CatalogItemFormData
 ) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const parsed = catalogItemSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
@@ -135,6 +142,9 @@ export async function updateCatalogItem(
 }
 
 export async function deactivateCatalogItem(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -151,6 +161,9 @@ export async function deactivateCatalogItem(id: string) {
 }
 
 export async function deleteCatalogItem(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -173,6 +186,9 @@ export async function saveToCatalog(lineItemData: {
   part_number?: string | null;
   category?: string | null;
 }) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   // Case-insensitive duplicate check by description + type
@@ -209,6 +225,9 @@ export async function saveToCatalog(lineItemData: {
 }
 
 export async function incrementUsageCount(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return;
+
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -234,6 +253,9 @@ export async function addCatalogItemsToJob(
     category?: string;
   }[]
 ) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   if (!items.length) return { success: true };
 
   const supabase = await createClient();

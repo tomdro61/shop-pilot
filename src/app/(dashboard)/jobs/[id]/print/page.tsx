@@ -268,7 +268,7 @@ export default async function PrintRepairOrderPage({
       )}
 
       {/* Footer */}
-      <div className="border-t border-stone-300 pt-4 text-center text-sm text-stone-500">
+      <div className="border-t border-stone-200 pt-4 text-center text-sm text-stone-500">
         <p>Thank you for your business!</p>
       </div>
     </div>

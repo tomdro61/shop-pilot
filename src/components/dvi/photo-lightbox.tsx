@@ -23,7 +23,7 @@ export function PhotoLightbox({ photos }: PhotoLightboxProps) {
         {photos.map((photo) => (
           <div
             key={photo.id}
-            className="h-16 w-16 rounded-lg overflow-hidden bg-stone-100 dark:bg-stone-800"
+            className="h-16 w-16 rounded-md overflow-hidden bg-stone-100 dark:bg-stone-800"
           >
             {photo.signedUrl ? (
               <img
@@ -56,7 +56,7 @@ export function PhotoLightbox({ photos }: PhotoLightboxProps) {
           <img
             src={lightboxUrl}
             alt=""
-            className="max-h-[85vh] max-w-full rounded-lg object-contain"
+            className="max-h-[85vh] max-w-full rounded-md object-contain"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
