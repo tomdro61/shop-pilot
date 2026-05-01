@@ -12,9 +12,8 @@ import {
   UserX,
   MessageSquareQuote,
   FileText,
-  ClipboardCheck,
   MapPin,
-  Package,
+  Gift,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -22,53 +21,34 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { formatCurrencyWhole } from "@/lib/utils/format";
 import { createTask, resolveTask, type Task } from "@/lib/actions/tasks";
 import { TONE_CLASSES, type Tone } from "@/lib/ui/alert-tone";
-
-interface ParkingActivity {
-  dropOffsToday: number;
-  pickupsToday: number;
-  pickupsPreparedToday: number;
-}
-
-interface AwaitingPayment {
-  count: number;
-  total: number;
-  oldestDays: number;
-}
 
 interface NeedsAttention {
   unassignedJobs: number;
   quoteRequests: number;
   pendingEstimates: number;
-  readyDvis: number;
   parkingLeads: number;
-  agedParts: number;
+  awaitingPayments: number;
+  parkingSpecials: number;
 }
 
 interface ActionCenterProps {
-  today: string;
   tasks: Task[];
-  parking: ParkingActivity;
-  awaitingPayment: AwaitingPayment;
   needsAttention: NeedsAttention;
 }
 
 export function ActionCenter({
-  today,
   tasks,
-  parking,
-  awaitingPayment,
   needsAttention,
 }: ActionCenterProps) {
   const attentionTotal =
     needsAttention.unassignedJobs +
     needsAttention.quoteRequests +
     needsAttention.pendingEstimates +
-    needsAttention.readyDvis +
     needsAttention.parkingLeads +
-    needsAttention.agedParts;
+    needsAttention.awaitingPayments +
+    needsAttention.parkingSpecials;
   const totalActions = tasks.length + attentionTotal;
 
   return (
@@ -89,15 +69,10 @@ export function ActionCenter({
         </div>
       </div>
 
-      {/* Alert cards in a 2-col sub-grid on the left; Glance fixed-width on the right */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <NeedsAttentionCards attention={needsAttention} />
-        </div>
-        <GlanceCard today={today} parking={parking} awaitingPayment={awaitingPayment} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <NeedsAttentionCards attention={needsAttention} />
       </div>
 
-      {/* Tasks — full width below */}
       <div className="mt-3">
         <TasksCard tasks={tasks} />
       </div>
@@ -147,15 +122,6 @@ function NeedsAttentionCards({ attention }: { attention: NeedsAttention }) {
       tone: "indigo",
     },
     {
-      key: "readyDvis",
-      count: attention.readyDvis,
-      label: "DVIs Ready",
-      descriptor: "Send to customer",
-      href: "/inbox?tab=dvi",
-      icon: ClipboardCheck,
-      tone: "violet",
-    },
-    {
       key: "parkingLeads",
       count: attention.parkingLeads,
       label: "Parking Leads",
@@ -165,13 +131,22 @@ function NeedsAttentionCards({ attention }: { attention: NeedsAttention }) {
       tone: "emerald",
     },
     {
-      key: "agedParts",
-      count: attention.agedParts,
-      label: "Aged Parts",
-      descriptor: "Waiting > 3 days",
-      href: "/inbox?tab=parts",
-      icon: Package,
+      key: "awaitingPayments",
+      count: attention.awaitingPayments,
+      label: "Awaiting Payment",
+      descriptor: "Complete jobs not yet paid",
+      href: "/inbox?tab=payments",
+      icon: DollarSign,
       tone: "red",
+    },
+    {
+      key: "parkingSpecials",
+      count: attention.parkingSpecials,
+      label: "Specials Pending",
+      descriptor: "Parked, no specials text sent",
+      href: "/inbox?tab=parking",
+      icon: Gift,
+      tone: "violet",
     },
   ];
 
@@ -193,14 +168,14 @@ function AlertCard({ spec }: { spec: AlertSpec }) {
     <Link
       href={spec.href}
       className={cn(
-        "group relative flex h-full items-center gap-3 rounded-md border px-4 py-3.5 shadow-card transition-colors",
+        "group relative flex h-full items-center gap-3 rounded-md border px-3 py-2.5 shadow-card transition-colors",
         tone.card
       )}
     >
-      <span aria-hidden className={cn("absolute left-0 top-3 bottom-3 w-[3px] rounded-r", tone.bar)} />
+      <span aria-hidden className={cn("absolute left-0 top-2 bottom-2 w-[3px] rounded-r", tone.bar)} />
       <span
         className={cn(
-          "w-9 h-9 rounded-md grid place-items-center border flex-none",
+          "w-8 h-8 rounded-md grid place-items-center border flex-none",
           tone.tile
         )}
       >
@@ -208,14 +183,14 @@ function AlertCard({ spec }: { spec: AlertSpec }) {
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
-          <span className={cn("font-mono tabular-nums text-xl font-bold leading-none", tone.count)}>
+          <span className={cn("font-mono tabular-nums text-lg font-bold leading-none", tone.count)}>
             {spec.count}
           </span>
           <span className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
             {spec.label}
           </span>
         </div>
-        <p className="mt-1 text-xs text-stone-600 dark:text-stone-400 truncate">{spec.descriptor}</p>
+        <p className="mt-0.5 text-[11px] text-stone-600 dark:text-stone-400 truncate">{spec.descriptor}</p>
       </div>
       <ChevronRight className="h-4 w-4 text-stone-400 dark:text-stone-500 group-hover:text-stone-700 dark:group-hover:text-stone-300 transition-colors flex-none" />
     </Link>
@@ -379,123 +354,3 @@ function TaskRow({ task }: { task: Task }) {
   );
 }
 
-// ─── Glance — Parking + Awaiting Payment ───────────────────────
-
-function GlanceCard({
-  today,
-  parking,
-  awaitingPayment,
-}: {
-  today: string;
-  parking: ParkingActivity;
-  awaitingPayment: AwaitingPayment;
-}) {
-  return (
-    <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden flex flex-col">
-      <ParkingBlock today={today} parking={parking} />
-      <div className="border-t border-stone-200 dark:border-stone-800" />
-      <AwaitingPaymentBlock awaitingPayment={awaitingPayment} />
-    </div>
-  );
-}
-
-function CalendarTile({ today }: { today: string }) {
-  // T12:00:00 anchor avoids UTC midnight rolling back to yesterday.
-  const date = new Date(today + "T12:00:00");
-  const weekday = date.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
-  const day = date.getDate();
-  return (
-    <div
-      aria-hidden
-      className="flex flex-col items-stretch w-9 rounded-md border border-blue-200 dark:border-blue-900 overflow-hidden flex-none"
-    >
-      <span className="text-center text-[8px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 leading-none py-0.5">
-        {weekday}
-      </span>
-      <span className="text-center text-sm font-bold tabular-nums text-stone-900 dark:text-stone-50 bg-card dark:bg-stone-900 leading-none py-1">
-        {day}
-      </span>
-    </div>
-  );
-}
-
-function ParkingBlock({ today, parking }: { today: string; parking: ParkingActivity }) {
-  const empty = parking.dropOffsToday === 0 && parking.pickupsToday === 0;
-  return (
-    <Link
-      href="/parking"
-      className="group block flex-1 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
-    >
-      <div className="flex items-center justify-between gap-2.5 mb-2.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors">
-          Parking · Today
-        </span>
-        <CalendarTile today={today} />
-      </div>
-      {empty ? (
-        <p className="text-sm text-stone-400 dark:text-stone-500">No activity today</p>
-      ) : (
-        <div className="flex items-stretch gap-x-5">
-          <div className="flex flex-col">
-            <span className="font-mono tabular-nums text-2xl font-bold text-stone-900 dark:text-stone-50 leading-none">
-              {parking.dropOffsToday}
-            </span>
-            <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-              Drop-offs
-            </span>
-          </div>
-          <span aria-hidden className="self-stretch w-px bg-stone-300 dark:bg-stone-700" />
-          <div className="flex flex-col">
-            <span className="font-mono tabular-nums text-2xl font-bold text-stone-900 dark:text-stone-50 leading-none">
-              {parking.pickupsToday}
-            </span>
-            <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-              Pickups
-            </span>
-            {parking.pickupsToday > 0 && (
-              <span className="mt-1 font-mono tabular-nums text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                {parking.pickupsPreparedToday}/{parking.pickupsToday} prepared
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-    </Link>
-  );
-}
-
-function AwaitingPaymentBlock({
-  awaitingPayment,
-}: {
-  awaitingPayment: AwaitingPayment;
-}) {
-  const empty = awaitingPayment.count === 0;
-  return (
-    <Link
-      href="/jobs?status=complete&payment_status=unpaid"
-      className="group block flex-1 px-4 py-3 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="w-6 h-6 rounded-md grid place-items-center border bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900 flex-none">
-          <DollarSign className="h-3.5 w-3.5" />
-        </span>
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400 group-hover:text-stone-900 dark:group-hover:text-stone-100 transition-colors">
-          Awaiting Payment
-        </span>
-      </div>
-      {empty ? (
-        <p className="text-sm text-stone-400 dark:text-stone-500">All caught up</p>
-      ) : (
-        <div>
-          <p className="font-mono tabular-nums text-2xl font-bold text-red-700 dark:text-red-400">
-            {formatCurrencyWhole(awaitingPayment.total)}
-          </p>
-          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-            {awaitingPayment.count} job{awaitingPayment.count === 1 ? "" : "s"}
-            {awaitingPayment.oldestDays > 0 && ` · oldest ${awaitingPayment.oldestDays}d`}
-          </p>
-        </div>
-      )}
-    </Link>
-  );
-}

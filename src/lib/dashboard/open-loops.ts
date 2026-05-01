@@ -1,13 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { Bell, ClipboardCheck, DollarSign, FileText, Package } from "lucide-react";
+import { Bell, DollarSign, FileText } from "lucide-react";
 import { daysBetween } from "@/lib/utils";
 
 export type OpenLoopCategory =
   | "payment_due"
   | "estimate"
-  | "dvi"
-  | "follow_up"
-  | "parts";
+  | "follow_up";
 
 export interface OpenLoop {
   id: string;
@@ -58,16 +56,6 @@ export const OPEN_LOOP_CATEGORIES: Record<OpenLoopCategory, CategoryConfig> = {
     activeChipClass:
       "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900",
   },
-  dvi: {
-    label: "DVIs",
-    shortLabel: "DVI",
-    icon: ClipboardCheck,
-    warnAt: 1,
-    overdueAt: 3,
-    dotClass: "bg-violet-500",
-    activeChipClass:
-      "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900",
-  },
   follow_up: {
     label: "Follow-ups",
     shortLabel: "Follow-up",
@@ -78,24 +66,12 @@ export const OPEN_LOOP_CATEGORIES: Record<OpenLoopCategory, CategoryConfig> = {
     activeChipClass:
       "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900",
   },
-  parts: {
-    label: "Parts",
-    shortLabel: "Parts",
-    icon: Package,
-    warnAt: 3,
-    overdueAt: 7,
-    dotClass: "bg-amber-500",
-    activeChipClass:
-      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900",
-  },
 };
 
 export const OPEN_LOOP_CATEGORY_ORDER = [
   "payment_due",
   "estimate",
-  "dvi",
   "follow_up",
-  "parts",
 ] as const satisfies readonly OpenLoopCategory[];
 
 type CustomerSummary = { id: string; first_name: string; last_name: string };
@@ -132,15 +108,6 @@ interface BuildOpenLoopsInput {
     services: string[];
     created_at: string;
   }>;
-  readyDvis: Array<{
-    id: string;
-    completed_at: string | null;
-    jobs: {
-      id: string;
-      customers: CustomerSummary | null;
-      vehicles: VehicleSummary | null;
-    } | null;
-  }>;
   parkingLeads: Array<{
     id: string;
     first_name: string | null;
@@ -150,13 +117,6 @@ interface BuildOpenLoopsInput {
     model: string | null;
     services_interested: string[] | null;
     drop_off_date: string | null;
-  }>;
-  agedWaitingForParts: Array<{
-    id: string;
-    title: string | null;
-    date_received: string | null;
-    customers: CustomerSummary | null;
-    vehicles: VehicleSummary | null;
   }>;
 }
 
@@ -266,25 +226,6 @@ export function buildOpenLoops(input: BuildOpenLoopsInput): OpenLoop[] {
     });
   }
 
-  for (const dvi of input.readyDvis) {
-    const ageDays = ageOrNull(dvi.completed_at, today);
-    if (ageDays === null) {
-      console.error(`[open-loops] dvi ${dvi.id} missing completed_at — skipping`);
-      continue;
-    }
-    const job = dvi.jobs;
-    loops.push({
-      id: `dvi-${dvi.id}`,
-      category: "dvi",
-      customerName: customerLabel(job?.customers ?? null),
-      customerId: job?.customers?.id ?? null,
-      vehicleLabel: shortVehicle(job?.vehicles ?? null),
-      summary: "DVI ready to send to customer",
-      ageDays,
-      href: job?.id ? `/jobs/${job.id}` : `/dvi`,
-    });
-  }
-
   for (const lead of input.parkingLeads) {
     const ageDays = ageOrNull(lead.drop_off_date, today);
     if (ageDays === null) {
@@ -309,27 +250,6 @@ export function buildOpenLoops(input: BuildOpenLoopsInput): OpenLoop[] {
     });
   }
 
-  // Parts: jobs in waiting_for_parts >= threshold days. date_received is a
-  // proxy for "time spent in waiting_for_parts" until status_changed_at is
-  // tracked — surfaces stale parts orders without hiding misclassified ones.
-  for (const job of input.agedWaitingForParts) {
-    const ageDays = ageOrNull(job.date_received, today);
-    if (ageDays === null) {
-      console.error(`[open-loops] parts ${job.id} missing date_received — skipping`);
-      continue;
-    }
-    loops.push({
-      id: `parts-${job.id}`,
-      category: "parts",
-      customerName: customerLabel(job.customers),
-      customerId: job.customers?.id ?? null,
-      vehicleLabel: shortVehicle(job.vehicles),
-      summary: `Waiting on parts${job.title ? ` — ${job.title}` : ""}`,
-      ageDays,
-      href: `/jobs/${job.id}`,
-    });
-  }
-
   // Sort by aging severity: overdue first, then aging, then fresh; within each
   // tier, oldest first.
   return loops.sort((a, b) => {
@@ -348,9 +268,7 @@ export function countByCategory(loops: OpenLoop[]): Record<OpenLoopCategory, num
   const counts: Record<OpenLoopCategory, number> = {
     payment_due: 0,
     estimate: 0,
-    dvi: 0,
     follow_up: 0,
-    parts: 0,
   };
   for (const loop of loops) counts[loop.category]++;
   return counts;

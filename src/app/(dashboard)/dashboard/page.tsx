@@ -8,14 +8,12 @@ import {
   Calendar,
   TrendingUp,
   CalendarDays,
-  CalendarRange,
   ClipboardCheck,
-  CheckCircle2,
   LayoutGrid,
 } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC, MANAGED_PARKING_LOTS } from "@/lib/constants";
 import { formatCurrencyWhole } from "@/lib/utils/format";
-import { todayET, daysBetween, nowET } from "@/lib/utils";
+import { todayET, nowET } from "@/lib/utils";
 import { sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { hasPendingService } from "@/lib/utils/parking";
@@ -23,7 +21,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { KpiCompactCard } from "@/components/dashboard/kpi-compact-card";
 import { ActionCenter } from "@/components/dashboard/action-center";
-import { SectionHeader } from "@/components/dashboard/section-header";
+import { ParkingTodayCard } from "@/components/dashboard/parking-today-card";
 import { ShopFloorColumn } from "@/components/dashboard/shop-floor-column";
 import { buildOpenLoops } from "@/lib/dashboard/open-loops";
 import { getOpenTasks } from "@/lib/actions/tasks";
@@ -31,8 +29,6 @@ import { getOpenTasks } from "@/lib/actions/tasks";
 export const metadata = {
   title: "Dashboard | ShopPilot",
 };
-
-const PARTS_AGED_THRESHOLD_DAYS = 3;
 
 async function getDashboardData() {
   const supabase = await createClient();
@@ -51,22 +47,15 @@ async function getDashboardData() {
   const yearStart = `${nowET().getFullYear()}-01-01`;
   const inspectionRangeStart = [yearStart, lastWeekStart, lastMonthStart, monthStart].sort()[0];
 
-  // Using date_received as a proxy for "time spent in waiting_for_parts"
-  // until status_changed_at is tracked. T12:00:00 anchor avoids DST-edge drift.
-  const partsAgedCutoff = new Date(today + "T12:00:00");
-  partsAgedCutoff.setDate(partsAgedCutoff.getDate() - PARTS_AGED_THRESHOLD_DAYS);
-  const partsAgedCutoffDate = partsAgedCutoff.toISOString().split("T")[0];
-
   const [
     activeJobsResult,
     inspectionRangeResult,
     newQuoteRequestsResult,
     unpaidJobsResult,
     pendingEstimatesResult,
-    readyDvisResult,
     parkingLeadsResult,
     parkingTodayResult,
-    agedWaitingForPartsResult,
+    parkingSpecialsResult,
     manualIncomeRangeResult,
     completedJobsRangeResult,
   ] = await Promise.all([
@@ -105,13 +94,6 @@ async function getDashboardData() {
       .eq("status", "sent")
       .order("sent_at", { ascending: true }),
     supabase
-      .from("dvi_inspections")
-      .select(
-        "id, completed_at, jobs(id, customers(id, first_name, last_name), vehicles(year, make, model))"
-      )
-      .eq("status", "completed")
-      .order("completed_at", { ascending: true }),
-    supabase
       .from("parking_reservations")
       .select(
         "id, first_name, last_name, customer_id, make, model, services_interested, services_completed, drop_off_date"
@@ -124,13 +106,11 @@ async function getDashboardData() {
       .or(`drop_off_date.eq.${today},pick_up_date.eq.${today}`)
       .in("lot", MANAGED_PARKING_LOTS),
     supabase
-      .from("jobs")
-      .select(
-        "id, title, date_received, customers(id, first_name, last_name), vehicles(year, make, model)"
-      )
-      .eq("status", "waiting_for_parts")
-      .lte("date_received", partsAgedCutoffDate)
-      .order("date_received", { ascending: true }),
+      .from("parking_reservations")
+      .select("id")
+      .eq("status", "checked_in")
+      .eq("lot", "Broadway Motors")
+      .is("specials_sent_at", null),
     supabase
       .from("manual_income")
       .select("date, amount, shop_keep_pct")
@@ -154,14 +134,12 @@ async function getDashboardData() {
     throw new Error(`Failed to load unpaid jobs: ${unpaidJobsResult.error.message}`);
   if (pendingEstimatesResult.error)
     throw new Error(`Failed to load pending estimates: ${pendingEstimatesResult.error.message}`);
-  if (readyDvisResult.error)
-    throw new Error(`Failed to load ready DVIs: ${readyDvisResult.error.message}`);
   if (parkingLeadsResult.error)
     throw new Error(`Failed to load parking leads: ${parkingLeadsResult.error.message}`);
   if (parkingTodayResult.error)
     throw new Error(`Failed to load parking activity: ${parkingTodayResult.error.message}`);
-  if (agedWaitingForPartsResult.error)
-    throw new Error(`Failed to load aged waiting-for-parts jobs: ${agedWaitingForPartsResult.error.message}`);
+  if (parkingSpecialsResult.error)
+    throw new Error(`Failed to load parking specials: ${parkingSpecialsResult.error.message}`);
   if (manualIncomeRangeResult.error)
     throw new Error(`Failed to load manual income: ${manualIncomeRangeResult.error.message}`);
   if (completedJobsRangeResult.error)
@@ -177,9 +155,6 @@ async function getDashboardData() {
   );
   const lastWeekCompleted = completedJobs.filter(
     (j) => j.date_finished !== null && j.date_finished >= lastWeekStart && j.date_finished <= lastWeekEnd
-  );
-  const yearCompleted = completedJobs.filter(
-    (j) => j.date_finished !== null && j.date_finished >= yearStart && j.date_finished <= monthEnd
   );
 
   const activeJobsWithTotals = activeJobs.map((j) => ({
@@ -215,7 +190,6 @@ async function getDashboardData() {
   const inspMonth = inspectionRows.filter((r) => r.date >= monthStart && r.date <= monthEnd);
   const inspLastWeek = inspectionRows.filter((r) => r.date >= lastWeekStart && r.date <= lastWeekEnd);
   const inspLastMonth = inspectionRows.filter((r) => r.date >= lastMonthStart && r.date <= lastMonthEnd);
-  const inspYear = inspectionRows.filter((r) => r.date >= yearStart && r.date <= monthEnd);
 
   const manualIncomeRows = manualIncomeRangeResult.data || [];
   const manualIncomeToday = manualIncomeRows.filter((e) => e.date === today);
@@ -226,9 +200,6 @@ async function getDashboardData() {
   );
   const manualIncomeLastMonth = manualIncomeRows.filter(
     (e) => e.date >= lastMonthStart && e.date <= lastMonthEnd
-  );
-  const manualIncomeYear = manualIncomeRows.filter(
-    (e) => e.date >= yearStart && e.date <= monthEnd
   );
 
   const todayCompleted = completedJobs.filter((j) => j.date_finished === today);
@@ -241,11 +212,6 @@ async function getDashboardData() {
     total:
       (j.job_line_items as { total: number }[])?.reduce((s, li) => s + (li.total || 0), 0) || 0,
   }));
-  const totalOutstanding = unpaidJobs.reduce((s, j) => s + j.total, 0);
-  const oldestUnpaidDays = unpaidJobs[0]?.date_finished
-    ? daysBetween(unpaidJobs[0].date_finished, today)
-    : 0;
-
   const pendingEstimates = (pendingEstimatesResult.data || []).map((e) => ({
     ...e,
     total:
@@ -277,9 +243,7 @@ async function getDashboardData() {
     unpaidJobs,
     pendingEstimates,
     newQuoteRequests: newQuoteRequestsResult.data || [],
-    readyDvis: readyDvisResult.data || [],
     parkingLeads: openParkingLeads,
-    agedWaitingForParts: agedWaitingForPartsResult.data || [],
   });
 
   return {
@@ -298,8 +262,6 @@ async function getDashboardData() {
         sumJobRevenue(lastMonthCompleted) +
         sumInspectionRev(inspLastMonth) +
         sumManualIncome(manualIncomeLastMonth),
-      yearRevenue:
-        sumJobRevenue(yearCompleted) + sumInspectionRev(inspYear) + sumManualIncome(manualIncomeYear),
       unpaidJobCount: unpaidJobs.length,
     },
     ops: {
@@ -315,14 +277,13 @@ async function getDashboardData() {
     },
     shopFloor: { notStarted, waitingForParts, inProgress },
     parking: { dropOffsToday, pickupsToday, pickupsPreparedToday },
-    awaitingPayment: { count: unpaidJobs.length, total: totalOutstanding, oldestDays: oldestUnpaidDays },
     needsAttention: {
       unassignedJobs: unassignedJobsCount,
       quoteRequests: (newQuoteRequestsResult.data ?? []).length,
       pendingEstimates: (pendingEstimatesResult.data ?? []).length,
-      readyDvis: (readyDvisResult.data ?? []).length,
       parkingLeads: openParkingLeads.length,
-      agedParts: (agedWaitingForPartsResult.data ?? []).length,
+      awaitingPayments: unpaidJobs.length,
+      parkingSpecials: (parkingSpecialsResult.data ?? []).length,
     },
     openLoops,
   };
@@ -351,11 +312,10 @@ export default async function DashboardPage() {
   const firstName = user?.name?.split(" ")[0] ?? null;
   const greeting = firstName ? `${getGreeting()}, ${firstName}` : getGreeting();
 
-  const { stats, ops, shopFloor, parking, awaitingPayment, needsAttention, openLoops } = data;
+  const { stats, ops, shopFloor, parking, needsAttention, openLoops } = data;
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
   const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);
 
-  const totalJobs = shopFloor.notStarted.length + shopFloor.waitingForParts.length + shopFloor.inProgress.length;
   const todayLabel = new Date(today + "T12:00:00").toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -387,99 +347,85 @@ export default async function DashboardPage() {
         </>
       }
     >
-      <div className="space-y-8">
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <KpiCard
-              title="Today's Revenue"
-              value={formatCurrencyWhole(stats.todayRevenue)}
-              icon={Calendar}
-              tone="green"
-              subtitle={ops.jobsClosedToday > 0 ? `${ops.jobsClosedToday} closed today` : "no jobs closed yet"}
-            />
-            <KpiCard
-              title="This Week"
-              value={formatCurrencyWhole(stats.weeklyRevenue)}
-              icon={TrendingUp}
-              tone="blue"
-              changePercent={weekChange}
-              changeLabel="vs last week"
-            />
-            <KpiCard
-              title="This Month"
-              value={formatCurrencyWhole(stats.monthlyRevenue)}
-              icon={CalendarDays}
-              tone="indigo"
-              changePercent={monthChange}
-              changeLabel="vs last month"
-            />
-            <KpiCard
-              title="This Year"
-              value={formatCurrencyWhole(stats.yearRevenue)}
-              icon={CalendarRange}
-              tone="violet"
-            />
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+        <div className="space-y-6 min-w-0">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <KpiCard
+                title="Today's Revenue"
+                value={formatCurrencyWhole(stats.todayRevenue)}
+                icon={Calendar}
+                tone="green"
+                subtitle={ops.jobsClosedToday > 0 ? `${ops.jobsClosedToday} closed today` : "no jobs closed yet"}
+              />
+              <KpiCard
+                title="This Week"
+                value={formatCurrencyWhole(stats.weeklyRevenue)}
+                icon={TrendingUp}
+                tone="blue"
+                changePercent={weekChange}
+                changeLabel="vs last week"
+              />
+              <KpiCard
+                title="This Month"
+                value={formatCurrencyWhole(stats.monthlyRevenue)}
+                icon={CalendarDays}
+                tone="indigo"
+                changePercent={monthChange}
+                changeLabel="vs last month"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <KpiCompactCard
+                label="State Inspections"
+                icon={ClipboardCheck}
+                tone="stone"
+                today={ops.stateToday}
+                todaySub={formatCurrencyWhole(ops.stateToday * INSPECTION_RATE_STATE)}
+                week={ops.stateWeek}
+                weekSub={formatCurrencyWhole(ops.stateWeek * INSPECTION_RATE_STATE)}
+                month={ops.stateMonth}
+                monthSub={formatCurrencyWhole(ops.stateMonth * INSPECTION_RATE_STATE)}
+              />
+              <KpiCompactCard
+                label="TNC Inspections"
+                icon={ClipboardCheck}
+                tone="stone"
+                today={ops.tncToday}
+                todaySub={formatCurrencyWhole(ops.tncToday * INSPECTION_RATE_TNC)}
+                week={ops.tncWeek}
+                weekSub={formatCurrencyWhole(ops.tncWeek * INSPECTION_RATE_TNC)}
+                month={ops.tncMonth}
+                monthSub={formatCurrencyWhole(ops.tncMonth * INSPECTION_RATE_TNC)}
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <KpiCompactCard
-              label="State Inspections"
-              icon={ClipboardCheck}
-              tone="stone"
-              today={ops.stateToday}
-              todaySub={formatCurrencyWhole(ops.stateToday * INSPECTION_RATE_STATE)}
-              week={ops.stateWeek}
-              weekSub={formatCurrencyWhole(ops.stateWeek * INSPECTION_RATE_STATE)}
-              month={ops.stateMonth}
-              monthSub={formatCurrencyWhole(ops.stateMonth * INSPECTION_RATE_STATE)}
-            />
-            <KpiCompactCard
-              label="TNC Inspections"
-              icon={ClipboardCheck}
-              tone="stone"
-              today={ops.tncToday}
-              todaySub={formatCurrencyWhole(ops.tncToday * INSPECTION_RATE_TNC)}
-              week={ops.tncWeek}
-              weekSub={formatCurrencyWhole(ops.tncWeek * INSPECTION_RATE_TNC)}
-              month={ops.tncMonth}
-              monthSub={formatCurrencyWhole(ops.tncMonth * INSPECTION_RATE_TNC)}
-            />
-            <KpiCompactCard
-              label="Jobs Closed"
-              icon={CheckCircle2}
-              tone="stone"
-              today={ops.jobsClosedToday}
-              week={ops.jobsClosedWeek}
-              month={ops.jobsClosedMonth}
-            />
-          </div>
-        </div>
-
-        <div className="border-t border-stone-200 dark:border-stone-800 pt-7">
           <ActionCenter
-            today={today}
             tasks={tasks}
-            parking={parking}
-            awaitingPayment={awaitingPayment}
             needsAttention={needsAttention}
           />
         </div>
 
-        <section className="border-t border-stone-200 dark:border-stone-800 pt-7">
-          <SectionHeader
-            icon={LayoutGrid}
-            iconTone="stone"
-            title="Shop Floor"
-            count={totalJobs}
-            actionLabel="View all"
-            actionHref="/jobs"
-          />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <aside className="space-y-3 min-w-0">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
+              <LayoutGrid className="h-4 w-4" />
+            </span>
+            <h2 className="text-base font-bold tracking-tight text-stone-900 dark:text-stone-50">
+              Today&apos;s View
+            </h2>
+          </div>
+
+          <ParkingTodayCard today={today} parking={parking} />
+
+          <div className="space-y-2">
             <ShopFloorColumn status="not_started" jobs={shopFloor.notStarted} today={today} />
             <ShopFloorColumn status="waiting_for_parts" jobs={shopFloor.waitingForParts} today={today} />
             <ShopFloorColumn status="in_progress" jobs={shopFloor.inProgress} today={today} />
           </div>
-        </section>
+        </aside>
       </div>
     </DashboardShell>
   );

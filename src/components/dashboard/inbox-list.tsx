@@ -7,10 +7,8 @@ import {
   UserX,
   MessageSquareQuote,
   FileText,
-  ClipboardCheck,
   MapPin,
   Megaphone,
-  Package,
   DollarSign,
   CheckCircle2,
   type LucideIcon,
@@ -29,9 +27,7 @@ import { TONE_CLASSES, type Tone } from "@/lib/ui/alert-tone";
 import type {
   InboxData,
   InboxUnassignedJob,
-  InboxAgedPart,
   InboxUnpaidJob,
-  InboxDvi,
   InboxEstimate,
   InboxQuote,
   InboxParkingLead,
@@ -51,9 +47,7 @@ const TABS: readonly TabSpec[] = [
   { key: "unassigned", label: "Unassigned", icon: UserX, tone: "amber" },
   { key: "quotes", label: "Quotes", icon: MessageSquareQuote, tone: "blue" },
   { key: "estimates", label: "Estimates", icon: FileText, tone: "indigo" },
-  { key: "dvi", label: "DVIs", icon: ClipboardCheck, tone: "violet" },
   { key: "parking", label: "Parking", icon: MapPin, tone: "emerald" },
-  { key: "parts", label: "Parts", icon: Package, tone: "red" },
   { key: "payments", label: "Payments", icon: DollarSign, tone: "red" },
 ];
 
@@ -61,9 +55,7 @@ type TabKey =
   | "unassigned"
   | "quotes"
   | "estimates"
-  | "dvi"
   | "parking"
-  | "parts"
   | "payments";
 
 function isTabKey(value: string): value is TabKey {
@@ -78,12 +70,8 @@ function tabCount(data: InboxData, tab: TabKey): number {
       return data.counts.quotes;
     case "estimates":
       return data.counts.estimates;
-    case "dvi":
-      return data.counts.dvi;
     case "parking":
       return data.counts.parkingLeads + data.counts.parkingSpecials;
-    case "parts":
-      return data.counts.parts;
     case "payments":
       return data.counts.unpaid;
   }
@@ -250,48 +238,6 @@ function EstimateRow({ estimate, today }: { estimate: InboxEstimate; today: stri
   );
 }
 
-function DviReadyRow({ dvi, today }: { dvi: InboxDvi; today: string }) {
-  const job = dvi.jobs;
-  const customer = job?.customers || dvi.customers;
-  const vehicle = job?.vehicles || dvi.vehicles;
-  const days = daysBetween(dvi.completed_at?.split("T")[0] ?? null, today);
-  const href = job ? `/jobs/${job.id}` : `/dvi/inspect/${dvi.id}`;
-  return (
-    <ClickableRow
-      href={href}
-      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
-    >
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium truncate text-stone-900 dark:text-stone-50">
-          {customer ? (
-            <CustomerLink customerId={customer.id} stopPropagation>
-              {formatCustomerName(customer)}
-            </CustomerLink>
-          ) : (
-            "Unknown"
-          )}
-        </p>
-        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-          {vehicle ? formatVehicle(vehicle) : job?.title || "DVI"}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        {dvi.attention > 0 && (
-          <span className="inline-flex items-center font-mono tabular-nums px-1.5 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400">
-            {dvi.attention} attn
-          </span>
-        )}
-        {dvi.monitor > 0 && (
-          <span className="inline-flex items-center font-mono tabular-nums px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400">
-            {dvi.monitor} mon
-          </span>
-        )}
-        <DaysBadge days={days} warnAt={1} />
-      </div>
-    </ClickableRow>
-  );
-}
-
 function ParkingLeadRow({ lead }: { lead: InboxParkingLead }) {
   const completed = new Set(lead.services_completed || []);
   const pending = lead.services_interested.filter((s) => !completed.has(s));
@@ -347,35 +293,6 @@ function ParkingSpecialsRow({ reservation }: { reservation: InboxParkingSpecials
       <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400">
         Specials not sent
       </span>
-    </ClickableRow>
-  );
-}
-
-function AgedPartsRow({ job, today }: { job: InboxAgedPart; today: string }) {
-  const days = daysBetween(job.date_received, today);
-  const customer = job.customers;
-  const vehicle = job.vehicles;
-  return (
-    <ClickableRow
-      href={`/jobs/${job.id}`}
-      className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
-    >
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium truncate text-stone-900 dark:text-stone-50">
-          {customer ? (
-            <CustomerLink customerId={customer.id} stopPropagation>
-              {formatCustomerName(customer)}
-            </CustomerLink>
-          ) : (
-            "Unknown"
-          )}
-        </p>
-        <p className="text-xs text-stone-500 dark:text-stone-400 truncate">
-          {vehicle ? formatVehicle(vehicle) : ""}
-          {job.title ? ` · ${job.title}` : ""}
-        </p>
-      </div>
-      <DaysBadge days={days} />
     </ClickableRow>
   );
 }
@@ -526,19 +443,6 @@ export function InboxList({ data, activeTab }: { data: InboxData; activeTab: str
             </Section>
           )}
 
-          {showSection("dvi") && (
-            <Section
-              title="DVIs ready to send"
-              icon={ClipboardCheck}
-              tone="violet"
-              count={data.dvisReady.length}
-            >
-              {data.dvisReady.map((dvi) => (
-                <DviReadyRow key={dvi.id} dvi={dvi} today={data.today} />
-              ))}
-            </Section>
-          )}
-
           {showSection("parking") && (
             <>
               <Section
@@ -562,14 +466,6 @@ export function InboxList({ data, activeTab }: { data: InboxData; activeTab: str
                 ))}
               </Section>
             </>
-          )}
-
-          {showSection("parts") && (
-            <Section title="Aged parts" icon={Package} tone="red" count={data.agedParts.length}>
-              {data.agedParts.map((j) => (
-                <AgedPartsRow key={j.id} job={j} today={data.today} />
-              ))}
-            </Section>
           )}
 
           {showSection("payments") && (
