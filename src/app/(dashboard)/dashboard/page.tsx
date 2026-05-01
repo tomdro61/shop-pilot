@@ -5,9 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Plus,
   Wallet,
-  Calendar,
-  TrendingUp,
-  CalendarDays,
   ClipboardCheck,
   LayoutGrid,
 } from "lucide-react";
@@ -350,27 +347,21 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
         <div className="space-y-6 min-w-0">
           <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <KpiCard
                 title="Today's Revenue"
                 value={formatCurrencyWhole(stats.todayRevenue)}
-                icon={Calendar}
-                tone="green"
                 subtitle={ops.jobsClosedToday > 0 ? `${ops.jobsClosedToday} closed today` : "no jobs closed yet"}
               />
               <KpiCard
                 title="This Week"
                 value={formatCurrencyWhole(stats.weeklyRevenue)}
-                icon={TrendingUp}
-                tone="blue"
                 changePercent={weekChange}
                 changeLabel="vs last week"
               />
               <KpiCard
                 title="This Month"
                 value={formatCurrencyWhole(stats.monthlyRevenue)}
-                icon={CalendarDays}
-                tone="indigo"
                 changePercent={monthChange}
                 changeLabel="vs last month"
               />

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import type { JobStatus } from "@/types";
 
 const STATUS_TONE: Record<JobStatus, Accent> = {
-  not_started: "stone",
+  not_started: "red",
   waiting_for_parts: "amber",
   in_progress: "blue",
   complete: "green",
