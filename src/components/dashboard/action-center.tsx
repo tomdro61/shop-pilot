@@ -175,7 +175,7 @@ function AlertCard({ spec }: { spec: AlertSpec }) {
       <span aria-hidden className={cn("absolute left-0 top-2 bottom-2 w-[3px] rounded-r", tone.bar)} />
       <span
         className={cn(
-          "w-8 h-8 rounded-md grid place-items-center border flex-none",
+          "w-8 h-8 rounded-md hidden sm:grid place-items-center border flex-none",
           tone.tile
         )}
       >
