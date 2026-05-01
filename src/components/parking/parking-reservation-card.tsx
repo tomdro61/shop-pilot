@@ -108,7 +108,7 @@ export function ParkingReservationCard({
           {(vehicleText || reservation.license_plate) && (
             <div className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${STATUS_PANEL[status]}`}>
               <Car className="h-3.5 w-3.5 shrink-0 text-stone-500 dark:text-stone-400" />
-              <span className="min-w-0 flex-1 text-xs text-stone-800 dark:text-stone-200 truncate">
+              <span className="min-w-0 flex-1 text-xs text-stone-800 dark:text-stone-200">
                 <span className="font-medium">{vehicleText || "Vehicle"}</span>
                 {reservation.color && (
                   <span className="text-stone-500 dark:text-stone-400 capitalize"> · {reservation.color}</span>
@@ -268,7 +268,7 @@ export function ParkingReservationCardCompact({
           {(vehicleText || reservation.license_plate) && (
             <div className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${VARIANT_PANEL[variant]}`}>
               <Car className="h-3.5 w-3.5 shrink-0 text-stone-500 dark:text-stone-400" />
-              <span className="min-w-0 flex-1 text-xs text-stone-800 dark:text-stone-200 truncate">
+              <span className="min-w-0 flex-1 text-xs text-stone-800 dark:text-stone-200">
                 <span className="font-medium">{vehicleText || "Vehicle"}</span>
                 {reservation.color && (
                   <span className="text-stone-500 dark:text-stone-400 capitalize"> · {reservation.color}</span>
