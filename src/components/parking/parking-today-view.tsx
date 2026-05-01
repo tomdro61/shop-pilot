@@ -54,7 +54,7 @@ function KPICard({
   );
 }
 
-type ReservationVariant = "arrival" | "pickup" | "pickup-tomorrow";
+type ReservationVariant = "arrival" | "pickup" | "pickup-tomorrow" | "parked";
 
 interface ReservationColumnProps {
   title: string;
@@ -183,6 +183,17 @@ export function ParkingTodayView({
           emptyMessage="No arrivals today"
         />
       </div>
+
+      {/* Currently Parked — full-width column below the 3-up grid */}
+      <ReservationColumn
+        title="Currently Parked"
+        tone="stone"
+        icon={Car}
+        reservations={data.currentlyParked}
+        lockBoxCodes={lockBoxCodes}
+        variant="parked"
+        emptyMessage="No vehicles currently parked"
+      />
     </div>
   );
 }

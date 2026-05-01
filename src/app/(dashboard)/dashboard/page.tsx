@@ -8,7 +8,7 @@ import {
   Calendar,
   TrendingUp,
   CalendarDays,
-  AlertCircle,
+  CalendarRange,
   ClipboardCheck,
   CheckCircle2,
   LayoutGrid,
@@ -48,7 +48,8 @@ async function getDashboardData() {
   const monthEnd = month.to;
   const lastMonthStart = month.priorFrom!;
   const lastMonthEnd = month.priorTo!;
-  const inspectionRangeStart = [lastWeekStart, lastMonthStart, monthStart].sort()[0];
+  const yearStart = `${nowET().getFullYear()}-01-01`;
+  const inspectionRangeStart = [yearStart, lastWeekStart, lastMonthStart, monthStart].sort()[0];
 
   // Using date_received as a proxy for "time spent in waiting_for_parts"
   // until status_changed_at is tracked. T12:00:00 anchor avoids DST-edge drift.
@@ -70,6 +71,7 @@ async function getDashboardData() {
     parkingTodayResult,
     agedWaitingForPartsResult,
     manualIncomeRangeResult,
+    yearCompletedResult,
   ] = await Promise.all([
     supabase
       .from("jobs")
@@ -155,6 +157,12 @@ async function getDashboardData() {
       .select("date, amount, shop_keep_pct")
       .gte("date", inspectionRangeStart)
       .lte("date", monthEnd),
+    supabase
+      .from("jobs")
+      .select("id, date_finished, job_line_items(total, category)")
+      .eq("status", "complete")
+      .gte("date_finished", yearStart)
+      .lte("date_finished", monthEnd),
   ]);
 
   if (activeJobsResult.error)
@@ -183,9 +191,12 @@ async function getDashboardData() {
     throw new Error(`Failed to load aged waiting-for-parts jobs: ${agedWaitingForPartsResult.error.message}`);
   if (manualIncomeRangeResult.error)
     throw new Error(`Failed to load manual income: ${manualIncomeRangeResult.error.message}`);
+  if (yearCompletedResult.error)
+    throw new Error(`Failed to load year-to-date completed jobs: ${yearCompletedResult.error.message}`);
 
   const activeJobs = activeJobsResult.data || [];
   const monthCompleted = monthCompletedResult.data || [];
+  const yearCompleted = yearCompletedResult.data || [];
 
   const activeJobsWithTotals = activeJobs.map((j) => ({
     ...j,
@@ -220,6 +231,7 @@ async function getDashboardData() {
   const inspMonth = inspectionRows.filter((r) => r.date >= monthStart && r.date <= monthEnd);
   const inspLastWeek = inspectionRows.filter((r) => r.date >= lastWeekStart && r.date <= lastWeekEnd);
   const inspLastMonth = inspectionRows.filter((r) => r.date >= lastMonthStart && r.date <= lastMonthEnd);
+  const inspYear = inspectionRows.filter((r) => r.date >= yearStart && r.date <= monthEnd);
 
   const manualIncomeRows = manualIncomeRangeResult.data || [];
   const manualIncomeToday = manualIncomeRows.filter((e) => e.date === today);
@@ -230,6 +242,9 @@ async function getDashboardData() {
   );
   const manualIncomeLastMonth = manualIncomeRows.filter(
     (e) => e.date >= lastMonthStart && e.date <= lastMonthEnd
+  );
+  const manualIncomeYear = manualIncomeRows.filter(
+    (e) => e.date >= yearStart && e.date <= monthEnd
   );
 
   const todayCompleted = monthCompleted.filter((j) => j.date_finished === today);
@@ -299,6 +314,8 @@ async function getDashboardData() {
         sumJobRevenue(lastMonthCompletedResult.data || []) +
         sumInspectionRev(inspLastMonth) +
         sumManualIncome(manualIncomeLastMonth),
+      yearRevenue:
+        sumJobRevenue(yearCompleted) + sumInspectionRev(inspYear) + sumManualIncome(manualIncomeYear),
       unpaidJobCount: unpaidJobs.length,
     },
     ops: {
@@ -367,12 +384,6 @@ export default async function DashboardPage() {
       statusLine={statusLineParts.length > 0 ? <span>{statusLineParts.join(" · ")}</span> : null}
       actions={
         <>
-          <Link href="/customers/new">
-            <Button variant="ghost" size="sm">
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              New Customer
-            </Button>
-          </Link>
           <Link href="/jobs/new">
             <Button size="sm">
               <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -418,15 +429,10 @@ export default async function DashboardPage() {
               changeLabel="vs last month"
             />
             <KpiCard
-              title="Outstanding A/R"
-              value={formatCurrencyWhole(awaitingPayment.total)}
-              icon={AlertCircle}
-              tone={awaitingPayment.count > 0 ? "amber" : "stone"}
-              subtitle={
-                awaitingPayment.count > 0
-                  ? `${awaitingPayment.count} unpaid · ${awaitingPayment.oldestDays}d oldest`
-                  : "all caught up"
-              }
+              title="This Year"
+              value={formatCurrencyWhole(stats.yearRevenue)}
+              icon={CalendarRange}
+              tone="violet"
             />
           </div>
 
