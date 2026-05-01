@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   LayoutGrid,
 } from "lucide-react";
-import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
+import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC, MANAGED_PARKING_LOTS } from "@/lib/constants";
 import { formatCurrencyWhole } from "@/lib/utils/format";
 import { todayET, daysBetween, nowET } from "@/lib/utils";
 import { sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
@@ -140,7 +140,8 @@ async function getDashboardData() {
     supabase
       .from("parking_reservations")
       .select("id, status, drop_off_date, pick_up_date, lock_box_number")
-      .or(`drop_off_date.eq.${today},pick_up_date.eq.${today}`),
+      .or(`drop_off_date.eq.${today},pick_up_date.eq.${today}`)
+      .in("lot", MANAGED_PARKING_LOTS),
     supabase
       .from("jobs")
       .select(
@@ -379,7 +380,10 @@ export default async function DashboardPage() {
             </Button>
           </Link>
           <Link href="/quick-pay">
-            <Button size="sm" variant="outline">
+            <Button
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+            >
               <Wallet className="mr-1.5 h-3.5 w-3.5" />
               Quick Pay
             </Button>

@@ -110,14 +110,25 @@ function NavItemLink({
       className={cn(
         "group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
         isActive
-          ? "bg-blue-600 dark:bg-stone-700 text-white font-semibold"
-          : "text-stone-400 hover:bg-sidebar-accent hover:text-stone-100"
+          ? "bg-white/[0.08] text-white font-semibold ring-1 ring-inset ring-white/10"
+          : "text-stone-400 hover:bg-white/[0.04] hover:text-stone-100"
       )}
     >
-      <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-white" : "text-stone-500")} />
+      {isActive && (
+        <span
+          aria-hidden
+          className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-white"
+        />
+      )}
+      <item.icon
+        className={cn(
+          "h-[18px] w-[18px] shrink-0",
+          isActive ? "text-white" : "text-stone-500"
+        )}
+      />
       {item.label}
       {badge != null && badge > 0 && (
-        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 dark:bg-stone-200 px-1.5 text-[10px] font-semibold text-white dark:text-stone-900">
+        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-stone-200 dark:bg-stone-200 px-1.5 text-[10px] font-semibold text-stone-900 dark:text-stone-900">
           {badge}
         </span>
       )}
