@@ -48,7 +48,7 @@ const SHOP_FLOOR_CONFIG: Record<ShopFloorStatus, StatusConfig> = {
   not_started: {
     label: "Not Started",
     icon: CircleDashed,
-    tone: "stone",
+    tone: "red",
     queryKey: "not_started",
   },
   waiting_for_parts: {

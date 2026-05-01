@@ -55,7 +55,7 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card p-4",
+        "bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card p-3 sm:p-4",
         !useIconVariant && accentColor && `border-l-4 ${accentBorderMap[accentColor]}`
       )}
     >
@@ -72,11 +72,11 @@ export function KpiCard({
         )}
         <p className={cn(SECTION_LABEL, "truncate")}>{title}</p>
       </div>
-      <p className="mt-2 font-mono tabular-nums text-2xl lg:text-[28px] font-bold tracking-tight text-stone-900 dark:text-stone-50 leading-none">
+      <p className="mt-2 font-mono tabular-nums text-lg sm:text-2xl lg:text-[28px] font-bold tracking-tight text-stone-900 dark:text-stone-50 leading-none">
         {value}
       </p>
       {(subtitle || (changePercent !== null && changeLabel)) && (
-        <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
+        <p className="mt-1.5 text-[10px] sm:text-xs text-stone-500 dark:text-stone-400">
           {subtitle ?? (
             <>
               {changePercent !== null && (
