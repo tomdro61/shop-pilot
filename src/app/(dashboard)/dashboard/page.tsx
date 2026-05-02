@@ -20,7 +20,6 @@ import { KpiCompactCard } from "@/components/dashboard/kpi-compact-card";
 import { ActionCenter } from "@/components/dashboard/action-center";
 import { ParkingTodayCard } from "@/components/dashboard/parking-today-card";
 import { ShopFloorColumn } from "@/components/dashboard/shop-floor-column";
-import { buildOpenLoops } from "@/lib/dashboard/open-loops";
 import { getOpenTasks } from "@/lib/actions/tasks";
 
 export const metadata = {
@@ -235,14 +234,6 @@ async function getDashboardData() {
 
   const openParkingLeads = (parkingLeadsResult.data ?? []).filter(hasPendingService);
 
-  const openLoops = buildOpenLoops({
-    today,
-    unpaidJobs,
-    pendingEstimates,
-    newQuoteRequests: newQuoteRequestsResult.data || [],
-    parkingLeads: openParkingLeads,
-  });
-
   return {
     stats: {
       todayRevenue:
@@ -282,7 +273,6 @@ async function getDashboardData() {
       awaitingPayments: unpaidJobs.length,
       parkingSpecials: (parkingSpecialsResult.data ?? []).length,
     },
-    openLoops,
   };
 }
 
@@ -309,7 +299,7 @@ export default async function DashboardPage() {
   const firstName = user?.name?.split(" ")[0] ?? null;
   const greeting = firstName ? `${getGreeting()}, ${firstName}` : getGreeting();
 
-  const { stats, ops, shopFloor, parking, needsAttention, openLoops } = data;
+  const { stats, ops, shopFloor, parking, needsAttention } = data;
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
   const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);
 
