@@ -601,14 +601,16 @@ export async function convertEstimateToJob(estimateId: string) {
     }
   }
 
-  // Link the estimate to the new job. If this fails the job exists with
-  // its line items, but the estimate keeps showing "Convert to Job".
-  // Don't auto-delete the orphan job — line items are real and the manager
-  // may have already started it; tell them to reconcile manually.
-  const { error: linkError } = await supabase
+  // Atomic link-back: scoping by `job_id IS NULL` makes this the race
+  // gate. Two concurrent Convert clicks both pass the earlier read-time
+  // check, both insert their own job, but only one UPDATE here actually
+  // matches the row — the other gets count=0 and we roll back its job.
+  // Without this, both clicks would silently produce two jobs.
+  const { error: linkError, count: linkCount } = await supabase
     .from("estimates")
-    .update({ job_id: job.id })
-    .eq("id", estimateId);
+    .update({ job_id: job.id }, { count: "exact" })
+    .eq("id", estimateId)
+    .is("job_id", null);
 
   if (linkError) {
     console.error(
@@ -625,6 +627,25 @@ export async function convertEstimateToJob(estimateId: string) {
     return {
       error: `The new job (${roLabel}) was created but couldn't be linked back to this estimate. Find it on the Shop Floor and link or delete it manually.`,
     };
+  }
+
+  if (linkCount === 0) {
+    // A concurrent Convert click already won the race. Roll back the job
+    // we just created so we don't leave an orphan duplicate.
+    const { error: rollbackError } = await supabase.from("jobs").delete().eq("id", job.id);
+    if (rollbackError) {
+      console.error(
+        "[convertEstimateToJob] race-loser rollback failed — orphan duplicate job",
+        { rollbackError, jobId: job.id, estimateId }
+      );
+      const roLabel = job.ro_number
+        ? `RO-${String(job.ro_number).padStart(4, "0")}`
+        : "a duplicate job";
+      return {
+        error: `This estimate was already being converted in another tab. We tried to discard the duplicate (${roLabel}) but the cleanup failed — find and delete it manually.`,
+      };
+    }
+    return { error: "This estimate was already converted (likely from another tab). Refresh to see the linked job." };
   }
 
   revalidatePath(`/estimates/${estimateId}`);
