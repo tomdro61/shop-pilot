@@ -727,14 +727,20 @@ export async function updateEstimateLineItem(
   if (!estimate) return { error: "Estimate not found" };
   if (estimate.status !== "draft") return { error: "Can only edit items on draft estimates" };
 
+  // Scope by estimate_id too — without it, a caller could pass a draft
+  // estimate_id alongside a line-item id from a *different* (sent/approved)
+  // estimate. The status guard would pass on the wrong estimate while the
+  // update lands on the protected one.
   const { data, error } = await supabase
     .from("estimate_line_items")
     .update(prepareEstimateLineItemData(parsed.data))
     .eq("id", id)
+    .eq("estimate_id", parsed.data.estimate_id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!data) return { error: "Line item not found on this estimate" };
 
   revalidatePath(`/estimates/${parsed.data.estimate_id}`);
   return { data };
@@ -757,12 +763,15 @@ export async function deleteEstimateLineItem(id: string, estimateId: string) {
   if (!estimate) return { error: "Estimate not found" };
   if (estimate.status !== "draft") return { error: "Can only delete items from draft estimates" };
 
-  const { error } = await supabase
+  // Scope by estimate_id too — see updateEstimateLineItem comment for why.
+  const { error, count } = await supabase
     .from("estimate_line_items")
-    .delete()
-    .eq("id", id);
+    .delete({ count: "exact" })
+    .eq("id", id)
+    .eq("estimate_id", estimateId);
 
   if (error) return { error: error.message };
+  if (count === 0) return { error: "Line item not found on this estimate" };
 
   revalidatePath(`/estimates/${estimateId}`);
   return { success: true };
