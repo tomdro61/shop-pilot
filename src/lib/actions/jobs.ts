@@ -121,7 +121,14 @@ export const getJob = cache(async (id: string) => {
     .eq("id", id)
     .single();
 
-  if (error) return null;
+  if (error) {
+    // PGRST116 = no row matched — render 404. Anything else (RLS, network,
+    // schema drift) is infrastructure failure and must throw, otherwise
+    // the AI handler and job detail page treat real outages as "job not
+    // found" and the manager has no signal that something is broken.
+    if (error.code === "PGRST116") return null;
+    throw new Error(`Failed to load job: ${error.message}`);
+  }
   return data;
 });
 
@@ -351,12 +358,15 @@ export async function deleteJob(id: string) {
 export async function getLineItemCategories() {
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("job_line_items")
     .select("category")
     .not("category", "is", null)
     .order("category");
 
+  // RLS denial / infra failure → empty dropdown silently → manager
+  // assumes no categories exist and creates duplicates. Surface it.
+  if (error) throw new Error(`Failed to load categories: ${error.message}`);
   const categories = [...new Set(data?.map((li) => li.category).filter(Boolean) as string[])];
   return categories;
 }
