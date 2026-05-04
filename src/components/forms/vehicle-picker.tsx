@@ -29,13 +29,16 @@ interface VehiclePickerProps {
 
 export function VehiclePicker({ customerId, value, onChange }: VehiclePickerProps) {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
 
   const loadVehicles = useCallback(async () => {
     if (!customerId) {
       setVehicles([]);
+      setLoaded(true);
       return;
     }
+    setLoaded(false);
     const supabase = createClient();
     const { data, error } = await supabase
       .from("vehicles")
@@ -47,14 +50,30 @@ export function VehiclePicker({ customerId, value, onChange }: VehiclePickerProp
       // mismatch leads managers to add a duplicate vehicle they couldn't see.
       console.error("[VehiclePicker] loadVehicles failed:", error);
       toast.error("Couldn't load vehicles — refresh before adding a new one.");
+      // Don't flip `loaded` so the stale-value clear below stays paused —
+      // we genuinely don't know whose vehicles we're looking at.
       return;
     }
     setVehicles(data ?? []);
+    setLoaded(true);
   }, [customerId]);
 
   useEffect(() => {
     loadVehicles();
   }, [loadVehicles]);
+
+  // Defense-in-depth: once we have an authoritative list for this customer,
+  // if `value` isn't in it, the parent's vehicle_id is stale (belongs to a
+  // previous customer). EstimateForm + JobForm clear this immediately via
+  // onCustomerChange, but a future caller that forgets shouldn't render a
+  // "selected" card for a vehicle the customer doesn't actually own.
+  useEffect(() => {
+    if (!loaded) return;
+    if (!value) return;
+    if (!vehicles.some((v) => v.id === value)) {
+      onChange(null);
+    }
+  }, [loaded, vehicles, value, onChange]);
 
   const selected = vehicles.find((v) => v.id === value);
 
