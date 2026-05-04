@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getJobs, getLineItemCategories } from "@/lib/actions/jobs";
 import { getShopSettings } from "@/lib/actions/settings";
-import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
+import { resolveConfiguredCategories } from "@/lib/utils/totals";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
 import { JobsListView } from "@/components/dashboard/jobs-list-view";
@@ -53,7 +53,7 @@ export default async function JobsPage({
     getShopSettings(),
   ]);
 
-  const configuredCategories = (settings?.job_categories as string[] | undefined) ?? DEFAULT_JOB_CATEGORIES;
+  const configuredCategories = resolveConfiguredCategories(settings);
   const allCategories = [
     ...new Set([...configuredCategories, ...dbCategories]),
   ].sort();

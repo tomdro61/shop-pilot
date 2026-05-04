@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Inbox, Users, Wrench, ClipboardCheck, CircleDollarSign, PlaneLanding, FileQuestion, Search } from "lucide-react";
+import { LayoutDashboard, Inbox, Users, Wrench, ClipboardCheck, CircleDollarSign, PlaneLanding, FileQuestion, FileText, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -31,6 +31,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/inbox", label: "Inbox", icon: Inbox },
       { href: "/jobs", label: "Jobs", icon: Wrench },
+      { href: "/estimates", label: "Estimates", icon: FileText },
       { href: "/customers", label: "Customers", icon: Users },
       { href: "/dvi", label: "DVI", icon: Search, techVisible: true },
       { href: "/quote-requests", label: "Quotes", icon: FileQuestion },

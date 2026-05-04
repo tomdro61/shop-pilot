@@ -9,6 +9,7 @@ export const jobSchema = z.object({
     "waiting_for_parts",
     "in_progress",
     "complete",
+    "cancelled",
   ]),
   title: z.string().max(200).optional(),
   category: z.string().max(100).optional(),
@@ -50,12 +51,17 @@ export const lineItemSchema = z.object({
   unit_cost: z.number().min(0, "Cost must be 0 or greater"),
   cost: z.number().min(0).nullable().optional(),
   part_number: z.string().max(100),
-  category: z.string().max(100).optional(),
+  category: z.string().max(100).nullable().optional(),
 });
 
 export type LineItemFormData = z.infer<typeof lineItemSchema>;
 
 export function prepareLineItemData(data: LineItemFormData) {
+  // Trim + collapse empty/whitespace categories to NULL so the DB never
+  // stores "" — that ambiguity ("no category picked" vs literal empty string)
+  // breaks downstream grouping and reports.
+  const trimmed = data.category?.trim();
+  const category = trimmed && trimmed.length > 0 ? trimmed : null;
   return {
     job_id: data.job_id,
     type: data.type,
@@ -64,6 +70,6 @@ export function prepareLineItemData(data: LineItemFormData) {
     unit_cost: data.unit_cost,
     cost: data.type === "part" ? (data.cost ?? null) : null,
     part_number: data.part_number || null,
-    category: data.category || null,
+    category,
   };
 }

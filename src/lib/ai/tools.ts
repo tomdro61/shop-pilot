@@ -289,6 +289,18 @@ export const tools: Anthropic.Tool[] = [
       required: ["id"],
     },
   },
+  {
+    name: "cancel_job",
+    description:
+      "Cancel a job — moves it off the Shop Floor / Jobs board into history without losing the line-item record. Use this for jobs the customer didn't move forward with (e.g., declined estimate, no-show). Cannot cancel completed, paid, or invoiced jobs — those need explicit Stripe action first. Always confirm with the user before calling.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "Job UUID" },
+      },
+      required: ["id"],
+    },
+  },
 
   // ── Job Line Item tools ─────────────────────────────────────────
   {

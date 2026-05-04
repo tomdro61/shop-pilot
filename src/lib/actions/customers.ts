@@ -110,7 +110,12 @@ export const getCustomer = cache(async (id: string) => {
     .eq("id", id)
     .single();
 
-  if (error) return null;
+  if (error) {
+    // Same 404-vs-infra split as getJob / getEstimate. Returning null on
+    // every error masks RLS / network failures as "customer not found".
+    if (error.code === "PGRST116") return null;
+    throw new Error(`Failed to load customer: ${error.message}`);
+  }
   return data;
 });
 

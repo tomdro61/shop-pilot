@@ -37,20 +37,38 @@ import {
 import { formatCurrency } from "@/lib/utils/format";
 import type { EstimateLineItem } from "@/types";
 
-interface EstimateLineItemFormProps {
-  estimateId: string;
-  lineItem?: EstimateLineItem;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+// Two distinct usage modes — modal owns its own Sheet chrome and reflects
+// open/close to the parent; inline renders bare and signals completion via
+// onDone. The discriminated union prevents callers from passing
+// open/onOpenChange in inline mode (where they were ignored) or onDone in
+// modal mode (where it had no meaning).
+type EstimateLineItemFormProps =
+  | {
+      kind?: "modal";
+      estimateId: string;
+      lineItem?: EstimateLineItem;
+      categories?: string[];
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }
+  | {
+      kind: "inline";
+      estimateId: string;
+      lineItem?: EstimateLineItem;
+      categories?: string[];
+      onDone: () => void;
+    };
 
-export function EstimateLineItemForm({
-  estimateId,
-  lineItem,
-  open,
-  onOpenChange,
-}: EstimateLineItemFormProps) {
+export function EstimateLineItemForm(props: EstimateLineItemFormProps) {
+  const { estimateId, lineItem, categories = [] } = props;
   const isEditing = !!lineItem;
+  const closeForm = () => {
+    if (props.kind === "inline") {
+      props.onDone();
+    } else {
+      props.onOpenChange(false);
+    }
+  };
 
   const form = useForm<EstimateLineItemFormData>({
     resolver: zodResolver(estimateLineItemSchema),
@@ -61,6 +79,7 @@ export function EstimateLineItemForm({
       quantity: lineItem?.quantity || 1,
       unit_cost: lineItem?.unit_cost || 0,
       part_number: lineItem?.part_number || "",
+      category: lineItem?.category || "",
     },
   });
 
@@ -89,7 +108,7 @@ export function EstimateLineItemForm({
     }
 
     toast.success(isEditing ? "Line item updated" : "Line item added");
-    onOpenChange(false);
+    closeForm();
     form.reset({
       estimate_id: estimateId,
       type: "labor",
@@ -97,18 +116,12 @@ export function EstimateLineItemForm({
       quantity: 1,
       unit_cost: 0,
       part_number: "",
+      category: "",
     });
   }
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[85vh] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>
-            {isEditing ? "Edit Line Item" : "Add Line Item"}
-          </SheetTitle>
-        </SheetHeader>
-        <Form {...form}>
+  const formBody = (
+    <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="mt-3 space-y-3"
@@ -144,7 +157,7 @@ export function EstimateLineItemForm({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="Brake pad replacement" {...field} />
+                    <Input placeholder="Brake pad replacement" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -164,6 +177,7 @@ export function EstimateLineItemForm({
                         step="0.01"
                         min="0.01"
                         {...field}
+                        value={field.value ?? 0}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
@@ -183,6 +197,7 @@ export function EstimateLineItemForm({
                         step="0.01"
                         min="0"
                         {...field}
+                        value={field.value ?? 0}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
@@ -207,8 +222,39 @@ export function EstimateLineItemForm({
                   <FormItem>
                     <FormLabel>Part Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Optional" {...field} />
+                      <Input placeholder="Optional" {...field} value={field.value ?? ""} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {categories.length > 0 && (
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      value={field.value || "__none__"}
+                      onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="No category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">No category</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -226,13 +272,28 @@ export function EstimateLineItemForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={closeForm}
               >
                 Cancel
               </Button>
             </div>
           </form>
         </Form>
+  );
+
+  if (props.kind === "inline") {
+    return formBody;
+  }
+
+  return (
+    <Sheet open={props.open} onOpenChange={props.onOpenChange}>
+      <SheetContent side="bottom" className="h-auto max-h-[85vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>
+            {isEditing ? "Edit Line Item" : "Add Line Item"}
+          </SheetTitle>
+        </SheetHeader>
+        {formBody}
       </SheetContent>
     </Sheet>
   );

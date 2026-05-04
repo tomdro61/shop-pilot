@@ -1,5 +1,9 @@
 import type { JobStatus, EstimateStatus, InvoiceStatus, PaymentStatus, PaymentMethod, CustomerType, ParkingStatus, QuoteRequestStatus, DviStatus, DviCondition } from "@/types";
 
+// Active job lifecycle in linear order. `cancelled` is intentionally
+// excluded — cancelled jobs are off-board history; they aren't a kanban
+// column, a progress step, or a value the manager picks from a dropdown.
+// Use the dedicated Cancel action instead.
 export const JOB_STATUS_ORDER: JobStatus[] = [
   "not_started",
   "waiting_for_parts",
@@ -15,6 +19,7 @@ export const JOB_STATUS_LABELS: Record<JobStatusKey, string> = {
   waiting_for_parts: "Waiting for Parts",
   in_progress: "In Progress",
   complete: "Complete",
+  cancelled: "Cancelled",
   paid: "Paid",
 };
 
@@ -38,6 +43,10 @@ export const JOB_STATUS_COLORS: Record<
     bg: "bg-emerald-100 dark:bg-emerald-950",
     text: "text-emerald-700 dark:text-emerald-400",
   },
+  cancelled: {
+    bg: "bg-stone-100 dark:bg-stone-800",
+    text: "text-stone-500 dark:text-stone-400",
+  },
   paid: {
     bg: "bg-emerald-100 dark:bg-emerald-950",
     text: "text-emerald-700 dark:text-emerald-400",
@@ -51,6 +60,7 @@ export const JOB_STATUS_BAR: Record<JobStatusKey, string> = {
   waiting_for_parts: "bg-amber-500",
   in_progress: "bg-blue-500",
   complete: "bg-emerald-500",
+  cancelled: "bg-stone-400",
   paid: "bg-emerald-500",
 };
 
@@ -138,8 +148,8 @@ export const ESTIMATE_STATUS_COLORS: Record<
     text: "text-stone-500 dark:text-stone-400",
   },
   sent: {
-    bg: "bg-emerald-100 dark:bg-emerald-950",
-    text: "text-emerald-700 dark:text-emerald-400",
+    bg: "bg-indigo-100 dark:bg-indigo-950",
+    text: "text-indigo-700 dark:text-indigo-400",
   },
   approved: {
     bg: "bg-emerald-100 dark:bg-emerald-950",

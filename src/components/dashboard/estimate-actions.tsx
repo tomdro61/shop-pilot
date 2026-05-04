@@ -15,23 +15,40 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { sendEstimate, resendEstimate, deleteEstimate } from "@/lib/actions/estimates";
+import {
+  sendEstimate,
+  resendEstimate,
+  deleteEstimate,
+  markEstimateApproved,
+  convertEstimateToJob,
+} from "@/lib/actions/estimates";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
-import { Send, RotateCw, Copy, Check } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  HandCoins,
+  RotateCw,
+  Send,
+  Trash2,
+  Workflow,
+} from "lucide-react";
 import type { EstimateStatus } from "@/types";
 
 interface EstimateActionsProps {
   estimateId: string;
-  jobId: string;
   status: EstimateStatus;
   approvalToken: string | null;
+  jobId: string | null;
+  customerId: string | null;
 }
 
 export function EstimateActions({
   estimateId,
-  jobId,
   status,
   approvalToken,
+  jobId,
+  customerId,
 }: EstimateActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -39,6 +56,7 @@ export function EstimateActions({
   const [copied, setCopied] = useState(false);
 
   async function handleSend() {
+    if (loading) return;
     setLoading(true);
     const result = await sendEstimate(estimateId);
     setLoading(false);
@@ -50,8 +68,28 @@ export function EstimateActions({
 
     if (result.data?.approvalUrl) {
       setApprovalUrl(result.data.approvalUrl);
-      toast.success("Estimate sent! Copy the approval link to share.");
+      if (result.data.deliveryWarning) {
+        // Status flipped to sent and the link exists, but at least one
+        // delivery channel failed — manager needs to copy/share manually.
+        toast.warning(`Estimate marked sent — ${result.data.deliveryWarning}. Copy the link below to share.`);
+      } else {
+        toast.success("Estimate sent! Copy the approval link to share.");
+      }
     }
+  }
+
+  async function handleResend() {
+    if (loading) return;
+    setLoading(true);
+    const result = await resendEstimate(estimateId);
+    setLoading(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success("Estimate resent via SMS");
   }
 
   async function handleCopyLink() {
@@ -69,35 +107,64 @@ export function EstimateActions({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handleDelete() {
-    const result = await deleteEstimate(estimateId);
-    if (result.error) {
-      toast.error(result.error);
-      return result;
-    }
-    toast.success("Estimate deleted");
-    router.push(`/jobs/${jobId}`);
-    return result;
-  }
-
-  async function handleResend() {
+  async function handleMarkApproved() {
+    if (loading) return;
     setLoading(true);
-    const result = await resendEstimate(estimateId);
+    const result = await markEstimateApproved(estimateId);
     setLoading(false);
 
     if (result.error) {
       toast.error(result.error);
       return;
     }
-
-    toast.success("Estimate resent via SMS");
+    toast.success("Estimate marked approved");
+    router.refresh();
   }
 
-  const canDelete = status === "draft" || status === "sent";
+  async function handleConvert() {
+    if (loading) return;
+    setLoading(true);
+    const result = await convertEstimateToJob(estimateId);
+    setLoading(false);
+
+    if ("error" in result && result.error) {
+      toast.error(result.error);
+      return;
+    }
+    if ("data" in result && result.data?.jobId) {
+      toast.success("Job created from estimate");
+      router.push(`/jobs/${result.data.jobId}`);
+    }
+  }
+
+  async function handleDelete() {
+    // DeleteConfirmDialog discards onConfirm's return value, so toast here
+    // rather than relying on the caller to surface the rejection.
+    if (loading) {
+      toast.error("Another action is already in progress");
+      return { error: "Already in progress" };
+    }
+    setLoading(true);
+    const result = await deleteEstimate(estimateId);
+    setLoading(false);
+    if (result.error) {
+      toast.error(result.error);
+      return result;
+    }
+    toast.success("Estimate deleted");
+    if (jobId) {
+      router.push(`/jobs/${jobId}`);
+    } else if (customerId) {
+      router.push(`/customers/${customerId}`);
+    } else {
+      router.push("/dashboard");
+    }
+    return result;
+  }
 
   if (status === "draft") {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button disabled={loading}>
@@ -122,10 +189,22 @@ export function EstimateActions({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Button variant="outline" onClick={handleMarkApproved} disabled={loading}>
+          <HandCoins className="mr-2 h-4 w-4" />
+          Mark approved
+        </Button>
+
         <DeleteConfirmDialog
           title="Delete Estimate"
-          description="This will delete the estimate. You can create a new one from the job's current line items."
+          description="This will delete the estimate. You can create a new one from the customer's page."
           onConfirm={handleDelete}
+          trigger={
+            <Button variant="destructive" size="sm" disabled={loading}>
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Delete
+            </Button>
+          }
         />
       </div>
     );
@@ -133,7 +212,7 @@ export function EstimateActions({
 
   if (status === "sent") {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button onClick={handleResend} disabled={loading}>
           <RotateCw className="mr-2 h-4 w-4" />
           {loading ? "Sending..." : "Resend"}
@@ -144,13 +223,46 @@ export function EstimateActions({
           ) : (
             <Copy className="mr-2 h-4 w-4" />
           )}
-          {copied ? "Copied!" : "Copy Link"}
+          {copied ? "Copied!" : "Copy link"}
         </Button>
+
+        <Button variant="outline" onClick={handleMarkApproved} disabled={loading}>
+          <HandCoins className="mr-2 h-4 w-4" />
+          Mark approved
+        </Button>
+
         <DeleteConfirmDialog
           title="Delete Estimate"
-          description="This estimate has been sent to the customer. Deleting it will invalidate the approval link. You can create a new one from the job's current line items."
+          description="This estimate has been sent to the customer. Deleting it will invalidate the approval link."
           onConfirm={handleDelete}
+          trigger={
+            <Button variant="destructive" size="sm" disabled={loading}>
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Delete
+            </Button>
+          }
         />
+      </div>
+    );
+  }
+
+  if (status === "approved") {
+    if (jobId) {
+      return (
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => router.push(`/jobs/${jobId}`)}>
+            View job
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={handleConvert} disabled={loading}>
+          <Workflow className="mr-2 h-4 w-4" />
+          {loading ? "Converting..." : "Convert to Job"}
+        </Button>
       </div>
     );
   }

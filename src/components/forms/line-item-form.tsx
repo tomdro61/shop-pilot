@@ -164,7 +164,6 @@ export function LineItemForm({
       return;
     }
 
-    // Bump catalog usage count
     if (selectedCatalogId) {
       incrementUsageCount(selectedCatalogId);
     }
@@ -292,7 +291,7 @@ export function LineItemForm({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input placeholder="Brake pad replacement" {...field} />
+                    <Input placeholder="Brake pad replacement" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -312,6 +311,7 @@ export function LineItemForm({
                         step="0.01"
                         min="0.01"
                         {...field}
+                        value={field.value ?? 0}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
@@ -331,6 +331,7 @@ export function LineItemForm({
                         step="0.01"
                         min="0"
                         {...field}
+                        value={field.value ?? 0}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
@@ -361,7 +362,7 @@ export function LineItemForm({
                     <FormItem>
                       <FormLabel>Part Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="Optional" {...field} />
+                        <Input placeholder="Optional" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

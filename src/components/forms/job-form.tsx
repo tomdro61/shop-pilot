@@ -11,11 +11,11 @@ import { createJob, updateJob } from "@/lib/actions/jobs";
 import { applyPresetToJob } from "@/lib/actions/presets";
 import { updateQuoteRequestStatus } from "@/lib/actions/quote-requests";
 import { createClient } from "@/lib/supabase/client";
-import { VehicleForm } from "@/components/forms/vehicle-form";
+import { CustomerPicker } from "@/components/forms/customer-picker";
+import { VehiclePicker } from "@/components/forms/vehicle-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SECTION_LABEL } from "@/components/ui/section-card";
 import {
   Select,
   SelectContent,
@@ -31,24 +31,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_LABELS, JOB_STATUS_COLORS, JOB_STATUS_ORDER } from "@/lib/constants";
-import { formatCustomerName, formatCurrency, getInitials } from "@/lib/utils/format";
-import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Plus, Car, Search, X, UserPlus, ClipboardList } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/format";
+import { Plus, Search, X, ClipboardList } from "lucide-react";
 import { TONE_CLASSES } from "@/lib/ui/alert-tone";
 import type { Customer, Vehicle, Job, JobPreset, PresetLineItem, JobStatus } from "@/types";
 
@@ -64,8 +50,6 @@ interface JobFormProps {
   presets?: JobPreset[];
 }
 
-type CustomerOption = { id: string; first_name: string; last_name: string; phone: string | null };
-type VehicleOption = { id: string; year: number | null; make: string | null; model: string | null };
 type TechOption = { id: string; name: string };
 
 function PresetSearchPicker({
@@ -127,12 +111,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
   const router = useRouter();
   const isEditing = !!job;
 
-  const [customerOpen, setCustomerOpen] = useState(false);
-  const [customers, setCustomers] = useState<CustomerOption[]>([]);
-  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [technicians, setTechnicians] = useState<TechOption[]>([]);
-  const [customerSearch, setCustomerSearch] = useState("");
-  const [vehicleAddOpen, setVehicleAddOpen] = useState(false);
   const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
 
   function handlePresetSelect(preset: JobPreset) {
@@ -159,104 +138,15 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
   });
 
   const selectedCustomerId = form.watch("customer_id");
-
-  // The customer ID that must stay in the dropdown (editing or pre-selected via query param)
   const pinnedCustomerId = job?.customer_id || defaultCustomerId;
-
-  // Seed customers list with the job's existing customer when editing
-  useEffect(() => {
-    if (job?.customers) {
-      setCustomers([{
+  const initialCustomer = job?.customers
+    ? {
         id: job.customers.id,
         first_name: job.customers.first_name,
         last_name: job.customers.last_name,
         phone: null,
-      }]);
-    }
-  }, [job?.customers]);
-
-  // Fetch the pre-selected customer when creating a new job from a customer page
-  useEffect(() => {
-    if (!defaultCustomerId || job?.customers) return;
-    async function fetchDefaultCustomer() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("customers")
-        .select("id, first_name, last_name, phone")
-        .eq("id", defaultCustomerId!)
-        .single();
-      if (data) {
-        setCustomers([data]);
       }
-    }
-    fetchDefaultCustomer();
-  }, [defaultCustomerId, job?.customers]);
-
-  // Search customers — debounced + abortable
-  useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      const supabase = createClient();
-      let query = supabase
-        .from("customers")
-        .select("id, first_name, last_name, phone")
-        .order("last_name")
-        .limit(20)
-        .abortSignal(controller.signal);
-
-      if (customerSearch) {
-        const words = customerSearch.trim().split(/\s+/);
-        if (words.length > 1) {
-          // "john machine" → first_name LIKE %john% AND last_name LIKE %machine%
-          query = query
-            .ilike("first_name", `%${words[0]}%`)
-            .ilike("last_name", `%${words.slice(1).join(" ")}%`);
-        } else {
-          query = query.or(
-            `first_name.ilike.%${customerSearch}%,last_name.ilike.%${customerSearch}%,phone.ilike.%${customerSearch}%`
-          );
-        }
-      }
-
-      const { data } = await query;
-      if (data && !controller.signal.aborted) {
-        setCustomers(prev => {
-          // Keep the pinned customer in the list even if not in search results
-          const pinId = pinnedCustomerId;
-          const pinnedInResults = !pinId || data.some(c => c.id === pinId);
-          if (pinnedInResults) return data;
-          const existing = prev.find(c => c.id === pinId);
-          return existing ? [existing, ...data] : data;
-        });
-      }
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [customerSearch, pinnedCustomerId]);
-
-  // Load vehicles for selected customer
-  async function loadVehicles(customerId?: string) {
-    const cid = customerId || selectedCustomerId;
-    if (!cid) {
-      setVehicles([]);
-      return;
-    }
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("vehicles")
-      .select("id, year, make, model")
-      .eq("customer_id", cid)
-      .order("year", { ascending: false });
-    setVehicles(data || []);
-  }
-
-  useEffect(() => {
-    loadVehicles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCustomerId]);
+    : null;
 
   // Load technicians
   useEffect(() => {
@@ -310,191 +200,41 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
     }
   }
 
-  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
-  const selectedVehicleId = form.watch("vehicle_id");
-  const selectedVehicle = vehicles.find((v) => v.id === selectedVehicleId);
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 
-        {/* Customer */}
-        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
-          <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-stone-200 dark:border-stone-800">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className={`w-7 h-7 rounded-md grid place-items-center border flex-none ${TONE_CLASSES.violet.tile}`}>
-                <UserPlus className="h-3.5 w-3.5" />
-              </span>
-              <h3 className="text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-50">Customer</h3>
-            </div>
-            <Link
-              href="/customers/new"
-              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-            >
-              <Plus className="h-3 w-3" />
-              New customer
-            </Link>
-          </header>
-          <div className="p-5">
-            <FormField
-              control={form.control}
-              name="customer_id"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  {selectedCustomer ? (
-                    <div className="flex items-center gap-3 rounded-md border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                        {getInitials(formatCustomerName(selectedCustomer))}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
-                          {formatCustomerName(selectedCustomer)}
-                        </div>
-                        {selectedCustomer.phone && (
-                          <div className="text-xs text-stone-500 dark:text-stone-400 truncate">
-                            {selectedCustomer.phone}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          field.onChange("");
-                          form.setValue("vehicle_id", undefined);
-                          setCustomerOpen(true);
-                        }}
-                        className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 transition-colors"
-                      >
-                        Change
-                      </button>
-                    </div>
-                  ) : (
-                    <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between h-10 text-muted-foreground"
-                          >
-                            Search by name or phone…
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command shouldFilter={false}>
-                          <CommandInput
-                            placeholder="Search by name or phone..."
-                            value={customerSearch}
-                            onValueChange={setCustomerSearch}
-                          />
-                          <CommandList>
-                            <CommandEmpty>No customers found.</CommandEmpty>
-                            <CommandGroup>
-                              {customers.map((customer) => (
-                                <CommandItem
-                                  key={customer.id}
-                                  value={customer.id}
-                                  onSelect={() => {
-                                    field.onChange(customer.id);
-                                    form.setValue("vehicle_id", undefined);
-                                    setCustomerOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      customer.id === field.value ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {formatCustomerName(customer)}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </section>
+        <FormField
+          control={form.control}
+          name="customer_id"
+          render={({ field }) => (
+            <FormItem>
+              <CustomerPicker
+                value={field.value}
+                onChange={field.onChange}
+                onCustomerChange={() => form.setValue("vehicle_id", undefined)}
+                pinnedCustomerId={pinnedCustomerId}
+                initialCustomer={initialCustomer}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        {/* Vehicle */}
-        <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
-          <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-stone-200 dark:border-stone-800">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-7 h-7 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
-                <Car className="h-3.5 w-3.5" />
-              </span>
-              <h3 className="text-sm font-semibold tracking-tight text-stone-900 dark:text-stone-50">Vehicle</h3>
-            </div>
-            {selectedCustomerId && (
-              <button
-                type="button"
-                onClick={() => setVehicleAddOpen(true)}
-                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
-              >
-                <Plus className="h-3 w-3" />
-                Add vehicle
-              </button>
-            )}
-          </header>
-          <div className="p-5">
-            <FormField
-              control={form.control}
-              name="vehicle_id"
-              render={({ field }) => (
-                <FormItem>
-                  {selectedVehicle ? (
-                    <div className="flex items-center gap-3 rounded-md border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/40 px-3 py-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300">
-                        <Car className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1 text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
-                        {[selectedVehicle.year, selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(" ")}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => field.onChange(undefined)}
-                        className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 transition-colors"
-                      >
-                        Change
-                      </button>
-                    </div>
-                  ) : (
-                    <Select
-                      value={field.value ?? "none"}
-                      onValueChange={(val) => field.onChange(val === "none" ? null : val)}
-                      disabled={!selectedCustomerId}
-                    >
-                      <FormControl>
-                        <SelectTrigger className={cn(!selectedCustomerId && "text-muted-foreground")}>
-                          <SelectValue
-                            placeholder={selectedCustomerId ? "Select vehicle (optional)" : "Select customer first"}
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No vehicle</SelectItem>
-                        {vehicles.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </section>
+        <FormField
+          control={form.control}
+          name="vehicle_id"
+          render={({ field }) => (
+            <FormItem>
+              <VehiclePicker
+                customerId={selectedCustomerId}
+                value={field.value}
+                onChange={field.onChange}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Job details */}
         <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
@@ -589,7 +329,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                   <FormItem>
                     <FormLabel>Date received</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -726,18 +466,6 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
           </Button>
         </div>
       </form>
-
-      {selectedCustomerId && (
-        <VehicleForm
-          customerId={selectedCustomerId}
-          open={vehicleAddOpen}
-          onOpenChange={setVehicleAddOpen}
-          onCreated={async (vehicleId) => {
-            await loadVehicles();
-            form.setValue("vehicle_id", vehicleId);
-          }}
-        />
-      )}
     </Form>
   );
 }

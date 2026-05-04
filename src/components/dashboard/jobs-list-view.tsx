@@ -28,6 +28,7 @@ const STATUS_BORDER: Record<JobStatus, string> = {
   waiting_for_parts: "border-l-amber-500",
   in_progress: "border-l-blue-500",
   complete: "border-l-emerald-500",
+  cancelled: "border-l-stone-400 dark:border-l-stone-600",
 };
 
 type JobRow = {

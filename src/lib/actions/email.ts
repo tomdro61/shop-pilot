@@ -68,11 +68,14 @@ export async function sendEstimateEmail({
 }): Promise<{ sent: boolean; testMode?: boolean; error?: string }> {
   const supabase = await createClient();
 
+  // Read customer + vehicle directly off the estimate (not through jobs).
+  // The old jobs-traversal returned null on standalone estimates (job_id
+  // NULL) — same shape bug as getEstimateByToken.
   const [{ data: estimate, error: fetchError }, settings] = await Promise.all([
     supabase
       .from("estimates")
       .select(
-        "id, approval_token, tax_rate, jobs(id, title, customer_id, vehicle_id, customers(id, first_name, last_name, email), vehicles(id, year, make, model)), estimate_line_items(type, description, quantity, unit_cost)"
+        "id, approval_token, tax_rate, job_id, customers(id, first_name, last_name, email), vehicles(id, year, make, model), jobs(id, title), estimate_line_items(type, description, quantity, unit_cost)"
       )
       .eq("id", estimateId)
       .single(),
@@ -81,19 +84,23 @@ export async function sendEstimateEmail({
 
   if (fetchError || !estimate) return { sent: false, error: "Estimate not found" };
 
-  const job = estimate.jobs as {
+  const customer = estimate.customers as {
     id: string;
-    title: string | null;
-    customer_id: string;
-    vehicle_id: string | null;
-    customers: { id: string; first_name: string; last_name: string; email: string | null } | null;
-    vehicles: { id: string; year: number | null; make: string | null; model: string | null } | null;
+    first_name: string;
+    last_name: string;
+    email: string | null;
   } | null;
+  const vehicle = estimate.vehicles as {
+    id: string;
+    year: number | null;
+    make: string | null;
+    model: string | null;
+  } | null;
+  const job = estimate.jobs as { id: string; title: string | null } | null;
 
-  if (!job?.customers) return { sent: false, error: "Customer not found" };
-  if (!job.customers.email) return { sent: false, error: "No email address on file" };
+  if (!customer) return { sent: false, error: "Customer not found" };
+  if (!customer.email) return { sent: false, error: "No email address on file" };
 
-  const vehicle = job.vehicles;
   const vehicleDesc = vehicle
     ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")
     : "Vehicle";
@@ -111,8 +118,8 @@ export async function sendEstimateEmail({
   const totals = calculateTotals(lineItems, settings);
 
   const { subject, html } = estimateReadyEmail({
-    customerName: job.customers.first_name,
-    jobTitle: job.title,
+    customerName: customer.first_name,
+    jobTitle: job?.title ?? null,
     vehicleDesc,
     approvalUrl,
     lineItems,
@@ -120,10 +127,10 @@ export async function sendEstimateEmail({
   });
 
   return sendCustomerEmail({
-    customerId: job.customers.id,
+    customerId: customer.id,
     subject,
     html,
-    jobId: job.id,
+    jobId: job?.id,
   });
 }
 

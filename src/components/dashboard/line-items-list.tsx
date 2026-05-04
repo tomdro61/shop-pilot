@@ -10,7 +10,7 @@ import { saveToCatalog, incrementUsageCount } from "@/lib/actions/catalog";
 import { applyPresetToJob } from "@/lib/actions/presets";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils/format";
-import { calculateTotals, DEFAULT_SETTINGS } from "@/lib/utils/totals";
+import { calculateTotals, resolveConfiguredCategories } from "@/lib/utils/totals";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SECTION_LABEL } from "@/components/ui/section-card";
@@ -43,7 +43,7 @@ export function LineItemsAddButton({
       <AddItemSheet
         jobId={jobId}
         presets={presets}
-        categories={((settings?.job_categories ?? DEFAULT_SETTINGS.job_categories) as string[])}
+        categories={resolveConfiguredCategories(settings)}
         open={open}
         onOpenChange={setOpen}
       />
@@ -76,10 +76,12 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
       part_number: item.part_number,
       category: item.category,
     });
-    if ("duplicate" in result && result.duplicate) {
-      toast.info("Already in catalog");
-    } else if ("error" in result && result.error) {
+    if ("error" in result && result.error) {
       toast.error(typeof result.error === "string" ? result.error : "Failed to save");
+    } else if ("updated" in result && result.updated) {
+      toast.success("Updated cost in catalog");
+    } else if ("duplicate" in result && result.duplicate) {
+      toast.info("Already in catalog");
     } else {
       toast.success("Saved to catalog");
     }
@@ -266,7 +268,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
         <LineItemForm
           jobId={jobId}
           lineItem={editItem}
-          categories={((settings?.job_categories ?? DEFAULT_SETTINGS.job_categories) as string[])}
+          categories={resolveConfiguredCategories(settings)}
           open={!!editItem}
           onOpenChange={(open) => {
             if (!open) setEditItem(null);
@@ -371,10 +373,14 @@ function PresetsTab({
     const result = await applyPresetToJob(jobId, preset.id);
     if ("error" in result && result.error) {
       toast.error(result.error);
-    } else {
-      toast.success(`Added "${preset.name}" items`);
-      onDone();
+      return;
     }
+    if ("inserted" in result && result.inserted === 0) {
+      toast.info(`"${preset.name}" has no line items`);
+      return;
+    }
+    toast.success(`Added "${preset.name}" items`);
+    onDone();
   }
 
   return (
@@ -437,30 +443,36 @@ function CatalogTab({
   const [adding, setAdding] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
-      if (!search.trim()) {
-        // Show popular items when no search
-        const supabase = createClient();
-        const { data } = await supabase
-          .from("catalog_items")
-          .select("*")
-          .eq("is_active", true)
-          .order("usage_count", { ascending: false })
-          .limit(20);
-        setResults(data || []);
-        return;
-      }
       const supabase = createClient();
-      const { data } = await supabase
+      let query = supabase
         .from("catalog_items")
         .select("*")
         .eq("is_active", true)
-        .ilike("description", `%${search.trim()}%`)
         .order("usage_count", { ascending: false })
-        .limit(20);
-      setResults(data || []);
-    }, 200);
-    return () => clearTimeout(timer);
+        .limit(20)
+        .abortSignal(controller.signal);
+      if (search.trim()) {
+        query = query.ilike("description", `%${search.trim()}%`);
+      }
+      const { data, error } = await query;
+      if (controller.signal.aborted) return;
+      if (error) {
+        // Silent empty results would hide "search failed" as "no items" —
+        // toast so the manager doesn't add a duplicate of something already
+        // in the catalog.
+        console.error("[CatalogTab] catalog search failed:", error);
+        toast.error("Couldn't load catalog — try again");
+        setResults([]);
+        return;
+      }
+      setResults(data ?? []);
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [search]);
 
   async function handleAdd(item: CatalogItem) {
@@ -473,7 +485,7 @@ function CatalogTab({
       unit_cost: item.default_unit_cost,
       cost: item.type === "part" ? (item.default_cost ?? null) : null,
       part_number: item.part_number || "",
-      category: item.category || "",
+      category: item.category || undefined,
     });
     setAdding(null);
 

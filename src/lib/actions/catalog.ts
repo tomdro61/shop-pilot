@@ -69,7 +69,13 @@ export async function getCatalogItem(id: string) {
     .eq("id", id)
     .single();
 
-  if (error) return null;
+  if (error) {
+    // Same 404-vs-infra split as getJob / getEstimate / getCustomer.
+    // The AI handler treats null as "not found" and may try to create a
+    // duplicate — masking RLS/network errors as 404 produces wrong work.
+    if (error.code === "PGRST116") return null;
+    throw new Error(`Failed to load catalog item: ${error.message}`);
+  }
   return data;
 }
 
@@ -192,14 +198,31 @@ export async function saveToCatalog(lineItemData: {
   const supabase = await createClient();
 
   // Case-insensitive duplicate check by description + type
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("catalog_items")
-    .select("id")
+    .select("id, default_cost")
     .eq("type", lineItemData.type)
     .ilike("description", lineItemData.description.trim())
     .limit(1);
 
+  if (existingError) return { error: existingError.message };
+
   if (existing && existing.length > 0) {
+    const existingRow = existing[0];
+    const newCost = lineItemData.type === "part" ? (lineItemData.cost ?? null) : null;
+    // First save from a job (with cost) for a part that was previously
+    // saved from an estimate (no cost) — backfill the catalog entry's
+    // default_cost so margin reporting picks it up. Strictly an upgrade:
+    // never overwrites an existing non-null cost.
+    if (newCost != null && existingRow.default_cost == null) {
+      const { error: updateError } = await supabase
+        .from("catalog_items")
+        .update({ default_cost: newCost })
+        .eq("id", existingRow.id);
+      if (updateError) return { error: updateError.message };
+      revalidatePath("/settings/catalog");
+      return { updated: true, message: "Updated cost in catalog" };
+    }
     return { duplicate: true, message: "Already in catalog" };
   }
 
@@ -224,23 +247,41 @@ export async function saveToCatalog(lineItemData: {
   return { data };
 }
 
+// Best-effort popularity counter. Wrapped in try/catch so the many
+// fire-and-forget callers can never produce an unhandled promise
+// rejection (the popularity counter is allowed to drift; it must never
+// surface as a runtime error in the user's flow).
+//
+// Lost-update races between concurrent calls are intentionally tolerated
+// — popularity is approximate and self-corrects with use.
 export async function incrementUsageCount(id: string) {
-  const auth = await requireManager();
-  if (!auth.ok) return;
+  try {
+    const auth = await requireManager();
+    if (!auth.ok) return;
 
-  const supabase = await createClient();
+    const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("catalog_items")
-    .select("usage_count")
-    .eq("id", id)
-    .single();
+    const { data, error: readError } = await supabase
+      .from("catalog_items")
+      .select("usage_count")
+      .eq("id", id)
+      .single();
 
-  if (data) {
-    await supabase
+    if (readError || !data) {
+      console.error("[incrementUsageCount] read failed:", { readError, id });
+      return;
+    }
+
+    const { error: writeError } = await supabase
       .from("catalog_items")
       .update({ usage_count: (data.usage_count || 0) + 1 })
       .eq("id", id);
+
+    if (writeError) {
+      console.error("[incrementUsageCount] write failed:", { writeError, id });
+    }
+  } catch (err) {
+    console.error("[incrementUsageCount] unexpected:", err);
   }
 }
 

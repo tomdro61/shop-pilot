@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { updateJobStatus } from "@/lib/actions/jobs";
+import { updateJobStatus, type ActiveJobStatus } from "@/lib/actions/jobs";
 import {
   JOB_STATUS_LABELS,
   JOB_STATUS_COLORS,
@@ -34,11 +34,14 @@ function StatusChip({ status }: { status: JobStatus }) {
 
 export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
   async function handleChange(newStatus: string) {
-    const result = await updateJobStatus(jobId, newStatus as JobStatus);
+    // Dropdown only renders JOB_STATUS_ORDER values (excludes cancelled),
+    // so the cast to ActiveJobStatus is sound here.
+    const status = newStatus as ActiveJobStatus;
+    const result = await updateJobStatus(jobId, status);
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(`Status updated to ${JOB_STATUS_LABELS[newStatus as JobStatus]}`);
+      toast.success(`Status updated to ${JOB_STATUS_LABELS[status]}`);
     }
   }
 

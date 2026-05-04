@@ -34,6 +34,11 @@ export async function getJobs(filters?: {
 
   if (filters?.status) {
     query = query.eq("status", filters.status);
+  } else {
+    // Cancelled jobs are off-board history. Hide them from default list,
+    // kanban, and calendar views — manager can still find them by selecting
+    // the Cancelled filter explicitly, or via the customer detail page.
+    query = query.neq("status", "cancelled");
   }
 
   if (filters?.paymentStatus) {
@@ -116,7 +121,14 @@ export const getJob = cache(async (id: string) => {
     .eq("id", id)
     .single();
 
-  if (error) return null;
+  if (error) {
+    // PGRST116 = no row matched — render 404. Anything else (RLS, network,
+    // schema drift) is infrastructure failure and must throw, otherwise
+    // the AI handler and job detail page treat real outages as "job not
+    // found" and the manager has no signal that something is broken.
+    if (error.code === "PGRST116") return null;
+    throw new Error(`Failed to load job: ${error.message}`);
+  }
   return data;
 });
 
@@ -168,7 +180,12 @@ export async function updateJob(id: string, formData: JobFormData) {
   return { data };
 }
 
-export async function updateJobStatus(id: string, status: JobStatus) {
+// `cancelled` is intentionally excluded — every cancel transition must go
+// through `cancelJob`, which enforces the "no cancelling completed/paid"
+// guards. A bare status update from a Kanban drag would otherwise bypass them.
+export type ActiveJobStatus = Exclude<JobStatus, "cancelled">;
+
+export async function updateJobStatus(id: string, status: ActiveJobStatus) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
 
@@ -263,17 +280,77 @@ export async function updateJobDateFinished(id: string, dateFinished: string) {
   return { success: true };
 }
 
+export async function cancelJob(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: job, error: fetchError } = await supabase
+    .from("jobs")
+    .select("id, status, payment_status, customer_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!job) return { error: "Job not found" };
+  if (job.status === "complete") {
+    return { error: "Completed jobs can't be cancelled — delete instead" };
+  }
+  if (job.status === "cancelled") return { error: "Job is already cancelled" };
+  // Paid / invoiced jobs have a Stripe payment intent or invoice attached.
+  // Cancelling without voiding those creates a financial reconciliation gap.
+  if (job.payment_status === "paid") {
+    return { error: "Paid jobs can't be cancelled — refund the payment in Stripe first" };
+  }
+  if (job.payment_status === "invoiced") {
+    return { error: "This job has an open invoice — void it in Stripe before cancelling" };
+  }
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ status: "cancelled", date_finished: null })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${id}`);
+  if (job.customer_id) revalidatePath(`/customers/${job.customer_id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function deleteJob(id: string) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
 
   const supabase = await createClient();
 
+  // Same payment guards as cancelJob — deleting a job with live Stripe
+  // state (open invoice or collected payment) leaves the Stripe side
+  // orphaned and creates an unreconcilable financial record.
+  const { data: job, error: fetchError } = await supabase
+    .from("jobs")
+    .select("id, payment_status, customer_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!job) return { error: "Job not found" };
+  if (job.payment_status === "paid") {
+    return { error: "Paid jobs can't be deleted — refund the payment in Stripe first" };
+  }
+  if (job.payment_status === "invoiced") {
+    return { error: "This job has an open invoice — void it in Stripe before deleting" };
+  }
+
   const { error } = await supabase.from("jobs").delete().eq("id", id);
 
   if (error) return { error: error.message };
 
   revalidatePath("/jobs");
+  if (job.customer_id) revalidatePath(`/customers/${job.customer_id}`);
   revalidatePath("/dashboard");
   return { success: true };
 }
@@ -281,18 +358,18 @@ export async function deleteJob(id: string) {
 export async function getLineItemCategories() {
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("job_line_items")
     .select("category")
     .not("category", "is", null)
     .order("category");
 
+  // RLS denial / infra failure → empty dropdown silently → manager
+  // assumes no categories exist and creates duplicates. Surface it.
+  if (error) throw new Error(`Failed to load categories: ${error.message}`);
   const categories = [...new Set(data?.map((li) => li.category).filter(Boolean) as string[])];
   return categories;
 }
-
-// Keep old name as alias for backward compatibility with AI handlers
-export const getJobCategories = getLineItemCategories;
 
 export async function recordPayment(
   jobId: string,
