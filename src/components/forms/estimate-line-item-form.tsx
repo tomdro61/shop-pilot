@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -88,51 +87,37 @@ export function EstimateLineItemForm(props: EstimateLineItemFormProps) {
   const unitCost = form.watch("unit_cost");
   const total = (Number(quantity) || 0) * (Number(unitCost) || 0);
 
-  // Belt-and-suspenders double-submit guard. The submit button is already
-  // disabled via form.formState.isSubmitting, but a programmatic re-trigger
-  // or fast Enter race could still re-enter onSubmit. The ref is reset in
-  // finally so a thrown error doesn't lock the form forever.
-  // NOTE: do not replace this with `if (form.formState.isSubmitting) return`
-  // inside onSubmit — observed in browser to short-circuit submissions.
-  const submittingRef = useRef(false);
-
   async function onSubmit(data: EstimateLineItemFormData) {
-    if (submittingRef.current) return;
-    submittingRef.current = true;
-    try {
-      const cleaned = {
-        ...data,
-        quantity: Number(data.quantity),
-        unit_cost: Number(data.unit_cost),
-      };
+    const cleaned = {
+      ...data,
+      quantity: Number(data.quantity),
+      unit_cost: Number(data.unit_cost),
+    };
 
-      const result = isEditing
-        ? await updateEstimateLineItem(lineItem.id, cleaned)
-        : await createEstimateLineItem(cleaned);
+    const result = isEditing
+      ? await updateEstimateLineItem(lineItem.id, cleaned)
+      : await createEstimateLineItem(cleaned);
 
-      if ("error" in result && result.error) {
-        if (typeof result.error === "string") {
-          toast.error(result.error);
-        } else {
-          toast.error("Please fix the form errors");
-        }
-        return;
+    if ("error" in result && result.error) {
+      if (typeof result.error === "string") {
+        toast.error(result.error);
+      } else {
+        toast.error("Please fix the form errors");
       }
-
-      toast.success(isEditing ? "Line item updated" : "Line item added");
-      closeForm();
-      form.reset({
-        estimate_id: estimateId,
-        type: "labor",
-        description: "",
-        quantity: 1,
-        unit_cost: 0,
-        part_number: "",
-        category: "",
-      });
-    } finally {
-      submittingRef.current = false;
+      return;
     }
+
+    toast.success(isEditing ? "Line item updated" : "Line item added");
+    closeForm();
+    form.reset({
+      estimate_id: estimateId,
+      type: "labor",
+      description: "",
+      quantity: 1,
+      unit_cost: 0,
+      part_number: "",
+      category: "",
+    });
   }
 
   const formBody = (
