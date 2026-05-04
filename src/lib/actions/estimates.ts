@@ -617,10 +617,11 @@ export async function convertEstimateToJob(estimateId: string) {
       "[convertEstimateToJob] orphan job — failed to link back to estimate:",
       { linkError, estimateId, jobId: job.id }
     );
-    // Revalidate so the new job shows up on the board immediately — manager
-    // can find and reconcile it without thinking the action did nothing.
-    revalidatePath(`/customers/${estimate.customer_id}`);
-    revalidatePath("/dashboard");
+    // Don't revalidate on this error path — every other error branch in
+    // this function deliberately skips revalidation, and pre-revalidating
+    // here makes the dashboard show the orphan as if it's legitimate before
+    // the manager has read the error toast. They'll find it via the RO
+    // label in the next page navigation.
     const roLabel = job.ro_number
       ? `RO-${String(job.ro_number).padStart(4, "0")}`
       : "the new job";
@@ -629,9 +630,10 @@ export async function convertEstimateToJob(estimateId: string) {
     };
   }
 
-  if (linkCount === 0) {
-    // A concurrent Convert click already won the race. Roll back the job
-    // we just created so we don't leave an orphan duplicate.
+  // Strict !== 1 check, not === 0: Supabase can return count: null on some
+  // RLS edge cases. Treat anything-other-than-exactly-1 as race-loser so we
+  // don't fall through and silently leave the estimate unlinked.
+  if (linkCount !== 1) {
     const { error: rollbackError } = await supabase.from("jobs").delete().eq("id", job.id);
     if (rollbackError) {
       console.error(

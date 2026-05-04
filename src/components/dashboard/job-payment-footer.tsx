@@ -62,6 +62,11 @@ export function JobPaymentFooter({
     paymentStatus !== "waived";
 
   async function handleRecordPayment(method: PaymentMethod) {
+    // Money path — block re-entry. The Radix DropdownMenuItem stays
+    // rendered for a frame after click, and `disabled={loading}` on the
+    // trigger only prevents reopening the menu, not a second item click
+    // within that frame. A double-fire here would record the payment twice.
+    if (loading) return;
     setLoading(true);
     const result = await recordPayment(jobId, method);
     setLoading(false);

@@ -69,7 +69,13 @@ export async function getCatalogItem(id: string) {
     .eq("id", id)
     .single();
 
-  if (error) return null;
+  if (error) {
+    // Same 404-vs-infra split as getJob / getEstimate / getCustomer.
+    // The AI handler treats null as "not found" and may try to create a
+    // duplicate — masking RLS/network errors as 404 produces wrong work.
+    if (error.code === "PGRST116") return null;
+    throw new Error(`Failed to load catalog item: ${error.message}`);
+  }
   return data;
 }
 
