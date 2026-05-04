@@ -320,11 +320,30 @@ export async function deleteJob(id: string) {
 
   const supabase = await createClient();
 
+  // Same payment guards as cancelJob — deleting a job with live Stripe
+  // state (open invoice or collected payment) leaves the Stripe side
+  // orphaned and creates an unreconcilable financial record.
+  const { data: job, error: fetchError } = await supabase
+    .from("jobs")
+    .select("id, payment_status, customer_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!job) return { error: "Job not found" };
+  if (job.payment_status === "paid") {
+    return { error: "Paid jobs can't be deleted — refund the payment in Stripe first" };
+  }
+  if (job.payment_status === "invoiced") {
+    return { error: "This job has an open invoice — void it in Stripe before deleting" };
+  }
+
   const { error } = await supabase.from("jobs").delete().eq("id", id);
 
   if (error) return { error: error.message };
 
   revalidatePath("/jobs");
+  if (job.customer_id) revalidatePath(`/customers/${job.customer_id}`);
   revalidatePath("/dashboard");
   return { success: true };
 }
