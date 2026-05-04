@@ -38,7 +38,7 @@ export function EstimateApprovalButtons({
       return;
     }
 
-    toast.success("Estimate approved! An invoice has been sent to your email.");
+    toast.success("Estimate approved! The shop will be in touch.");
     router.refresh();
   }
 
@@ -69,8 +69,9 @@ export function EstimateApprovalButtons({
           <AlertDialogHeader>
             <AlertDialogTitle>Approve Estimate</AlertDialogTitle>
             <AlertDialogDescription>
-              By approving, you authorize this repair work. An invoice will be
-              sent to your email for payment.
+              By approving, you authorize this repair work. The shop will
+              reach out to schedule it and will send an invoice once the
+              job is complete.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

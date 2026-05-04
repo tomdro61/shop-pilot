@@ -48,12 +48,12 @@ export default async function EstimateApprovalPage({
   const job = estimate.jobs as {
     id: string;
     title: string | null;
-    customers: Customer | null;
-    vehicles: Vehicle | null;
   } | null;
 
-  const customer = job?.customers || null;
-  const vehicle = job?.vehicles || null;
+  // Customer + vehicle now joined directly off the estimate (not through
+  // jobs) so standalone estimates with job_id NULL still render.
+  const customer = (estimate.customers as Customer | null) ?? null;
+  const vehicle = (estimate.vehicles as Vehicle | null) ?? null;
 
   const totals = calculateTotals(lineItems, settings);
 
@@ -177,7 +177,8 @@ export default async function EstimateApprovalPage({
             <div>
               <p className="font-medium">Estimate Approved</p>
               <p className="text-sm text-muted-foreground">
-                An invoice has been sent to your email.
+                Thanks — the shop will reach out to schedule the work.
+                You&apos;ll receive an invoice once the job is complete.
               </p>
             </div>
           </CardContent>

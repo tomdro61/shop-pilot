@@ -222,10 +222,14 @@ export async function getEstimateForJob(jobId: string) {
 export async function getEstimateByToken(token: string) {
   const supabase = createAdminClient();
 
+  // Join customer + vehicle directly off the estimate. Going through
+  // `jobs.customers` / `jobs.vehicles` (the old pattern) returned null for
+  // standalone estimates (job_id NULL), which broke the customer-facing
+  // approval page on every estimate created via the new first-class flow.
   const { data, error } = await supabase
     .from("estimates")
     .select(
-      "*, estimate_line_items(*), jobs(id, title, customers(id, first_name, last_name, email, phone, stripe_customer_id), vehicles(id, year, make, model, vin))"
+      "*, estimate_line_items(*), customers(id, first_name, last_name, email, phone, stripe_customer_id), vehicles(id, year, make, model, vin), jobs(id, title)"
     )
     .eq("approval_token", token)
     .single();
