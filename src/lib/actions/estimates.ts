@@ -500,7 +500,9 @@ export async function convertEstimateToJob(estimateId: string) {
 
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
-    .select("id, status, customer_id, vehicle_id, job_id, estimate_line_items(*)")
+    .select(
+      "id, status, customer_id, vehicle_id, job_id, estimate_number, estimate_line_items(*)"
+    )
     .eq("id", estimateId)
     .single();
 
@@ -514,12 +516,47 @@ export async function convertEstimateToJob(estimateId: string) {
   }
   if (!estimate.customer_id) return { error: "Estimate has no customer" };
 
+  const lineItemsRaw = (estimate.estimate_line_items ?? []) as Array<{
+    type: "labor" | "part";
+    description: string;
+    quantity: number;
+    unit_cost: number;
+    part_number: string | null;
+    category: string | null;
+  }>;
+
+  // Derive a title so the converted job isn't a nameless row on the Shop
+  // Floor. Preference: most-common category > first line-item description >
+  // a generic "From EST-####" reference. Estimate prose isn't stored on the
+  // estimate row itself, so this is the best signal we have.
+  const derivedTitle = (() => {
+    const categoryCounts = new Map<string, number>();
+    for (const li of lineItemsRaw) {
+      if (li.category) {
+        categoryCounts.set(li.category, (categoryCounts.get(li.category) ?? 0) + 1);
+      }
+    }
+    if (categoryCounts.size > 0) {
+      const sorted = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1]);
+      return sorted[0][0];
+    }
+    if (lineItemsRaw[0]?.description) {
+      const desc = lineItemsRaw[0].description.trim();
+      return desc.length > 80 ? `${desc.slice(0, 77)}…` : desc;
+    }
+    if (estimate.estimate_number) {
+      return `From EST-${String(estimate.estimate_number).padStart(4, "0")}`;
+    }
+    return "Repair Order";
+  })();
+
   const { data: job, error: jobError } = await supabase
     .from("jobs")
     .insert({
       customer_id: estimate.customer_id,
       vehicle_id: estimate.vehicle_id,
       status: "not_started",
+      title: derivedTitle,
       date_received: new Date().toISOString().split("T")[0],
       payment_status: "unpaid",
     })
@@ -529,17 +566,8 @@ export async function convertEstimateToJob(estimateId: string) {
   if (jobError) return { error: jobError.message };
   if (!job) return { error: "Failed to create job" };
 
-  const lineItems = (estimate.estimate_line_items || []) as Array<{
-    type: "labor" | "part";
-    description: string;
-    quantity: number;
-    unit_cost: number;
-    part_number: string | null;
-    category: string | null;
-  }>;
-
-  if (lineItems.length > 0) {
-    const jobLineItems = lineItems.map((li) => ({
+  if (lineItemsRaw.length > 0) {
+    const jobLineItems = lineItemsRaw.map((li) => ({
       job_id: job.id,
       type: li.type,
       description: li.description,
