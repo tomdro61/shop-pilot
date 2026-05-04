@@ -16,6 +16,8 @@ import {
   getInitials,
 } from "@/lib/utils/format";
 import {
+  ESTIMATE_STATUS_COLORS,
+  ESTIMATE_STATUS_LABELS,
   JOB_STATUS_LABELS,
   JOB_STATUS_COLORS,
   PAYMENT_STATUS_LABELS,
@@ -31,9 +33,9 @@ import { CustomerNotesEditor } from "@/components/dashboard/customer-notes-edito
 import { CustomerTypeEditor } from "@/components/dashboard/customer-type-editor";
 import { SectionTitle } from "@/components/ui/section-title";
 import { PageShell } from "@/components/layout/page-shell";
-import { ArrowLeft, Plus, DollarSign, StickyNote } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Plus, DollarSign, FileText, StickyNote } from "lucide-react";
 import { TONE_CLASSES } from "@/lib/ui/alert-tone";
-import type { JobStatus, PaymentStatus, ParkingStatus, Vehicle } from "@/types";
+import type { EstimateStatus, JobStatus, PaymentStatus, ParkingStatus, Vehicle } from "@/types";
 
 const JOBS_DISPLAY_LIMIT = 20;
 const VEHICLE_DOT_PALETTE = [
@@ -108,7 +110,7 @@ export default async function CustomerDetailPage({
 
   const supabase = await createClient();
 
-  const [vehiclesResult, jobsResult, parkingResult] = await Promise.all([
+  const [vehiclesResult, jobsResult, estimatesResult, parkingResult] = await Promise.all([
     supabase
       .from("vehicles")
       .select("*")
@@ -122,6 +124,13 @@ export default async function CustomerDetailPage({
       .eq("customer_id", id)
       .order("date_received", { ascending: false }),
     supabase
+      .from("estimates")
+      .select(
+        "id, status, estimate_number, created_at, sent_at, approved_at, declined_at, job_id, vehicle_id, estimate_line_items(total)"
+      )
+      .eq("customer_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
       .from("parking_reservations")
       .select("id, status, make, model, license_plate, lot, drop_off_date, pick_up_date")
       .eq("customer_id", id)
@@ -129,8 +138,42 @@ export default async function CustomerDetailPage({
       .limit(20),
   ]);
 
+  // A silent empty section is indistinguishable from a real failure — log
+  // each branch so a customer with hidden vehicles/jobs/estimates doesn't
+  // result in the manager creating duplicates. Also surface in the UI so
+  // the manager doesn't blind-create from the page itself.
+  const failedSections: string[] = [];
+  if (vehiclesResult.error) {
+    console.error("[CustomerDetail] vehicles query failed:", vehiclesResult.error);
+    failedSections.push("vehicles");
+  }
+  if (jobsResult.error) {
+    console.error("[CustomerDetail] jobs query failed:", jobsResult.error);
+    failedSections.push("jobs");
+  }
+  if (estimatesResult.error) {
+    console.error("[CustomerDetail] estimates query failed:", estimatesResult.error);
+    failedSections.push("estimates");
+  }
+  if (parkingResult.error) {
+    console.error("[CustomerDetail] parking query failed:", parkingResult.error);
+    failedSections.push("parking");
+  }
+
   const vehicles = (vehiclesResult.data || []) as Vehicle[];
   const allJobs = (jobsResult.data || []) as JobRow[];
+  const estimates = (estimatesResult.data || []) as Array<{
+    id: string;
+    status: EstimateStatus;
+    estimate_number: number | null;
+    created_at: string;
+    sent_at: string | null;
+    approved_at: string | null;
+    declined_at: string | null;
+    job_id: string | null;
+    vehicle_id: string | null;
+    estimate_line_items: { total: number | null }[];
+  }>;
   const parkingReservations = parkingResult.data || [];
 
   const vehicleDotIndex = new Map<string, number>();
@@ -178,6 +221,12 @@ export default async function CustomerDetailPage({
           </Button>
         </Link>
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+          <Link href={`/estimates/new?customerId=${id}`}>
+            <Button size="sm" variant="outline">
+              <FileText className="mr-1.5 h-3.5 w-3.5" />
+              New Estimate
+            </Button>
+          </Link>
           <Link href={`/jobs/new?customerId=${id}`}>
             <Button size="sm">
               <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -187,6 +236,24 @@ export default async function CustomerDetailPage({
           <CustomerDeleteButton customerId={id} />
         </div>
       </div>
+
+      {failedSections.length > 0 && (
+        <div className="relative bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-md px-4 py-3 flex items-start gap-3">
+          <span
+            aria-hidden
+            className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-amber-500"
+          />
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Couldn&apos;t load {failedSections.join(", ")}
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400/80 mt-0.5">
+              Refresh before adding new records — what looks empty may not be.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
 
@@ -385,6 +452,76 @@ export default async function CustomerDetailPage({
         <VehicleSection customerId={id} vehicles={vehicles} inspectionsByVehicle={vehicleDviMap} />
       </section>
 
+      {estimates.length > 0 && (
+        <section className="pt-2">
+          <SectionTitle
+            title="Estimates"
+            sub={`${estimates.length} on file`}
+            action={
+              <Link href={`/estimates/new?customerId=${id}`}>
+                <Button size="sm" variant="outline">
+                  <FileText className="mr-1.5 h-3.5 w-3.5" />
+                  New Estimate
+                </Button>
+              </Link>
+            }
+          />
+          <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
+            {estimates.map((est) => {
+              const status = est.status;
+              const colors = ESTIMATE_STATUS_COLORS[status];
+              const total = est.estimate_line_items.reduce(
+                (s, li) => s + (li.total ?? 0),
+                0
+              );
+              const vehicle = est.vehicle_id ? vehicleById.get(est.vehicle_id) : null;
+              const estimateNum = est.estimate_number
+                ? `EST-${String(est.estimate_number).padStart(4, "0")}`
+                : "—";
+              return (
+                <Link
+                  key={est.id}
+                  href={`/estimates/${est.id}`}
+                  className="relative flex items-center gap-3 px-4 py-3 border-b border-stone-200 dark:border-stone-800 last:border-b-0 hover:bg-stone-50 dark:hover:bg-stone-800/40"
+                >
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-indigo-500"
+                  />
+                  <span
+                    aria-hidden
+                    className="w-7 h-7 rounded-md grid place-items-center border bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900 flex-none"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono tabular-nums text-[11px] text-stone-400 dark:text-stone-500">
+                      {estimateNum}
+                    </div>
+                    <div className="text-sm font-medium text-stone-900 dark:text-stone-50 mt-0.5 truncate">
+                      {vehicle ? formatVehicle(vehicle) : "Vehicle TBD"}
+                      {est.job_id && (
+                        <span className="ml-2 text-xs font-normal text-stone-500 dark:text-stone-400">
+                          → linked to job
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span
+                    className={`shrink-0 inline-flex items-center px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${colors.bg} ${colors.text}`}
+                  >
+                    {ESTIMATE_STATUS_LABELS[status]}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50 w-20 text-right">
+                    {total > 0 ? formatCurrencyWhole(total) : <span className="text-stone-400 font-normal">—</span>}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <section className="pt-2">
         <SectionTitle
           title="Job history"
@@ -500,13 +637,13 @@ export default async function CustomerDetailPage({
                           {formatDate(job.date_received)}
                         </td>
                         <td className="px-3 py-3 align-middle">
-                          <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors.bg} ${statusColors.text}`}>
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${statusColors.bg} ${statusColors.text}`}>
                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
                             {JOB_STATUS_LABELS[status]}
                           </span>
                         </td>
                         <td className="px-3 py-3 align-middle">
-                          <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium ${paymentColors.bg} ${paymentColors.text}`}>
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${paymentColors.bg} ${paymentColors.text}`}>
                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
                             {PAYMENT_STATUS_LABELS[paymentStatus]}
                           </span>

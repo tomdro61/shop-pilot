@@ -143,45 +143,59 @@ export function LineItemForm({
     ? ((unitCost - watchCost) / unitCost) * 100
     : null;
 
+  // Belt-and-suspenders double-submit guard. The submit button is already
+  // disabled via form.formState.isSubmitting, but a programmatic re-trigger
+  // or fast Enter race could still re-enter onSubmit. The ref is reset in
+  // finally so a thrown error doesn't lock the form forever.
+  // NOTE: do not replace this with `if (form.formState.isSubmitting) return`
+  // inside onSubmit — observed in browser to short-circuit submissions.
+  const submittingRef = useRef(false);
+
   async function onSubmit(data: LineItemFormData) {
-    const cleaned = {
-      ...data,
-      quantity: Number(data.quantity),
-      unit_cost: Number(data.unit_cost),
-      cost: data.type === "part" && data.cost != null ? Number(data.cost) : null,
-    };
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    try {
+      const cleaned = {
+        ...data,
+        quantity: Number(data.quantity),
+        unit_cost: Number(data.unit_cost),
+        cost: data.type === "part" && data.cost != null ? Number(data.cost) : null,
+      };
 
-    const result = isEditing
-      ? await updateLineItem(lineItem.id, cleaned)
-      : await createLineItem(cleaned);
+      const result = isEditing
+        ? await updateLineItem(lineItem.id, cleaned)
+        : await createLineItem(cleaned);
 
-    if ("error" in result && result.error) {
-      if (typeof result.error === "string") {
-        toast.error(result.error);
-      } else {
-        toast.error("Please fix the form errors");
+      if ("error" in result && result.error) {
+        if (typeof result.error === "string") {
+          toast.error(result.error);
+        } else {
+          toast.error("Please fix the form errors");
+        }
+        return;
       }
-      return;
-    }
 
-    // Bump catalog usage count
-    if (selectedCatalogId) {
-      incrementUsageCount(selectedCatalogId);
-    }
+      // Bump catalog usage count
+      if (selectedCatalogId) {
+        incrementUsageCount(selectedCatalogId);
+      }
 
-    toast.success(isEditing ? "Line item updated" : "Line item added");
-    onOpenChange(false);
-    setSelectedCatalogId(null);
-    form.reset({
-      job_id: jobId,
-      type: "labor",
-      description: "",
-      quantity: 1,
-      unit_cost: 0,
-      cost: null,
-      part_number: "",
-      category: "",
-    });
+      toast.success(isEditing ? "Line item updated" : "Line item added");
+      onOpenChange(false);
+      setSelectedCatalogId(null);
+      form.reset({
+        job_id: jobId,
+        type: "labor",
+        description: "",
+        quantity: 1,
+        unit_cost: 0,
+        cost: null,
+        part_number: "",
+        category: "",
+      });
+    } finally {
+      submittingRef.current = false;
+    }
   }
 
   const formContent = (

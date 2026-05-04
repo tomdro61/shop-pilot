@@ -192,14 +192,31 @@ export async function saveToCatalog(lineItemData: {
   const supabase = await createClient();
 
   // Case-insensitive duplicate check by description + type
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("catalog_items")
-    .select("id")
+    .select("id, default_cost")
     .eq("type", lineItemData.type)
     .ilike("description", lineItemData.description.trim())
     .limit(1);
 
+  if (existingError) return { error: existingError.message };
+
   if (existing && existing.length > 0) {
+    const existingRow = existing[0];
+    const newCost = lineItemData.type === "part" ? (lineItemData.cost ?? null) : null;
+    // First save from a job (with cost) for a part that was previously
+    // saved from an estimate (no cost) — backfill the catalog entry's
+    // default_cost so margin reporting picks it up. Strictly an upgrade:
+    // never overwrites an existing non-null cost.
+    if (newCost != null && existingRow.default_cost == null) {
+      const { error: updateError } = await supabase
+        .from("catalog_items")
+        .update({ default_cost: newCost })
+        .eq("id", existingRow.id);
+      if (updateError) return { error: updateError.message };
+      revalidatePath("/settings/catalog");
+      return { updated: true, message: "Updated cost in catalog" };
+    }
     return { duplicate: true, message: "Already in catalog" };
   }
 

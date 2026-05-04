@@ -4,25 +4,40 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EstimateLineItemForm } from "@/components/forms/estimate-line-item-form";
+import { EstimateLineItemsAddSheet } from "./estimate-line-items-add-sheet";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteEstimateLineItem } from "@/lib/actions/estimates";
+import { saveToCatalog } from "@/lib/actions/catalog";
 import { formatCurrency } from "@/lib/utils/format";
-import { calculateTotals } from "@/lib/utils/totals";
+import { calculateTotals, getJobCategories } from "@/lib/utils/totals";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { cn } from "@/lib/utils";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import type { EstimateLineItem, ShopSettings } from "@/types";
+import { Plus, Pencil, Trash2, BookmarkPlus } from "lucide-react";
+import type { EstimateLineItem, JobPreset, ShopSettings } from "@/types";
 
-export function EstimateLineItemsAddButton({ estimateId }: { estimateId: string }) {
+export function EstimateLineItemsAddButton({
+  estimateId,
+  presets,
+  settings,
+}: {
+  estimateId: string;
+  // Required — caller must explicitly pass [] if there are no presets.
+  // Hides a real coupling: the sheet's tab order depends on presets.length.
+  presets: JobPreset[];
+  settings?: ShopSettings | null;
+}) {
   const [open, setOpen] = useState(false);
+  const categories = getJobCategories(settings);
   return (
     <>
       <Button size="sm" onClick={() => setOpen(true)}>
         <Plus className="mr-1.5 h-3.5 w-3.5" />
         Add
       </Button>
-      <EstimateLineItemForm
+      <EstimateLineItemsAddSheet
         estimateId={estimateId}
+        presets={presets}
+        categories={categories}
         open={open}
         onOpenChange={setOpen}
       />
@@ -44,6 +59,7 @@ export function EstimateLineItemsList({
   settings,
 }: EstimateLineItemsListProps) {
   const [editItem, setEditItem] = useState<EstimateLineItem | null>(null);
+  const categories = getJobCategories(settings);
 
   const totals = calculateTotals(lineItems, settings);
 
@@ -55,6 +71,27 @@ export function EstimateLineItemsList({
       toast.success("Line item deleted");
     }
     return result;
+  }
+
+  async function handleSaveToCatalog(item: EstimateLineItem) {
+    const result = await saveToCatalog({
+      type: item.type as "labor" | "part",
+      description: item.description,
+      quantity: item.quantity,
+      unit_cost: item.unit_cost,
+      cost: null,
+      part_number: item.part_number,
+      category: item.category,
+    });
+    if ("error" in result && result.error) {
+      toast.error(typeof result.error === "string" ? result.error : "Failed to save");
+    } else if ("updated" in result && result.updated) {
+      toast.success("Updated cost in catalog");
+    } else if ("duplicate" in result && result.duplicate) {
+      toast.info("Already in catalog");
+    } else {
+      toast.success("Saved to catalog");
+    }
   }
 
   // Group line items by category
@@ -135,6 +172,14 @@ export function EstimateLineItemsList({
                     </div>
                     {!readOnly && (
                       <div className="flex shrink-0 items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          title="Save to catalog"
+                          onClick={() => handleSaveToCatalog(item)}
+                        >
+                          <BookmarkPlus className="h-3 w-3" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon-xs"
@@ -222,6 +267,7 @@ export function EstimateLineItemsList({
         <EstimateLineItemForm
           estimateId={estimateId}
           lineItem={editItem}
+          categories={categories}
           open={!!editItem}
           onOpenChange={(open) => {
             if (!open) setEditItem(null);

@@ -15,6 +15,7 @@ import { EstimateSection } from "@/components/dashboard/estimate-section";
 import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { DviSection } from "@/components/dashboard/dvi-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
+import { JobCancelButton } from "@/components/dashboard/job-cancel-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { JobDateEditor } from "@/components/dashboard/job-date-editor";
 import { JobTitleEditor } from "@/components/dashboard/job-title-editor";
@@ -96,6 +97,9 @@ export default async function JobDetailPage({
                 Print
               </Button>
             </Link>
+            {job.status !== "complete" && job.status !== "cancelled" && (
+              <JobCancelButton jobId={id} />
+            )}
             <JobDeleteButton jobId={id} />
           </div>
         </div>

@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       catalog_items: {
@@ -185,10 +210,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "dvi_inspections_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "dvi_inspections_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: true
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dvi_inspections_parking_reservation_id_fkey"
+            columns: ["parking_reservation_id"]
+            isOneToOne: false
+            referencedRelation: "parking_reservations"
             referencedColumns: ["id"]
           },
           {
@@ -203,6 +242,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "dvi_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dvi_inspections_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -445,50 +491,86 @@ export type Database = {
       }
       estimates: {
         Row: {
+          approval_method: string | null
           approval_token: string | null
           approved_at: string | null
+          approved_by_user_id: string | null
           created_at: string
+          customer_id: string
           declined_at: string | null
+          estimate_number: number | null
           id: string
-          job_id: string
+          job_id: string | null
           notes: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["estimate_status"]
           tax_rate: number
           updated_at: string
+          vehicle_id: string | null
         }
         Insert: {
+          approval_method?: string | null
           approval_token?: string | null
           approved_at?: string | null
+          approved_by_user_id?: string | null
           created_at?: string
+          customer_id: string
           declined_at?: string | null
+          estimate_number?: number | null
           id?: string
-          job_id: string
+          job_id?: string | null
           notes?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["estimate_status"]
           tax_rate?: number
           updated_at?: string
+          vehicle_id?: string | null
         }
         Update: {
+          approval_method?: string | null
           approval_token?: string | null
           approved_at?: string | null
+          approved_by_user_id?: string | null
           created_at?: string
+          customer_id?: string
           declined_at?: string | null
+          estimate_number?: number | null
           id?: string
-          job_id?: string
+          job_id?: string | null
           notes?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["estimate_status"]
           tax_rate?: number
           updated_at?: string
+          vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "estimates_approved_by_user_id_fkey"
+            columns: ["approved_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "estimates_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -739,6 +821,50 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_income: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string | null
+          customer_id: string | null
+          date: string
+          id: string
+          label: string
+          notes: string | null
+          shop_keep_pct: number
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string | null
+          customer_id?: string | null
+          date: string
+          id?: string
+          label: string
+          notes?: string | null
+          shop_keep_pct?: number
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string | null
+          customer_id?: string | null
+          date?: string
+          id?: string
+          label?: string
+          notes?: string | null
+          shop_keep_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_income_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           body: string
@@ -789,49 +915,6 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      manual_income: {
-        Row: {
-          id: string
-          date: string
-          amount: number
-          shop_keep_pct: number
-          label: string
-          category: string
-          customer_id: string | null
-          notes: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          date: string
-          amount: number
-          shop_keep_pct?: number
-          label: string
-          category: string
-          customer_id?: string | null
-          notes?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          date?: string
-          amount?: number
-          shop_keep_pct?: number
-          label?: string
-          category?: string
-          customer_id?: string | null
-          notes?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "manual_income_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -1014,41 +1097,6 @@ export type Database = {
           },
         ]
       }
-      tasks: {
-        Row: {
-          id: string
-          user_id: string | null
-          title: string
-          status: string
-          created_at: string
-          resolved_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          title: string
-          status?: string
-          created_at?: string
-          resolved_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          title?: string
-          status?: string
-          created_at?: string
-          resolved_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       shop_settings: {
         Row: {
           created_at: string
@@ -1099,6 +1147,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          id: string
+          resolved_at: string | null
+          status: string
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          status?: string
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          status?: string
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
@@ -1188,6 +1271,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      append_service_completed: {
+        Args: { reservation_id: string; service_value: string }
+        Returns: undefined
+      }
       get_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -1195,10 +1282,6 @@ export type Database = {
       is_manager: { Args: never; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
-      append_service_completed: {
-        Args: { reservation_id: string; service_value: string }
-        Returns: undefined
-      }
     }
     Enums: {
       customer_type: "retail" | "fleet" | "parking"
@@ -1211,6 +1294,7 @@ export type Database = {
         | "waiting_for_parts"
         | "in_progress"
         | "complete"
+        | "cancelled"
       line_item_type: "labor" | "part"
       message_channel: "sms" | "email"
       message_direction: "in" | "out"
@@ -1348,6 +1432,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       customer_type: ["retail", "fleet", "parking"],
@@ -1360,6 +1447,7 @@ export const Constants = {
         "waiting_for_parts",
         "in_progress",
         "complete",
+        "cancelled",
       ],
       line_item_type: ["labor", "part"],
       message_channel: ["sms", "email"],

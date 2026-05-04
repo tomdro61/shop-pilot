@@ -42,6 +42,23 @@ export const DEFAULT_SETTINGS: Pick<
   hazmat_categories: null,
 };
 
+/**
+ * Extract job_categories from shop_settings as a validated string[].
+ *
+ * shop_settings.job_categories is a JSON column, so the supabase-generated
+ * type is `Json` — `as string[]` would be an unchecked cast. This validates
+ * at runtime and falls back to DEFAULT_JOB_CATEGORIES if the JSON shape is
+ * wrong (e.g., manual DB tampering, schema drift).
+ */
+export function getJobCategories(settings: ShopSettings | null | undefined): string[] {
+  const raw = settings?.job_categories ?? DEFAULT_SETTINGS.job_categories;
+  if (Array.isArray(raw) && raw.every((v) => typeof v === "string")) {
+    return raw;
+  }
+  console.warn("[getJobCategories] shop_settings.job_categories has unexpected shape, falling back to defaults", { raw });
+  return DEFAULT_JOB_CATEGORIES;
+}
+
 interface LineItemLike {
   type: string;
   quantity: number;

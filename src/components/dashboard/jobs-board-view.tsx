@@ -1,4 +1,4 @@
-import { CircleDashed, Package, Wrench, CheckCircle2 } from "lucide-react";
+import { CircleDashed, Package, Wrench, CheckCircle2, Ban } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { JobCard } from "./job-card";
@@ -12,6 +12,7 @@ const STATUS_TONE: Record<JobStatus, Accent> = {
   waiting_for_parts: "amber",
   in_progress: "blue",
   complete: "green",
+  cancelled: "stone",
 };
 
 const STATUS_ICON: Record<JobStatus, LucideIcon> = {
@@ -19,6 +20,7 @@ const STATUS_ICON: Record<JobStatus, LucideIcon> = {
   waiting_for_parts: Package,
   in_progress: Wrench,
   complete: CheckCircle2,
+  cancelled: Ban,
 };
 
 type JobRow = {

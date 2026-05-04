@@ -5,13 +5,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireManager } from "@/lib/auth";
 import {
   estimateLineItemSchema,
+  estimateSchema,
   prepareEstimateLineItemData,
 } from "@/lib/validators/estimate";
-import { getOrCreateStripeCustomer } from "./invoices";
-import { createStripeInvoice } from "@/lib/stripe/create-invoice";
 import { revalidatePath } from "next/cache";
 import { getShopSettings } from "@/lib/actions/settings";
-import type { EstimateLineItemFormData } from "@/lib/validators/estimate";
+import type {
+  EstimateFormData,
+  EstimateLineItemFormData,
+} from "@/lib/validators/estimate";
 import crypto from "crypto";
 
 export async function createEstimateFromJob(jobId: string) {
@@ -29,6 +31,15 @@ export async function createEstimateFromJob(jobId: string) {
   if (existingError) return { error: existingError.message };
   if (existing) return { error: "An estimate already exists for this job" };
 
+  const { data: job, error: jobError } = await supabase
+    .from("jobs")
+    .select("id, customer_id, vehicle_id")
+    .eq("id", jobId)
+    .single();
+
+  if (jobError) return { error: jobError.message };
+  if (!job) return { error: "Job not found" };
+
   const [{ data: lineItems, error: lineItemsError }, settings] = await Promise.all([
     supabase.from("job_line_items").select("*").eq("job_id", jobId),
     getShopSettings(),
@@ -40,6 +51,8 @@ export async function createEstimateFromJob(jobId: string) {
     .from("estimates")
     .insert({
       job_id: jobId,
+      customer_id: job.customer_id,
+      vehicle_id: job.vehicle_id,
       status: "draft",
       tax_rate: settings?.tax_rate ?? 0.0625,
     })
@@ -69,16 +82,99 @@ export async function createEstimateFromJob(jobId: string) {
         .delete()
         .eq("id", estimate.id);
 
-      return {
-        error: rollbackError
-          ? `Failed to copy line items and rollback failed (estimate ${estimate.id} may need manual cleanup): ${copyError.message}`
-          : `Failed to copy line items: ${copyError.message}`,
-      };
+      if (rollbackError) {
+        console.error(
+          "[createEstimateFromJob] rollback failed — orphan estimate left in DB",
+          { rollbackError, copyError, estimateId: estimate.id, jobId }
+        );
+        return {
+          error: `Couldn't copy line items and rollback failed — the estimate may need manual cleanup: ${copyError.message}`,
+        };
+      }
+      return { error: `Failed to copy line items: ${copyError.message}` };
     }
   }
 
   revalidatePath(`/jobs/${jobId}`);
   return { data: estimate };
+}
+
+// Manager creates a standalone estimate (no parent job). Used for quotes
+// the customer hasn't committed to yet — prevents "ghost jobs" cluttering
+// the Shop Floor while we wait on approval.
+export async function createEstimate(formData: EstimateFormData) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const parsed = estimateSchema.safeParse(formData);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const supabase = await createClient();
+
+  // Validate customer exists (don't trust client-supplied UUID)
+  const { data: customer, error: customerError } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("id", parsed.data.customer_id)
+    .single();
+  if (customerError) return { error: customerError.message };
+  if (!customer) return { error: "Customer not found" };
+
+  // Validate vehicle belongs to the customer (when provided)
+  if (parsed.data.vehicle_id) {
+    const { data: vehicle, error: vehicleError } = await supabase
+      .from("vehicles")
+      .select("id, customer_id")
+      .eq("id", parsed.data.vehicle_id)
+      .single();
+    if (vehicleError) return { error: vehicleError.message };
+    if (!vehicle || vehicle.customer_id !== parsed.data.customer_id) {
+      return { error: "Vehicle does not belong to this customer" };
+    }
+  }
+
+  const settings = await getShopSettings();
+
+  const { data: estimate, error } = await supabase
+    .from("estimates")
+    .insert({
+      customer_id: parsed.data.customer_id,
+      vehicle_id: parsed.data.vehicle_id || null,
+      job_id: null,
+      status: "draft",
+      tax_rate: settings?.tax_rate ?? 0.0625,
+      notes: parsed.data.notes || null,
+    })
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/customers/${parsed.data.customer_id}`);
+  return { data: estimate };
+}
+
+export async function getEstimates(filters?: {
+  status?: "draft" | "sent" | "approved" | "declined";
+}) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("estimates")
+    .select(
+      "id, status, estimate_number, created_at, sent_at, approved_at, declined_at, customer_id, vehicle_id, job_id, customers(id, first_name, last_name), vehicles(year, make, model), estimate_line_items(total)"
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (filters?.status) {
+    query = query.eq("status", filters.status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Failed to load estimates: ${error.message}`);
+  return data ?? [];
 }
 
 export async function getEstimate(id: string) {
@@ -87,12 +183,22 @@ export async function getEstimate(id: string) {
   const { data, error } = await supabase
     .from("estimates")
     .select(
-      "*, estimate_line_items(*), jobs(id, title, customer_id, vehicle_id, customers(id, first_name, last_name, email, phone), vehicles(id, year, make, model, vin))"
+      `*,
+       estimate_line_items(*),
+       customers(id, first_name, last_name, email, phone),
+       vehicles(id, year, make, model, vin, license_plate, color),
+       jobs(id, title, ro_number, status)`
     )
     .eq("id", id)
     .single();
 
-  if (error) return null;
+  if (error) {
+    // PGRST116 = no row matched — render 404. Anything else (RLS, network,
+    // schema drift) is infrastructure failure and must surface as 500 so
+    // the manager doesn't see "Estimate not found" for a real bug.
+    if (error.code === "PGRST116") return null;
+    throw new Error(`Failed to load estimate: ${error.message}`);
+  }
   return data;
 }
 
@@ -107,7 +213,9 @@ export async function getEstimateForJob(jobId: string) {
     .limit(1)
     .maybeSingle();
 
-  if (error) return null;
+  // maybeSingle() returns data: null with error: null when no row matches,
+  // so any error here is a real failure — surface it.
+  if (error) throw new Error(`Failed to load estimate for job: ${error.message}`);
   return data;
 }
 
@@ -122,7 +230,13 @@ export async function getEstimateByToken(token: string) {
     .eq("approval_token", token)
     .single();
 
-  if (error) return null;
+  if (error) {
+    // Public approval link — a bad/expired token should render the friendly
+    // 404 page. Any other error is infrastructure and must throw so the
+    // customer doesn't see "Estimate not found" for a real outage.
+    if (error.code === "PGRST116") return null;
+    throw new Error(`Failed to load estimate: ${error.message}`);
+  }
   return data;
 }
 
@@ -132,11 +246,10 @@ export async function sendEstimate(id: string) {
 
   const supabase = await createClient();
 
-  // Verify it's a draft and get job/customer info for SMS
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select(
-      "id, status, job_id, jobs(id, customer_id, vehicle_id, customers(id, first_name, phone, email), vehicles(year, make, model))"
+      "id, status, job_id, customer_id, vehicle_id, customers(id, first_name, phone, email), vehicles(year, make, model)"
     )
     .eq("id", id)
     .single();
@@ -159,46 +272,60 @@ export async function sendEstimate(id: string) {
 
   if (error) return { error: error.message };
 
-  // Fire-and-forget SMS notification to customer
-  const job = estimate.jobs as {
+  const customer = estimate.customers as {
     id: string;
-    customer_id: string;
-    customers: { id: string; first_name: string; phone: string | null; email: string | null } | null;
-    vehicles?: { year: number | null; make: string | null; model: string | null } | null;
+    first_name: string;
+    phone: string | null;
+    email: string | null;
   } | null;
-  const customer = job?.customers;
-  if (customer?.phone) {
-    import("@/lib/messaging/templates")
-      .then(({ estimateSentSMS }) => {
-        const vehicle = (job as { vehicles?: { year: number | null; make: string | null; model: string | null } | null })?.vehicles;
-        return import("@/lib/actions/messages").then(({ sendCustomerSMS }) =>
-          sendCustomerSMS({
-            customerId: customer.id,
-            body: estimateSentSMS({
-              firstName: customer.first_name,
-              year: vehicle?.year,
-              make: vehicle?.make,
-              model: vehicle?.model,
-              link: approvalUrl,
-            }),
-            jobId: job!.id,
-            line: "shop",
-          })
-        );
-      })
-      .catch((err) => console.error("Failed to send estimate SMS:", err));
-  }
+  const vehicle = estimate.vehicles as {
+    year: number | null;
+    make: string | null;
+    model: string | null;
+  } | null;
 
-  // Fire-and-forget email notification
+  // Surface delivery failures — "Estimate sent!" must not lie when the
+  // customer never actually got the link. Both channels are awaited so the
+  // toast can warn the manager to copy the link manually if needed.
+  const warnings: string[] = [];
+  if (customer?.phone) {
+    const { estimateSentSMS } = await import("@/lib/messaging/templates");
+    const { sendCustomerSMS } = await import("@/lib/actions/messages");
+    const smsResult = await sendCustomerSMS({
+      customerId: customer.id,
+      body: estimateSentSMS({
+        firstName: customer.first_name,
+        year: vehicle?.year,
+        make: vehicle?.make,
+        model: vehicle?.model,
+        link: approvalUrl,
+      }),
+      jobId: estimate.job_id ?? undefined,
+      line: "shop",
+    });
+    if ("error" in smsResult && smsResult.error) {
+      warnings.push(`SMS: ${smsResult.error}`);
+      console.error("[sendEstimate] SMS delivery failed:", smsResult.error);
+    }
+  }
   if (customer?.email) {
-    import("@/lib/actions/email")
-      .then(({ sendEstimateEmail }) => sendEstimateEmail({ estimateId: id }))
-      .catch((err) => console.error("Failed to send estimate email:", err));
+    const { sendEstimateEmail } = await import("@/lib/actions/email");
+    const emailResult = await sendEstimateEmail({ estimateId: id });
+    if (!emailResult.sent && emailResult.error) {
+      warnings.push(`Email: ${emailResult.error}`);
+      console.error("[sendEstimate] email delivery failed:", emailResult.error);
+    }
   }
 
   revalidatePath(`/estimates/${id}`);
-  revalidatePath(`/jobs/${estimate.job_id}`);
-  return { data: { approvalUrl } };
+  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
+  return {
+    data: {
+      approvalUrl,
+      deliveryWarning: warnings.length > 0 ? warnings.join(" · ") : undefined,
+    },
+  };
 }
 
 export async function resendEstimate(id: string) {
@@ -210,7 +337,7 @@ export async function resendEstimate(id: string) {
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select(
-      "id, status, approval_token, job_id, jobs(id, customer_id, vehicle_id, customers(id, first_name, phone), vehicles(year, make, model))"
+      "id, status, approval_token, job_id, customer_id, customers(id, first_name, phone), vehicles(year, make, model)"
     )
     .eq("id", id)
     .single();
@@ -222,21 +349,23 @@ export async function resendEstimate(id: string) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const approvalUrl = `${appUrl}/estimates/approve/${estimate.approval_token}`;
 
-  const job = estimate.jobs as {
+  const customer = estimate.customers as {
     id: string;
-    customer_id: string;
-    customers: { id: string; first_name: string; phone: string | null } | null;
-    vehicles?: { year: number | null; make: string | null; model: string | null } | null;
+    first_name: string;
+    phone: string | null;
   } | null;
-  const customer = job?.customers;
+  const vehicle = estimate.vehicles as {
+    year: number | null;
+    make: string | null;
+    model: string | null;
+  } | null;
 
   if (!customer?.phone) return { error: "Customer has no phone number" };
 
   const { estimateSentSMS } = await import("@/lib/messaging/templates");
   const { sendCustomerSMS } = await import("@/lib/actions/messages");
-  const vehicle = (job as { vehicles?: { year: number | null; make: string | null; model: string | null } | null })?.vehicles;
 
-  await sendCustomerSMS({
+  const smsResult = await sendCustomerSMS({
     customerId: customer.id,
     body: estimateSentSMS({
       firstName: customer.first_name,
@@ -245,167 +374,230 @@ export async function resendEstimate(id: string) {
       model: vehicle?.model,
       link: approvalUrl,
     }),
-    jobId: job!.id,
+    jobId: estimate.job_id ?? undefined,
     line: "shop",
   });
+  if ("error" in smsResult && smsResult.error) {
+    return { error: `Resend failed: ${smsResult.error}` };
+  }
 
+  revalidatePath(`/estimates/${id}`);
+  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
   return { data: { success: true } };
 }
 
+// Public customer-facing approval via emailed/SMS link. We deliberately do
+// NOT create a Stripe customer or invoice here: pricing can change once
+// the work begins (additional parts, etc.), so invoices are generated from
+// the completed-job InvoiceSection — see createInvoiceFromJob.
 export async function approveEstimate(token: string) {
   const supabase = createAdminClient();
 
-  // Get estimate with relations
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
-    .select(
-      "*, estimate_line_items(*), jobs(id, customer_id, customers(id, first_name, last_name, email, phone, stripe_customer_id))"
-    )
+    .select("id, status, customer_id, job_id")
     .eq("approval_token", token)
     .single();
 
   if (fetchError || !estimate) return { error: "Estimate not found" };
   if (estimate.status !== "sent") return { error: "This estimate cannot be approved" };
 
-  const job = estimate.jobs as {
-    id: string;
-    customer_id: string;
-    customers: {
-      id: string;
-      first_name: string;
-      last_name: string;
-      email: string | null;
-      phone: string | null;
-      stripe_customer_id: string | null;
-    } | null;
-  } | null;
+  const { error } = await supabase
+    .from("estimates")
+    .update({
+      status: "approved",
+      approved_at: new Date().toISOString(),
+      approval_method: "link",
+    })
+    .eq("id", estimate.id);
 
-  if (!job?.customers) return { error: "Customer not found" };
+  if (error) return { error: error.message };
 
-  const lineItems = (estimate.estimate_line_items || []) as {
+  revalidatePath(`/estimates/${estimate.id}`);
+  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
+  revalidatePath("/dashboard");
+  return { data: { success: true } };
+}
+
+// Manager-side bypass: when the customer approves verbally or in person
+// instead of clicking the link. Records who approved and how, so the audit
+// trail makes it clear this wasn't a customer-link click.
+export async function markEstimateApproved(
+  id: string,
+  method: "verbal" | "in_person"
+) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: estimate, error: fetchError } = await supabase
+    .from("estimates")
+    .select("id, status, customer_id, job_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!estimate) return { error: "Estimate not found" };
+  if (estimate.status !== "sent" && estimate.status !== "draft") {
+    return { error: "Only draft or sent estimates can be marked approved" };
+  }
+
+  // Look up the manager's users.id (auth.userId is auth_id, not the FK target).
+  // maybeSingle() so the "no users row for this auth user" case is a clean null
+  // we can guard, not a Postgres error string surfaced to the manager.
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("id")
+    .eq("auth_id", auth.userId)
+    .maybeSingle();
+  if (profileError) return { error: profileError.message };
+  if (!profile) {
+    console.error("[markEstimateApproved] manager has no users row", { authId: auth.userId });
+    return { error: "Your user profile is missing. Contact support." };
+  }
+
+  const { error } = await supabase
+    .from("estimates")
+    .update({
+      status: "approved",
+      approved_at: new Date().toISOString(),
+      approval_method: method,
+      approved_by_user_id: profile.id,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/estimates/${id}`);
+  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+// Promote an approved estimate to a real job. Copies line items so the
+// job can evolve independently — additional parts on the job don't need
+// to mutate the historical estimate. The estimate keeps a back-link
+// (job_id) so the customer detail page can show the conversion chain.
+//
+// Intentionally does NOT create an invoice: the new job follows the
+// normal lifecycle (Not Started → In Progress → Complete) and is
+// invoiced from the completed-job InvoiceSection like any other job.
+export async function convertEstimateToJob(estimateId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: estimate, error: fetchError } = await supabase
+    .from("estimates")
+    .select("id, status, customer_id, vehicle_id, job_id, estimate_line_items(*)")
+    .eq("id", estimateId)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!estimate) return { error: "Estimate not found" };
+  if (estimate.status !== "approved") {
+    return { error: "Only approved estimates can be converted to a job" };
+  }
+  if (estimate.job_id) {
+    return { error: "Estimate is already linked to a job" };
+  }
+  if (!estimate.customer_id) return { error: "Estimate has no customer" };
+
+  const { data: job, error: jobError } = await supabase
+    .from("jobs")
+    .insert({
+      customer_id: estimate.customer_id,
+      vehicle_id: estimate.vehicle_id,
+      status: "not_started",
+      date_received: new Date().toISOString().split("T")[0],
+      payment_status: "unpaid",
+    })
+    .select("id, ro_number")
+    .single();
+
+  if (jobError) return { error: jobError.message };
+  if (!job) return { error: "Failed to create job" };
+
+  const lineItems = (estimate.estimate_line_items || []) as Array<{
     type: "labor" | "part";
     description: string;
     quantity: number;
     unit_cost: number;
-  }[];
+    part_number: string | null;
+    category: string | null;
+  }>;
 
-  if (lineItems.length === 0) return { error: "Estimate has no line items" };
+  if (lineItems.length > 0) {
+    const jobLineItems = lineItems.map((li) => ({
+      job_id: job.id,
+      type: li.type,
+      description: li.description,
+      quantity: li.quantity,
+      unit_cost: li.unit_cost,
+      part_number: li.part_number,
+      category: li.category,
+    }));
 
-  // Get or create Stripe customer (handles stale IDs)
-  const stripe = (await import("@/lib/stripe")).getStripe();
-  let stripeCustomerId = job.customers.stripe_customer_id;
+    const { error: copyError } = await supabase
+      .from("job_line_items")
+      .insert(jobLineItems);
 
-  if (stripeCustomerId) {
-    try {
-      const existing = await stripe.customers.retrieve(stripeCustomerId);
-      if ((existing as { deleted?: boolean }).deleted) {
-        stripeCustomerId = null;
+    if (copyError) {
+      // Roll back the job so we don't leave a half-converted artifact.
+      // Capture rollback failure too — same pattern as createEstimateFromJob.
+      const { error: rollbackError } = await supabase
+        .from("jobs")
+        .delete()
+        .eq("id", job.id);
+      if (rollbackError) {
+        console.error(
+          "[convertEstimateToJob] rollback failed — orphan job left in DB",
+          { rollbackError, copyError, jobId: job.id, estimateId }
+        );
+        return {
+          error: `Couldn't copy line items and rollback failed — the job may need manual cleanup: ${copyError.message}`,
+        };
       }
-    } catch (err) {
-      // Stripe sets code "resource_missing" specifically for 404. Other errors
-      // (rate limit, network, auth) must surface — silently treating them as
-      // missing creates duplicate Stripe customers.
-      if ((err as { code?: string } | null)?.code === "resource_missing") {
-        stripeCustomerId = null;
-      } else {
-        const message = err instanceof Error ? err.message : "Failed to verify Stripe customer";
-        return { error: message };
-      }
+      return { error: `Failed to copy line items: ${copyError.message}` };
     }
   }
 
-  if (!stripeCustomerId) {
-    const stripeCustomer = await stripe.customers.create({
-      name: `${job.customers.first_name} ${job.customers.last_name}`,
-      email: job.customers.email || undefined,
-      phone: job.customers.phone || undefined,
-      metadata: { supabase_customer_id: job.customers.id },
-    });
-    stripeCustomerId = stripeCustomer.id;
+  // Link the estimate to the new job. If this fails the job exists with
+  // its line items, but the estimate keeps showing "Convert to Job".
+  // Don't auto-delete the orphan job — line items are real and the manager
+  // may have already started it; tell them to reconcile manually.
+  const { error: linkError } = await supabase
+    .from("estimates")
+    .update({ job_id: job.id })
+    .eq("id", estimateId);
 
-    const { error: customerUpdateError } = await supabase
-      .from("customers")
-      .update({ stripe_customer_id: stripeCustomerId })
-      .eq("id", job.customers.id);
-    if (customerUpdateError) {
-      // Non-fatal: the Stripe customer exists; we just failed to record its
-      // ID locally. Future invoice creation will create a duplicate Stripe
-      // customer until this is reconciled. Surface to logs for manual fix.
-      console.error(
-        "[approveEstimate] failed to save stripe_customer_id locally:",
-        customerUpdateError,
-        { customerId: job.customers.id, stripeCustomerId }
-      );
-    }
-  }
-
-  // Create Stripe invoice with current shop settings
-  const shopSettings = await getShopSettings();
-  try {
-    const { stripeInvoiceId, hostedInvoiceUrl, amountDue } =
-      await createStripeInvoice({
-        stripeCustomerId,
-        lineItems,
-        jobCategory: null,
-        settings: shopSettings,
-        hasEmail: !!job.customers.email,
-      });
-
-    // Insert invoice record (draft — staff sends manually when ready).
-    // Critical: Stripe invoice was just created. If this insert fails, the
-    // customer is billed in Stripe but we have no local record of it.
-    // Surface the error so the manager can manually reconcile (Stripe
-    // dashboard → void invoice, or run the insert by hand).
-    const { error: invoiceInsertError } = await supabase
-      .from("invoices")
-      .insert({
-        job_id: job.id,
-        stripe_invoice_id: stripeInvoiceId,
-        stripe_hosted_invoice_url: hostedInvoiceUrl,
-        status: "draft",
-        amount: amountDue / 100,
-      });
-    if (invoiceInsertError) {
-      console.error(
-        "[approveEstimate] orphan Stripe invoice — local insert failed:",
-        invoiceInsertError,
-        { stripeInvoiceId, jobId: job.id }
-      );
-      return {
-        error: `Stripe invoice was created (${stripeInvoiceId}) but could not be saved locally. Please contact support to reconcile.`,
-      };
-    }
-
-    // Mark estimate as approved. If this fails, Stripe customer + invoice
-    // exist and the local invoice row exists, but the estimate stays "sent".
-    // Surface so the manager can manually update the estimate status.
-    const { error: estimateUpdateError } = await supabase
-      .from("estimates")
-      .update({
-        status: "approved",
-        approved_at: new Date().toISOString(),
-      })
-      .eq("id", estimate.id);
-    if (estimateUpdateError) {
-      console.error(
-        "[approveEstimate] estimate status update failed:",
-        estimateUpdateError,
-        { estimateId: estimate.id }
-      );
-      return {
-        error: `Invoice was saved but the estimate status could not be updated. Please mark the estimate approved manually.`,
-      };
-    }
-
-    revalidatePath(`/estimates/${estimate.id}`);
-    revalidatePath(`/jobs/${job.id}`);
+  if (linkError) {
+    console.error(
+      "[convertEstimateToJob] orphan job — failed to link back to estimate:",
+      { linkError, estimateId, jobId: job.id }
+    );
+    // Revalidate so the new job shows up on the board immediately — manager
+    // can find and reconcile it without thinking the action did nothing.
+    revalidatePath(`/customers/${estimate.customer_id}`);
     revalidatePath("/dashboard");
-    return { data: { success: true } };
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Failed to create invoice";
-    return { error: message };
+    const roLabel = job.ro_number
+      ? `RO-${String(job.ro_number).padStart(4, "0")}`
+      : "the new job";
+    return {
+      error: `The new job (${roLabel}) was created but couldn't be linked back to this estimate. Find it on the Shop Floor and link or delete it manually.`,
+    };
   }
+
+  revalidatePath(`/estimates/${estimateId}`);
+  revalidatePath(`/jobs/${job.id}`);
+  revalidatePath(`/customers/${estimate.customer_id}`);
+  revalidatePath("/dashboard");
+  return { data: { jobId: job.id } };
 }
 
 export async function declineEstimate(token: string) {
@@ -413,7 +605,7 @@ export async function declineEstimate(token: string) {
 
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
-    .select("id, status, job_id")
+    .select("id, status, job_id, customer_id")
     .eq("approval_token", token)
     .single();
 
@@ -431,7 +623,8 @@ export async function declineEstimate(token: string) {
   if (error) return { error: error.message };
 
   revalidatePath(`/estimates/${estimate.id}`);
-  revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
   return { data: { success: true } };
 }
 
@@ -443,14 +636,14 @@ export async function deleteEstimate(id: string) {
 
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
-    .select("id, status, job_id")
+    .select("id, status, job_id, customer_id")
     .eq("id", id)
     .single();
 
   if (fetchError || !estimate) return { error: "Estimate not found" };
 
   if (estimate.status === "approved") {
-    return { error: "Cannot delete an approved estimate that has an invoice" };
+    return { error: "Approved estimates can't be deleted — convert them to a job or decline first" };
   }
 
   // Delete estimate line items first, then the estimate
@@ -464,7 +657,8 @@ export async function deleteEstimate(id: string) {
 
   if (error) return { error: error.message };
 
-  revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
   revalidatePath(`/estimates/${id}`);
   return { success: true };
 }

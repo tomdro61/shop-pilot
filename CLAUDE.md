@@ -389,7 +389,7 @@ These are the recurring failure modes from `REVIEW-FINDINGS.md`. Treat them as h
 
 **Forms:**
 - Always `value={field.value ?? ""}` on text inputs/textareas; never bare `{...field}` (avoids controlled/uncontrolled flip)
-- Submit handlers MUST guard against double-submit — `if (isSubmitting) return`
+- For double-submit protection, disable the submit button via `disabled={form.formState.isSubmitting}`. Do NOT add `if (form.formState.isSubmitting) return` inside the onSubmit handler — react-hook-form's `handleSubmit` flips `isSubmitting=true` BEFORE invoking the handler, so the inline guard fires every time and silently blocks all submissions. RHF's handleSubmit is internally re-entrant safe; the disabled button is the correct guard.
 - Search inputs hitting Supabase MUST debounce (300ms) AND use AbortController for cancellation
 
 **Comments:**

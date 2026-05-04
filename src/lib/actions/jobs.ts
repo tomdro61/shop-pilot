@@ -34,6 +34,11 @@ export async function getJobs(filters?: {
 
   if (filters?.status) {
     query = query.eq("status", filters.status);
+  } else {
+    // Cancelled jobs are off-board history. Hide them from default list,
+    // kanban, and calendar views — manager can still find them by selecting
+    // the Cancelled filter explicitly, or via the customer detail page.
+    query = query.neq("status", "cancelled");
   }
 
   if (filters?.paymentStatus) {
@@ -168,7 +173,12 @@ export async function updateJob(id: string, formData: JobFormData) {
   return { data };
 }
 
-export async function updateJobStatus(id: string, status: JobStatus) {
+// `cancelled` is intentionally excluded — every cancel transition must go
+// through `cancelJob`, which enforces the "no cancelling completed/paid"
+// guards. A bare status update from a Kanban drag would otherwise bypass them.
+export type ActiveJobStatus = Exclude<JobStatus, "cancelled">;
+
+export async function updateJobStatus(id: string, status: ActiveJobStatus) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
 
@@ -259,6 +269,47 @@ export async function updateJobDateFinished(id: string, dateFinished: string) {
 
   revalidatePath("/jobs");
   revalidatePath(`/jobs/${id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
+export async function cancelJob(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: job, error: fetchError } = await supabase
+    .from("jobs")
+    .select("id, status, payment_status, customer_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!job) return { error: "Job not found" };
+  if (job.status === "complete") {
+    return { error: "Completed jobs can't be cancelled — delete instead" };
+  }
+  if (job.status === "cancelled") return { error: "Job is already cancelled" };
+  // Paid / invoiced jobs have a Stripe payment intent or invoice attached.
+  // Cancelling without voiding those creates a financial reconciliation gap.
+  if (job.payment_status === "paid") {
+    return { error: "Paid jobs can't be cancelled — refund the payment in Stripe first" };
+  }
+  if (job.payment_status === "invoiced") {
+    return { error: "This job has an open invoice — void it in Stripe before cancelling" };
+  }
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ status: "cancelled", date_finished: null })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${id}`);
+  if (job.customer_id) revalidatePath(`/customers/${job.customer_id}`);
   revalidatePath("/dashboard");
   return { success: true };
 }

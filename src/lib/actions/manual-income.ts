@@ -15,7 +15,7 @@ export interface ManualIncomeEntry {
   category: string;
   customer_id: string | null;
   notes: string | null;
-  created_at: string;
+  created_at: string | null;
   customer_name?: string | null;
 }
 

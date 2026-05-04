@@ -239,9 +239,20 @@ export async function executeToolCall(
         return JSON.stringify(result);
       }
       case "update_job_status": {
+        // Runtime allowlist — the tool's enum is advisory; the model can
+        // still hallucinate "cancelled" or other strings and a bare cast
+        // would slip past updateJobStatus's type narrowing AND cancelJob's
+        // paid/invoiced guards.
+        const ACTIVE_STATUSES = ["not_started", "waiting_for_parts", "in_progress", "complete"] as const;
+        const status = str(toolInput.status);
+        if (!ACTIVE_STATUSES.includes(status as typeof ACTIVE_STATUSES[number])) {
+          return JSON.stringify({
+            error: `Invalid status '${status}' — use the cancel_job tool for cancellations.`,
+          });
+        }
         const result = await updateJobStatus(
           str(toolInput.id),
-          str(toolInput.status) as Parameters<typeof updateJobStatus>[1]
+          status as typeof ACTIVE_STATUSES[number]
         );
         return JSON.stringify(result);
       }

@@ -83,6 +83,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
             <SelectItem value="waiting_for_parts">Waiting for Parts</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="complete">Complete</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
 

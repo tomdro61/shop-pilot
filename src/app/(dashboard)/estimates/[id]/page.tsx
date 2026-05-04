@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getEstimate } from "@/lib/actions/estimates";
+import { getPresets } from "@/lib/actions/presets";
 import { getShopSettings } from "@/lib/actions/settings";
 import { Button } from "@/components/ui/button";
-import { EstimateLineItemsList, EstimateLineItemsAddButton } from "@/components/dashboard/estimate-line-items-list";
+import {
+  EstimateLineItemsList,
+  EstimateLineItemsAddButton,
+} from "@/components/dashboard/estimate-line-items-list";
 import { EstimateActions } from "@/components/dashboard/estimate-actions";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { SectionTitle } from "@/components/ui/section-title";
@@ -19,7 +23,7 @@ import {
   formatDateLong,
   getInitials,
 } from "@/lib/utils/format";
-import { ArrowLeft, User as UserIcon, Truck } from "lucide-react";
+import { ArrowLeft, FileText, User as UserIcon, Truck } from "lucide-react";
 import type {
   EstimateStatus,
   EstimateLineItem,
@@ -29,10 +33,21 @@ import type {
 
 const ESTIMATE_DOT: Record<EstimateStatus, string> = {
   draft: "bg-stone-400",
-  sent: "bg-emerald-500",
+  sent: "bg-indigo-500",
   approved: "bg-emerald-500",
   declined: "bg-red-500",
 };
+
+const APPROVAL_METHOD_LABELS: Record<string, string> = {
+  link: "via approval link",
+  verbal: "verbally",
+  in_person: "in person",
+};
+
+function formatEstimateNumber(n: number | null | undefined) {
+  if (!n) return null;
+  return `EST-${String(n).padStart(4, "0")}`;
+}
 
 export async function generateMetadata({
   params,
@@ -42,7 +57,8 @@ export async function generateMetadata({
   const { id } = await params;
   const estimate = await getEstimate(id);
   if (!estimate) return { title: "Estimate Not Found | ShopPilot" };
-  return { title: `Estimate | ShopPilot` };
+  const num = formatEstimateNumber(estimate.estimate_number);
+  return { title: `${num ?? "Estimate"} | ShopPilot` };
 }
 
 export default async function EstimateDetailPage({
@@ -51,9 +67,10 @@ export default async function EstimateDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [estimate, settings] = await Promise.all([
+  const [estimate, settings, presets] = await Promise.all([
     getEstimate(id),
     getShopSettings(),
+    getPresets(),
   ]);
   if (!estimate) notFound();
 
@@ -61,50 +78,62 @@ export default async function EstimateDetailPage({
   const statusColors = ESTIMATE_STATUS_COLORS[status];
   const lineItems = (estimate.estimate_line_items || []) as EstimateLineItem[];
 
+  const customer = (estimate.customers as Customer | null) ?? null;
+  const vehicle = (estimate.vehicles as Vehicle | null) ?? null;
   const job = estimate.jobs as {
     id: string;
     title: string | null;
-    customer_id: string;
-    vehicle_id: string | null;
-    customers: Customer | null;
-    vehicles: Vehicle | null;
+    ro_number: number | null;
+    status: string;
   } | null;
 
-  const customer = job?.customers || null;
-  const vehicle = job?.vehicles || null;
   const isDraft = status === "draft";
+  const estimateNumber = formatEstimateNumber(estimate.estimate_number);
+
+  // Back link points to the parent job when there is one (estimate was
+  // created from a job), otherwise back to the customer.
+  const backHref = job ? `/jobs/${job.id}` : customer ? `/customers/${customer.id}` : "/dashboard";
+  const backLabel = job
+    ? job.ro_number
+      ? `RO-${String(job.ro_number).padStart(4, "0")}`
+      : "Job"
+    : customer
+      ? formatCustomerName(customer)
+      : "Dashboard";
 
   return (
     <PageShell width="wide">
-
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 py-2">
-        {job ? (
-          <Link href={`/jobs/${job.id}`}>
-            <Button variant="ghost" size="sm" className="-ml-3">
-              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-              Job
-            </Button>
-          </Link>
-        ) : (
-          <span />
-        )}
+        <Link href={backHref}>
+          <Button variant="ghost" size="sm" className="-ml-3">
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            {backLabel}
+          </Button>
+        </Link>
       </div>
 
       <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden">
         <div className="px-5 lg:px-6 py-5">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
-                Estimate
-                <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
-                Created {formatDateLong(estimate.created_at) ?? "—"}
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <span className="w-9 h-9 rounded-md grid place-items-center border bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900 flex-none">
+                <FileText className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
+                  {estimateNumber ?? "Estimate"}
+                  <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
+                  Created {formatDateLong(estimate.created_at) ?? "—"}
+                </div>
+                <h2 className="mt-1.5 text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50 truncate">
+                  Estimate
+                </h2>
               </div>
-              <h2 className="mt-1.5 text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50 truncate">
-                {job?.title || "Estimate"}
-              </h2>
             </div>
             <div className="shrink-0">
-              <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[11px] font-medium ${statusColors.bg} ${statusColors.text}`}>
+              <span
+                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${statusColors.bg} ${statusColors.text}`}
+              >
                 <span className={`w-1.5 h-1.5 rounded-full ${ESTIMATE_DOT[status]}`} />
                 {ESTIMATE_STATUS_LABELS[status]}
               </span>
@@ -137,9 +166,15 @@ export default async function EstimateDetailPage({
                   <dd className="min-w-0 flex items-center gap-1.5 flex-wrap">
                     {customer.phone ? (
                       <>
-                        <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">{formatPhone(customer.phone)}</span>
-                        <a href={`tel:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">Call</a>
-                        <a href={`sms:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">Text</a>
+                        <span className="font-mono tabular-nums text-stone-900 dark:text-stone-50">
+                          {formatPhone(customer.phone)}
+                        </span>
+                        <a href={`tel:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                          Call
+                        </a>
+                        <a href={`sms:${customer.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                          Text
+                        </a>
                       </>
                     ) : (
                       <span className="text-stone-400">—</span>
@@ -167,9 +202,13 @@ export default async function EstimateDetailPage({
                     <Truck className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">{formatVehicle(vehicle)}</div>
+                    <div className="text-sm font-semibold text-stone-900 dark:text-stone-50 truncate">
+                      {formatVehicle(vehicle)}
+                    </div>
                     {vehicle.color && (
-                      <div className="text-xs text-stone-500 dark:text-stone-400 capitalize mt-0.5">{vehicle.color}</div>
+                      <div className="text-xs text-stone-500 dark:text-stone-400 capitalize mt-0.5">
+                        {vehicle.color}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -206,6 +245,11 @@ export default async function EstimateDetailPage({
                 <span className="font-mono tabular-nums text-stone-700 dark:text-stone-300">
                   {formatDateLong(estimate.approved_at)}
                 </span>
+                {estimate.approval_method && (
+                  <span className="ml-1 text-stone-500 dark:text-stone-400">
+                    {APPROVAL_METHOD_LABELS[estimate.approval_method]}
+                  </span>
+                )}
               </span>
             )}
             {estimate.declined_at && (
@@ -223,7 +267,15 @@ export default async function EstimateDetailPage({
       <section className="pt-2">
         <SectionTitle
           title="Line items"
-          action={isDraft ? <EstimateLineItemsAddButton estimateId={id} /> : undefined}
+          action={
+            isDraft ? (
+              <EstimateLineItemsAddButton
+                estimateId={id}
+                presets={presets}
+                settings={settings}
+              />
+            ) : undefined
+          }
         />
         <EstimateLineItemsList
           estimateId={id}
@@ -237,9 +289,10 @@ export default async function EstimateDetailPage({
         <SectionTitle title="Actions" />
         <EstimateActions
           estimateId={id}
-          jobId={job?.id || ""}
           status={status}
           approvalToken={estimate.approval_token}
+          jobId={job?.id ?? null}
+          customerId={customer?.id ?? null}
         />
       </section>
     </PageShell>
