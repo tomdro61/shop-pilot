@@ -19,6 +19,7 @@ import {
   updateJob,
   updateJobStatus,
   deleteJob,
+  cancelJob,
   getJobCategories,
   recordPayment,
 } from "@/lib/actions/jobs";
@@ -258,6 +259,10 @@ export async function executeToolCall(
       }
       case "delete_job": {
         const result = await deleteJob(str(toolInput.id));
+        return JSON.stringify(result);
+      }
+      case "cancel_job": {
+        const result = await cancelJob(str(toolInput.id));
         return JSON.stringify(result);
       }
 
