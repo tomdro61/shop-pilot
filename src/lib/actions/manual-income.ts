@@ -32,12 +32,16 @@ export async function getManualIncomeForRange(
   customer_id: string | null;
 }>> {
   const supabase = await createClient();
-  const { data } = await supabase
+  // Throw on infra error — this feeds the dashboard's revenue KPIs and the
+  // reports page. Silently returning [] understates revenue figures the
+  // owner sees, with no signal anything went wrong.
+  const { data, error } = await supabase
     .from("manual_income")
     .select("date, amount, shop_keep_pct, category, customer_id")
     .gte("date", startDate)
     .lte("date", endDate);
-  return data || [];
+  if (error) throw new Error(`Failed to load manual income: ${error.message}`);
+  return data ?? [];
 }
 
 // ── CRUD ─────────────────────────────────────────────────────
@@ -50,7 +54,7 @@ export async function getManualIncomeEntries(): Promise<ManualIncomeEntry[]> {
     .order("date", { ascending: false })
     .limit(500);
 
-  if (error) return [];
+  if (error) throw new Error(`Failed to load manual income entries: ${error.message}`);
 
   return (data || []).map((row) => {
     const customer = row.customers as { first_name: string; last_name: string } | null;
@@ -71,10 +75,12 @@ export async function getManualIncomeEntries(): Promise<ManualIncomeEntry[]> {
 
 export async function getManualIncomeCategories(): Promise<string[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("manual_income")
     .select("category")
     .limit(1000);
+
+  if (error) throw new Error(`Failed to load manual income categories: ${error.message}`);
 
   const cats = new Set<string>();
   (data || []).forEach((row) => cats.add(row.category));
