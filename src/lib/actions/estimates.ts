@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireManager } from "@/lib/auth";
@@ -177,7 +178,9 @@ export async function getEstimates(filters?: {
   return data ?? [];
 }
 
-export async function getEstimate(id: string) {
+// Wrapped in React cache() so generateMetadata + the page component
+// share one DB round-trip per request (they otherwise fetch twice).
+export const getEstimate = cache(async (id: string) => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -200,7 +203,7 @@ export async function getEstimate(id: string) {
     throw new Error(`Failed to load estimate: ${error.message}`);
   }
   return data;
-}
+});
 
 export async function getEstimateForJob(jobId: string) {
   const supabase = await createClient();
