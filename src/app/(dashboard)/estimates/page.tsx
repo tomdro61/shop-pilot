@@ -38,9 +38,15 @@ export default async function EstimatesPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  // Allowlist the URL param before casting to EstimateStatus — a garbage
+  // value like ?status=foo would otherwise cast through and render
+  // "No undefined estimates" via ESTIMATE_STATUS_LABELS[undefined].
+  const VALID_STATUSES: EstimateStatus[] = ["draft", "sent", "approved", "declined"];
   const { status } = await searchParams;
   const effectiveStatus =
-    status && status !== "all" ? (status as EstimateStatus) : undefined;
+    status && VALID_STATUSES.includes(status as EstimateStatus)
+      ? (status as EstimateStatus)
+      : undefined;
 
   const estimates = await getEstimates({ status: effectiveStatus });
 
