@@ -371,9 +371,6 @@ export async function getLineItemCategories() {
   return categories;
 }
 
-// Keep old name as alias for backward compatibility with AI handlers
-export const getJobCategories = getLineItemCategories;
-
 export async function recordPayment(
   jobId: string,
   paymentMethod: PaymentMethod,

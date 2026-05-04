@@ -9,7 +9,7 @@ import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteEstimateLineItem } from "@/lib/actions/estimates";
 import { saveToCatalog } from "@/lib/actions/catalog";
 import { formatCurrency } from "@/lib/utils/format";
-import { calculateTotals, getJobCategories } from "@/lib/utils/totals";
+import { calculateTotals, resolveConfiguredCategories } from "@/lib/utils/totals";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { cn } from "@/lib/utils";
 import { Plus, Pencil, Trash2, BookmarkPlus } from "lucide-react";
@@ -27,7 +27,7 @@ export function EstimateLineItemsAddButton({
   settings?: ShopSettings | null;
 }) {
   const [open, setOpen] = useState(false);
-  const categories = getJobCategories(settings);
+  const categories = resolveConfiguredCategories(settings);
   return (
     <>
       <Button size="sm" onClick={() => setOpen(true)}>
@@ -59,7 +59,7 @@ export function EstimateLineItemsList({
   settings,
 }: EstimateLineItemsListProps) {
   const [editItem, setEditItem] = useState<EstimateLineItem | null>(null);
-  const categories = getJobCategories(settings);
+  const categories = resolveConfiguredCategories(settings);
 
   const totals = calculateTotals(lineItems, settings);
 

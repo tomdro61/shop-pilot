@@ -3,7 +3,7 @@ import { getShopSettings } from "@/lib/actions/settings";
 import { JobCategoriesForm } from "@/components/forms/job-categories-form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Tag } from "lucide-react";
-import { DEFAULT_JOB_CATEGORIES } from "@/lib/constants";
+import { resolveConfiguredCategories } from "@/lib/utils/totals";
 import { PageShell } from "@/components/layout/page-shell";
 
 export const metadata = {
@@ -13,7 +13,7 @@ export const metadata = {
 export default async function CategoriesSettingsPage() {
   const settings = await getShopSettings();
 
-  const categories = (settings?.job_categories as string[] | undefined) ?? DEFAULT_JOB_CATEGORIES;
+  const categories = resolveConfiguredCategories(settings);
 
   return (
     <PageShell width="tight">

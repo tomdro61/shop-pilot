@@ -10,7 +10,7 @@ import { saveToCatalog, incrementUsageCount } from "@/lib/actions/catalog";
 import { applyPresetToJob } from "@/lib/actions/presets";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils/format";
-import { calculateTotals, getJobCategories } from "@/lib/utils/totals";
+import { calculateTotals, resolveConfiguredCategories } from "@/lib/utils/totals";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SECTION_LABEL } from "@/components/ui/section-card";
@@ -43,7 +43,7 @@ export function LineItemsAddButton({
       <AddItemSheet
         jobId={jobId}
         presets={presets}
-        categories={getJobCategories(settings)}
+        categories={resolveConfiguredCategories(settings)}
         open={open}
         onOpenChange={setOpen}
       />
@@ -268,7 +268,7 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
         <LineItemForm
           jobId={jobId}
           lineItem={editItem}
-          categories={getJobCategories(settings)}
+          categories={resolveConfiguredCategories(settings)}
           open={!!editItem}
           onOpenChange={(open) => {
             if (!open) setEditItem(null);

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateShopSettings } from "@/lib/actions/settings";
+import { resolveConfiguredCategories } from "@/lib/utils/totals";
 import type { ShopSettings, ShopSuppliesMethod } from "@/types";
 
 const METHOD_LABELS: Record<ShopSuppliesMethod, string> = {
@@ -292,7 +293,7 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
               )}
             </div>
             <CategorySelector
-              allCategories={settings.job_categories as string[]}
+              allCategories={resolveConfiguredCategories(settings)}
               selected={suppliesCategories}
               onChange={setSuppliesCategories}
               label="Apply to categories"
@@ -338,7 +339,7 @@ export function ShopSettingsForm({ settings }: { settings: ShopSettings }) {
               <p className={HINT}>Flat fee per job. Not taxed.</p>
             </div>
             <CategorySelector
-              allCategories={settings.job_categories as string[]}
+              allCategories={resolveConfiguredCategories(settings)}
               selected={hazmatCategories}
               onChange={setHazmatCategories}
               label="Apply to categories"

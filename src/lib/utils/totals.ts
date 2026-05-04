@@ -49,13 +49,16 @@ export const DEFAULT_SETTINGS: Pick<
  * type is `Json` — `as string[]` would be an unchecked cast. This validates
  * at runtime and falls back to DEFAULT_JOB_CATEGORIES if the JSON shape is
  * wrong (e.g., manual DB tampering, schema drift).
+ *
+ * Renamed from getJobCategories to avoid colliding with the
+ * getLineItemCategories alias in lib/actions/jobs.ts.
  */
-export function getJobCategories(settings: ShopSettings | null | undefined): string[] {
+export function resolveConfiguredCategories(settings: ShopSettings | null | undefined): string[] {
   const raw = settings?.job_categories ?? DEFAULT_SETTINGS.job_categories;
   if (Array.isArray(raw) && raw.every((v) => typeof v === "string")) {
     return raw;
   }
-  console.warn("[getJobCategories] shop_settings.job_categories has unexpected shape, falling back to defaults", { raw });
+  console.warn("[resolveConfiguredCategories] shop_settings.job_categories has unexpected shape, falling back to defaults", { raw });
   return DEFAULT_JOB_CATEGORIES;
 }
 

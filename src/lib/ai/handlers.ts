@@ -20,7 +20,7 @@ import {
   updateJobStatus,
   deleteJob,
   cancelJob,
-  getJobCategories,
+  getLineItemCategories,
   recordPayment,
 } from "@/lib/actions/jobs";
 import {
@@ -191,7 +191,7 @@ export async function executeToolCall(
         return JSON.stringify(result ?? { error: "Job not found" });
       }
       case "get_job_categories": {
-        const result = await getJobCategories();
+        const result = await getLineItemCategories();
         return JSON.stringify(result);
       }
       case "create_job": {
