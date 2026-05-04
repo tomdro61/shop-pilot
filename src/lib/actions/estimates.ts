@@ -421,13 +421,12 @@ export async function approveEstimate(token: string) {
   return { data: { success: true } };
 }
 
-// Manager-side bypass: when the customer approves verbally or in person
-// instead of clicking the link. Records who approved and how, so the audit
-// trail makes it clear this wasn't a customer-link click.
-export async function markEstimateApproved(
-  id: string,
-  method: "verbal" | "in_person"
-) {
+// Manager-side bypass: when the manager confirms approval directly instead
+// of waiting on the customer-link click. approval_method stays NULL so the
+// audit trail distinguishes "customer clicked the link" (method = "link")
+// from "manager marked it approved" (method = NULL) without forcing the
+// manager to pick verbal vs in-person every time.
+export async function markEstimateApproved(id: string) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
 
@@ -464,7 +463,7 @@ export async function markEstimateApproved(
     .update({
       status: "approved",
       approved_at: new Date().toISOString(),
-      approval_method: method,
+      approval_method: null,
       approved_by_user_id: profile.id,
     })
     .eq("id", id);

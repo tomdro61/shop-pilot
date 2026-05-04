@@ -16,12 +16,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   sendEstimate,
   resendEstimate,
   deleteEstimate,
@@ -32,7 +26,6 @@ import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import {
   ArrowRight,
   Check,
-  ChevronDown,
   Copy,
   HandCoins,
   RotateCw,
@@ -114,19 +107,17 @@ export function EstimateActions({
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handleMarkApproved(method: "verbal" | "in_person") {
+  async function handleMarkApproved() {
     if (loading) return;
     setLoading(true);
-    const result = await markEstimateApproved(estimateId, method);
+    const result = await markEstimateApproved(estimateId);
     setLoading(false);
 
     if (result.error) {
       toast.error(result.error);
       return;
     }
-    toast.success(
-      method === "verbal" ? "Approved (verbal)" : "Approved (in person)"
-    );
+    toast.success("Estimate marked approved");
     router.refresh();
   }
 
@@ -199,23 +190,10 @@ export function EstimateActions({
           </AlertDialogContent>
         </AlertDialog>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" disabled={loading}>
-              <HandCoins className="mr-2 h-4 w-4" />
-              Mark approved
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleMarkApproved("verbal")}>
-              Approved verbally
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleMarkApproved("in_person")}>
-              Approved in person
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="outline" onClick={handleMarkApproved} disabled={loading}>
+          <HandCoins className="mr-2 h-4 w-4" />
+          Mark approved
+        </Button>
 
         <DeleteConfirmDialog
           title="Delete Estimate"
@@ -248,23 +226,10 @@ export function EstimateActions({
           {copied ? "Copied!" : "Copy link"}
         </Button>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" disabled={loading}>
-              <HandCoins className="mr-2 h-4 w-4" />
-              Mark approved
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleMarkApproved("verbal")}>
-              Approved verbally
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleMarkApproved("in_person")}>
-              Approved in person
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="outline" onClick={handleMarkApproved} disabled={loading}>
+          <HandCoins className="mr-2 h-4 w-4" />
+          Mark approved
+        </Button>
 
         <DeleteConfirmDialog
           title="Delete Estimate"
