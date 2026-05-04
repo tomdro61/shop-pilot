@@ -363,6 +363,47 @@ A 13-agent review of `staging` (April 2026) found 118 issues that accumulated ac
 
 **After invoking `/scoped-review`:** address all Critical findings before declaring done. Triage High/Medium with the user. Don't ship a Critical "as a follow-up."
 
+## Investigation Discipline (hard rules)
+
+Static review reads the diff. Static review can be wrong about runtime
+behavior, third-party API contracts, and cross-flow side effects. Before
+concluding "no bug exists" or "this isn't our bug," verify all four:
+
+1. **Trace the JS data flow** end-to-end — input → Zod parse → server
+   action → Supabase write → re-read → component prop → DOM. Read every
+   transformation. If you skip a layer, the bug lives there.
+2. **Check the DB column types** — schema-drift bugs are invisible at the
+   JS layer. A `text` column where the schema expected `text[]` looks
+   fine in TypeScript and breaks at insert. The `as string[]` cast on
+   `shop_settings.job_categories` (T-1, T-2 in May 2026) hid this for
+   months until the runtime check shipped.
+3. **Verify third-party API contracts** — don't assume the SDK comments
+   match the live behavior. Quo SMS responses, Stripe webhook payloads,
+   Resend send results, Supabase nested-select shapes (`customers(...)`
+   inside an `estimates` query returns null when the join FK is null —
+   that's how FH-1 broke the standalone-estimate approval page).
+4. **Click through the customer flow** — `/verify-flow <keyword>` exists
+   for this. Use it. Reading the diff isn't enough. The May 2026
+   broken-submit-button bug had two rounds of multi-agent review mark
+   the form "OK but redundant"; the cause was that react-hook-form's
+   `handleSubmit` flips `isSubmitting=true` BEFORE invoking the user
+   handler, so `if (form.formState.isSubmitting) return` short-circuited
+   every submission. No diff reader caught it; one click would have.
+
+If you skip any of these and conclude "no bug," you'll be wrong like the
+May 2026 estimate-approval investigation was: schema check would have
+caught the `jobs.customers` traversal returning null for standalone
+estimates, and clicking through the public approval page would have
+shown blank customer/vehicle on every emailed link. Both gates were
+skipped, both bugs shipped to staging, and the final whole-diff sweep
+caught them only because the prompt said "walk every customer-facing
+surface." Make the four checks routine, not heroic.
+
+**The two skills that operationalize this:**
+- `/verify-flow <keyword>` — clicks through customer flows in the dev
+  server (handles step 4)
+- `/post-deploy-check` — production-side equivalent after merge to master
+
 ## Anti-patterns to avoid (these are what the review keeps catching)
 
 These are the recurring failure modes from `REVIEW-FINDINGS.md`. Treat them as hard rules during writing, not just review-time checks.
