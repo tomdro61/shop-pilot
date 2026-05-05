@@ -149,7 +149,21 @@ describe("markEstimateDeclined status guard", () => {
     expect(updateCall).toBeDefined();
     const updatePayload = updateCall?.args[0] as { status: string; declined_at: string };
     expect(updatePayload.status).toBe("declined");
-    expect(typeof updatePayload.declined_at).toBe("string");
+    // Tighter than typeof string — confirm it parses as a valid date so a
+    // future regression that passes a Date object or empty string fails.
+    expect(new Date(updatePayload.declined_at).getTime()).not.toBeNaN();
+  });
+
+  it("blocks re-declining an already-declined estimate (idempotency)", async () => {
+    const declined = createSupabaseMock({ data: { id: ESTIMATE_A, status: "declined" }, error: null });
+    vi.mocked(createClient).mockResolvedValueOnce(
+      declined.client as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
+
+    const result = await markEstimateDeclined(ESTIMATE_A);
+
+    expect(result).toEqual({ error: "Only sent estimates can be marked declined" });
+    expect(declined.calls.find((c) => c.method === "update")).toBeUndefined();
   });
 
   it("blocks marking a draft estimate declined (delete it instead)", async () => {
