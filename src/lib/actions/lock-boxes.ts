@@ -6,7 +6,7 @@ import { toE164 } from "@/lib/quo/format";
 import { sendSMS } from "@/lib/quo/client";
 import { getPhoneNumber } from "@/lib/quo/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireManager } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
 import { pickupReadySMS } from "@/lib/messaging/templates";
 
 export async function getLockBoxes() {
@@ -21,7 +21,7 @@ export async function getLockBoxes() {
 }
 
 export async function checkOutWithLockbox(reservationId: string, boxNumber: number) {
-  const auth = await requireManager();
+  const auth = await requireStaff();
   if (!auth.ok) return { error: auth.error };
 
   // Admin client: parking_reservations RLS doesn't grant authenticated updates;
@@ -95,7 +95,7 @@ export async function checkOutWithLockbox(reservationId: string, boxNumber: numb
 }
 
 export async function checkOutInPerson(reservationId: string) {
-  const auth = await requireManager();
+  const auth = await requireStaff();
   if (!auth.ok) return { error: auth.error };
 
   const supabase = createAdminClient();
