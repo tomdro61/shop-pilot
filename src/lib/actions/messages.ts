@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireManager } from "@/lib/auth";
+import { requireManager, requireStaff } from "@/lib/auth";
 import { toE164 } from "@/lib/quo/format";
 import { sendSMS, isQuoConfigured } from "@/lib/quo/client";
 import { getPhoneNumber, type PhoneLine } from "@/lib/quo/routing";
@@ -122,7 +122,9 @@ export async function sendVehicleReadySMS(jobId: string) {
 }
 
 export async function sendParkingSpecialsSMS(reservationId: string) {
-  const auth = await requireManager();
+  // Operational parking-floor action — techs need to send the upsell SMS
+  // when checking out a customer. Mirrors requireStaff usage in parking.ts.
+  const auth = await requireStaff();
   if (!auth.ok) return { error: auth.error };
 
   const supabase = await createClient();
