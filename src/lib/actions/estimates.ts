@@ -484,6 +484,45 @@ export async function markEstimateApproved(id: string) {
   return { success: true };
 }
 
+// Manager-side bypass for the decline path: the customer ghosted on a sent
+// estimate or said no verbally. Flips status to declined, keeps the record
+// (line items + history), drops it off the active list. Mirrors the public
+// declineEstimate flow but takes an id instead of a token.
+export async function markEstimateDeclined(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: estimate, error: fetchError } = await supabase
+    .from("estimates")
+    .select("id, status, customer_id, job_id")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!estimate) return { error: "Estimate not found" };
+  if (estimate.status !== "sent") {
+    return { error: "Only sent estimates can be marked declined" };
+  }
+
+  const { error } = await supabase
+    .from("estimates")
+    .update({
+      status: "declined",
+      declined_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/estimates/${id}`);
+  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 // Promote an approved estimate to a real job. Copies line items so the
 // job can evolve independently — additional parts on the job don't need
 // to mutate the historical estimate. The estimate keeps a back-link

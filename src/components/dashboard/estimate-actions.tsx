@@ -20,6 +20,7 @@ import {
   resendEstimate,
   deleteEstimate,
   markEstimateApproved,
+  markEstimateDeclined,
   convertEstimateToJob,
 } from "@/lib/actions/estimates";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
@@ -30,6 +31,7 @@ import {
   HandCoins,
   RotateCw,
   Send,
+  ThumbsDown,
   Trash2,
   Workflow,
 } from "lucide-react";
@@ -118,6 +120,20 @@ export function EstimateActions({
       return;
     }
     toast.success("Estimate marked approved");
+    router.refresh();
+  }
+
+  async function handleMarkDeclined() {
+    if (loading) return;
+    setLoading(true);
+    const result = await markEstimateDeclined(estimateId);
+    setLoading(false);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("Estimate marked declined");
     router.refresh();
   }
 
@@ -230,6 +246,31 @@ export function EstimateActions({
           <HandCoins className="mr-2 h-4 w-4" />
           Mark approved
         </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" disabled={loading}>
+              <ThumbsDown className="mr-2 h-4 w-4" />
+              Mark declined
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Mark this estimate declined?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Use this when the customer didn&apos;t move forward — verbally,
+                in person, or just ghosted. The estimate stays in the
+                customer&apos;s history but stops appearing on the active list.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleMarkDeclined} disabled={loading}>
+                Mark declined
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <DeleteConfirmDialog
           title="Delete Estimate"

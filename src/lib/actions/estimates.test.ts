@@ -15,6 +15,7 @@ import { requireManager } from "@/lib/auth";
 import {
   updateEstimateLineItem,
   deleteEstimateLineItem,
+  markEstimateDeclined,
 } from "./estimates";
 import { createSupabaseMock } from "./__test-helpers__/supabase-mock";
 
@@ -130,5 +131,48 @@ describe("deleteEstimateLineItem ownership guard (C-2)", () => {
 
     expect(result).toEqual({ error: "Can only delete items from draft estimates" });
     expect(approved.calls.find((c) => c.method === "delete")).toBeUndefined();
+  });
+});
+
+describe("markEstimateDeclined status guard", () => {
+  it("flips a sent estimate to declined and stamps declined_at", async () => {
+    const sent = createSupabaseMock({ data: { id: ESTIMATE_A, status: "sent", customer_id: null, job_id: null }, error: null });
+    vi.mocked(createClient).mockResolvedValueOnce(
+      sent.client as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
+
+    const result = await markEstimateDeclined(ESTIMATE_A);
+
+    expect(result).toEqual({ success: true });
+    // Sanity: an UPDATE was issued.
+    const updateCall = sent.calls.find((c) => c.method === "update");
+    expect(updateCall).toBeDefined();
+    const updatePayload = updateCall?.args[0] as { status: string; declined_at: string };
+    expect(updatePayload.status).toBe("declined");
+    expect(typeof updatePayload.declined_at).toBe("string");
+  });
+
+  it("blocks marking a draft estimate declined (delete it instead)", async () => {
+    const draft = createSupabaseMock({ data: { id: ESTIMATE_A, status: "draft" }, error: null });
+    vi.mocked(createClient).mockResolvedValueOnce(
+      draft.client as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
+
+    const result = await markEstimateDeclined(ESTIMATE_A);
+
+    expect(result).toEqual({ error: "Only sent estimates can be marked declined" });
+    expect(draft.calls.find((c) => c.method === "update")).toBeUndefined();
+  });
+
+  it("blocks marking an approved estimate declined", async () => {
+    const approved = createSupabaseMock({ data: { id: ESTIMATE_A, status: "approved" }, error: null });
+    vi.mocked(createClient).mockResolvedValueOnce(
+      approved.client as unknown as Awaited<ReturnType<typeof createClient>>,
+    );
+
+    const result = await markEstimateDeclined(ESTIMATE_A);
+
+    expect(result).toEqual({ error: "Only sent estimates can be marked declined" });
+    expect(approved.calls.find((c) => c.method === "update")).toBeUndefined();
   });
 });
