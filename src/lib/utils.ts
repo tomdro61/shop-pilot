@@ -35,14 +35,11 @@ export function daysBetween(from: string | null, today: string): number {
 }
 
 /**
- * Returns the UTC instant of midnight ET on the given YYYY-MM-DD as an ISO
- * string. DST-aware via Intl. Used to build timestamptz query bounds for
- * "today in ET" filters that work correctly regardless of server timezone.
+ * The current Eastern Time UTC offset in hours for the given UTC instant.
+ * EDT = -4, EST = -5. Throws if Intl returns an unexpected format — silent
+ * EST fallback would produce a 1-hour drift in summer with no error signal.
  */
-function midnightEtAsUtcIso(etDateStr: string): string {
-  // Probe at noon UTC on that date — safely lands inside the day in ET no
-  // matter the offset (and avoids the ambiguous DST jump hour).
-  const probe = new Date(`${etDateStr}T12:00:00Z`);
+function getEtOffsetHours(probe: Date): number {
   const tzPart = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     timeZoneName: "shortOffset",
@@ -50,23 +47,44 @@ function midnightEtAsUtcIso(etDateStr: string): string {
     .formatToParts(probe)
     .find((p) => p.type === "timeZoneName")?.value ?? "";
   const m = tzPart.match(/GMT([+-]\d+)/);
-  const offsetHours = m ? parseInt(m[1], 10) : -5;
-  // Midnight ET as UTC = midnight UTC of same date shifted by -offsetHours.
-  // EDT (-4): 04:00 UTC; EST (-5): 05:00 UTC.
-  const [y, mo, d] = etDateStr.split("-").map(Number);
-  return new Date(Date.UTC(y, mo - 1, d, -offsetHours, 0, 0)).toISOString();
+  if (!m) {
+    throw new Error(
+      `getEtOffsetHours: unexpected Intl shortOffset format "${tzPart}" for ${probe.toISOString()}`
+    );
+  }
+  return parseInt(m[1], 10);
 }
 
 /**
- * Returns [start, end) UTC ISO bounds for "today in Eastern Time".
- * For use with Supabase `.gte/.lt` filters on timestamptz columns.
+ * Combine a YYYY-MM-DD ET date and HH:MM ET time into a UTC ISO string.
+ * Independent of process timezone — safe to call from Vercel server actions
+ * where Node runs in UTC. Validates inputs to fail loudly on garbage rather
+ * than silently storing wrong-time data.
  */
-export function todayEtBoundsUtc(): { startIso: string; endIso: string } {
-  const today = todayET();
-  const [y, m, d] = today.split("-").map(Number);
-  const tomorrow = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
-  return {
-    startIso: midnightEtAsUtcIso(today),
-    endIso: midnightEtAsUtcIso(tomorrow),
-  };
+export function etDateTimeToUtcIso(etDate: string, etTime: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(etDate)) {
+    throw new Error(`etDateTimeToUtcIso: expected YYYY-MM-DD, got "${etDate}"`);
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(etTime)) {
+    throw new Error(`etDateTimeToUtcIso: expected HH:MM (24h), got "${etTime}"`);
+  }
+  const [y, mo, d] = etDate.split("-").map(Number);
+  const [h, mi] = etTime.split(":").map(Number);
+  // Probe at noon UTC of the date to safely land inside the day in ET no
+  // matter the offset (and avoid the ambiguous DST jump hour).
+  const probe = new Date(`${etDate}T12:00:00Z`);
+  const offsetHours = getEtOffsetHours(probe);
+  // ET wall-clock h:mi == UTC (h - offsetHours):mi.
+  // EDT (-4): 14:00 ET == 18:00 UTC. EST (-5): 14:00 ET == 19:00 UTC.
+  return new Date(Date.UTC(y, mo - 1, d, h - offsetHours, mi, 0)).toISOString();
+}
+
+/** Format a UTC ISO timestamp as ET wall-clock time, "2:00 PM" style. */
+export function formatTimeEt(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }

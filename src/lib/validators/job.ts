@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { todayET } from "@/lib/utils";
+import { todayET, etDateTimeToUtcIso } from "@/lib/utils";
 
 export const jobSchema = z.object({
   customer_id: z.string().uuid("Please select a customer"),
@@ -16,10 +16,16 @@ export const jobSchema = z.object({
   assigned_tech: z.string().uuid().nullable().optional(),
   date_received: z.string().min(1, "Date is required"),
   date_finished: z.string().nullable().optional(),
-  // HH:MM 24h string from <input type="time">. Empty/null when the customer
-  // hasn't given a specific drop-off time. Combined with date_received in
-  // prepareJobData to form the timestamptz scheduled_at on the row.
-  scheduled_time: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional().or(z.literal("")),
+  // HH:MM 24h string from <input type="time">. Empty when no drop-off time
+  // was given. Combined with date_received in prepareJobData to form
+  // scheduled_at. Regex enforces 00:00–23:59 so 25:99 / 99:00 / 30:60 etc.
+  // can never reach prepareJobData and produce a wrong-day timestamp.
+  scheduled_time: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Time must be HH:MM (24h)")
+    .nullable()
+    .optional()
+    .or(z.literal("")),
   notes: z.string().max(5000),
   payment_method: z.enum(["stripe", "cash", "check", "ach", "terminal"]).nullable().optional(),
   payment_status: z.enum(["unpaid", "invoiced", "paid", "waived"]),
@@ -40,12 +46,12 @@ export function prepareJobData(data: JobFormData) {
     date_finished: data.status === "complete"
       ? (data.date_finished || todayET())
       : null,
-    // Combine date_received + scheduled_time into a timestamptz when the
-    // user gave a time. The `${date}T${time}` form is interpreted as the
-    // browser's local timezone — which for this shop is always ET — and
-    // .toISOString() converts to UTC for storage. Empty/missing time → null.
+    // Build the timestamptz explicitly in ET — `new Date(`${d}T${t}`)`
+    // would parse in the runtime's local TZ, which on Vercel is UTC, and
+    // silently store every drop-off time 4–5 hours off. etDateTimeToUtcIso
+    // uses an Intl probe so EDT vs EST is handled correctly per date.
     scheduled_at: data.scheduled_time
-      ? new Date(`${data.date_received}T${data.scheduled_time}`).toISOString()
+      ? etDateTimeToUtcIso(data.date_received, data.scheduled_time)
       : null,
     notes: data.notes || null,
     payment_method: data.payment_method || null,

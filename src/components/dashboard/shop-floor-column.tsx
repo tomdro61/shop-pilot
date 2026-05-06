@@ -21,7 +21,7 @@ import {
   formatRONumber,
   formatCurrencyWhole,
 } from "@/lib/utils/format";
-import { daysBetween } from "@/lib/utils";
+import { daysBetween, formatTimeEt } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 export type ShopFloorStatus = "not_started" | "waiting_for_parts" | "in_progress";
@@ -37,15 +37,6 @@ interface ShopFloorJob {
   customers: { id: string; first_name: string; last_name: string } | null;
   vehicles: { year: number | null; make: string | null; model: string | null } | null;
   users: { name: string } | null;
-}
-
-function formatTimeEt(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
 }
 
 interface StatusConfig {

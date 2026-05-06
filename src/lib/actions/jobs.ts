@@ -4,7 +4,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
-import { todayET, todayEtBoundsUtc } from "@/lib/utils";
+import { todayET } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
 import type { JobStatus, PaymentMethod, PaymentStatus } from "@/types";
@@ -109,32 +109,6 @@ export async function getJobs(filters?: {
   if (error) throw new Error(error.message);
   return data;
 }
-
-/**
- * Jobs the customer agreed to drop off today (in ET). Used by the dashboard
- * "Scheduled Today" strip — only the rows with scheduled_at set, ordered by
- * time. Cancelled and complete jobs filtered out: cancelled is off-board
- * history, complete jobs already finished and don't need a drop-off slot.
- */
-export const getScheduledJobsToday = cache(async () => {
-  const supabase = await createClient();
-  const { startIso, endIso } = todayEtBoundsUtc();
-
-  const { data, error } = await supabase
-    .from("jobs")
-    .select(
-      "id, title, scheduled_at, status, ro_number, customers(id, first_name, last_name), vehicles(year, make, model)"
-    )
-    .gte("scheduled_at", startIso)
-    .lt("scheduled_at", endIso)
-    .not("status", "in", "(cancelled,complete)")
-    .order("scheduled_at", { ascending: true });
-
-  if (error) {
-    throw new Error(`Failed to load scheduled jobs: ${error.message}`);
-  }
-  return data;
-});
 
 export const getJob = cache(async (id: string) => {
   const supabase = await createClient();

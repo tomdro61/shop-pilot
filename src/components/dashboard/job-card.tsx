@@ -14,6 +14,7 @@ import {
   DVI_STATUS_COLORS,
 } from "@/lib/constants";
 import { Car, Calendar, Clock } from "lucide-react";
+import { formatTimeEt } from "@/lib/utils";
 import type { JobStatus, DviStatus } from "@/types";
 
 interface JobCardProps {
@@ -38,15 +39,6 @@ interface JobCardProps {
 function formatMonthDay(dateStr: string): string {
   const d = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T00:00:00");
   return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-function formatTimeEt(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
 }
 
 export function JobCard({ job, showStatus = true }: JobCardProps) {

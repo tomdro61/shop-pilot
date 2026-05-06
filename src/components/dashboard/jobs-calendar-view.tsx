@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatVehicle } from "@/lib/utils/format";
+import { formatTimeEt } from "@/lib/utils";
 import { JOB_STATUS_BAR, type JobStatusKey } from "@/lib/constants";
 
 type JobRow = {
@@ -28,7 +29,7 @@ type JobRow = {
   category: string | null;
   ro_number?: number | null;
   date_received: string;
-  scheduled_at?: string | null;
+  scheduled_at: string | null;
   notes: string | null;
   customers: {
     id: string;
@@ -44,15 +45,6 @@ type JobRow = {
   } | null;
   users?: { id: string; name: string } | null;
 };
-
-function formatTimeEt(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
 
 interface JobsCalendarViewProps {
   jobs: JobRow[];

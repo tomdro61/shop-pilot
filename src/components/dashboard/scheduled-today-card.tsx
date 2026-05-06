@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Clock } from "lucide-react";
+import { formatTimeEt } from "@/lib/utils";
 
 interface ScheduledJob {
   id: string;
@@ -8,15 +9,6 @@ interface ScheduledJob {
   ro_number: number | null;
   customers: { first_name: string | null; last_name: string | null } | null;
   vehicles: { year: number | null; make: string | null; model: string | null } | null;
-}
-
-function formatTimeEt(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-US", {
-    timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
 }
 
 function customerName(c: ScheduledJob["customers"]): string {
@@ -30,9 +22,6 @@ function vehicleLabel(v: ScheduledJob["vehicles"]): string {
 }
 
 export function ScheduledTodayCard({ jobs }: { jobs: ScheduledJob[] }) {
-  // Empty state is intentional: the strip hides entirely so the dashboard
-  // doesn't gain a permanent "No scheduled jobs" sliver. Manager only sees
-  // it on days where there's something to look at.
   if (jobs.length === 0) return null;
 
   return (

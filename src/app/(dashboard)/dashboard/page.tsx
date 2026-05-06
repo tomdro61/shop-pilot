@@ -22,7 +22,6 @@ import { ParkingTodayCard } from "@/components/dashboard/parking-today-card";
 import { ScheduledTodayCard } from "@/components/dashboard/scheduled-today-card";
 import { ShopFloorColumn } from "@/components/dashboard/shop-floor-column";
 import { getOpenTasks } from "@/lib/actions/tasks";
-import { getScheduledJobsToday } from "@/lib/actions/jobs";
 
 export const metadata = {
   title: "Dashboard | ShopPilot",
@@ -291,11 +290,10 @@ function getGreeting(): string {
 }
 
 export default async function DashboardPage() {
-  const [user, data, tasks, scheduledToday] = await Promise.all([
+  const [user, data, tasks] = await Promise.all([
     getCurrentUser(),
     getDashboardData(),
     getOpenTasks(),
-    getScheduledJobsToday(),
   ]);
   const today = todayET();
 
@@ -303,6 +301,23 @@ export default async function DashboardPage() {
   const greeting = firstName ? `${getGreeting()}, ${firstName}` : getGreeting();
 
   const { stats, ops, shopFloor, parking, needsAttention } = data;
+  // Derive Scheduled Today from the already-fetched active jobs to avoid a
+  // second Supabase round-trip — the dashboard already has every active job
+  // including scheduled_at. Compare each row's UTC timestamp to today's ET
+  // date string so DST is handled by the engine, not by us.
+  const scheduledToday = [
+    ...shopFloor.notStarted,
+    ...shopFloor.waitingForParts,
+    ...shopFloor.inProgress,
+  ]
+    .filter(
+      (j) =>
+        j.scheduled_at &&
+        new Date(j.scheduled_at).toLocaleDateString("en-CA", {
+          timeZone: "America/New_York",
+        }) === today
+    )
+    .sort((a, b) => (a.scheduled_at! < b.scheduled_at! ? -1 : 1));
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
   const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);
 
