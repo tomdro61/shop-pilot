@@ -132,13 +132,15 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
       date_received: job?.date_received || new Date().toISOString().split("T")[0],
       date_finished: job?.date_finished || undefined,
       // Extract HH:MM in ET from the stored UTC timestamp so the time picker
-      // shows what the manager originally entered, not the UTC value.
+      // shows what the manager originally entered, not the UTC value. en-GB
+      // is unambiguously 24h and avoids historical en-US quirks where some
+      // V8 builds returned "24:00" for midnight (which fails the form's Zod
+      // regex and silently breaks the edit flow).
       scheduled_time: job?.scheduled_at
-        ? new Date(job.scheduled_at).toLocaleTimeString("en-US", {
+        ? new Date(job.scheduled_at).toLocaleTimeString("en-GB", {
             timeZone: "America/New_York",
             hour: "2-digit",
             minute: "2-digit",
-            hour12: false,
           })
         : "",
       notes: job?.notes || "",

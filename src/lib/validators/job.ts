@@ -14,7 +14,9 @@ export const jobSchema = z.object({
   title: z.string().max(200).optional(),
   category: z.string().max(100).optional(),
   assigned_tech: z.string().uuid().nullable().optional(),
-  date_received: z.string().min(1, "Date is required"),
+  date_received: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
   date_finished: z.string().nullable().optional(),
   // HH:MM 24h string from <input type="time">. Empty when no drop-off time
   // was given. Combined with date_received in prepareJobData to form

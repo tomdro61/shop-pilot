@@ -105,4 +105,32 @@ describe("prepareJobData scheduled_at", () => {
     });
     expect(r.scheduled_at).toBe("2026-07-16T03:00:00.000Z");
   });
+
+  it("throws if date_received is empty but scheduled_time is provided", () => {
+    // Defense-in-depth: jobSchema rejects empty date_received first, but
+    // prepareJobData can be called from non-form callers (AI tools) that
+    // build payloads ad-hoc. Pin the throw so a future "silently return
+    // null" change to prepareJobData breaks this test.
+    expect(() =>
+      prepareJobData({ ...baseJob, date_received: "", scheduled_time: "14:00" })
+    ).toThrow(/YYYY-MM-DD/);
+  });
+});
+
+describe("jobSchema date_received", () => {
+  it("accepts YYYY-MM-DD", () => {
+    expect(jobSchema.safeParse({ ...baseJob, date_received: "2026-07-15" }).success).toBe(true);
+  });
+
+  it("rejects empty string", () => {
+    expect(jobSchema.safeParse({ ...baseJob, date_received: "" }).success).toBe(false);
+  });
+
+  it("rejects natural-language dates (the AI-tool failure mode)", () => {
+    expect(jobSchema.safeParse({ ...baseJob, date_received: "July 15 2026" }).success).toBe(false);
+  });
+
+  it("rejects single-digit month", () => {
+    expect(jobSchema.safeParse({ ...baseJob, date_received: "2026-7-15" }).success).toBe(false);
+  });
 });

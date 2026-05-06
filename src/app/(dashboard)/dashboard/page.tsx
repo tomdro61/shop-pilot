@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC, MANAGED_PARKING_LOTS } from "@/lib/constants";
 import { formatCurrencyWhole } from "@/lib/utils/format";
-import { todayET, nowET } from "@/lib/utils";
+import { todayET, nowET, isScheduledOnEtDate } from "@/lib/utils";
 import { sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { hasPendingService } from "@/lib/utils/parking";
@@ -302,21 +302,14 @@ export default async function DashboardPage() {
 
   const { stats, ops, shopFloor, parking, needsAttention } = data;
   // Derive Scheduled Today from the already-fetched active jobs to avoid a
-  // second Supabase round-trip — the dashboard already has every active job
-  // including scheduled_at. Compare each row's UTC timestamp to today's ET
-  // date string so DST is handled by the engine, not by us.
+  // second Supabase round-trip. The ET-date comparison lives in
+  // isScheduledOnEtDate so the timezone handling is testable in isolation.
   const scheduledToday = [
     ...shopFloor.notStarted,
     ...shopFloor.waitingForParts,
     ...shopFloor.inProgress,
   ]
-    .filter(
-      (j) =>
-        j.scheduled_at &&
-        new Date(j.scheduled_at).toLocaleDateString("en-CA", {
-          timeZone: "America/New_York",
-        }) === today
-    )
+    .filter((j) => isScheduledOnEtDate(j.scheduled_at, today))
     .sort((a, b) => (a.scheduled_at! < b.scheduled_at! ? -1 : 1));
   const weekChange = pctChange(stats.weeklyRevenue, stats.lastWeekRevenue);
   const monthChange = pctChange(stats.monthlyRevenue, stats.lastMonthRevenue);

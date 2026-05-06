@@ -5,7 +5,7 @@
  * the first version of this code, both are caught here now.
  */
 import { describe, it, expect } from "vitest";
-import { etDateTimeToUtcIso, formatTimeEt } from "./utils";
+import { etDateTimeToUtcIso, formatTimeEt, isScheduledOnEtDate } from "./utils";
 
 describe("etDateTimeToUtcIso", () => {
   describe("EDT (summer, UTC-4)", () => {
@@ -113,6 +113,40 @@ describe("etDateTimeToUtcIso", () => {
     it("throws on empty time", () => {
       expect(() => etDateTimeToUtcIso("2026-07-15", "")).toThrow(/HH:MM/);
     });
+  });
+});
+
+describe("isScheduledOnEtDate", () => {
+  it("returns false when scheduled_at is null", () => {
+    expect(isScheduledOnEtDate(null, "2026-07-15")).toBe(false);
+  });
+
+  it("returns true when scheduled_at falls on the given ET date in EDT", () => {
+    // 14:00 ET on 2026-07-15 (EDT) = 18:00 UTC same day
+    const iso = etDateTimeToUtcIso("2026-07-15", "14:00");
+    expect(isScheduledOnEtDate(iso, "2026-07-15")).toBe(true);
+  });
+
+  it("returns true for late-evening ET that wraps to next-day UTC", () => {
+    // 23:30 ET on 2026-07-15 (EDT) = 03:30 UTC on 2026-07-16
+    // The UTC date is "tomorrow" but the ET date is still 2026-07-15.
+    const iso = etDateTimeToUtcIso("2026-07-15", "23:30");
+    expect(iso.startsWith("2026-07-16")).toBe(true); // sanity
+    expect(isScheduledOnEtDate(iso, "2026-07-15")).toBe(true);
+    expect(isScheduledOnEtDate(iso, "2026-07-16")).toBe(false);
+  });
+
+  it("returns false for 00:01 of the next ET day", () => {
+    const iso = etDateTimeToUtcIso("2026-07-16", "00:01");
+    expect(isScheduledOnEtDate(iso, "2026-07-15")).toBe(false);
+    expect(isScheduledOnEtDate(iso, "2026-07-16")).toBe(true);
+  });
+
+  it("works correctly across DST in EST", () => {
+    // 23:30 ET on 2026-01-15 (EST) = 04:30 UTC on 2026-01-16
+    const iso = etDateTimeToUtcIso("2026-01-15", "23:30");
+    expect(isScheduledOnEtDate(iso, "2026-01-15")).toBe(true);
+    expect(isScheduledOnEtDate(iso, "2026-01-16")).toBe(false);
   });
 });
 

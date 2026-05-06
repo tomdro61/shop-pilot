@@ -88,3 +88,20 @@ export function formatTimeEt(iso: string): string {
     hour12: true,
   });
 }
+
+/**
+ * Does a stored UTC timestamp fall on the given ET calendar date?
+ * Tolerates `null` (returns false). The `timeZone` option is the
+ * load-bearing part — without it this would re-introduce the original
+ * "scheduled_at filtered against UTC date" bug.
+ */
+export function isScheduledOnEtDate(
+  scheduledAt: string | null,
+  etDate: string
+): boolean {
+  if (!scheduledAt) return false;
+  const rowEtDate = new Date(scheduledAt).toLocaleDateString("en-CA", {
+    timeZone: "America/New_York",
+  });
+  return rowEtDate === etDate;
+}
