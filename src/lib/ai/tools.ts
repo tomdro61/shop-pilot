@@ -212,8 +212,12 @@ export const tools: Anthropic.Tool[] = [
         },
         title: { type: "string", description: "Free-text job title describing the full scope of work (e.g. 'Brake job and coolant filter')" },
         assigned_tech: { type: "string", description: "Technician user UUID" },
-        date_received: { type: "string", description: "Job date (YYYY-MM-DD, defaults to today)" },
+        date_received: { type: "string", description: "Drop-off date as YYYY-MM-DD in ET (defaults to today)" },
         date_finished: { type: "string", description: "Date finished (YYYY-MM-DD)" },
+        scheduled_time: {
+          type: "string",
+          description: "Customer-agreed drop-off time as HH:MM 24h ET (e.g. '14:00' for 2:00 PM). Only set when the customer gave a specific time. Combined with date_received to form the scheduled appointment.",
+        },
         notes: { type: "string", description: "Job notes" },
         payment_status: {
           type: "string",
@@ -245,8 +249,12 @@ export const tools: Anthropic.Tool[] = [
         },
         title: { type: "string", description: "Free-text job title" },
         assigned_tech: { type: "string" },
-        date_received: { type: "string" },
+        date_received: { type: "string", description: "Drop-off date as YYYY-MM-DD in ET" },
         date_finished: { type: "string" },
+        scheduled_time: {
+          type: "string",
+          description: "Customer-agreed drop-off time as HH:MM 24h ET (e.g. '14:00' for 2:00 PM). Pass empty string to clear. Combined with date_received to update the scheduled appointment.",
+        },
         notes: { type: "string" },
         payment_status: {
           type: "string",

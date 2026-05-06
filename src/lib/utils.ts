@@ -110,13 +110,30 @@ export function isScheduledOnEtDate(
  * Re-anchor a stored scheduled_at to a new drop-off date while keeping
  * the same ET wall-clock time. Used when the manager changes the drop-off
  * date on a job that already has a time set — the appointment stays at
- * the same time, just on a different day.
+ * the same time, just on a different day. Validates inputs explicitly so
+ * argument-swap bugs (passing a date-only string in the ISO slot) fail
+ * loud with a parameter-named error rather than silently returning
+ * midnight-of-yesterday in UTC.
  */
 export function shiftScheduledAtToNewDate(
   scheduledAtIso: string,
   newEtDate: string
 ): string {
-  const time = new Date(scheduledAtIso).toLocaleTimeString("en-GB", {
+  // Must look like a UTC ISO instant (has time component + Z), not a
+  // bare YYYY-MM-DD which JS Date will happily parse as UTC midnight
+  // and silently produce wrong-day output.
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(scheduledAtIso)) {
+    throw new Error(
+      `shiftScheduledAtToNewDate: scheduledAtIso must be a UTC ISO instant, got "${scheduledAtIso}"`
+    );
+  }
+  const probe = new Date(scheduledAtIso);
+  if (!Number.isFinite(probe.getTime())) {
+    throw new Error(
+      `shiftScheduledAtToNewDate: scheduledAtIso parsed as Invalid Date, got "${scheduledAtIso}"`
+    );
+  }
+  const time = probe.toLocaleTimeString("en-GB", {
     timeZone: "America/New_York",
     hour: "2-digit",
     minute: "2-digit",

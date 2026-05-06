@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { updateJobFields } from "@/lib/actions/jobs";
 import { useInlineEditor } from "@/hooks/use-inline-editor";
 import { etDateTimeToUtcIso, formatTimeEt } from "@/lib/utils";
@@ -48,9 +49,18 @@ export function JobScheduledTimeEditor({
       // edits the time and the date stays put.
       const date = value ? isoToEtDate(value) : dateReceived;
       if (!date) {
-        return; // can't schedule without a date
+        toast.error("Set a drop-off date before scheduling a time.");
+        cancel();
+        return;
       }
-      next = etDateTimeToUtcIso(date, time);
+      try {
+        next = etDateTimeToUtcIso(date, time);
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : "Couldn't parse the time."
+        );
+        return;
+      }
     }
     if (next === value) {
       setEditing(false);

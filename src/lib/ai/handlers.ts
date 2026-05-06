@@ -204,6 +204,7 @@ export async function executeToolCall(
           assigned_tech: str(toolInput.assigned_tech) || null,
           date_received: str(toolInput.date_received, today),
           date_finished: str(toolInput.date_finished) || null,
+          scheduled_time: str(toolInput.scheduled_time) || "",
           notes: str(toolInput.notes),
           payment_status: str(toolInput.payment_status, "unpaid") as "unpaid",
           payment_method: toolInput.payment_method ? str(toolInput.payment_method) as "stripe" : undefined,
@@ -230,6 +231,15 @@ export async function executeToolCall(
           date_finished: toolInput.date_finished !== undefined
             ? (str(toolInput.date_finished) || null)
             : (currentJob.date_finished ?? null),
+          scheduled_time: toolInput.scheduled_time !== undefined
+            ? (str(toolInput.scheduled_time) || "")
+            : (currentJob.scheduled_at
+                ? new Date(currentJob.scheduled_at).toLocaleTimeString("en-GB", {
+                    timeZone: "America/New_York",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : ""),
           notes: str(toolInput.notes, currentJob.notes ?? ""),
           payment_status: str(toolInput.payment_status, currentJob.payment_status ?? "unpaid") as "unpaid",
           payment_method: toolInput.payment_method !== undefined

@@ -260,16 +260,37 @@ export async function updateJobFields(id: string, patch: JobFieldPatch) {
   // explicitly patches scheduled_at in the same call, respect that
   // (don't overwrite the explicit value with the cascaded one).
   if ("date_received" in update && !("scheduled_at" in update)) {
-    const { data: existing } = await supabase
+    const { data: existing, error: readError } = await supabase
       .from("jobs")
       .select("scheduled_at, date_received")
       .eq("id", id)
       .single();
-    if (existing?.scheduled_at) {
+    if (readError) {
+      // Surface the read failure rather than silently letting the update
+      // proceed with no cascade — that path leaves scheduled_at anchored
+      // to the wrong date and the manager has no signal anything is off.
+      return { error: `Failed to load job for date cascade: ${readError.message}` };
+    }
+    if (!existing) return { error: "Job not found" };
+    if (existing.scheduled_at) {
       const newDate = update.date_received;
       if (typeof newDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
         if (existing.date_received !== newDate) {
-          update.scheduled_at = shiftScheduledAtToNewDate(existing.scheduled_at, newDate);
+          try {
+            update.scheduled_at = shiftScheduledAtToNewDate(
+              existing.scheduled_at,
+              newDate
+            );
+          } catch (e) {
+            // shiftScheduledAtToNewDate throws on garbage input. Translate
+            // into the action's { error } contract instead of letting an
+            // unhandled exception bubble out as a generic 500.
+            return {
+              error: `Couldn't re-anchor scheduled time to ${newDate}: ${
+                e instanceof Error ? e.message : "invalid existing time"
+              }. Edit the time directly to fix.`,
+            };
+          }
         }
       } else if (newDate === null) {
         // Drop-off date cleared → drop the time too. They're a unit.
