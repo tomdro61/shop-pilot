@@ -1,15 +1,14 @@
 import Link from "next/link";
 import { Clock } from "lucide-react";
 import { formatTimeEt } from "@/lib/utils";
+import type { Job, Customer, Vehicle } from "@/types";
 
-interface ScheduledJob {
-  id: string;
-  scheduled_at: string | null;
-  title: string | null;
-  ro_number: number | null;
-  customers: { first_name: string | null; last_name: string | null } | null;
-  vehicles: { year: number | null; make: string | null; model: string | null } | null;
-}
+// Derived from the generated supabase row types so a schema rename or
+// nullability change becomes a compile error here, not a runtime surprise.
+type ScheduledJob = Pick<Job, "id" | "scheduled_at" | "title" | "ro_number"> & {
+  customers: Pick<Customer, "first_name" | "last_name"> | null;
+  vehicles: Pick<Vehicle, "year" | "make" | "model"> | null;
+};
 
 function customerName(c: ScheduledJob["customers"]): string {
   if (!c) return "(no customer)";
