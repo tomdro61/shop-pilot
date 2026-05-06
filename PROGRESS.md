@@ -2428,3 +2428,71 @@ After running `/scoped-review merge` (full sweep, 8 reviewers in parallel) on `g
 
 ### Verdict
 All Criticals + agreed Tier-1 Highs verified clean by per-cluster focused agent reviews. Branch is ready for the final cumulative verification pass + browser smoke test before merging staging→master.
+
+---
+
+## Session 34 — 2026-05-05/06 — Sentry, scheduled drop-off, harness review gate
+
+Three concurrent threads landed in this session. All shipped to master at SHA `8fc578c`.
+
+### Thread 1 — Sentry error monitoring
+
+Production observability that wasn't wired before this session. Replaces the implicit "watch Vercel runtime logs" loop.
+
+- `@sentry/nextjs` installed via the official wizard (App Router preset), tunnel route `/monitoring`, source maps uploaded on every Vercel build, errors tagged with the release commit SHA.
+- New config files at repo root (`sentry.server.config.ts`, `sentry.edge.config.ts`, `src/instrumentation-client.ts`, `src/instrumentation.ts`, `src/app/global-error.tsx`).
+- `next.config.ts` wraps export with `withSentryConfig`. Tunnel route bypasses ad blockers on customer-facing pages (estimate approval, DVI inspect).
+- `src/middleware.ts` adds `/monitoring` to `isPublicRoute` so unauthenticated POSTs to the tunnel aren't redirected to /login (would silently drop every customer-side error otherwise).
+- `enableLogs: true` so existing `console.*` calls in server actions flow into Sentry alongside thrown errors.
+- `sendDefaultPii: true` so authenticated user context attaches for triage. Internal tool — same identity already in our DB.
+- `SENTRY_AUTH_TOKEN` lives in Vercel env vars only, set on Production + Preview environments. Not in any checked-in file. The .env.sentry-build-plugin file is gitignored.
+
+### Thread 2 — Scheduled drop-off times on jobs
+
+Customer-agreed appointment times surfaced across the dashboard, Shop Floor, and calendar. Most jobs leave it null (walk-ins); when set, the dashboard shows a chronological strip.
+
+- New column `jobs.scheduled_at timestamptz NULL` (migration `20260505000000_jobs_scheduled_at.sql`, applied to remote).
+- UI label rename across three surfaces: "Received" → "Drop-off date" + new "Drop-off time" row. DB column name (`date_received`) unchanged — only labels changed.
+- Optional time picker in `JobForm` (creation flow) + new `JobScheduledTimeEditor` inline editor on job detail page (edit flow). The architecture decision that there is NO `/jobs/[id]/edit` page — all editing is inline via per-field components — is now captured in memory (`project_inline_editing.md`).
+- Cascade in `updateJobFields`: when `date_received` changes on a job that has `scheduled_at` set, `scheduled_at` follows to the new date keeping the same ET wall-clock time. Clearing `date_received` clears `scheduled_at` too. Manager can move a 2pm appointment from Friday to Saturday by editing one field.
+- Dashboard `ScheduledTodayCard` hidden when no scheduled jobs today — only renders when there's something to look at.
+- Shop Floor cards show a small blue clock chip at the top when scheduled. Calendar view prepends the time before customer name in blue mono.
+- AI tools `create_job` and `update_job` accept optional `scheduled_time` HH:MM ET. Handler routes through to `prepareJobData` which combines with `date_received` to form `scheduled_at`.
+
+#### New utilities (all in `src/lib/utils.ts`, all DST-aware via Intl probe)
+- `etDateTimeToUtcIso(etDate, etTime)` — combines YYYY-MM-DD + HH:MM (ET) into a UTC ISO string. Independent of process timezone (Vercel runs in UTC). Validates inputs and throws on garbage with parameter-named errors.
+- `formatTimeEt(iso)` — renders UTC ISO as "2:00 PM" style ET wall-clock.
+- `isScheduledOnEtDate(scheduledAt, etDate)` — used by the dashboard to filter "today in ET" without re-introducing the original timezone bug.
+- `shiftScheduledAtToNewDate(iso, newDate)` — re-anchors to a new date keeping the same ET time. Validates the input is an ISO instant (rejects bare YYYY-MM-DD that would silently produce midnight UTC).
+
+#### Tests (35 new, total now 70)
+- `src/lib/utils.test.ts` — EDT/EST/DST transition coverage, input validation, formatTimeEt round-trips, isScheduledOnEtDate edge cases, shiftScheduledAtToNewDate cross-DST boundary.
+- `src/lib/validators/job.test.ts` — scheduled_time zod regex (accept HH:MM 24h, reject 24:00/25:00/14:60/9:30/abc), prepareJobData scheduled_at output for EDT/EST + late-evening day-wrap + empty date_received throw, jobSchema date_received YYYY-MM-DD regex.
+
+### Thread 3 — Harness review gate
+
+The "invoke /scoped-review when X, Y, Z" rule in CLAUDE.md was honored on conscientious days and skipped when momentum took over — exactly the failure mode the rule existed to prevent. Replaced the conditional with a hook.
+
+- `.claude/hooks/scoped-review-required.sh` (PreToolUse on `Bash(git push*)`): BLOCKS push unless `.scoped-review-marker` at repo root matches the current HEAD SHA.
+- `.scoped-review-marker` written by the /scoped-review skill on completion (added Step 6 to the SKILL.md). Stale on every new commit.
+- Bypass: append `[skip-review]` to the latest commit message — for typo fixes, doc-only changes, anything where review would be theater.
+- `.claude/settings.json` matcher fixed: was `"if": "Bash(git commit*)"` (silently invalid syntax, hook never fired); now uses `"matcher": "Bash(git commit*)"` and adds the new pre-push entry.
+- CLAUDE.md "Review Workflow" rewritten: "the gate is the hook, not your judgment." Drops the "invoke when X, Y, Z" conditional that was the rule the agent reads vs. the gate the harness enforces.
+- `.claude/` is gitignored, so the hooks/skill themselves are per-machine state. The CLAUDE.md change + .gitignore for `.scoped-review-marker` are the only tracked artifacts.
+
+### Review pattern that emerged
+Three /scoped-review passes ran during this session:
+1. After scheduled_at feature + initial fix pass — found 2 Critical timezone bugs (Vercel = UTC, not ET), tightened.
+2. After second fix pass — found 4 follow-up issues (date regex, en-GB time, dashboard helper untested, prepareJobData empty-date case), addressed.
+3. After rename + cascade + harness commit — found 2 Critical (cascade error swallowed, throw bypass) + 2 High (silent editor return, type confusion in shiftScheduledAtToNewDate) + 1 Medium (AI tool surface), all fixed.
+
+Each pass surfaced real issues. Cumulative effect: the feature shipped to master with the timezone math pinned by tests, the action error contract honored, and the AI tool surface complete.
+
+### Memory updates (in user's auto-memory)
+- `reference_sentry.md` (NEW) — Sentry project URL, auth-token location, middleware exemption, release tagging behavior.
+- `project_inline_editing.md` (NEW) — there is NO `/jobs/[id]/edit` route; editing is inline via per-field components + JobFieldPatch.
+- `project_staging_state.md` (UPDATED) — staging and master now in sync; "DO NOT MERGE" hold from April lifted.
+- `MEMORY.md` index updated with the two new entries.
+
+### Verdict
+Production at 8fc578c. Master + staging + remote all aligned. Sentry watching prod, harness gate enforcing review on every push, scheduled_at feature live. Next session can start from `git log` + this entry.
