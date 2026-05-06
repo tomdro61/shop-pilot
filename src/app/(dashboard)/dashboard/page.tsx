@@ -19,8 +19,10 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { KpiCompactCard } from "@/components/dashboard/kpi-compact-card";
 import { ActionCenter } from "@/components/dashboard/action-center";
 import { ParkingTodayCard } from "@/components/dashboard/parking-today-card";
+import { ScheduledTodayCard } from "@/components/dashboard/scheduled-today-card";
 import { ShopFloorColumn } from "@/components/dashboard/shop-floor-column";
 import { getOpenTasks } from "@/lib/actions/tasks";
+import { getScheduledJobsToday } from "@/lib/actions/jobs";
 
 export const metadata = {
   title: "Dashboard | ShopPilot",
@@ -289,10 +291,11 @@ function getGreeting(): string {
 }
 
 export default async function DashboardPage() {
-  const [user, data, tasks] = await Promise.all([
+  const [user, data, tasks, scheduledToday] = await Promise.all([
     getCurrentUser(),
     getDashboardData(),
     getOpenTasks(),
+    getScheduledJobsToday(),
   ]);
   const today = todayET();
 
@@ -400,6 +403,8 @@ export default async function DashboardPage() {
           </div>
 
           <ParkingTodayCard today={today} parking={parking} />
+
+          <ScheduledTodayCard jobs={scheduledToday} />
 
           <div className="space-y-2">
             <ShopFloorColumn status="not_started" jobs={shopFloor.notStarted} today={today} />
