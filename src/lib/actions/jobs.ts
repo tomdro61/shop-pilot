@@ -4,7 +4,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
-import { todayET } from "@/lib/utils";
+import { todayET, shiftScheduledAtToNewDate } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
 import type { JobStatus, PaymentMethod, PaymentStatus } from "@/types";
@@ -252,6 +252,30 @@ export async function updateJobFields(id: string, patch: JobFieldPatch) {
 
   if (Object.keys(update).length === 0) {
     return { error: "Nothing to update" };
+  }
+
+  // Treat date_received + scheduled_at as a unit. If the caller is moving
+  // the drop-off date and the job has a time set, shift scheduled_at to
+  // the new date keeping the same ET wall-clock time. If the caller
+  // explicitly patches scheduled_at in the same call, respect that
+  // (don't overwrite the explicit value with the cascaded one).
+  if ("date_received" in update && !("scheduled_at" in update)) {
+    const { data: existing } = await supabase
+      .from("jobs")
+      .select("scheduled_at, date_received")
+      .eq("id", id)
+      .single();
+    if (existing?.scheduled_at) {
+      const newDate = update.date_received;
+      if (typeof newDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+        if (existing.date_received !== newDate) {
+          update.scheduled_at = shiftScheduledAtToNewDate(existing.scheduled_at, newDate);
+        }
+      } else if (newDate === null) {
+        // Drop-off date cleared → drop the time too. They're a unit.
+        update.scheduled_at = null;
+      }
+    }
   }
 
   const { error } = await supabase.from("jobs").update(update).eq("id", id);

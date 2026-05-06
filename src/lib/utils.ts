@@ -105,3 +105,21 @@ export function isScheduledOnEtDate(
   });
   return rowEtDate === etDate;
 }
+
+/**
+ * Re-anchor a stored scheduled_at to a new drop-off date while keeping
+ * the same ET wall-clock time. Used when the manager changes the drop-off
+ * date on a job that already has a time set — the appointment stays at
+ * the same time, just on a different day.
+ */
+export function shiftScheduledAtToNewDate(
+  scheduledAtIso: string,
+  newEtDate: string
+): string {
+  const time = new Date(scheduledAtIso).toLocaleTimeString("en-GB", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return etDateTimeToUtcIso(newEtDate, time);
+}

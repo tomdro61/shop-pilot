@@ -5,7 +5,12 @@
  * the first version of this code, both are caught here now.
  */
 import { describe, it, expect } from "vitest";
-import { etDateTimeToUtcIso, formatTimeEt, isScheduledOnEtDate } from "./utils";
+import {
+  etDateTimeToUtcIso,
+  formatTimeEt,
+  isScheduledOnEtDate,
+  shiftScheduledAtToNewDate,
+} from "./utils";
 
 describe("etDateTimeToUtcIso", () => {
   describe("EDT (summer, UTC-4)", () => {
@@ -147,6 +152,35 @@ describe("isScheduledOnEtDate", () => {
     const iso = etDateTimeToUtcIso("2026-01-15", "23:30");
     expect(isScheduledOnEtDate(iso, "2026-01-15")).toBe(true);
     expect(isScheduledOnEtDate(iso, "2026-01-16")).toBe(false);
+  });
+});
+
+describe("shiftScheduledAtToNewDate", () => {
+  it("preserves the same ET wall-clock time when re-anchoring within EDT", () => {
+    // 14:00 ET on July 15 = 18:00 UTC. Move to July 16 → still 14:00 ET.
+    const original = etDateTimeToUtcIso("2026-07-15", "14:00");
+    expect(shiftScheduledAtToNewDate(original, "2026-07-16")).toBe(
+      "2026-07-16T18:00:00.000Z"
+    );
+  });
+
+  it("preserves the same ET wall-clock time when re-anchoring within EST", () => {
+    // 09:30 ET on Jan 15 = 14:30 UTC. Move to Jan 20 → still 09:30 ET.
+    const original = etDateTimeToUtcIso("2026-01-15", "09:30");
+    expect(shiftScheduledAtToNewDate(original, "2026-01-20")).toBe(
+      "2026-01-20T14:30:00.000Z"
+    );
+  });
+
+  it("re-anchors across the DST boundary correctly (EST → EDT)", () => {
+    // 14:00 ET on Feb 15 (EST). Move to July 15 (EDT). UTC offset shifts
+    // from -5 to -4, so the UTC wall clock changes (19:00 → 18:00) even
+    // though the ET wall clock stays at 14:00.
+    const original = etDateTimeToUtcIso("2026-02-15", "14:00");
+    expect(original).toBe("2026-02-15T19:00:00.000Z");
+    expect(shiftScheduledAtToNewDate(original, "2026-07-15")).toBe(
+      "2026-07-15T18:00:00.000Z"
+    );
   });
 });
 

@@ -272,11 +272,11 @@ export default async function JobDetailPage({
               </div>
               <JobTechEditor jobId={id} currentTech={tech} techs={technicians} />
               <dl className="grid grid-cols-[70px_1fr] gap-x-2 gap-y-1.5 text-xs items-center min-w-0">
-                <dt className={SECTION_LABEL}>Received</dt>
+                <dt className={SECTION_LABEL}>Drop-off date</dt>
                 <dd className="min-w-0 text-xs">
                   <JobDateEditor jobId={id} field="date_received" value={job.date_received} />
                 </dd>
-                <dt className={SECTION_LABEL}>Drop-off</dt>
+                <dt className={SECTION_LABEL}>Drop-off time</dt>
                 <dd className="min-w-0 text-xs">
                   <JobScheduledTimeEditor
                     jobId={id}

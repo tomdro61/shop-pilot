@@ -340,7 +340,7 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                 name="date_received"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Date received</FormLabel>
+                    <FormLabel>Drop-off date</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} value={field.value ?? ""} />
                     </FormControl>
