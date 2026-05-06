@@ -219,6 +219,7 @@ export type JobFieldPatch = Partial<{
   mileage_in: number | null;
   date_received: string | null;
   date_finished: string | null;
+  scheduled_at: string | null;
   assigned_tech: string | null;
   customer_id: string;
   vehicle_id: string | null;
@@ -230,6 +231,7 @@ const EDITABLE_KEYS = [
   "mileage_in",
   "date_received",
   "date_finished",
+  "scheduled_at",
   "assigned_tech",
   "customer_id",
   "vehicle_id",

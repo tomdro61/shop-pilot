@@ -18,6 +18,7 @@ import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { JobCancelButton } from "@/components/dashboard/job-cancel-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { JobDateEditor } from "@/components/dashboard/job-date-editor";
+import { JobScheduledTimeEditor } from "@/components/dashboard/job-scheduled-time-editor";
 import { JobTitleEditor } from "@/components/dashboard/job-title-editor";
 import { JobNotesEditor } from "@/components/dashboard/job-notes-editor";
 import { JobMileageEditor } from "@/components/dashboard/job-mileage-editor";
@@ -274,6 +275,14 @@ export default async function JobDetailPage({
                 <dt className={SECTION_LABEL}>Received</dt>
                 <dd className="min-w-0 text-xs">
                   <JobDateEditor jobId={id} field="date_received" value={job.date_received} />
+                </dd>
+                <dt className={SECTION_LABEL}>Drop-off</dt>
+                <dd className="min-w-0 text-xs">
+                  <JobScheduledTimeEditor
+                    jobId={id}
+                    value={job.scheduled_at}
+                    dateReceived={job.date_received}
+                  />
                 </dd>
                 <dt className={SECTION_LABEL}>Finished</dt>
                 <dd className="min-w-0 text-xs">
