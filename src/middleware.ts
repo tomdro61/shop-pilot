@@ -54,6 +54,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api") ||
     pathname.startsWith("/estimates/approve") ||
     pathname.startsWith("/inspect") ||
+    pathname.startsWith("/monitoring") ||
     pathname === "/";
 
   // Redirect old /tech/* URLs to /dvi/*
