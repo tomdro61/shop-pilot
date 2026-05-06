@@ -4,6 +4,7 @@ import {
   Package,
   Wrench,
   Car,
+  Clock,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ClickableRow } from "@/components/ui/clickable-row";
@@ -31,10 +32,20 @@ interface ShopFloorJob {
   status: string;
   title: string | null;
   date_received: string | null;
+  scheduled_at: string | null;
   total: number;
   customers: { id: string; first_name: string; last_name: string } | null;
   vehicles: { year: number | null; make: string | null; model: string | null } | null;
   users: { name: string } | null;
+}
+
+function formatTimeEt(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 interface StatusConfig {
@@ -125,6 +136,12 @@ function JobCard({ job, today }: { job: ShopFloorJob; today: string }) {
       className="flex gap-2 px-3 py-2.5 bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
     >
       <div className="min-w-0 flex-1 space-y-0.5">
+        {job.scheduled_at && (
+          <div className="inline-flex items-center gap-1 text-[11px] font-semibold tabular-nums text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 rounded-md px-1.5 py-0.5 mb-0.5">
+            <Clock className="h-3 w-3" aria-hidden />
+            {formatTimeEt(job.scheduled_at)}
+          </div>
+        )}
         <div className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400 truncate">
           {formatRONumber(job.ro_number)}
         </div>

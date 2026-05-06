@@ -13,7 +13,7 @@ import {
   DVI_STATUS_LABELS,
   DVI_STATUS_COLORS,
 } from "@/lib/constants";
-import { Car, Calendar } from "lucide-react";
+import { Car, Calendar, Clock } from "lucide-react";
 import type { JobStatus, DviStatus } from "@/types";
 
 interface JobCardProps {
@@ -24,6 +24,7 @@ interface JobCardProps {
     category: string | null;
     ro_number?: number | null;
     date_received: string;
+    scheduled_at?: string | null;
     notes: string | null;
     customers: { id: string; first_name: string; last_name: string; phone: string | null } | null;
     vehicles: { id: string; year: number | null; make: string | null; model: string | null; license_plate?: string | null } | null;
@@ -37,6 +38,15 @@ interface JobCardProps {
 function formatMonthDay(dateStr: string): string {
   const d = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T00:00:00");
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function formatTimeEt(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export function JobCard({ job, showStatus = true }: JobCardProps) {
@@ -124,6 +134,12 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {job.scheduled_at && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold tabular-nums text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 rounded-md px-1.5 py-0.5">
+                <Clock className="h-3 w-3" aria-hidden />
+                {formatTimeEt(job.scheduled_at)}
+              </span>
+            )}
             <span className="flex items-center gap-1 text-[11px] text-stone-500 dark:text-stone-400">
               <Calendar className="h-3 w-3 text-stone-400" />
               <span className="font-mono tabular-nums">{formatMonthDay(job.date_received)}</span>

@@ -28,6 +28,7 @@ type JobRow = {
   category: string | null;
   ro_number?: number | null;
   date_received: string;
+  scheduled_at?: string | null;
   notes: string | null;
   customers: {
     id: string;
@@ -43,6 +44,15 @@ type JobRow = {
   } | null;
   users?: { id: string; name: string } | null;
 };
+
+function formatTimeEt(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
 
 interface JobsCalendarViewProps {
   jobs: JobRow[];
@@ -226,6 +236,7 @@ function CalendarJobEntry({ job, expanded }: { job: JobRow; expanded?: boolean }
     ? job.customers.last_name
     : "Unknown";
   const vehicle = job.vehicles ? formatVehicle(job.vehicles) : null;
+  const time = job.scheduled_at ? formatTimeEt(job.scheduled_at) : null;
 
   return (
     <Link
@@ -235,6 +246,11 @@ function CalendarJobEntry({ job, expanded }: { job: JobRow; expanded?: boolean }
       <span
         className={`h-1.5 w-1.5 shrink-0 rounded-md ${JOB_STATUS_BAR[job.status as JobStatusKey] ?? "bg-stone-400"}`}
       />
+      {time && (
+        <span className="shrink-0 font-mono tabular-nums font-semibold text-blue-700 dark:text-blue-300">
+          {time}
+        </span>
+      )}
       <span className="truncate font-medium text-stone-700 dark:text-stone-300">
         {customerName}
       </span>

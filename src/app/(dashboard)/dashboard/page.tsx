@@ -60,7 +60,7 @@ async function getDashboardData() {
     supabase
       .from("jobs")
       .select(
-        "id, ro_number, status, title, assigned_tech, date_received, users!jobs_assigned_tech_fkey(name), customers(id, first_name, last_name), vehicles(year, make, model), job_line_items(total)"
+        "id, ro_number, status, title, assigned_tech, date_received, scheduled_at, users!jobs_assigned_tech_fkey(name), customers(id, first_name, last_name), vehicles(year, make, model), job_line_items(total)"
       )
       .in("status", ["not_started", "in_progress", "waiting_for_parts"]),
     supabase
