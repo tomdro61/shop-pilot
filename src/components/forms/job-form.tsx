@@ -26,6 +26,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -130,6 +131,16 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
       assigned_tech: job?.assigned_tech || undefined,
       date_received: job?.date_received || new Date().toISOString().split("T")[0],
       date_finished: job?.date_finished || undefined,
+      // Extract HH:MM in ET from the stored UTC timestamp so the time picker
+      // shows what the manager originally entered, not the UTC value.
+      scheduled_time: job?.scheduled_at
+        ? new Date(job.scheduled_at).toLocaleTimeString("en-US", {
+            timeZone: "America/New_York",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        : "",
       notes: job?.notes || "",
       payment_status: job?.payment_status || "unpaid",
       payment_method: job?.payment_method || undefined,
@@ -331,6 +342,26 @@ export function JobForm({ job, defaultCustomerId, defaultVehicleId, defaultTitle
                     <FormControl>
                       <Input type="date" {...field} value={field.value ?? ""} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="scheduled_time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Drop-off time</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      Optional — only if customer gave a time
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

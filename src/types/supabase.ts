@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       catalog_items: {
@@ -730,6 +705,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           payment_status: Database["public"]["Enums"]["payment_status"]
           ro_number: number | null
+          scheduled_at: string | null
           status: Database["public"]["Enums"]["job_status"]
           stripe_payment_intent_id: string | null
           title: string | null
@@ -750,6 +726,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           ro_number?: number | null
+          scheduled_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_intent_id?: string | null
           title?: string | null
@@ -770,6 +747,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           ro_number?: number | null
+          scheduled_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_intent_id?: string | null
           title?: string | null
@@ -1432,9 +1410,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       customer_type: ["retail", "fleet", "parking"],

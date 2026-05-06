@@ -16,6 +16,10 @@ export const jobSchema = z.object({
   assigned_tech: z.string().uuid().nullable().optional(),
   date_received: z.string().min(1, "Date is required"),
   date_finished: z.string().nullable().optional(),
+  // HH:MM 24h string from <input type="time">. Empty/null when the customer
+  // hasn't given a specific drop-off time. Combined with date_received in
+  // prepareJobData to form the timestamptz scheduled_at on the row.
+  scheduled_time: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional().or(z.literal("")),
   notes: z.string().max(5000),
   payment_method: z.enum(["stripe", "cash", "check", "ach", "terminal"]).nullable().optional(),
   payment_status: z.enum(["unpaid", "invoiced", "paid", "waived"]),
@@ -35,6 +39,13 @@ export function prepareJobData(data: JobFormData) {
     date_received: data.date_received,
     date_finished: data.status === "complete"
       ? (data.date_finished || todayET())
+      : null,
+    // Combine date_received + scheduled_time into a timestamptz when the
+    // user gave a time. The `${date}T${time}` form is interpreted as the
+    // browser's local timezone — which for this shop is always ET — and
+    // .toISOString() converts to UTC for storage. Empty/missing time → null.
+    scheduled_at: data.scheduled_time
+      ? new Date(`${data.date_received}T${data.scheduled_time}`).toISOString()
       : null,
     notes: data.notes || null,
     payment_method: data.payment_method || null,
