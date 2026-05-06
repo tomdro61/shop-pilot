@@ -322,7 +322,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Production readiness (before going live):**
 - ~~Upgrade Supabase to Pro ($25/mo)~~ DONE
 - Upgrade Vercel to Pro ($20/mo) — SLA, higher function duration limits for AI chat
-- Add Sentry error monitoring (free tier) — captures runtime errors, sends alerts
+- ~~Add Sentry error monitoring (free tier) — captures runtime errors, sends alerts~~ DONE — `@sentry/nextjs` wired with tunnel route `/monitoring`, source maps uploaded on every Vercel build, errors tagged with commit SHA via release config. Project: `shop-pilot.sentry.io`
 - Add uptime monitoring (BetterUptime or UptimeRobot, free) — texts/emails if site goes down
 - Set up weekly database backup export of critical tables (customers, jobs, invoices)
 - Audit environment variables — ensure no secrets committed or exposed
@@ -345,23 +345,21 @@ Read `PROGRESS.md` first to pick up where we left off.
 - **Mobile-first** — design for phone screens first, then expand to desktop
 - **Front-end design / UI changes** — ALWAYS invoke the front-end design skill (`/front-end-design` or whichever slash-skill is configured for visual/design work) before making visual changes, restructuring layouts, or proposing redesigns. The skill exists specifically to give design decisions structure — don't freelance the visuals. If the task touches component layout, typography, color, spacing, or visual composition, the skill is in scope. Read [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) first for the canonical tokens and patterns.
 
-## Review Workflow (read this — required, not optional)
+## Review Workflow (the gate is the hook, not your judgment)
 
-A 13-agent review of `staging` (April 2026) found 118 issues that accumulated across many sessions because review wasn't built into the workflow. The full report lives at `REVIEW-FINDINGS.md`. To prevent this from repeating, every change runs through the `/scoped-review` skill at scoped triggers.
+A 13-agent review of `staging` (April 2026) found 118 issues that accumulated across many sessions because review wasn't built into the workflow. The full report lives at `REVIEW-FINDINGS.md`.
 
-**Invoke `/scoped-review` automatically (without being asked) when:**
+**The harness gate**: a pre-push hook (`.claude/hooks/scoped-review-required.sh`) BLOCKS `git push` unless `.scoped-review-marker` at repo root contains the current HEAD SHA. The `/scoped-review` skill writes that marker on completion. The marker becomes stale on every new commit, so every batch of work earns its own review pass.
 
-- A change is "done" and touches **any** of: `src/lib/actions/`, `src/hooks/`, `src/middleware.ts`, `src/lib/auth.ts`, `src/components/ui/`, `src/components/forms/`, `src/lib/utils/`, `src/lib/validators/`, `src/app/api/`
-- A change adds more than ~50 lines or touches more than 3 files
-- A change adds new types, hooks, or generic functions
-- The user is about to commit (`git commit`) — invoke `/review staged` first
-- The user asks to merge `staging` → `master` — invoke `/review merge` first (full sweep)
+**Don't try to reason about whether to skip review.** The agent's "this feels small" judgment was the failure mode that caused 118 issues to accumulate. The hook removes that judgment from the loop.
 
-**Don't invoke for:** typo fixes, doc-only changes, single-line bug fixes, formatting, or anything under ~10 lines.
+**Bypass for tiny changes**: append `[skip-review]` to the latest commit message, then push. Use this for typo fixes, doc-only changes, single-line bug fixes, formatting changes — anything where review would be theater. If you find yourself reaching for `[skip-review]` on something that touches a server action or a form, you're using it wrong.
 
-**The skill picks the agents.** It reads the diff, categorizes the changes, and dispatches only the relevant reviewers in parallel. A 30-line server-action change runs 2 agents. A whole feature runs 3-4. Pre-merge runs all 12. A typo fix runs zero.
+**The skill picks the agents.** It reads the diff, categorizes the changes, and dispatches only the relevant reviewers in parallel. A 30-line server-action change runs 2 agents. A whole feature runs 3-4. Pre-merge runs all 12. A typo fix runs zero. After consolidating findings, the skill writes the marker so the push unblocks.
 
-**After invoking `/scoped-review`:** address all Critical findings before declaring done. Triage High/Medium with the user. Don't ship a Critical "as a follow-up."
+**After invoking `/scoped-review`:** address all Critical findings before declaring done. Triage High/Medium with the user. Don't ship a Critical "as a follow-up." If Criticals exist, fix them first then re-run the skill against the new HEAD.
+
+**Pre-commit hook** (`.claude/hooks/scoped-review-reminder.sh`) is advisory — it just reminds. The real gate is the pre-push hook.
 
 ## Investigation Discipline (hard rules)
 
