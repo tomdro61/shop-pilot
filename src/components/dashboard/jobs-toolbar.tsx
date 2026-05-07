@@ -53,7 +53,17 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      updateParams({ search });
+      // >=2 chars required — see getJobs() for why
+      const trimmed = search.trim();
+      if (trimmed.length === 1) {
+        // Clear any prior multi-char param so input and results stay in sync
+        // when the user backspaces from "smi" to "s".
+        if (searchParamsRef.current.get("search")) {
+          updateParams({ search: "" });
+        }
+        return;
+      }
+      updateParams({ search: trimmed });
     }, 300);
     return () => clearTimeout(timer);
   }, [search, updateParams]);

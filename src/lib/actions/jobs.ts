@@ -1,6 +1,7 @@
 "use server";
 
 import { cache } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
@@ -60,20 +61,31 @@ export async function getJobs(filters?: {
     query = query.in("id", jobIds);
   }
 
-  if (filters?.search) {
-    const searchLower = filters.search.toLowerCase();
+  if (filters?.search && filters.search.trim().length >= 2) {
+    const searchLower = filters.search.trim().toLowerCase();
     const supabaseForSearch = await createClient();
 
-    // Server-side: find matching customers and vehicles first, then filter jobs
+    // Cap matched-ID lists so the resulting `customer_id.in.(...)` /
+    // `vehicle_id.in.(...)` clauses don't blow past PostgREST's URL length
+    // limit on broad searches (e.g. a 2-char substring matching hundreds of
+    // customer rows in a 3,000-row table). Beyond this cap we'd 400. Order
+    // by name so the truncated set is deterministic if it saturates.
+    const SEARCH_ID_CAP = 100;
     const [customerResult, vehicleResult] = await Promise.all([
       supabaseForSearch
         .from("customers")
         .select("id")
-        .or(`first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%`),
+        .or(`first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%`)
+        .order("last_name", { ascending: true })
+        .order("first_name", { ascending: true })
+        .limit(SEARCH_ID_CAP),
       supabaseForSearch
         .from("vehicles")
         .select("id")
-        .or(`make.ilike.%${searchLower}%,model.ilike.%${searchLower}%`),
+        .or(`make.ilike.%${searchLower}%,model.ilike.%${searchLower}%`)
+        .order("make", { ascending: true })
+        .order("model", { ascending: true })
+        .limit(SEARCH_ID_CAP),
     ]);
 
     if (customerResult.error) {
@@ -85,6 +97,20 @@ export async function getJobs(filters?: {
 
     const customerIds = customerResult.data?.map(c => c.id) || [];
     const vehicleIds = vehicleResult.data?.map(v => v.id) || [];
+
+    // Saturation = silent truncation; surface to Sentry so we can see if the
+    // RPC follow-up needs to be prioritized.
+    if (customerIds.length === SEARCH_ID_CAP || vehicleIds.length === SEARCH_ID_CAP) {
+      Sentry.captureMessage("jobs_search_truncated", {
+        level: "warning",
+        extra: {
+          query: searchLower,
+          customer_matches: customerIds.length,
+          vehicle_matches: vehicleIds.length,
+          cap: SEARCH_ID_CAP,
+        },
+      });
+    }
 
     // Build OR filter for job's own fields + matched customer/vehicle IDs
     const orParts: string[] = [

@@ -2496,3 +2496,28 @@ Each pass surfaced real issues. Cumulative effect: the feature shipped to master
 
 ### Verdict
 Production at 8fc578c. Master + staging + remote all aligned. Sentry watching prod, harness gate enforcing review on every push, scheduled_at feature live. Next session can start from `git log` + this entry.
+
+---
+
+## Session 35 — 2026-05-07 — Jobs search 400 fix
+
+Sentry caught a `Bad Request` on prod `/jobs` (release `2efdc47b0463`, GET /jobs, single user). Root cause was in `getJobs()` search branch: a 1-char query (manager typed "s" in the search box) ran `customers.ilike('%s%')` against a 3,000-row table, fanned the matched IDs into a single `customer_id.in.(uuid1,uuid2,...)` clause, and blew past PostgREST's URL length limit. Same mode trips on any common 2-3 char substring at this dataset size, so this was a recurring bug, not a one-off.
+
+### Fix (server + client)
+- `src/lib/actions/jobs.ts` — short-circuit search branch when trimmed query <2 chars; cap customer + vehicle ID lookups to 100 each via `.limit(100)`; add `.order("last_name").order("first_name")` and `.order("make").order("model")` so the truncated 100 is deterministic instead of insertion-ordered.
+- Saturation log: when either lookup hits the cap, `Sentry.captureMessage("jobs_search_truncated", { level: "warning", extra: { query, customer_matches, vehicle_matches, cap } })`. Gives us visibility on whether the cap is firing in real use without changing the user-facing UX. If it lights up frequently, the proper fix (Postgres RPC that joins server-side) gets prioritized.
+- `src/components/dashboard/jobs-toolbar.tsx` — debounced effect skips URL push when input is exactly 1 char. When the user backspaces from a multi-char query down to 1 char, the existing `?search=…` param is cleared so input and visible results stay in sync (caught by /scoped-review as HIGH).
+
+### Verification
+- `/verify-flow` doesn't have a "jobs search" scenario — it's an internal-tool surface, out of scope. Verified manually via Playwright instead: `/jobs` (no search), `/jobs?search=s` (1-char), `/jobs?search=smi` (broad — 4 results returned, no 400), and the backspace-from-"smi"-to-"s" UI test (URL cleared correctly). All passed.
+
+### /scoped-review findings (addressed before commit)
+- HIGH — stale URL when backspacing to 1 char (both reviewers flagged independently). Fixed.
+- MEDIUM — silent truncation at the 100 cap with no signal. Addressed via `.order()` for determinism + Sentry warning on saturation.
+- MEDIUM — toolbar comment redundant with server comment. Trimmed to one-liner referencing `getJobs()`.
+
+### Workflow note
+First pass skipped /scoped-review and /verify-flow and tried to jump straight to commit-and-push — the exact failure mode the harness gate exists to prevent. User flagged it. Re-ran the right workflow and the review surfaced the HIGH that pure static analysis on my own diff missed. Lesson: the gate works because it catches what self-review doesn't, not because it's procedurally required.
+
+### Follow-up
+Tracked but not done this session: replace the customer/vehicle prefetch + URL-encoded `IN(...)` pattern with a Postgres RPC (`search_jobs(query text)`) that does the join server-side. Removes the URL-length pressure entirely, makes truncation impossible, faster on broad searches. Triggered if the Sentry `jobs_search_truncated` warning fires regularly.
