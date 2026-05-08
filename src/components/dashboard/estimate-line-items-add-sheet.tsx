@@ -207,6 +207,7 @@ function CatalogTab({ estimateId }: { estimateId: string }) {
       description: item.description,
       quantity: item.default_quantity,
       unit_cost: item.default_unit_cost,
+      cost: item.type === "part" ? (item.default_cost ?? null) : null,
       part_number: item.part_number || "",
       category: item.category || undefined,
     });

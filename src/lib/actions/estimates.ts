@@ -69,6 +69,7 @@ export async function createEstimateFromJob(jobId: string) {
       description: li.description,
       quantity: li.quantity,
       unit_cost: li.unit_cost,
+      cost: li.type === "part" ? (li.cost ?? null) : null,
       part_number: li.part_number,
       category: li.category,
     }));
@@ -560,6 +561,7 @@ export async function convertEstimateToJob(estimateId: string) {
     description: string;
     quantity: number;
     unit_cost: number;
+    cost: number | null;
     part_number: string | null;
     category: string | null;
   }>;
@@ -612,6 +614,7 @@ export async function convertEstimateToJob(estimateId: string) {
       description: li.description,
       quantity: li.quantity,
       unit_cost: li.unit_cost,
+      cost: li.type === "part" ? (li.cost ?? null) : null,
       part_number: li.part_number,
       category: li.category,
     }));

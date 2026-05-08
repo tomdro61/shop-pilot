@@ -179,13 +179,13 @@ export async function applyPresetToEstimate(estimateId: string, presetId: string
     return { success: true, inserted: 0 };
   }
 
-  // estimate_line_items has no `cost` column (cost-tracking is jobs-only).
   const rows = lineItems.map((item) => ({
     estimate_id: estimateId,
     type: item.type as "labor" | "part",
     description: item.description,
     quantity: item.quantity,
     unit_cost: item.unit_cost,
+    cost: item.type === "part" && item.cost != null ? item.cost : null,
     part_number: item.part_number || null,
     category: item.category || preset.category || null,
   }));

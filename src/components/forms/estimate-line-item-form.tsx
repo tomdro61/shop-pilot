@@ -78,20 +78,28 @@ export function EstimateLineItemForm(props: EstimateLineItemFormProps) {
       description: lineItem?.description || "",
       quantity: lineItem?.quantity || 1,
       unit_cost: lineItem?.unit_cost || 0,
+      cost: lineItem?.cost ?? null,
       part_number: lineItem?.part_number || "",
       category: lineItem?.category || "",
     },
   });
 
+  const watchType = form.watch("type");
   const quantity = form.watch("quantity");
   const unitCost = form.watch("unit_cost");
+  const watchCost = form.watch("cost");
   const total = (Number(quantity) || 0) * (Number(unitCost) || 0);
+  const marginPct =
+    watchType === "part" && watchCost && unitCost
+      ? ((unitCost - watchCost) / unitCost) * 100
+      : null;
 
   async function onSubmit(data: EstimateLineItemFormData) {
     const cleaned = {
       ...data,
       quantity: Number(data.quantity),
       unit_cost: Number(data.unit_cost),
+      cost: data.type === "part" && data.cost != null ? Number(data.cost) : null,
     };
 
     const result = isEditing
@@ -115,6 +123,7 @@ export function EstimateLineItemForm(props: EstimateLineItemFormProps) {
       description: "",
       quantity: 1,
       unit_cost: 0,
+      cost: null,
       part_number: "",
       category: "",
     });
@@ -212,22 +221,59 @@ export function EstimateLineItemForm(props: EstimateLineItemFormProps) {
               <span className="text-lg font-semibold">
                 {formatCurrency(total)}
               </span>
+              {marginPct !== null && (
+                <span
+                  className={`ml-2 text-sm font-medium ${
+                    marginPct >= 30
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : marginPct >= 15
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-red-600 dark:text-red-400"
+                  }`}
+                >
+                  ({marginPct.toFixed(1)}% margin)
+                </span>
+              )}
             </div>
 
-            {form.watch("type") === "part" && (
-              <FormField
-                control={form.control}
-                name="part_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Part Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Optional" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {watchType === "part" && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="part_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Part Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Optional" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="cost"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Your Cost</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Wholesale"
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(e.target.value ? Number(e.target.value) : null)
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             {categories.length > 0 && (

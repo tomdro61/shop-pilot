@@ -417,6 +417,7 @@ export type Database = {
       estimate_line_items: {
         Row: {
           category: string | null
+          cost: number | null
           created_at: string
           description: string
           estimate_id: string
@@ -430,6 +431,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          cost?: number | null
           created_at?: string
           description: string
           estimate_id: string
@@ -443,6 +445,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          cost?: number | null
           created_at?: string
           description?: string
           estimate_id?: string
