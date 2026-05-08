@@ -105,52 +105,7 @@ shop-pilot/
 
 ### Phase 1: Foundation (Weeks 1-2) — COMPLETE
 
-**Goal:** Replace Notion for job tracking. Get the core data model and UI working.
-
-#### Phase 1 Order of Operations:
-
-1. **Project scaffolding**
-   - Initialize Next.js with TypeScript, Tailwind CSS, App Router
-   - Install and configure shadcn/ui for component library
-   - Set up ESLint and Prettier
-   - Initialize Git repo, push to GitHub
-   - Deploy blank app to Vercel to confirm pipeline works
-
-2. **Supabase setup**
-   - Create Supabase project
-   - Write and run migrations for all core tables (customers, vehicles, jobs, job_line_items, estimates, invoices, messages, users)
-   - Configure Row Level Security (RLS) policies
-   - Set up Supabase Auth (email/password to start)
-   - Generate TypeScript types from schema
-
-3. **Authentication**
-   - Build login page
-   - Set up Supabase Auth middleware in Next.js
-   - Implement role-based access (manager vs. tech)
-   - Protect all routes behind auth
-
-4. **Customer management**
-   - Customer list page with search
-   - Create/edit customer form
-   - Customer detail page (shows linked vehicles and job history)
-
-5. **Vehicle management**
-   - Add/edit vehicle form (linked to customer)
-   - Vehicle list on customer detail page
-
-6. **Job tracker**
-   - Create/edit job form (link to customer + vehicle, assign tech, set status)
-   - Job detail page with line items (labor + parts)
-
-7. **Job dashboard**
-   - Kanban board view (drag-and-drop by status)
-   - List view with sort/filter
-   - Calendar view (by date received or date finished)
-   - Mobile-responsive layout for all views
-
-8. **Data import**
-   - Export Wix customer contacts
-   - Build import script to load into Supabase
+Replaced Notion for job tracking. Core data model + UI shipped (auth, customers, vehicles, jobs, line items, kanban/list/calendar views, Wix data import).
 
 ### Phase 2: Payments & Communication (Weeks 3-4)
 
@@ -248,35 +203,8 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Phase 1: COMPLETE** — Deployed and live on Vercel
 **Phase 2: COMPLETE** — Stripe invoicing + estimates + Quo SMS + Terminal + Resend email all built
 **Phase 3: COMPLETE** — AI Assistant with Claude API, 46 tools, streaming chat UI
-**Session 4:** Team management, tech assignment on jobs, reports date filtering + tech charts
-**Session 5:** Full AI chat assistant (Phase 3)
-**Session 6:** Dashboard operational intelligence, UI refresh phase 2
-**Session 7:** Quo SMS integration, AI chat context preservation, customer search fix
-**Session 8:** Job presets, job form redesign, dashboard + reports enhancements
-**Session 9:** Stripe Terminal (WisePOS E) integration with Quick Pay
-**Session 10:** Quick Pay presets, inspections update, dashboard overhaul, typography system
-**Session 11:** Line item categories for multi-service jobs
-**Session 12:** Remove job-level category — line items as single source of truth
-**Session 13:** Design system refactor — stone/blue palette, layered depth, component polish
-**Session 14:** Resend transactional email integration — client, templates, server actions, auto-send, AI tool
-**Session 15:** Wix customer CSV import (~3,000 contacts), customer list server-side pagination
-**Session 16:** RO numbers (sequential, auto-assigned) + printable repair order page
-**Session 17:** Shop settings — configurable tax rate, shop supplies fee, environmental fee
-**Session 18:** Part cost tracking — wholesale cost on parts for actual profit margin reporting
-**Session 19:** Calendar views, date fixes, job form rename
-**Session 20:** Category-scoped shop supplies & hazmat fees
-**Session 21:** Estimate delete, category grouping on estimates, Add Service overflow fix
-**Session 22:** Airport Parking Management — 3-lot system with dashboard, public API, AI tools
-**Session 23:** Link parking reservations to customers — auto find-or-create, parking type, customer detail parking history
-**Session 24:** Wix parking webhook bridge — Wix form submissions → ShopPilot reservations + customers
-**Session 26:** Messaging system overhaul — dual-line SMS routing (shop 617 + parking 978), 7 message templates, Quo contact creation for parking customers, lockbox checkout flow with SMS, parking specials upsell, inbound message routing
-**Session 27:** New parking forms (shuttle + valet) on BroadwayMotorsMA.com, lot-specific confirmation pages with instructions, lot-specific confirmation SMS, triple-line phone routing (shop/parking/APB), Wix automation deactivated
-**Session 28:** Unified revenue reporting — dashboard and reports now use shared revenue calculation, inspection-category line items excluded from job revenue, inspection revenue from inspections page included in both, State/TNC Inspection shown in category and profitability reports
-**Session 29:** Stitch UI refresh — full design system overhaul (Inter font, pill-shaped controls, warm stone palette, card shadows, dark sidebar), then UI consistency audit (standardized pills, normalized dark mode colors, restyled dashboard alerts, redesigned quote requests and parking detail pages, lockbox info on parking cards)
-**Session 30:** Parts & Labor Catalog — `catalog_items` table with 30 seeded items, catalog management page at `/settings/catalog`, catalog search in line item form + job creation form, "Save to Catalog" button on line items, 3 new AI tools (search_catalog, add_catalog_items_to_job, manage_catalog_item). Also: quote request message expand/collapse.
-**Session 32:** Stripe Terminal fully operational (WisePOS E registered, walk-in customer, payment status auto-update). Reporting suite: Trends Explorer (`/reports/trends`), Service Mix Deep-Dive (`/reports/service-mix`), Tech Scoreboard (`/reports/tech`). Shared trend bucketing infrastructure. Preset catalog search filtered by category. Inspection revenue exclusion expanded to match user's categories.
-**Session 33:** UI dial-in pre-merge gate. New Action Center on dashboard (Tasks scratchpad + Glance + 6 needs-attention alert cards linking to `/inbox?tab=...`). Inbox redesigned with type-accent filter chips. DVI suite (list, detail, customer-facing /inspect, all 11 components) aligned. Detail pages (job, customer, parking) Notes blocks converted to alert-card pattern. Segmented controls swept. Quote requests rebuilt and default to "new" filter. Sidebar active state redesigned with white left-edge strip, no blue. Primary blue refreshed to `oklch(0.55 0.18 255)` and Button routed through `bg-primary`. Quick Pay emerald. Parking · Today scoped to managed lots. Vitest + first test. New shared modules: `lib/ui/alert-tone.ts` (Tone palette), `lib/actions/_types.ts` (ActionResult), `lib/utils/parking.ts` (hasPendingService). Tasks server actions + migration applied to remote.
-**Session 34:** Sentry error monitoring wired (project `shop-pilot.sentry.io`, tunnel route `/monitoring`, source maps uploaded per build, errors tagged with commit SHA). Drop-off scheduling: new `jobs.scheduled_at timestamptz` column for customer-agreed appointment times, paired with `date_received` (renamed in UI from "Received" to "Drop-off date"). Optional time picker in JobForm + new `JobScheduledTimeEditor` inline editor on job detail page. Server-side cascade in `updateJobFields` keeps `scheduled_at` anchored to `date_received` when the date changes. Surfaces: dashboard "Scheduled · Today" strip (hidden when empty), blue clock chip on Shop Floor cards, time prepended on calendar view entries. AI tools (`create_job`, `update_job`) accept optional `scheduled_time` HH:MM ET. New utils: `etDateTimeToUtcIso`, `formatTimeEt`, `isScheduledOnEtDate`, `shiftScheduledAtToNewDate` — all DST-aware via Intl probe, all input-validated. 35 new tests pin EDT/EST/DST correctness + zod schema edges. **Harness gate:** pre-push hook (`.claude/hooks/scoped-review-required.sh`) blocks `git push` unless `.scoped-review-marker` matches HEAD, replacing the rule-the-agent-reads with a hook-the-harness-enforces. The /scoped-review skill writes the marker on completion; bypass via `[skip-review]` token in the latest commit message.
+
+> **Per-session changelog lives in [`PROGRESS.md`](./PROGRESS.md).** Read it at the start of every new session for what shipped when, in what file, and why. Don't duplicate that history here — this section is for the *current* shape of the system, not how it got there.
 
 - All core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - **Design system:** Stitch design language — Inter font, oklch palette, `rounded-md` canonical, `shadow-card` token, color semantics anchored on emerald/amber/red/blue/violet/stone. Layout patterns include structured metric chunks, 3px top accent strips, line-items-as-grouped-sections, Open Loops single-line rows, customer = violet identity. **Full spec lives in [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) — that's the authoritative source.** This file should NOT accumulate design tokens; update DESIGN_SYSTEM.md instead.
@@ -323,7 +251,7 @@ Read `PROGRESS.md` first to pick up where we left off.
 **Production readiness (before going live):**
 - ~~Upgrade Supabase to Pro ($25/mo)~~ DONE
 - Upgrade Vercel to Pro ($20/mo) — SLA, higher function duration limits for AI chat
-- ~~Add Sentry error monitoring (free tier) — captures runtime errors, sends alerts~~ DONE — `@sentry/nextjs` wired with tunnel route `/monitoring`, source maps uploaded on every Vercel build, errors tagged with commit SHA via release config. Project: `shop-pilot.sentry.io`
+- ~~Add Sentry error monitoring (free tier) — captures runtime errors, sends alerts~~ DONE — `@sentry/nextjs` wired with tunnel route `/monitoring`, source maps uploaded on every Vercel build, errors tagged with commit SHA via release config. Project: `shop-pilot.sentry.io`. **Sentry MCP available** — install per-machine with `claude mcp add --transport http sentry https://mcp.sentry.dev/mcp` (OAuth on first use, no token to manage). When wired, the agent can query issues, events, and releases live instead of asking you to paste them.
 - Add uptime monitoring (BetterUptime or UptimeRobot, free) — texts/emails if site goes down
 - Set up weekly database backup export of critical tables (customers, jobs, invoices)
 - Audit environment variables — ensure no secrets committed or exposed
