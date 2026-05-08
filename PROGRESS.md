@@ -2521,3 +2521,235 @@ First pass skipped /scoped-review and /verify-flow and tried to jump straight to
 
 ### Follow-up
 Tracked but not done this session: replace the customer/vehicle prefetch + URL-encoded `IN(...)` pattern with a Postgres RPC (`search_jobs(query text)`) that does the join server-side. Removes the URL-length pressure entirely, makes truncation impossible, faster on broad searches. Triggered if the Sentry `jobs_search_truncated` warning fires regularly.
+
+---
+
+## Session 36 — 2026-05-07/08 — Card on File + Charge by Job (PAUSED — UNCOMMITTED)
+
+**Status: implementation done + 4 Criticals fixed + all 4 verified end-to-end with real Stripe test cards. Working tree is dirty. Highs not yet triaged. Resume from "Where to pick up" below.**
+
+### What Was Built — v1 of the "Card on File" feature
+
+DriveWhip use case: shop saves a B2B customer's credit card to charge directly from a completed job, instead of sending a Stripe-hosted invoice link the customer pays themselves.
+
+- **Customer detail page** — new "Payment Methods" section between Financial Snapshot and Vehicles. Shows saved Visa/MC/etc. with brand + last4 + expiry, or empty state. Add Card opens a Dialog with Stripe Elements `<PaymentElement />` (SetupIntent + `confirmSetup`), Replace Card overwrites, Remove Card detaches via Stripe.
+- **Job detail page** — when customer has a saved card AND job status = complete AND not paid, JobPaymentFooter renders a new blue **Charge Card on File** button alongside Terminal + Mark as Paid. Confirm dialog says "Charge $X to <Name>'s Visa ending in 4242 — receipt will be emailed automatically." On confirm, server action creates a Stripe invoice with `default_payment_method` + `auto_advance: false` + `collection_method: 'charge_automatically'`, finalizes, inserts local `invoices` row, then calls `stripe.invoices.pay({ off_session: true })`. Webhook reconciles via existing `invoice.paid` handler — receipt email + SMS fire for free.
+- **InvoiceSection** — fleet customers WITH a card on file no longer see "Billed separately"; instead a friendly "Card on file — Use Charge Card on File below to bill and collect in one step" callout.
+- **AI prompt softened** — `src/lib/ai/system-prompt.ts:37-42` — Hertz/Sixt without card stay net-30; DriveWhip with a card may be charged. **Caveat**: there's no `charge_card_on_file` AI tool yet (deferred to v2 per user). Prompt rule is currently aspirational. **Triage item.**
+
+### Files
+
+NEW:
+- `src/lib/stripe/client.ts` — `getStripeClient()` browser singleton wrapping `loadStripe(NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)`
+- `src/lib/actions/payment-methods.ts` — `createSetupIntent`, `setDefaultPaymentMethod`, `removePaymentMethod`, `getPaymentMethod`
+- `src/lib/actions/charge-card-on-file.ts` — `chargeCardOnFile(jobId)` returning `ActionResult<{invoiceId, amountDollars}>`
+- `src/components/customers/payment-methods-section.tsx` — server component, calls `getPaymentMethod` + renders row or empty state
+- `src/components/customers/payment-method-actions.tsx` — `AddCardButton` (Dialog + Elements) + `RemoveCardButton` (AlertDialog)
+- `src/components/dashboard/charge-card-on-file-button.tsx` — AlertDialog confirm + action call
+
+MODIFIED:
+- `package.json` — added `@stripe/stripe-js` and `@stripe/react-stripe-js`
+- `src/lib/stripe/create-invoice.ts` — extracted `addJobInvoiceItems()` shared helper (used by both hosted-invoice + charge-card-on-file flows so totals/tax stay in lockstep). Type renamed to `StripeInvoiceLineItem` (was colliding with the canonical `JobLineItem` in `src/types/index.ts`).
+- `src/components/dashboard/job-payment-footer.tsx` — new `customerName`, `savedCard` props; renders `ChargeCardOnFileButton` when card present
+- `src/components/dashboard/invoice-section.tsx` — new `hasCardOnFile` prop; new third branch for fleet+card customers
+- `src/app/(dashboard)/customers/[id]/page.tsx` — inserts `<PaymentMethodsSection customerId={id} />` between Financial Snapshot and Vehicles
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — fetches `getPaymentMethod(customer.id)`, threads to InvoiceSection + JobPaymentFooter
+- `src/lib/ai/system-prompt.ts` — softened fleet rule
+
+Plan file: `C:\Users\tomjd\.claude\plans\yes-write-the-implementation-sharded-flurry.md`
+
+### /scoped-review — 6 agents dispatched, 4 Criticals found and fixed
+
+1. **C1 — SCA error narrowing was on the wrong Stripe error class** — `authentication_required` is thrown as `StripeCardError`, not `StripeInvalidRequestError`. The dead branch would have shown "Card declined (undefined)" for SCA cards. Fixed by moving the check inside the `StripeCardError` branch.
+2. **C2 — pay() failure left orphaned local invoice row** — local `invoices` row got inserted before `pay()`. On decline, the row remained at `status='sent'`, blocking re-charge via the existing-invoice guard. Fixed by wrapping `pay()` in its own try/catch that voids the Stripe invoice + deletes the local row. Then refined to ONLY void/delete on `StripeCardError` (definitive decline) so `StripeConnectionError`/`StripeAPIError` (ambiguous) leave state intact for the webhook to reconcile.
+3. **C3 — `JobLineItem` name collision** — public export from `create-invoice.ts` collided with the canonical `JobLineItem` (Supabase row) from `src/types/index.ts`. The `as` cast at `charge-card-on-file.ts:55` was right by accident. Fixed by renaming export to `StripeInvoiceLineItem` and using `Pick<JobLineItem, ...>` from `@/types` for the DB row.
+4. **C4 — `setDefaultPaymentMethod` didn't verify PM belongs to customer** — first attempted fix used `payment_methods.attach()` with idempotent `resource_already_exists` swallow. Verification agent caught the wrong code. Refactored to use `paymentMethods.retrieve()` + structural `pm.customer === customer.stripe_customer_id` check instead — cleaner and doesn't depend on undocumented error code strings.
+
+### Runtime verification — all 4 Criticals validated end-to-end
+
+Used Stripe test cards in test mode with both `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` from sandbox `pk_test_51T34py.../sk_test_51T34py...`. Test customer: "Test2 CardOnFile" (`d1a834a6-4bfe-4330-8df1-bc19f612e4b7`).
+
+- **Save card (C4)**: `4242 4242 4242 4242` → toast "Card saved on file", section flipped to "Visa ending in 4242 / Expires 12/30". Stripe customer's `invoice_settings.default_payment_method` set.
+- **Happy charge**: complete job → "Charge Card on File" dialog → confirm. Toast "Charged $89.39 to Visa ••4242". Stripe invoice `in_1TUfZUE` paid in full at Stripe ($89.39 collected, `charge_automatically`). Local DB stays "Unpaid" — see "Webhook gap" below.
+- **Decline rollback (C2)**: replaced card with `4000 0000 0000 0341` (saves OK, declines on charge). Charge attempt → toast (paraphrasing) "Card declined — try Terminal or another method". Stripe invoice `in_1TUfe6E` voided ✓. Local row deleted ✓ (verified via `/invoices` page showing only the happy-path invoice).
+- **SCA branch (C1)**: replaced card with `4000 0027 6000 3184` (3DS-required). Charge attempt → toast **"This card requires customer authentication — collect via Terminal instead"** ✓. Stripe invoice `in_1TUfoZE` voided ✓.
+
+### A real bug runtime testing caught that static review didn't
+
+**During C1 verification, the SCA toast came out wrong** — the long Stripe SDK message instead of my SCA-specific copy. Probed the SDK with a one-off Node script: `stripe.invoices.pay({ off_session: true })` against an SCA-required card throws `StripeCardError` with code **`invoice_payment_intent_requires_action`**, NOT `authentication_required`. The wrapped invoice-pay error carries a different code than direct PaymentIntent.confirm. Added the second code to my SCA check (`charge-card-on-file.ts:194-197`):
+
+```ts
+if (
+  cardErr.code === "authentication_required" ||
+  cardErr.code === "invoice_payment_intent_requires_action"
+) { /* SCA-specific message */ }
+```
+
+Re-tested with the SCA card → correct toast fired. **This is exactly the failure mode CLAUDE.md's investigation discipline rule names — "don't assume the SDK comments match the live behavior."** Static review and SDK type inspection couldn't see this; only an actual runtime call against an SCA card surfaced it. Note for future: anything involving Stripe error narrowing should be runtime-verified, not just type-checked.
+
+### Webhook gap (environmental, not a code bug)
+
+`stripe listen` isn't running locally, so `invoice.paid` webhooks don't reach `localhost:3000/api/stripe/webhooks`. Three test jobs (RO-0404 RO-0405 RO-0407) show `payment_status: 'unpaid'` locally even though Stripe Dashboard says paid. In production with the deployed webhook endpoint configured, this works (it's the same webhook code that powers the existing hosted-invoice flow — already tested in prod). For local E2E of the receipt-email path, future verification needs `stripe listen --forward-to localhost:3000/api/stripe/webhooks` running in a separate terminal.
+
+### Env
+
+`.env.local` was updated:
+- `STRIPE_SECRET_KEY` swapped to test sandbox `sk_test_51T34py...` (was previously a different test sandbox `sk_test_51T34rH...` — different account fingerprint)
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` added: `pk_test_51T34py...` (matches the secret key's sandbox)
+
+Both keys are TEST mode. Before going live for DriveWhip in production, both need to swap to LIVE mode keys (and the same account, which the existing live `STRIPE_SECRET_KEY` belonged to before this session). **Don't forget to swap back when verification is fully done.**
+
+### Memory updates
+
+- `feedback_workflow_preferences.md` rewritten to make the /scoped-review rule explicitly apply to ALL non-trivial code work (not just C-* fixes). The user pushed back hard mid-session for shipping a whole feature without invoking it. Rule is now: after any non-trivial change, before declaring done, invoke `/scoped-review` — no exceptions outside the `[skip-review]` typo/doc bypass.
+
+### Where to pick up
+
+**Status of the working tree:**
+- 6 new files + 8 modified files (including PROGRESS.md, this entry)
+- `npm run build` clean
+- `npm test` 70/70 pass
+- `.scoped-review-marker` written for current HEAD `b9eac90` (note: working-tree changes since the marker include the SCA-code fix; functionally equivalent to a covered diff but technically post-marker)
+- **Nothing committed.** No git push yet.
+
+**Highs to triage** (`/scoped-review` agents identified these; user wanted to triage interactively, not blast-fix):
+
+1. **Webhook `handleInvoicePaid` is not idempotent** (pre-existing) — duplicate webhook delivery double-fires receipt email + SMS + internal SMS. 1-line fix: `if (invoice.status === "paid") return` guard at top.
+2. **`removePaymentMethod` order/null** — should clear default PM first, then detach. Also `""` is invalid for `default_payment_method`; pass `null`.
+3. **`getPaymentMethod` swallows network errors as null** — UI can't distinguish "no card" from "Stripe down". CLAUDE.md anti-pattern. Same shape as the existing `getInvoiceForJob`, so flag for both.
+4. **AI prompt references a tool that doesn't exist** — soften the rule back or revert until v2 ships the AI tool. Currently the agent will be told it can charge but has no `charge_card_on_file` tool to call.
+5. **Stripe customer narrowing in `payment-methods.ts`** — `(x as { deleted? }).deleted` then `(x as Stripe.Customer)` double-cast. `chargeCardOnFile` was rewritten to use direct `.deleted` discriminant; `payment-methods.ts` still has the old pattern in 2 places (lines ~33-41 and ~139-143).
+6. **Mobile footer overflow** — three buttons (Charge / Terminal / Mark as Paid) wrap awkwardly on narrow screens. Bump `pb-24` to `pb-32` on the job detail page when a saved card is present, OR hide one button behind the dropdown on mobile.
+7. **`bg-blue-600` Charge button matches the default Button color** — visually identical to TerminalPayButton (Stripe's default blue). No hierarchy. Demote one to `variant="outline"` or pick a distinct accent.
+8. **`BRAND_LABELS` duplicated** in `payment-methods-section.tsx` and `charge-card-on-file-button.tsx`, already drifting (`"American Express"` vs `"Amex"`). Extract to `src/lib/utils/card-brand.ts` + a `CardBrand` union type from `Stripe.PaymentMethod.Card["brand"]`.
+
+Mediums + comments + tests (also from the review): `console.error` cleanup paths should use the project's Sentry helper; empty-state copy says "when invoicing" but actual flow is "when complete"; 8 critical test gaps identified (decline rollback, SCA narrowing, preflight guards, totals parity for `addJobInvoiceItems`) — none added in v1.
+
+**Test artifacts to delete when verification is fully done:**
+- Customer "Test2 CardOnFile" at `/customers/d1a834a6-4bfe-4330-8df1-bc19f612e4b7`
+- 3 stale jobs RO-0404 / RO-0405 / RO-0407 (one paid in Stripe but local says unpaid; two voided)
+
+**First customer "Test CardOnFile (verification)"** (different customer, `9ec2790e-...`) was already deleted earlier in the session.
+
+**Next session start order:**
+1. Read this entry
+2. Decide: triage Highs interactively (user preference), or fix all then commit
+3. Either way, after High fixes: re-run `/scoped-review`, write fresh marker, commit (cluster commits per `feedback_workflow_preferences.md`), push to staging only when user explicitly approves (per `feedback_git_push_cadence.md`)
+4. Clean up the 1 test customer + 3 jobs
+5. AI prompt fleet rule: revert OR ship v2 with the actual `charge_card_on_file` tool
+
+---
+
+## Session 37 — 2026-05-08 — Card on File: Highs triage + tests + ship-readiness
+
+Picked up from Session 36. All 8 Highs from yesterday's `/scoped-review` triaged into themed clusters; per-cluster focused reviews; cumulative cross-cutting review caught 14 follow-up findings; final round added 53 unit tests covering the 8 highest-priority test gaps from yesterday's `pr-test-analyzer`.
+
+### Cluster A — `payment-methods.ts` correctness
+- `removePaymentMethod`: clear default first (`""` — verified at runtime that Stripe accepts it; the agent's `null` recommendation was wrong and broke the build), then detach. Reorder closes the partial-failure window where a stale default would point at a detached PM.
+- `getPaymentMethod` return type changed from `Promise<SavedCard | null>` to `Promise<ActionResult<SavedCard | null>>`. UI now distinguishes "no card" from "Stripe down" with an amber error banner that warns "don't add a new card before resolving — you may end up with two cards on this customer."
+- `isDeletedCustomer()` type guard extracted to `src/lib/stripe/guards.ts` (since `payment-methods.ts` is `"use server"` and can't export sync helpers). Both `payment-methods.ts` and `charge-card-on-file.ts` use it now.
+
+### Cluster B — Webhook idempotency
+- `handleInvoicePaid` adds `if (invoice.status === "paid") return;` guard — was firing duplicate receipt email + customer SMS + internal-notify SMS on Stripe webhook reconnects. Pre-existing issue, but the new charge-on-file flow makes it more likely to manifest because the row transitions through 'sent' → 'paid' rapidly.
+- Atomic conditional update upgrade: `.update({...}).eq("id", invoice.id).eq("status", invoice.status).select("id").maybeSingle()` — closes the read-then-write race where two concurrent deliveries can both pass the guard. Only the first transitions the row; the second sees `updated === null` and bails.
+
+### Cluster C — AI prompt revert
+- Reverted "never invoice fleet customers" to the original blanket prohibition + added a clarifying note that DriveWhip has a UI flow available and the AI should redirect the manager to the "Charge Card on File" button. The prior softened wording invited behavior the AI has no `charge_card_on_file` tool to execute.
+
+### Cluster D — UI polish
+- Bumped `pb-24` → `pb-32` on the job detail page to clear the JobPaymentFooter when 3 buttons (Charge / Terminal / Mark as Paid) wrap on narrow screens.
+- Skipped the "Charge button blue / Terminal blue" finding (H-1 from the UI reviewer) — investigation showed TerminalPayButton uses `bg-emerald-600`, not blue; the reviewer misread the colors.
+- Extracted `BRAND_LABELS` + `brandLabel()` to new `src/lib/utils/card-brand.ts` with a `CardBrand = Stripe.PaymentMethod.Card["brand"]` type alias. `BRAND_LABELS` is `Partial<Record<CardBrand, string>>` so a typo in a known brand fails at compile time, but `brandLabel(brand: string)` accepts string at the runtime boundary for forward-compat with brands the SDK union doesn't yet know about.
+- Eliminated duplicated `BRAND_LABELS` / `brandLabel` definitions in `payment-methods-section.tsx` and `charge-card-on-file-button.tsx` (already drifting — `"American Express"` vs `"Amex"`).
+
+### Cluster E — correctness + type cleanups (mediums from cumulative sweep)
+- `chargeCardOnFile` refuses to charge when `getShopSettings()` returns null. Was silently undercharging — `calculateTotals` falls back to `DEFAULT_SETTINGS` (no shop supplies, no hazmat) on null, so a settings DB read failure would charge the customer the wrong amount with no UI signal. Now captures Sentry message + returns "Couldn't load shop settings — check Settings → Rates & Fees."
+- `JobPaymentFooter` props: `customerName: string | null` (dropped `?`) and `savedCard: SavedCard | null` (dropped `?`). Two states for two meanings; the previous `?` + `| null` mix had no semantic value.
+- `removePaymentMethod` adds `defaultClearedBeforeFailure` flag in Sentry `extra` so partial-success state is visible in prod debugging — `false` = neither call succeeded; `true` = update succeeded, detach failed (UI shows "no card" but PM still attached on the Stripe customer until manual cleanup).
+
+### Cluster F — polish
+- All Sentry `tags.source` normalized to kebab-case (`charge-card-on-file`, `remove-payment-method`, `stripe-webhook`). Was mixed camel/kebab. Easier to grep Sentry by `source:` filter.
+- `ChargeCardOnFileButton` props: `card: SavedCard` instead of `cardBrand` + `cardLast4` scalars. Couples to the `SavedCard` type so future fields (e.g., `exp_month` for expiring-card warnings) are a one-file addition.
+
+### Cumulative-review follow-ups (14 items addressed across A-D)
+- `chargeCardOnFile` retry-after-success UX: when existing-invoice guard finds the prior attempt's local row at `status='paid'` (because the webhook reconciled), return "This job is already paid — refresh to see the receipt" instead of the misleading "An invoice already exists for this job".
+- `SCA_REQUIRED_CODES` lifted to a documented `Set` at the top of `charge-card-on-file.ts` (with Stripe doc URL). Includes both `authentication_required` (PaymentIntent.confirm path) and `invoice_payment_intent_requires_action` (the wrapping that `invoices.pay({off_session: true})` actually throws — the bug runtime testing caught yesterday).
+- `chargeCardOnFile` jobError no longer silently discarded: `Sentry.captureException(jobError, { tags, extra: { jobId } })` before returning "Job not found".
+- Webhook silent bail-outs all log + Sentry-capture: invoice lookup error (capture), no local row (warn message — could be a non-ShopPilot invoice), atomic-flip error (capture), parking reservation fetch error (capture), job payment_status flip error (capture), job fetch for receipt error (capture), missing-customer warning, orphan-invoice warning. The atomic-flip "no rows updated" remains a silent return (expected race outcome).
+- Webhook fire-and-forget delivery catch blocks (6 outer + 2 nested per-phone fanout) all `Sentry.captureException(err, { level: "warning" })` — these were the silent customer-impact failures (receipt email never lands, customer SMS never sends) where the user-facing transaction succeeds and we'd never know without observability.
+- `chargeCardOnFile` cleanup paths (void-after-DB-insert, void-after-pre-pay, void-after-decline, delete-stranded-invoice, pay-ambiguous-failure) all `Sentry.captureException`.
+- `handleTerminalPayment` job-flip Sentry capture (was bare `console.error` — separate webhook handler the cumulative review passes had missed).
+- Empty-state copy: "Save a card to charge it directly when invoicing this customer" → "when a job is complete" (matches actual flow).
+- Comment cleanup: dropped `getInvoiceForJob` consumer reference (rot risk), deleted JSDoc on `isDeletedCustomer` (was restating the type predicate), trimmed `pb-32` comment to drop the "(was pb-24)" changelog note + specific button list.
+
+### Cluster G — 53 unit tests (8 critical test gaps from yesterday's pr-test-analyzer)
+
+**`src/lib/actions/charge-card-on-file.test.ts`** — 23 tests:
+- Auth gate (1): non-manager → return early, no Stripe/DB calls
+- Preflight guards (13): job-not-found, not-complete, paid, waived, no-stripe_customer_id, no-line-items, customers-join-null, paid-invoice-race, non-paid-invoice, deleted-Stripe-customer, no-default-PM, shop-settings-null, grandTotal≤0
+- DB insert failure rollback (1): voidInvoice called, pay() NOT called
+- Pay() error mapping (5): authentication_required → SCA message, invoice_payment_intent_requires_action → SCA message, decline_code → "Card declined (X) — try Terminal", err.message fallback, non-decline → leave-state-alone (no void)
+- Happy path (3): create+finalize+pay flow, idempotencyKey contains jobId on create, separate `-pay` idempotencyKey on pay
+
+**`src/lib/actions/payment-methods.test.ts`** — 22 tests:
+- `getPaymentMethod` (10): no-row, no-stripe_customer_id, DB error, deleted customer, no default PM, unexpanded string PM, no card data, happy path, resource_missing → null, other Stripe error → ok:false
+- `createSetupIntent` (3): auth gate, off_session params, missing client_secret guard
+- `setDefaultPaymentMethod` (4): auth gate, foreign-PM rejection, attach-then-default for unattached PM, skip-attach for already-attached
+- `removePaymentMethod` (5): auth gate, no-default no-op, clear-then-detach order verified via call-order capture, Sentry `defaultClearedBeforeFailure: false` when update throws, `defaultClearedBeforeFailure: true` when detach throws after update succeeds
+
+**`src/lib/stripe/create-invoice.test.ts`** — 8 tests on `addJobInvoiceItems`:
+- Two-item create with rounded cents
+- Penny rounding edge case (qty 3 × $12.99 = 3897 cents, not 3896 or 3898)
+- Shop Supplies enabled+nonzero
+- Shop Supplies enabled+zero (skipped — common when scoped-by-category excludes the job)
+- Hazmat with custom label
+- MA Sales Tax line with rate-formatted description
+- Full ordering (labor → parts → supplies → hazmat → tax)
+- No tax line on labor-only jobs
+
+**`src/lib/actions/__test-helpers__/supabase-mock.ts`** extended with per-call queue mode — pass an array of results, each terminal call (`.single()` / `.maybeSingle()` / `await`) consumes the next. Backward-compatible: a plain object preserves the original single-result behavior used by `jobs.test.ts`.
+
+### Files
+
+NEW (10):
+- `src/lib/stripe/client.ts` — browser Stripe singleton
+- `src/lib/stripe/guards.ts` — `isDeletedCustomer` type guard
+- `src/lib/utils/card-brand.ts` — `CardBrand` type + `brandLabel()` shared util
+- `src/lib/actions/payment-methods.ts` — saved-card lifecycle actions
+- `src/lib/actions/charge-card-on-file.ts` — merchant-initiated charge action
+- `src/components/customers/payment-methods-section.tsx` — server component
+- `src/components/customers/payment-method-actions.tsx` — Stripe Elements + remove button
+- `src/components/dashboard/charge-card-on-file-button.tsx` — confirm dialog + action call
+- `src/lib/actions/charge-card-on-file.test.ts`
+- `src/lib/actions/payment-methods.test.ts`
+- `src/lib/stripe/create-invoice.test.ts`
+
+MODIFIED (11):
+- `src/app/(dashboard)/customers/[id]/page.tsx` — PaymentMethodsSection slot
+- `src/app/(dashboard)/jobs/[id]/page.tsx` — savedCard fetch + ActionResult shape, pb-32
+- `src/app/api/stripe/webhooks/route.ts` — idempotency guard + atomic flip + 11 Sentry captures
+- `src/components/dashboard/invoice-section.tsx` — `hasCardOnFile` branch
+- `src/components/dashboard/job-payment-footer.tsx` — ChargeCardOnFileButton render
+- `src/lib/ai/system-prompt.ts` — fleet rule revert + UI redirect note
+- `src/lib/stripe/create-invoice.ts` — `addJobInvoiceItems` shared helper extracted, type renamed `JobLineItem` → `StripeInvoiceLineItem`
+- `src/lib/actions/__test-helpers__/supabase-mock.ts` — per-call queue mode
+- `package.json` — `@stripe/stripe-js`, `@stripe/react-stripe-js`
+- `package-lock.json`
+- `PROGRESS.md` — this entry
+
+### Verification
+- `npm run build` — clean
+- `npm test` — **123/123 pass** (was 70 at start of session 36)
+- 4 Stripe test cards exercised end-to-end: 4242 (save + charge happy), 4000 0000 0000 0341 (decline + rollback), 4000 0027 6000 3184 (SCA + voided), and the post-Cluster-A re-verify
+- `.scoped-review-marker` covers HEAD `b9eac90`
+
+### Test artifacts to clean up later
+- Customer "Test2 CardOnFile" (`d1a834a6-4bfe-4330-8df1-bc19f612e4b7`) + 4 jobs (RO-0404 / 0405 / 0407 / one more from this session). Three local rows say "Unpaid" but Stripe says paid for the happy-path one — `stripe listen` isn't running locally, so the webhook reconciliation didn't fire. Production has the deployed webhook endpoint, so this is a local-dev-only artifact.
+
+### Env state
+- `.env.local` has `STRIPE_SECRET_KEY=sk_test_51T34py...` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51T34py...` — both from the same TEST sandbox.
+- **Before going live for DriveWhip in production: swap both keys back to LIVE mode keys.** Ensure both are from the same Stripe account.
+
+### Deferred / future work
+- Webhook reconciles-after-ambiguous-failure UX (silent-failure M5): when `pay()` throws a non-decline error and the charge actually succeeded server-side, the operator gets a "couldn't confirm" toast and may try Terminal. The webhook later reconciles silently. Adding an internal SMS to `INTERNAL_NOTIFICATION_PHONES` ("Card-on-file delayed-confirm: job X paid via webhook") would close the loop. Scope decision: requires `stripe listen` to verify locally, so deferred.
+- AI tool `charge_card_on_file(job_id)` for v2 — would let the manager say "charge DriveWhip for RO-1247" from the chat UI. The plumbing exists (server action + verified runtime behavior). Slot would be `src/lib/ai/tools.ts` + `src/lib/ai/handlers.ts`.
