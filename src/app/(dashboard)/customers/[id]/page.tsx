@@ -31,6 +31,7 @@ import { CustomerNameEditor } from "@/components/dashboard/customer-name-editor"
 import { CustomerTextFieldEditor } from "@/components/dashboard/customer-text-field-editor";
 import { CustomerNotesEditor } from "@/components/dashboard/customer-notes-editor";
 import { CustomerTypeEditor } from "@/components/dashboard/customer-type-editor";
+import { PaymentMethodsSection } from "@/components/customers/payment-methods-section";
 import { SectionTitle } from "@/components/ui/section-title";
 import { PageShell } from "@/components/layout/page-shell";
 import { AlertTriangle, ArrowLeft, Plus, DollarSign, FileText, StickyNote } from "lucide-react";
@@ -442,6 +443,8 @@ export default async function CustomerDetailPage({
           ) : null}
         </section>
       </div>
+
+      <PaymentMethodsSection customerId={id} />
 
       <section className="pt-2">
         <SectionTitle

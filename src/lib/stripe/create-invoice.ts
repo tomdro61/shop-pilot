@@ -1,5 +1,6 @@
+import type Stripe from "stripe";
 import { getStripe } from "./index";
-import { calculateTotals } from "@/lib/utils/totals";
+import { calculateTotals, type TotalsBreakdown } from "@/lib/utils/totals";
 import type { ShopSettings } from "@/types";
 
 // ── Parking invoice (no tax/fees, shorter payment window) ───────────
@@ -37,6 +38,10 @@ export async function createParkingStripeInvoice({
     auto_advance: false,
   });
 
+  if (!invoice.id) {
+    throw new Error("Stripe did not return an invoice id");
+  }
+
   for (const item of lineItems) {
     await stripe.invoiceItems.create({
       customer: stripeCustomerId,
@@ -50,22 +55,71 @@ export async function createParkingStripeInvoice({
   const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
 
   return {
-    stripeInvoiceId: finalizedInvoice.id,
+    stripeInvoiceId: finalizedInvoice.id ?? "",
     hostedInvoiceUrl: finalizedInvoice.hosted_invoice_url || "",
     amountDue: finalizedInvoice.amount_due,
   };
 }
 
-interface LineItem {
+export interface StripeInvoiceLineItem {
   type: "labor" | "part";
   description: string;
   quantity: number;
   unit_cost: number;
 }
 
+export async function addJobInvoiceItems(
+  stripe: Stripe,
+  invoiceId: string,
+  stripeCustomerId: string,
+  lineItems: StripeInvoiceLineItem[],
+  totals: TotalsBreakdown
+): Promise<void> {
+  for (const item of lineItems) {
+    const itemAmountCents = Math.round(item.quantity * item.unit_cost * 100);
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      invoice: invoiceId,
+      description: `${item.description} (${item.quantity} x $${item.unit_cost.toFixed(2)})`,
+      amount: itemAmountCents,
+      currency: "usd",
+    });
+  }
+
+  if (totals.shopSuppliesEnabled && totals.shopSupplies > 0) {
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      invoice: invoiceId,
+      description: "Shop Supplies",
+      amount: Math.round(totals.shopSupplies * 100),
+      currency: "usd",
+    });
+  }
+
+  if (totals.hazmatEnabled && totals.hazmat > 0) {
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      invoice: invoiceId,
+      description: totals.hazmatLabel,
+      amount: Math.round(totals.hazmat * 100),
+      currency: "usd",
+    });
+  }
+
+  if (totals.taxAmount > 0) {
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      invoice: invoiceId,
+      description: `MA Sales Tax (${(totals.taxRate * 100).toFixed(2)}%)`,
+      amount: Math.round(totals.taxAmount * 100),
+      currency: "usd",
+    });
+  }
+}
+
 interface CreateStripeInvoiceParams {
   stripeCustomerId: string;
-  lineItems: LineItem[];
+  lineItems: StripeInvoiceLineItem[];
   jobCategory?: string | null;
   settings?: ShopSettings | null;
   hasEmail?: boolean;
@@ -96,56 +150,17 @@ export async function createStripeInvoice({
     auto_advance: false,
   });
 
-  // Add line items
-  for (const item of lineItems) {
-    const itemAmountCents = Math.round(item.quantity * item.unit_cost * 100);
-    await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      invoice: invoice.id,
-      description: `${item.description} (${item.quantity} x $${item.unit_cost.toFixed(2)})`,
-      amount: itemAmountCents,
-      currency: "usd",
-    });
+  if (!invoice.id) {
+    throw new Error("Stripe did not return an invoice id");
   }
 
-  // Shop supplies fee
-  if (totals.shopSuppliesEnabled && totals.shopSupplies > 0) {
-    await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      invoice: invoice.id,
-      description: "Shop Supplies",
-      amount: Math.round(totals.shopSupplies * 100),
-      currency: "usd",
-    });
-  }
-
-  // Hazmat / environmental fee
-  if (totals.hazmatEnabled && totals.hazmat > 0) {
-    await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      invoice: invoice.id,
-      description: totals.hazmatLabel,
-      amount: Math.round(totals.hazmat * 100),
-      currency: "usd",
-    });
-  }
-
-  // Tax (on parts only)
-  if (totals.taxAmount > 0) {
-    await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      invoice: invoice.id,
-      description: `MA Sales Tax (${(totals.taxRate * 100).toFixed(2)}%)`,
-      amount: Math.round(totals.taxAmount * 100),
-      currency: "usd",
-    });
-  }
+  await addJobInvoiceItems(stripe, invoice.id, stripeCustomerId, lineItems, totals);
 
   // Finalize (creates hosted payment URL) but don't send — staff sends manually
   const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
 
   return {
-    stripeInvoiceId: finalizedInvoice.id,
+    stripeInvoiceId: finalizedInvoice.id ?? "",
     hostedInvoiceUrl: finalizedInvoice.hosted_invoice_url || "",
     amountDue: finalizedInvoice.amount_due, // in cents
   };

@@ -14,6 +14,8 @@ import { formatCurrency } from "@/lib/utils/format";
 import { PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { CreditCard, Banknote, Landmark, CircleDollarSign, ChevronDown } from "lucide-react";
 import { TerminalPayButton } from "@/components/dashboard/terminal-pay-button";
+import { ChargeCardOnFileButton } from "@/components/dashboard/charge-card-on-file-button";
+import type { SavedCard } from "@/lib/actions/payment-methods";
 import type { JobStatus, PaymentStatus, PaymentMethod } from "@/types";
 
 const paymentMethods: { value: PaymentMethod; label: string; icon: typeof CreditCard }[] = [
@@ -43,6 +45,8 @@ interface JobPaymentFooterProps {
   paymentStatus: PaymentStatus;
   paymentMethod: PaymentMethod | null;
   grandTotal: number;
+  customerName: string | null;
+  savedCard: SavedCard | null;
 }
 
 export function JobPaymentFooter({
@@ -51,6 +55,8 @@ export function JobPaymentFooter({
   paymentStatus,
   paymentMethod,
   grandTotal,
+  customerName,
+  savedCard,
 }: JobPaymentFooterProps) {
   const [loading, setLoading] = useState(false);
 
@@ -120,7 +126,15 @@ export function JobPaymentFooter({
         </div>
 
         {showMarkAsPaid && (
-          <div className="ml-auto flex items-center gap-2 self-center w-full justify-end lg:w-auto">
+          <div className="ml-auto flex flex-wrap items-center gap-2 self-center w-full justify-end lg:w-auto">
+            {savedCard && customerName && (
+              <ChargeCardOnFileButton
+                jobId={jobId}
+                amountCents={Math.round(grandTotal * 100)}
+                customerName={customerName}
+                card={savedCard}
+              />
+            )}
             <TerminalPayButton
               jobId={jobId}
               amountCents={Math.round(grandTotal * 100)}

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
 import { getInvoiceForJob } from "@/lib/actions/invoices";
+import { getPaymentMethod } from "@/lib/actions/payment-methods";
 import { getEstimateForJob } from "@/lib/actions/estimates";
 import { getInspectionForJob } from "@/lib/actions/dvi";
 import { getShopSettings } from "@/lib/actions/settings";
@@ -77,9 +78,18 @@ export default async function JobDetailPage({
   const totals = calculateTotals(lineItems, settings);
   const grandTotal = totals.grandTotal;
 
+  // If the lookup fails (Stripe outage, etc.) treat as "no card" — the
+  // chargeCardOnFile preflight re-verifies the PM and surfaces a clearer
+  // error, so we just hide the Charge button rather than risk showing it
+  // against stale state.
+  const savedCardResult = customer ? await getPaymentMethod(customer.id) : null;
+  const savedCard = savedCardResult?.ok ? savedCardResult.data : null;
+
+  // Padding clears the fixed JobPaymentFooter when its action buttons
+  // wrap to two rows on narrow screens.
   return (
     <>
-      <PageShell width="wide" className="pb-24">
+      <PageShell width="wide" className="pb-32">
 
         <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
           <Link href="/jobs">
@@ -350,6 +360,7 @@ export default async function JobDetailPage({
               customerEmail={customer?.email || null}
               customerPhone={customer?.phone || null}
               isFleet={customer?.customer_type === "fleet"}
+              hasCardOnFile={!!savedCard}
             />
           </div>
         </section>
@@ -361,6 +372,8 @@ export default async function JobDetailPage({
         paymentStatus={(job.payment_status || "unpaid") as PaymentStatus}
         paymentMethod={(job.payment_method as PaymentMethod) || null}
         grandTotal={grandTotal}
+        customerName={customer ? formatCustomerName(customer) : null}
+        savedCard={savedCard}
       />
     </>
   );

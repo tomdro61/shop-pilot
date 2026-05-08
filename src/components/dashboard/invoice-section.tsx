@@ -28,6 +28,7 @@ interface InvoiceSectionProps {
   customerEmail: string | null;
   customerPhone: string | null;
   isFleet?: boolean;
+  hasCardOnFile?: boolean;
 }
 
 const STATUS_ACCENT: Record<InvoiceStatus, Accent> = {
@@ -43,6 +44,7 @@ export function InvoiceSection({
   customerEmail,
   customerPhone,
   isFleet = false,
+  hasCardOnFile = false,
 }: InvoiceSectionProps) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -73,7 +75,7 @@ export function InvoiceSection({
   }
 
   if (!invoice) {
-    if (isFleet) {
+    if (isFleet && !hasCardOnFile) {
       return (
         <MiniStatusCard
           accent="stone"
@@ -87,6 +89,24 @@ export function InvoiceSection({
             </>
           }
           meta="Billed separately — no Stripe invoice"
+        />
+      );
+    }
+
+    if (hasCardOnFile && jobStatus === "complete") {
+      return (
+        <MiniStatusCard
+          accent="blue"
+          icon={<FileText className="h-4 w-4" />}
+          title={
+            <>
+              <span>Invoice</span>
+              <span className="text-xs font-normal text-stone-500 dark:text-stone-400">
+                Card on file
+              </span>
+            </>
+          }
+          meta="Use Charge Card on File below to bill and collect in one step"
         />
       );
     }
