@@ -16,10 +16,7 @@ export async function PaymentMethodsSection({ customerId }: { customerId: string
         sub={loadError ? "Couldn't load card" : card ? "1 card on file" : "No card on file"}
         action={
           loadError ? null : (
-            <AddCardButton
-              customerId={customerId}
-              buttonLabel={card ? "Replace Card" : "Add Card"}
-            />
+            <AddCardButton customerId={customerId} hasExistingCard={!!card} />
           )
         }
       />

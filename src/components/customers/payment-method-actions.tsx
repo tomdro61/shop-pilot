@@ -4,7 +4,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,16 +34,17 @@ import {
 
 interface AddCardButtonProps {
   customerId: string;
-  buttonLabel: string;
+  hasExistingCard: boolean;
 }
 
-export function AddCardButton({ customerId, buttonLabel }: AddCardButtonProps) {
+export function AddCardButton({ customerId, hasExistingCard }: AddCardButtonProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        {buttonLabel}
+      <Button size="sm" onClick={() => setOpen(true)}>
+        {!hasExistingCard && <Plus className="mr-1.5 h-3.5 w-3.5" />}
+        {hasExistingCard ? "Replace Card" : "Add Card"}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
