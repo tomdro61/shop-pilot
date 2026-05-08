@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSMS } from "@/lib/quo/client";
@@ -60,21 +61,74 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   // Find our invoice by Stripe invoice ID
   const { data: invoice, error } = await supabase
     .from("invoices")
-    .select("id, job_id, parking_reservation_id")
+    .select("id, job_id, parking_reservation_id, status")
     .eq("stripe_invoice_id", stripeInvoice.id)
     .maybeSingle();
 
-  if (error || !invoice) return;
+  if (error) {
+    console.error("[stripe webhook] handleInvoicePaid: failed to look up invoice", {
+      stripeInvoiceId: stripeInvoice.id,
+      error,
+    });
+    Sentry.captureException(error, {
+      tags: { source: "stripe-webhook", path: "invoice-lookup" },
+      extra: { stripeInvoiceId: stripeInvoice.id },
+    });
+    return;
+  }
+  if (!invoice) {
+    // No local row — could be an invoice created outside ShopPilot, or one we
+    // failed to record. Worth knowing about either way.
+    console.warn("[stripe webhook] handleInvoicePaid: no local row for invoice", {
+      stripeInvoiceId: stripeInvoice.id,
+    });
+    Sentry.captureMessage("stripe_webhook_no_local_invoice", {
+      level: "warning",
+      tags: { source: "stripe-webhook" },
+      extra: { stripeInvoiceId: stripeInvoice.id },
+    });
+    return;
+  }
 
-  // Update invoice status
-  await supabase
+  // Idempotency guard — Stripe retries webhooks until it gets a 2xx, and
+  // duplicate delivery happens on reconnects. Without this, a second delivery
+  // would re-fire the receipt email, customer SMS, and internal-notify SMS.
+  if (invoice.status === "paid") return;
+
+  // Atomic flip — `.eq("status", invoice.status)` makes the update conditional
+  // on the row still being in the pre-paid state we read. Two concurrent
+  // deliveries that both pass the guard above will both reach this point;
+  // only the first transitions the row, and the second updates zero rows
+  // (we bail out below).
+  const { data: updated, error: updateErr } = await supabase
     .from("invoices")
     .update({
       status: "paid",
       paid_at: new Date().toISOString(),
       payment_method: "stripe",
     })
-    .eq("id", invoice.id);
+    .eq("id", invoice.id)
+    .eq("status", invoice.status)
+    .select("id")
+    .maybeSingle();
+
+  if (updateErr) {
+    console.error("[stripe webhook] handleInvoicePaid: failed to flip invoice status", {
+      stripeInvoiceId: stripeInvoice.id,
+      invoiceRowId: invoice.id,
+      error: updateErr,
+    });
+    Sentry.captureException(updateErr, {
+      tags: { source: "stripe-webhook", path: "invoice-status-flip" },
+      extra: { stripeInvoiceId: stripeInvoice.id, invoiceRowId: invoice.id },
+    });
+    return;
+  }
+  if (!updated) {
+    // Zero rows updated — another concurrent delivery already flipped this row
+    // (atomic-flip race; expected behavior, not an error).
+    return;
+  }
 
   const amount = stripeInvoice.amount_paid
     ? `$${(stripeInvoice.amount_paid / 100).toFixed(2)}`
@@ -82,13 +136,27 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
 
   // ── Parking invoice branch ──────────────────────────────────────
   if (invoice.parking_reservation_id) {
-    const { data: reservation } = await supabase
+    const { data: reservation, error: reservationErr } = await supabase
       .from("parking_reservations")
       .select("id, first_name, last_name, lot, customer_id, phone, email")
       .eq("id", invoice.parking_reservation_id)
       .single();
 
-    if (!reservation) return;
+    if (reservationErr || !reservation) {
+      console.error("[stripe webhook] handleInvoicePaid: parking reservation not found", {
+        stripeInvoiceId: stripeInvoice.id,
+        parkingReservationId: invoice.parking_reservation_id,
+        error: reservationErr,
+      });
+      Sentry.captureException(reservationErr ?? new Error("Parking reservation missing"), {
+        tags: { source: "stripe-webhook", path: "parking-reservation-fetch" },
+        extra: {
+          stripeInvoiceId: stripeInvoice.id,
+          parkingReservationId: invoice.parking_reservation_id,
+        },
+      });
+      return;
+    }
 
     // Customer SMS (fire-and-forget)
     if (reservation.phone && amount && reservation.customer_id) {
@@ -112,6 +180,11 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         }
       } catch (err) {
         console.error("Failed to send parking payment SMS:", err);
+        Sentry.captureException(err, {
+          level: "warning",
+          tags: { source: "stripe-webhook", path: "parking-payment-sms" },
+          extra: { stripeInvoiceId: stripeInvoice.id, customerId: reservation.customer_id },
+        });
       }
     }
 
@@ -141,6 +214,11 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         });
       } catch (err) {
         console.error("Failed to send parking receipt email:", err);
+        Sentry.captureException(err, {
+          level: "warning",
+          tags: { source: "stripe-webhook", path: "parking-receipt-email" },
+          extra: { stripeInvoiceId: stripeInvoice.id, customerId: reservation.customer_id },
+        });
       }
     }
 
@@ -163,16 +241,27 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
           await Promise.all(
             phones.map((phone) =>
               sendSMS({ to: phone, body: internalBody, from: parkingPhone }).catch(
-                (err) =>
+                (err) => {
                   console.error(
                     `[Stripe] Internal parking payment SMS to ${phone} failed:`,
                     err
-                  )
+                  );
+                  Sentry.captureException(err, {
+                    level: "warning",
+                    tags: { source: "stripe-webhook", path: "parking-internal-notify-fanout" },
+                    extra: { stripeInvoiceId: stripeInvoice.id, phone },
+                  });
+                }
               )
             )
           );
         } catch (err) {
           console.error("Failed to send internal parking payment SMS:", err);
+          Sentry.captureException(err, {
+            level: "warning",
+            tags: { source: "stripe-webhook", path: "parking-internal-notify-sms" },
+            extra: { stripeInvoiceId: stripeInvoice.id },
+          });
         }
       }
     }
@@ -181,10 +270,21 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   }
 
   // ── Job invoice branch (existing flow) ──────────────────────────
-  if (!invoice.job_id) return;
+  if (!invoice.job_id) {
+    console.warn("[stripe webhook] handleInvoicePaid: invoice has neither job_id nor parking_reservation_id", {
+      stripeInvoiceId: stripeInvoice.id,
+      invoiceRowId: invoice.id,
+    });
+    Sentry.captureMessage("stripe_webhook_orphan_invoice", {
+      level: "warning",
+      tags: { source: "stripe-webhook" },
+      extra: { stripeInvoiceId: stripeInvoice.id, invoiceRowId: invoice.id },
+    });
+    return;
+  }
 
   // Update job payment tracking (don't change job status — payment is separate from workflow)
-  await supabase
+  const { error: jobUpdateErr } = await supabase
     .from("jobs")
     .update({
       payment_status: "paid",
@@ -193,8 +293,22 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
     })
     .eq("id", invoice.job_id);
 
+  if (jobUpdateErr) {
+    console.error("[stripe webhook] handleInvoicePaid: failed to flip job payment_status", {
+      stripeInvoiceId: stripeInvoice.id,
+      jobId: invoice.job_id,
+      error: jobUpdateErr,
+    });
+    Sentry.captureException(jobUpdateErr, {
+      tags: { source: "stripe-webhook", path: "job-payment-status-flip" },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+    });
+    // Continue — still want to fire the receipt email/SMS so the customer
+    // isn't left wondering. The local row will need manual reconciliation.
+  }
+
   // Fetch job + customer + vehicle for SMS and email (admin client — no auth cookies in webhooks)
-  const { data: jobData } = await supabase
+  const { data: jobData, error: jobFetchErr } = await supabase
     .from("jobs")
     .select(
       "id, title, payment_method, customers(id, first_name, last_name, email, phone), vehicles(year, make, model), job_line_items(type, description, quantity, unit_cost)"
@@ -202,7 +316,18 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
     .eq("id", invoice.job_id)
     .single();
 
-  if (!jobData) return;
+  if (jobFetchErr || !jobData) {
+    console.error("[stripe webhook] handleInvoicePaid: failed to fetch job for receipt", {
+      stripeInvoiceId: stripeInvoice.id,
+      jobId: invoice.job_id,
+      error: jobFetchErr,
+    });
+    Sentry.captureException(jobFetchErr ?? new Error("Job missing for paid invoice"), {
+      tags: { source: "stripe-webhook", path: "job-fetch-for-receipt" },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+    });
+    return;
+  }
 
   const customer = jobData.customers as {
     id: string;
@@ -218,7 +343,18 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
     model: string | null;
   } | null;
 
-  if (!customer) return;
+  if (!customer) {
+    console.warn("[stripe webhook] handleInvoicePaid: paid job has no customer — receipt not sent", {
+      stripeInvoiceId: stripeInvoice.id,
+      jobId: invoice.job_id,
+    });
+    Sentry.captureMessage("stripe_webhook_paid_job_no_customer", {
+      level: "warning",
+      tags: { source: "stripe-webhook" },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+    });
+    return;
+  }
 
   // Receipt email (fire-and-forget)
   if (customer.email) {
@@ -263,6 +399,11 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       });
     } catch (err) {
       console.error("Failed to send receipt email:", err);
+      Sentry.captureException(err, {
+        level: "warning",
+        tags: { source: "stripe-webhook", path: "receipt-email" },
+        extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId: invoice.job_id },
+      });
     }
   }
 
@@ -291,6 +432,11 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       }
     } catch (err) {
       console.error("Failed to send payment SMS:", err);
+      Sentry.captureException(err, {
+        level: "warning",
+        tags: { source: "stripe-webhook", path: "payment-sms" },
+        extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId: invoice.job_id },
+      });
     }
   }
 
@@ -315,16 +461,27 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         await Promise.all(
           phones.map((phone) =>
             sendSMS({ to: phone, body: internalBody, from: shopPhone }).catch(
-              (err) =>
+              (err) => {
                 console.error(
                   `[Stripe] Internal payment SMS to ${phone} failed:`,
                   err
-                )
+                );
+                Sentry.captureException(err, {
+                  level: "warning",
+                  tags: { source: "stripe-webhook", path: "internal-notify-fanout" },
+                  extra: { stripeInvoiceId: stripeInvoice.id, phone },
+                });
+              }
             )
           )
         );
       } catch (err) {
         console.error("Failed to send internal payment SMS:", err);
+        Sentry.captureException(err, {
+          level: "warning",
+          tags: { source: "stripe-webhook", path: "internal-notify-sms" },
+          extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+        });
       }
     }
   }
@@ -346,6 +503,10 @@ async function handleTerminalPayment(pi: Stripe.PaymentIntent) {
 
   if (error) {
     console.error("[Webhook] Failed to update job payment status:", error, "jobId:", jobId);
+    Sentry.captureException(error, {
+      tags: { source: "stripe-webhook", path: "terminal-payment-job-flip" },
+      extra: { jobId, paymentIntentId: pi.id },
+    });
   } else {
     console.log("[Webhook] Terminal payment recorded for job:", jobId);
   }
