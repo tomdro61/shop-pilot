@@ -2753,3 +2753,131 @@ MODIFIED (11):
 ### Deferred / future work
 - Webhook reconciles-after-ambiguous-failure UX (silent-failure M5): when `pay()` throws a non-decline error and the charge actually succeeded server-side, the operator gets a "couldn't confirm" toast and may try Terminal. The webhook later reconciles silently. Adding an internal SMS to `INTERNAL_NOTIFICATION_PHONES` ("Card-on-file delayed-confirm: job X paid via webhook") would close the loop. Scope decision: requires `stripe listen` to verify locally, so deferred.
 - AI tool `charge_card_on_file(job_id)` for v2 — would let the manager say "charge DriveWhip for RO-1247" from the chat UI. The plumbing exists (server action + verified runtime behavior). Slot would be `src/lib/ai/tools.ts` + `src/lib/ai/handlers.ts`.
+
+---
+
+## Session 38 — 2026-05-08 (afternoon) — production-verified Card on File + cron foundation + estimate cost parity
+
+Picked up with the user smoke-testing the card-on-file feature on production. They charged their own card $1 against their own customer record, the SMS receipt arrived, the job marked `payment_status='paid'` via the live webhook — full live-mode verification of everything Session 36/37 built. One UI bug surfaced and got fixed mid-session, then we shifted onto the next-roadmap-item track (Vercel Cron foundation as the gate for Phase 1 Maintenance Reminders).
+
+### Production verification of Card on File
+
+User charged their own card via the production deploy as a real $1 test. Stripe SMS receipt landed; job displayed `$1.00 / $1.00` with the invoice section showing "Sent $1.00." End-to-end live-mode verification of the full feature: SetupIntent + save card + chargeCardOnFile action + Stripe invoice creation + webhook `invoice.paid` reconciliation + receipt email + customer SMS + internal-notify SMS. The whole thing works.
+
+User noted to refund themselves the $1 when convenient (Stripe Dashboard → find the charge → Refund). Tracked.
+
+### Bug caught in production: Charge confirm dialog stayed open after success
+
+User caught it during the $1 test: dialog "Charge card on file?" stayed open after the charge succeeded — they had to manually click Cancel even though the toast confirmed the charge.
+
+Root cause: `<AlertDialogAction onClick>` called `e.preventDefault()` so the async handler could run, which suppressed Radix's default close-on-click. The handler ran, the toast fired, but no `setOpen(false)` ever triggered. Same bug existed in `RemoveCardButton` (just less visible because `router.refresh()` re-renders the parent and unmounts the button anyway).
+
+Fix at `src/components/dashboard/charge-card-on-file-button.tsx` and `src/components/customers/payment-method-actions.tsx`: switched to controlled `open` state via `useState`; explicit `setOpen(false)` after the action resolves on both success AND failure (toast carries the error message; leaving the confirm dialog open after a decline is more confusing than dismissive). Reviewed by `feature-dev:code-reviewer` — verified Radix AlertDialog primitive blocks outside-click closure by default, so the in-flight-mid-cancel scenario can't happen. Shipped as `acd949e`.
+
+### Mobile nav fix: Inspections in user-avatar dropdown
+
+Manager couldn't reach `/inspections` on mobile — the bottom nav is capped at 5 (Home / Inbox / Jobs / Customers / Parking) and Inspections wasn't in the user-avatar dropdown either. Added it to the "Quick Access" `lg:hidden` section of `src/components/layout/header.tsx` between DVI and Quotes, using the `ClipboardCheck` icon to match the desktop sidebar. Shipped as `68195dc` with `[skip-review]` (4-line nav addition matching established pattern).
+
+### Vercel Cron foundation (gates Phase 1 Maintenance Reminders + Phase 4 follow-ups + Phase 3 agent triggers)
+
+User requested the agent platform track. Per `SHOPPILOT_ROADMAP.md` §4.2, that requires Vercel Cron infrastructure first — without scheduled triggers, nothing in the system can act without a manager click.
+
+Built the foundation: `vercel.json` declares one daily cron at 14:00 UTC (10 AM ET winter / 9 AM ET summer) hitting `src/app/api/cron/health/route.ts`. The route verifies `Authorization: Bearer ${CRON_SECRET}` (auto-injected by Vercel when crons are declared in vercel.json — no manual env setup needed) and logs an info-level Sentry message tagged `source: "cron-health"`. Reviewed by `feature-dev:code-reviewer`; one finding addressed before commit (kebab-case `source` tag convention). Two advisory items captured in commit message for the next cron route:
+
+- Extract auth check to `src/lib/cron/auth.ts` once a 2nd cron route ships
+- Future cron routes use `source: "cron-<route-name>"` tag pattern (kebab-case)
+
+**Verification path**:
+- Manual: `curl -H "Authorization: Bearer <secret-from-Vercel-env>" https://shop-pilot-rosy.vercel.app/api/cron/health` → expect `{"ok":true,"ranAt":"..."}`. No-auth → 401.
+- Natural: tomorrow at 14:00 UTC, look in Sentry (production env, last 1h) for an info-level message tagged `source: "cron-health"`.
+
+User decided to defer manual verification to tomorrow's natural fire. Shipped as `9f8d288`.
+
+### Architectural conversation: should jobs and estimates share a line_items table?
+
+User asked the right question after seeing the cost-column drift: "should the jobs and estimates line items just be the same thing so we don't have to manage two?"
+
+Decision: keep them separate. Three reasons:
+1. **Estimates need the snapshot/audit trail.** Approved estimate line items represent "what we quoted" — frozen. Job line items can drift (parts cost more than estimated, scope changes). Unifying with transfer-of-ownership semantics loses the dual record. Adding a `frozen_at` snapshot mechanism gets you back to the same complexity but with weirder semantics.
+2. **Their lifecycles are genuinely different.** "Editable while estimate is draft, frozen on send" vs "editable while job is open." Status guards are cleaner per-table than polymorphic.
+3. **Drift cost is bounded.** ~5-6 columns where parity matters, doesn't change often. Cost of unifying (data migration + every consumer rewritten + agent platform implications) >> cost of just adding the column when we notice.
+
+Pragmatic middle path: a vitest schema-parity test (see below) catches future drift mechanically.
+
+### Estimate cost column + schema-parity test
+
+User noticed that line items added to estimates have no cost field. Checked: `cost` was added to `job_line_items` (migration 20250226000000) but never to `estimate_line_items` — Feb 2026 oversight. The stale comment "estimate_line_items has no `cost` column" was even sitting in `applyPresetToEstimate` as evidence the gap was known but not fixed.
+
+Mirrored the job line-item flow end-to-end:
+- Migration `supabase/migrations/20260508120000_add_estimate_line_item_cost.sql` — `ALTER TABLE estimate_line_items ADD COLUMN cost numeric(10,2) DEFAULT NULL` (matches the original 20250226 migration on jobs exactly).
+- `src/types/supabase.ts` — added `cost: number | null` to estimate_line_items Row/Insert/Update.
+- `src/lib/validators/estimate.ts` — added `cost` field; `prepareEstimateLineItemData` filters to parts-only (null for labor) at the action boundary.
+- `src/components/forms/estimate-line-item-form.tsx` — Your Cost field appears alongside Part Number when type=part, margin% display in Total row with the same color thresholds as the job form (>=30 emerald, >=15 amber, else red).
+- `src/lib/actions/estimates.ts` — `createEstimateFromJob` (job → estimate) and `convertEstimateToJob` (estimate → job) both copy cost in their line-item INSERTs. Typed `lineItemsRaw` updated.
+- `src/lib/actions/presets.ts` — `applyPresetToEstimate` flows cost through; deleted the stale comment.
+- `src/components/dashboard/estimate-line-items-add-sheet.tsx` — catalog → estimate `handleAdd` passes `cost: item.default_cost ?? null`.
+
+**Schema-parity test** at `src/types/line-items-parity.test.ts`:
+```ts
+import { expectTypeOf } from "vitest";
+import type { JobLineItem, EstimateLineItem } from "@/types";
+
+type SharedColumns =
+  | "type" | "description" | "quantity" | "unit_cost"
+  | "cost" | "part_number" | "category" | "total";
+
+expectTypeOf<Pick<JobLineItem, SharedColumns>>().toEqualTypeOf<
+  Pick<EstimateLineItem, SharedColumns>
+>();
+```
+
+`Pick<T, K extends keyof T>` fails to compile if any column in `SharedColumns` is missing from either Row, so future drift gets caught at CI time instead of by a manager noticing a missing field. The `total` line includes a comment explaining it's a `GENERATED ALWAYS` column on both tables — read-only in Postgres, never written via Insert/Update.
+
+Reviewed by `feature-dev:code-reviewer`; one advisory addressed (the `total` comment). Migration deploy ordering noted: user runs `npx supabase db push` BEFORE merge to master so PostgREST doesn't 400 on writes. User confirmed migration applied, smoke-tested on staging, merged. Shipped as `516bd73`.
+
+### Doc updates this session
+
+- `CLAUDE.md` — Card on File feature added to Current Status (Session 37 commit `88008e7`), still on staging until next merge cycle. Estimate cost column noted by updating `estimate_line_items` schema entry (this session).
+- `feedback_workflow_preferences.md` (memory) — broadened to "/scoped-review applies to ALL non-trivial code work, not just C-* fixes" after the user pushed back hard on shipping a feature without it.
+
+### Production state at session end
+
+- Master at `516bd73`. Three merges to master this session:
+  1. `acd949e` — card-on-file feature + Highs + tests + dialog-close fix + mobile nav fix
+  2. `9f8d288` — Vercel Cron foundation
+  3. `516bd73` — estimate cost column + schema-parity test
+- `npm run build` clean
+- `npm test` 124/124 pass (was 70 at start of Session 36 — added 54 unit tests + 1 schema-parity check)
+- `.scoped-review-marker` covers HEAD
+- All Vercel env vars in place (`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` added to All Environments mid-session; `CRON_SECRET` will auto-inject when first deploy with `vercel.json` lands)
+- Production smoke-tested: card-on-file via real $1 charge
+
+### Tomorrow's first checks
+
+1. **14:00 UTC (~10 AM ET) cron natural fire** — open `https://shop-pilot.sentry.io/issues/`, filter env=production level=info, look for `cron_health_ok` tagged `source: "cron-health"`. If present, foundation is proven. If absent, debug:
+   - Vercel project Settings → Cron Jobs (is the cron registered?)
+   - Settings → Environment Variables (did `CRON_SECRET` auto-generate?)
+   - Vercel Logs for the deploy (any error during build?)
+2. **Manual cron trigger** if you want to verify now without waiting:
+   ```
+   curl -H "Authorization: Bearer <CRON_SECRET-from-Vercel>" \
+     https://shop-pilot-rosy.vercel.app/api/cron/health
+   ```
+   Should return `{"ok":true,"ranAt":"..."}`.
+
+### What's next on the roadmap
+
+Per `SHOPPILOT_ROADMAP.md` §5 (Phase 1 — Revenue Multipliers), now that the cron foundation is in place:
+
+1. **Maintenance Reminders Engine** (5.1) — biggest revenue ROI. Detect when a vehicle is due for service (oil change every X miles/months, brake check, etc.), auto-draft an SMS/email reminder, queue for review or auto-send if confidence is high. Depends on cron + a "service interval" config per category. **Estimated 1-2 days.**
+2. **DVI "Deferred Work" Follow-up** (5.2) — when a tech flags items "needs attention" during a DVI but the customer didn't approve them, queue a follow-up after N days. Closes the leak between "we found a problem" and "we never told them again."
+3. **Review Pipeline** (5.3) — auto-text "leave us a review" SMS after job complete + paid, with the Google review link.
+
+Carry-overs from card-on-file (small, not blocking):
+- `charge_card_on_file` AI tool (Phase 3 v2 of card-on-file feature) — ~30 min
+- Webhook reconciles-after-ambiguous-failure internal SMS — needs `stripe listen` to verify locally
+- Test artifact cleanup: `Test2 CardOnFile` customer + 5 stale jobs in DB
+
+### Test artifacts to clean up
+- Customer "Test2 CardOnFile" (`d1a834a6-4bfe-4330-8df1-bc19f612e4b7`) + 5 jobs (RO-0404 / 0405 / 0407 / one more from SCA test / one more from $1 production charge if user kept it)
+- $1 charge to refund (production Stripe, Dashboard → Refunds)
