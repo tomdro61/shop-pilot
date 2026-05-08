@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import { LogOut, Wrench, Sun, Moon, Monitor, Settings, BarChart3, Receipt, MessageCircle, FileQuestion, Search } from "lucide-react";
+import { LogOut, Wrench, Sun, Moon, Monitor, Settings, BarChart3, Receipt, MessageCircle, FileQuestion, Search, ClipboardCheck } from "lucide-react";
 import type { User } from "@/types";
 
 const pageTitles: Record<string, string> = {
@@ -107,6 +107,10 @@ export function Header({ user }: { user: User | null }) {
               <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/dvi")}>
                 <Search className="mr-2 h-4 w-4" />
                 DVI
+              </DropdownMenuItem>
+              <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/inspections")}>
+                <ClipboardCheck className="mr-2 h-4 w-4" />
+                Inspections
               </DropdownMenuItem>
               <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/quote-requests")}>
                 <FileQuestion className="mr-2 h-4 w-4" />
