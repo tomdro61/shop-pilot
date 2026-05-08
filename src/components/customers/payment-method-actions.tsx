@@ -173,6 +173,7 @@ function CardForm({ customerId, onClose }: { customerId: string; onClose: () => 
 export function RemoveCardButton({ customerId }: { customerId: string }) {
   const router = useRouter();
   const [removing, setRemoving] = useState(false);
+  const [open, setOpen] = useState(false);
 
   async function handleRemove() {
     setRemoving(true);
@@ -181,15 +182,17 @@ export function RemoveCardButton({ customerId }: { customerId: string }) {
 
     if (!result.ok) {
       toast.error(result.error);
+      setOpen(false);
       return;
     }
 
     toast.success("Card removed");
+    setOpen(false);
     router.refresh();
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button
           variant="ghost"

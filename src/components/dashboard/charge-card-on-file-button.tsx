@@ -36,6 +36,7 @@ export function ChargeCardOnFileButton({
 }: ChargeCardOnFileButtonProps) {
   const router = useRouter();
   const [charging, setCharging] = useState(false);
+  const [open, setOpen] = useState(false);
 
   async function handleCharge() {
     if (charging) return;
@@ -45,15 +46,19 @@ export function ChargeCardOnFileButton({
 
     if (!result.ok) {
       toast.error(result.error);
+      // Close on failure too — toast carries the message; leaving the
+      // confirm dialog open after a decline is more confusing than helpful.
+      setOpen(false);
       return;
     }
 
     toast.success(`Charged ${formatCurrency(result.data.amountDollars)} to ${brandLabel(card.brand)} ••${card.last4}`);
+    setOpen(false);
     router.refresh();
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button
           size="sm"
