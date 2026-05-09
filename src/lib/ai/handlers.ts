@@ -336,6 +336,7 @@ export async function executeToolCall(
           description: str(toolInput.description),
           quantity: num(toolInput.quantity, 1)!,
           unit_cost: num(toolInput.unit_cost, 0)!,
+          cost: toolInput.cost !== undefined ? (num(toolInput.cost) ?? null) : null,
           part_number: str(toolInput.part_number),
         });
         return JSON.stringify(result);
@@ -347,6 +348,7 @@ export async function executeToolCall(
           description: str(toolInput.description),
           quantity: num(toolInput.quantity, 1)!,
           unit_cost: num(toolInput.unit_cost, 0)!,
+          cost: toolInput.cost !== undefined ? (num(toolInput.cost) ?? null) : null,
           part_number: str(toolInput.part_number),
         });
         return JSON.stringify(result);
