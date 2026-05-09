@@ -23,6 +23,15 @@
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/scoped-review-required.sh\""
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/check-safety-removal.sh\""
+          }
+        ]
       }
     ]
   }

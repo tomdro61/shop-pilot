@@ -292,6 +292,32 @@ A 13-agent review of `staging` (April 2026) found 118 issues that accumulated ac
 
 **Pre-commit hook** (`.claude/hooks/scoped-review-reminder.sh`) is advisory — it just reminds. The real gate is the pre-push hook.
 
+### Auto-invoke `/sketch-flow` BEFORE writing async UI / payment code
+
+Some bugs aren't caught by review because they're already encoded in the code by the time review runs. The fix is to slow down before writing — enumerate the state machine first, then code against it.
+
+**Auto-invoke `/sketch-flow` when ANY of these are true:**
+- Adding a new async handler in `src/components/dashboard/{charge-card-on-file,terminal-pay,job-payment-footer,quick-pay,invoice-section}-*` or `src/components/customers/payment-method-actions*`
+- The change adds a new `useState` to a component already in a payment flow
+- The change interacts with Stripe `PaymentIntent` / `SetupIntent` / `Invoice` state from the UI or a server action
+- The change touches `src/app/api/{stripe,terminal,cron,webhooks}/**`
+- The change adds or modifies code in `src/lib/actions/{charge-card-on-file,payment-methods,invoices,jobs,estimates}.ts`
+- The change removes ANY safety check (auth gate, payment guard, idempotency key, double-submit `disabled`, Stripe error narrowing, atomic flip clause, webhook signature verify)
+
+The pre-edit hook (`.claude/hooks/check-safety-removal.sh`) BLOCKS edits to sensitive paths that strip these patterns without an explicit `// safety-removed: <reason>` marker. If you hit the block, that's the signal — go invoke `/sketch-flow` to enumerate why removal is safe, or restore the check.
+
+### Auto-invoke `/verify-flow` BEFORE declaring a UI flow done
+
+Code review reads diffs. `/verify-flow` clicks through the actual customer journey on the local dev server. Several bugs (controlled-dialog state, schema-drift on standalone estimates, broken react-hook-form submit) shipped because the diff looked clean but no one ran the flow.
+
+**Auto-invoke `/verify-flow` when:**
+- Diff touches `charge-card-on-file-button`, `terminal-pay-button`, `payment-method-actions`, or any other payment-flow client component
+- Diff changes the customer's experience of money math (totals, tax, fees)
+- A new UI state machine ships (loading / success / failure paths)
+- Diff modifies a public surface: estimate approval, DVI inspect, parking submit, quote requests
+
+If a flow doesn't yet exist in `.claude/skills/verify-flow`, write the new flow definition before declaring done — that's how this skill stays useful for the next session.
+
 ## Investigation Discipline (hard rules)
 
 Static review reads the diff. Static review can be wrong about runtime
