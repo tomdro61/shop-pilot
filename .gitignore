@@ -25,7 +25,10 @@
 .DS_Store
 *.pem
 nul
-.claude/
+# Claude Code: commit team artifacts (skills, hooks, project settings),
+# ignore per-machine personal state.
+.claude/settings.local.json
+.claude/worktrees/
 
 # debug
 npm-debug.log*

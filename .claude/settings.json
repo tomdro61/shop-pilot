@@ -1,0 +1,29 @@
+{
+  "enabledPlugins": {
+    "playwright@claude-plugins-official": true,
+    "stripe@claude-plugins-official": true,
+    "frontend-design@claude-code-plugins": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/scoped-review-reminder.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/scoped-review-required.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
