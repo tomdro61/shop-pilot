@@ -2881,3 +2881,42 @@ Carry-overs from card-on-file (small, not blocking):
 ### Test artifacts to clean up
 - Customer "Test2 CardOnFile" (`d1a834a6-4bfe-4330-8df1-bc19f612e4b7`) + 5 jobs (RO-0404 / 0405 / 0407 / one more from SCA test / one more from $1 production charge if user kept it)
 - $1 charge to refund (production Stripe, Dashboard → Refunds)
+
+---
+
+## Session 39 — 2026-05-11 — Tax Audit CSV Export
+
+### Why
+
+Pre-filing reconciliation. User was about to pay MA March sales tax and asked whether the $27,776.96 taxable-parts figure could be trusted. Reading-the-diff confidence isn't enough for a number the state will check against your bank account — the operator needs a job-level CSV they can spot-check, sum-check, and archive alongside the filing.
+
+### What shipped
+
+- **New API route `/api/reports/tax-audit/export`** — generates a job-level audit CSV mirroring the on-screen Tax Summary's exact query semantics:
+  - `payment_status='paid'` jobs, bucketed by `paid_at` in ET (fallback `date_finished`), inspection-category line items excluded — same logic as `getTaxReportData()` in `src/lib/actions/reports.ts:613-710`.
+  - Tax rate hard-coded to `MA_SALES_TAX_RATE` (matches `reports.ts:615` — diverging would cause CSV to not reconcile against the on-screen KPI).
+  - Includes manual income entries as a separate section so the CSV's "Total Revenue" footer ties to the on-screen Total Revenue KPI exactly (since `reports.ts:666-672` adds manual income into the tax report's totalRevenue).
+- **Tax Summary page** — added an "Export {year}" button next to the year picker, and each non-empty month label is now a clickable download link.
+
+### CSV shape
+
+Three sections: JOB SUMMARIES (one row per paid job with Labor/Parts/Subtotal/SalesTax/Total), MANUAL INCOME (when present, non-taxable rows), TOTALS footer with Labor / Parts (Taxable) / Subtotal / Sales Tax / Job Revenue / Manual Income / Total Revenue. Then LINE ITEM DETAIL — every line item that contributed to the above for drill-down.
+
+### Review
+
+`/scoped-review` dispatched 3 agents in parallel (code-reviewer, silent-failure-hunter, type-design). Round 1 surfaced 3 Criticals (no `requireManager()`, manual income missing from totals, `parseInt` NaN silently dropping jobs) + 4 Highs + several Mediums — all introduced by this diff. All fixed pre-commit. Round 2 verification flagged a new Critical (`getManualIncomeForRange` throws uncaught, would produce opaque 500) introduced by the C-2 fix — wrapped the `Promise.all` in try/catch with structured logging. Round 3 verification: CLOSED.
+
+### Files touched
+
+- `src/app/api/reports/tax-audit/export/route.ts` (new, ~310 lines)
+- `src/app/(dashboard)/reports/tax/page.tsx` (added year-export button + per-month download links)
+- `PROGRESS.md` (this entry)
+
+### What's next
+
+- User to download March CSV from staging, confirm `Total Parts (Taxable)` row = `$27,776.96` and `Sales Tax Collected` row = `$1,736.06`. If those match the on-screen KPI, file MA sales tax with the CSV as supporting evidence.
+- (Optional follow-up) Consider whether the Service Profitability table should rename the "Parts Cost" column on the State Inspection row to "Sticker Cost" or add a tooltip — the $13K parts-cost number on inspections triggered this whole investigation because it looked like inflated taxable parts when it's actually shop COGS for stickers.
+
+### Known issues
+
+- The on-screen Tax Summary "Total Revenue" KPI includes manual income, so the CSV's "Total Revenue" footer also includes manual income. If the operator wants ONLY jobs revenue (no manual income), use the "Job Revenue (incl. tax)" footer row instead. Both are now in the CSV for clarity.

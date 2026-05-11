@@ -7,7 +7,7 @@ import { CustomerTypeNav } from "@/components/dashboard/customer-type-nav";
 import { ReportsNav } from "@/components/dashboard/reports-nav";
 import { nowET } from "@/lib/utils";
 import { PageShell } from "@/components/layout/page-shell";
-import { Receipt } from "lucide-react";
+import { Receipt, Download } from "lucide-react";
 
 export const metadata = {
   title: "Tax Summary | ShopPilot",
@@ -28,6 +28,9 @@ export default async function TaxReportPage({
   const now = nowET();
   const isCurrentYear = year === now.getFullYear();
   const currentMonth = isCurrentYear ? now.getMonth() : 11;
+
+  const customerTypeQs = customerType ? `&customerType=${encodeURIComponent(customerType)}` : "";
+  const yearExportHref = `/api/reports/tax-audit/export?year=${year}${customerTypeQs}`;
 
   return (
     <PageShell>
@@ -51,6 +54,14 @@ export default async function TaxReportPage({
       <div className="mb-6 flex flex-wrap items-center justify-end gap-3">
         <CustomerTypeNav />
         <TaxYearPicker currentYear={year} />
+        <a
+          href={yearExportHref}
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-stone-200 bg-card px-3 text-xs font-medium text-stone-700 shadow-sm transition-colors hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
+          title={`Download tax audit CSV for ${year}`}
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export {year}
+        </a>
       </div>
 
       {/* KPI Cards */}
@@ -100,6 +111,7 @@ export default async function TaxReportPage({
               {data.months.map((row) => {
                 const isFuture = isCurrentYear && row.monthNum > currentMonth + 1;
                 const isEmpty = row.totalRevenue === 0;
+                const monthHref = `/api/reports/tax-audit/export?year=${year}&month=${row.monthNum}${customerTypeQs}`;
 
                 return (
                   <tr
@@ -108,7 +120,20 @@ export default async function TaxReportPage({
                       isFuture ? "text-stone-300 dark:text-stone-700" : "hover:bg-stone-50 dark:hover:bg-stone-800/40"
                     }`}
                   >
-                    <td className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-50">{row.month}</td>
+                    <td className="px-4 py-2 text-sm font-medium text-stone-900 dark:text-stone-50">
+                      {isEmpty || isFuture ? (
+                        row.month
+                      ) : (
+                        <a
+                          href={monthHref}
+                          className="group inline-flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400"
+                          title={`Download ${row.month} ${year} audit CSV`}
+                        >
+                          {row.month}
+                          <Download className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                        </a>
+                      )}
+                    </td>
                     <td className="px-4 py-2 text-right font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50">
                       {isEmpty && isFuture ? "—" : formatCurrency(row.totalRevenue)}
                     </td>
