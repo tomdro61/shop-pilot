@@ -1,0 +1,196 @@
+# ShopPilot — System Architecture
+
+This is the **current shape of the system** — what exists, where it lives, and what invariants apply. For history (what shipped when), see [`PROGRESS.md`](./PROGRESS.md). For the roadmap (what's next), see [`../SHOPPILOT_ROADMAP.md`](../SHOPPILOT_ROADMAP.md). For DB columns, see [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md). For design tokens, see [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md).
+
+## Phases shipped
+
+- **Phase 1 (Foundation): COMPLETE** — auth, customers, vehicles, jobs, line items, kanban/list/calendar dashboards, Wix data import
+- **Phase 2 (Payments & Comms): COMPLETE** — Stripe invoicing + estimates + Quo SMS + Terminal + Resend email
+- **Phase 3 (AI Assistant): COMPLETE** — Claude API (Haiku 4.5), 46 tools, streaming chat
+- **Phase 4 (next):** Operational Excellence — vehicle history, work orders, labor rates, inventory, accounting
+
+## Deployment
+
+- Hosted on Vercel at `https://shop-pilot-rosy.vercel.app`, auto-deploy from `master`
+- GitHub: `https://github.com/tomdro61/shop-pilot` (private)
+
+---
+
+## Customers, Jobs, Estimates, Invoices
+
+- Core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
+- Customer list: server-side pagination (50 per page) with URL params, handles 3,000+ imported contacts
+- **RO numbers** — auto-assigned sequential repair order numbers (RO-0001 format) via PostgreSQL `ro_number_seq`
+- **Printable Repair Order** at `/jobs/[id]/print` — shop header, customer/vehicle info, itemized line items, tax, totals
+- **Service categorization** — line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
+- **Estimates** — public approval page fully working (live mode). Estimates can be deleted and recreated to pick up updated job line items. Estimate line items carry categories and are grouped by service category on both internal and customer-facing views.
+
+## Payments
+
+### Stripe Terminal (WisePOS E)
+- Server-driven, fully operational
+- 3 API routes: `/api/terminal/pay`, `/status`, `/cancel`
+- TerminalPayButton on job detail
+- Quick Pay page at `/quick-pay` with numpad UI + presets
+- Reader registered ("Front-desk 1"), auto-marks jobs as paid on card tap
+- Walk-in sentinel customer (`00000000-...`) for Quick Pay jobs
+
+### Card on File (Session 36/37, built for DriveWhip B2B)
+- Saved-card + merchant-initiated charge flow
+- `PaymentMethodsSection` on customer profile uses Stripe Elements + SetupIntent. **Default PM lives in Stripe** (`invoice_settings.default_payment_method`), no local denormalization
+- `chargeCardOnFile(jobId)` action — creates Stripe invoice with `default_payment_method` + `auto_advance:false`, finalizes, inserts local invoices row, then `invoices.pay({off_session:true})`
+- Reuses existing `invoice.paid` webhook for receipt email/SMS — no new receipt code
+- **SCA handling covers both** `authentication_required` (PaymentIntent.confirm path) and `invoice_payment_intent_requires_action` (the wrapping that `invoices.pay({off_session:true})` actually throws — runtime testing caught this; static review missed it)
+- Ambiguous failures (network/API errors, not declines) leave state intact for the webhook to reconcile rather than rolling back
+- Webhook is idempotent (status guard + atomic conditional flip)
+- 53 unit tests cover preflight guards, decline/SCA mapping, DB-insert rollback, totals parity, idempotency keys, `getPaymentMethod` degradation, `removePaymentMethod` partial-failure observability
+- **Required env**: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (live-mode pk_, must match the Stripe account of `STRIPE_SECRET_KEY` — sandbox-mismatch produces 400 on SetupIntent load)
+- AI tool deferred to v2; system-prompt redirects fleet-charge requests to the manager's UI button
+
+## Messaging
+
+### Quo SMS
+- Fully wired (send/receive/webhook), triple-line routing:
+  - Shop — 617-996-8371 (`QUO_SHOP_PHONE_NUMBER`)
+  - Parking — 978-684-9254 (`QUO_PHONE_NUMBER`)
+  - APB — 978-644-9391 (`QUO_APB_PHONE_NUMBER`)
+- Auto-texts estimate/invoice links on shop line
+- Lot-specific confirmation SMS for all 5 lots
+- Quo contact auto-creation for parking customers with "Parking" tag
+- 7 SMS templates in `src/lib/messaging/templates.ts` (reservation confirmation is lot-aware)
+- Phone line tracked on all messages (`messages.phone_line`)
+- **Blocked on A2P registration** (waiting on number port + paid plan)
+
+### Resend Email
+- Branded HTML templates (estimate, receipt, generic)
+- Auto-send on estimate send + invoice paid
+- AI `send_email` tool
+- Test mode with console logging
+- Delivery status tracking in `messages` table
+
+## AI Assistant
+- Conversational chat at `/chat` with 46 tools covering all CRUD + SMS + email + settings + parking operations
+- Streaming SSE, floating chat bubble on all pages
+- Model: Claude Haiku 4.5 (configurable in `src/app/api/ai/chat/route.ts`)
+- Tool definitions live in `src/lib/ai/tools.ts`
+- **Confirmation pattern** — any action that involves money or external communication must include a confirmation step. System prompt enforces this.
+
+## Dashboard, Inbox, Reports
+
+### Dashboard
+Sectioned layout — slim greeting header, KPI cluster (Today's Revenue / Week / Month / Outstanding A/R + State/TNC/Jobs Closed compact cards), divider, **Action Center** (Tasks scratchpad full-width on top; Glance card on right with Parking · Today + Awaiting Payment; 2-column needs-attention alert grid on left with 6 alert types — Unassigned/Quote Requests/Estimates Sent/DVIs Ready/Parking Leads/Aged Parts — each linking to `/inbox?tab=...`), divider, Shop Floor 3-column kanban.
+
+Revenue cards include inspection revenue from `daily_inspection_counts`; job line items with `category = "Inspection"` are excluded from revenue to prevent double-counting. Parking · Today scoped to `MANAGED_PARKING_LOTS` only and reports an "X/Y prepared" line under Pickups (prepared = checked_out OR lock_box_number staged).
+
+### Tasks scratchpad
+- `tasks` table + `lib/actions/tasks.ts`
+- Manager-only personal todos surfaced in the Action Center
+- RLS on `tasks_select_authenticated` is permissive (any authenticated user reads), but `getOpenTasks` returns `[]` for non-managers as the intended UX
+- Mutations call `revalidatePath("/", "layout")` so the sidebar inbox badge stays fresh
+
+### Inbox (`/inbox`)
+- Single destination for every needs-attention alert from the dashboard
+- Type-accent filter chips per category (matches the Tone palette: amber Unassigned, blue Quotes, indigo Estimates, violet DVIs, emerald Parking, red Parts/Payments)
+- Section cards with row dividers
+
+### Reporting Suite (5 reports)
+- **Revenue Overview** (`/reports/revenue`) — KPI cards, category/tech breakdowns, profitability table, Fleet A/R aging
+- **Tax Summary** (`/reports/tax`) — Monthly taxable sales and MA sales tax by year
+- **Trends Explorer** (`/reports/trends`) — 11 metrics charted over time (day/week/month). Recharts BarChart. Revenue includes inspections.
+- **Service Mix Deep-Dive** (`/reports/service-mix`) — Per-category trends. "All Categories" stacked bar chart or single-category drill-down. 6 metrics. Top 8 categories + "Other".
+- **Tech Scoreboard** (`/reports/tech`) — Per-tech trends. "All Techs" stacked chart or single-tech drill-down. 6 metrics. Reuses `CategoryDeepDive` component.
+
+Shared bucketing helpers in `src/lib/utils/trend-buckets.ts` (`buildBucketKeys`, `getBucketKey`, `getDateRange`, `timestampToDateET`). `CategoryDeepDive` component (`src/components/dashboard/category-deep-dive.tsx`) generalized with `groupLabel`/`basePath` props for reuse across category and tech reports.
+
+### Revenue Reporting utility
+- `src/lib/utils/revenue.ts` — `sumJobRevenue()` excludes inspection-category items (`INSPECTION_CATEGORIES` set: "Inspection", "State Inspection", "TNC Inspection"); `calcInspectionRevenue()` computes inspection revenue/cost/profit
+- Both dashboard and reports use these
+- State Inspection cost: $11.50/unit (`INSPECTION_COST_STATE`)
+- Reports show "State Inspection" and "TNC Inspection" as rows in Revenue by Category and Service Profitability
+
+## Catalog & Presets
+
+### Job Presets
+Reusable templates with pre-filled line items, managed at `/presets`.
+
+### Parts & Labor Catalog
+- Saved individual parts and labor items with default pricing at `/settings/catalog`
+- Searchable when adding line items to jobs (both on job detail page and job creation form)
+- "Save to Catalog" button on line items for building up the catalog over time
+- Case-insensitive duplicate detection
+- Usage count tracking for popularity sorting
+- 3 AI tools: `search_catalog`, `add_catalog_items_to_job`, `manage_catalog_item`
+- Seeded with 30 common auto repair items
+
+## Shop Settings (`/settings/rates`)
+- Configurable tax rate, shop supplies fee (4 calculation methods + cap), environmental/hazmat fee
+- Both fees can be scoped to specific job categories (null = all categories, backward compatible)
+- All totals computed via shared `calculateTotals()` utility
+- Fees default to disabled
+- **Tax rule:** parts + shop supplies are taxable; labor and hazmat are not
+- **MA sales tax:** 6.25% on parts only, labor tax-exempt. `MA_SALES_TAX_RATE` constant used in Stripe invoices and estimate approval
+
+## Part Cost Tracking
+- Optional `cost` (wholesale price) field on part line items
+- Reports compute actual gross profit when cost is available, fall back to 40% margin estimate when not
+- Cost data coverage % shown on reports
+- **Cost is never exposed to customers** (invoices, estimates, print RO all use retail price only)
+
+## Airport Parking
+- Dashboard at `/parking` managing 4 lots (Broadway Motors, Airport Parking Boston 1, Airport Parking Boston 2, Boston Logan Valet)
+- 3 parking types: `self_park`, `shuttle`, `valet`
+- 3 views: Today (arrivals/pickups/parked), Service Leads (parking customers interested in repairs), All Reservations
+- Shuttle reservations show sky-blue "Shuttle" badge on cards and detail page
+- **Public API** at `/api/parking/submit` accepts form POSTs with CORS, rate limiting (per-IP), honeypot spam protection, dedup (phone + date + lot within 5 min)
+- Wix webhook bridge at `/api/webhooks/wix-parking` — **deactivated** (Wix redirects to BroadwayMotorsMA.com forms). Code retirement still pending.
+- 5 public forms on BroadwayMotorsMA.com: self-park, shuttle, APB1, APB2, valet
+- Lot-specific confirmation pages with parking instructions
+- 6 AI tools for parking operations
+- Parking reservations auto-link to `customers` table via `findOrCreateParkingCustomer()` (dedup by email, then phone). Customer detail page shows "Parking History" section.
+- **Checkout flow** with lockbox selection modal (8 physical lockboxes) — sends pickup SMS with box number + code, or in-person checkout without SMS
+- "Send Specials" button for upselling services to checked-in customers
+- Reservation detail page shows two-column layout with customer/vehicle cards, trip timeline, and Key Pickup section (lockbox number + code or "in person")
+- Parking dashboard compact cards show lockbox info for checked-out reservations
+
+## Vercel Cron (Session 38)
+- `vercel.json` declares schedules → Vercel auto-calls `/api/cron/*` routes
+- Auth via `Authorization: Bearer ${CRON_SECRET}` (auto-injected by Vercel when crons are detected; not manually set)
+- Pipeline-proving endpoint at `src/app/api/cron/health/route.ts` — daily 14:00 UTC
+- Real cron jobs (Maintenance Reminders, DVI deferred-work follow-ups, etc.) plug in by adding new `/api/cron/*` routes + `vercel.json` entries
+- Pattern for new routes: kebab-case `source: "cron-<name>"` Sentry tag; once 2+ routes ship, extract auth check to `src/lib/cron/auth.ts`
+- **Crons fire on production deployments only**, not preview/staging
+
+## Shared modules
+
+- `src/lib/ui/alert-tone.ts` — `Tone` union (`amber|blue|indigo|violet|emerald|red`) + `TONE_CLASSES` Record with `tile`, `bar`, `card`, `count`, `chip` strings. Single source of truth for alert/needs-attention surfaces.
+- `src/lib/actions/_types.ts` — `ActionResult<T>` discriminated union for new server actions. Older actions still use `{ success | error }`.
+- `src/lib/utils/parking.ts` — `hasPendingService(reservation)`. Used by dashboard, inbox, and sidebar count.
+- Vitest test framework wired (`vitest.config.ts`, `npm test`/`test:watch`/`test:coverage`)
+
+## Observability
+
+- **Sentry** — `@sentry/nextjs` wired with tunnel route `/monitoring`, source maps uploaded on every Vercel build, errors tagged with commit SHA via release config. Project: `shop-pilot.sentry.io`.
+- **Sentry MCP** available — install per-machine with `claude mcp add --transport http sentry https://mcp.sentry.dev/mcp` (OAuth on first use, no token to manage)
+
+## Other utilities
+- Wix import: one-time script (`scripts/import-wix-customers.ts`) with filtering, dedup, dry-run mode
+
+---
+
+## Outstanding work
+
+### Production readiness
+- ~~Supabase Pro ($25/mo)~~ DONE
+- Upgrade Vercel to Pro ($20/mo) — SLA, higher function duration limits for AI chat
+- ~~Sentry error monitoring~~ DONE
+- Add uptime monitoring (BetterUptime or UptimeRobot, free)
+- Set up weekly database backup export of critical tables (customers, jobs, invoices)
+- Audit environment variables — ensure no secrets committed or exposed
+
+### Remaining integration work
+- A2P registration on Quo (blocked on number port + paid plan)
+- Retire Wix webhook bridge code (redirects confirmed, automation deactivated)
+
+### Optional enhancements
+- Voice input (Web Speech API or Whisper)
+- Chat history persistence in Supabase (currently in-memory, resets on refresh)
