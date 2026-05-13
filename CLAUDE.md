@@ -165,6 +165,7 @@ These are the recurring failure modes from `REVIEW-FINDINGS.md`. Treat them as h
 - Always `value={field.value ?? ""}` on text inputs/textareas; never bare `{...field}` (avoids controlled/uncontrolled flip)
 - For double-submit protection, disable the submit button via `disabled={form.formState.isSubmitting}`. Do NOT add `if (form.formState.isSubmitting) return` inside the onSubmit handler — react-hook-form's `handleSubmit` flips `isSubmitting=true` BEFORE invoking the handler, so the inline guard fires every time and silently blocks all submissions. RHF's handleSubmit is internally re-entrant safe; the disabled button is the correct guard.
 - Search inputs hitting Supabase MUST debounce (300ms) AND use AbortController for cancellation
+- For forms on routes that must work without JS (login, public approval pages, anything reachable by a customer or unauthenticated user), pass the server action **directly** as `action={serverAction}`. Do NOT wrap it in a client `handleSubmit` to manage error/loading state — that disables native HTML form submission, so if JS fails to hydrate the form does nothing silently (no error, no spinner, no submission). Use `useFormStatus` in a tiny child client component for the loading state, and surface errors via `searchParams` (with an error-code lookup on the read side — don't render raw URL params as user-facing text). Real incident: iPad Safari, 2026-05.
 
 **Comments:**
 - Default to writing NO comments
