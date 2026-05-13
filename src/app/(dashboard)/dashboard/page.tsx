@@ -55,6 +55,7 @@ async function getDashboardData() {
     parkingSpecialsResult,
     manualIncomeRangeResult,
     completedJobsRangeResult,
+    completedTodayResult,
   ] = await Promise.all([
     supabase
       .from("jobs")
@@ -119,6 +120,14 @@ async function getDashboardData() {
       .eq("status", "complete")
       .gte("date_finished", inspectionRangeStart)
       .lte("date_finished", monthEnd),
+    supabase
+      .from("jobs")
+      .select(
+        "id, ro_number, status, title, assigned_tech, date_received, scheduled_at, users!jobs_assigned_tech_fkey(name), customers(id, first_name, last_name), vehicles(year, make, model), job_line_items(total)"
+      )
+      .eq("status", "complete")
+      .eq("date_finished", today)
+      .order("ro_number", { ascending: false }),
   ]);
 
   if (activeJobsResult.error)
@@ -141,6 +150,8 @@ async function getDashboardData() {
     throw new Error(`Failed to load manual income: ${manualIncomeRangeResult.error.message}`);
   if (completedJobsRangeResult.error)
     throw new Error(`Failed to load completed jobs: ${completedJobsRangeResult.error.message}`);
+  if (completedTodayResult.error)
+    throw new Error(`Failed to load completed-today jobs: ${completedTodayResult.error.message}`);
 
   const activeJobs = activeJobsResult.data || [];
   const completedJobs = completedJobsRangeResult.data || [];
@@ -166,6 +177,15 @@ async function getDashboardData() {
   const waitingForParts = activeJobsWithTotals.filter((j) => j.status === "waiting_for_parts");
   const notStarted = activeJobsWithTotals.filter((j) => j.status === "not_started");
   const unassignedJobsCount = activeJobsWithTotals.filter((j) => !j.assigned_tech).length;
+
+  const completedTodayWithTotals = (completedTodayResult.data ?? []).map((j) => ({
+    ...j,
+    total:
+      (j.job_line_items as { total: number }[] | null)?.reduce(
+        (s, li) => s + (li.total || 0),
+        0
+      ) ?? 0,
+  }));
 
   const inspectionRows = inspectionRangeResult.data || [];
   function sumInspectionRev(rows: typeof inspectionRows) {
@@ -264,7 +284,7 @@ async function getDashboardData() {
       jobsClosedWeek: weekCompleted.length,
       jobsClosedMonth: monthCompleted.length,
     },
-    shopFloor: { notStarted, waitingForParts, inProgress },
+    shopFloor: { notStarted, waitingForParts, inProgress, completedToday: completedTodayWithTotals },
     parking: { dropOffsToday, pickupsToday, pickupsPreparedToday },
     needsAttention: {
       unassignedJobs: unassignedJobsCount,
@@ -418,6 +438,7 @@ export default async function DashboardPage() {
             <ShopFloorColumn status="not_started" jobs={shopFloor.notStarted} today={today} />
             <ShopFloorColumn status="waiting_for_parts" jobs={shopFloor.waitingForParts} today={today} />
             <ShopFloorColumn status="in_progress" jobs={shopFloor.inProgress} today={today} />
+            <ShopFloorColumn status="complete" jobs={shopFloor.completedToday} today={today} />
           </div>
         </aside>
       </div>

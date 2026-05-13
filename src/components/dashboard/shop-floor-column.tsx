@@ -5,6 +5,7 @@ import {
   Wrench,
   Car,
   Clock,
+  CircleCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ClickableRow } from "@/components/ui/clickable-row";
@@ -24,12 +25,15 @@ import {
 import { daysBetween, formatTimeEt } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-export type ShopFloorStatus = "not_started" | "waiting_for_parts" | "in_progress";
+export type ShopFloorStatus =
+  | "not_started"
+  | "waiting_for_parts"
+  | "in_progress"
+  | "complete";
 
 interface ShopFloorJob {
   id: string;
   ro_number: number | null;
-  status: string;
   title: string | null;
   date_received: string | null;
   scheduled_at: string | null;
@@ -43,7 +47,8 @@ interface StatusConfig {
   label: string;
   icon: LucideIcon;
   tone: Accent;
-  queryKey: string;
+  viewAllHref?: string;
+  emptyLabel?: string;
 }
 
 const SHOP_FLOOR_CONFIG: Record<ShopFloorStatus, StatusConfig> = {
@@ -51,19 +56,28 @@ const SHOP_FLOOR_CONFIG: Record<ShopFloorStatus, StatusConfig> = {
     label: "Not Started",
     icon: CircleDashed,
     tone: "red",
-    queryKey: "not_started",
+    viewAllHref: "/jobs?status=not_started",
   },
   waiting_for_parts: {
     label: "Waiting for Parts",
     icon: Package,
     tone: "amber",
-    queryKey: "waiting_for_parts",
+    viewAllHref: "/jobs?status=waiting_for_parts",
   },
   in_progress: {
     label: "In Progress",
     icon: Wrench,
     tone: "blue",
-    queryKey: "in_progress",
+    viewAllHref: "/jobs?status=in_progress",
+  },
+  complete: {
+    label: "Completed Today",
+    icon: CircleCheck,
+    tone: "green",
+    emptyLabel: "Nothing yet",
+    // No viewAllHref: /jobs filters by date_received, not date_finished,
+    // so there is no canonical "all of today's completions" URL to link to.
+    // The section already shows the full set; no further drill-down needed.
   },
 };
 
@@ -97,17 +111,21 @@ export function ShopFloorColumn({ status, jobs, today }: ShopFloorColumnProps) {
             {jobs.length}
           </span>
         </div>
-        <Link
-          href={`/jobs?status=${config.queryKey}`}
-          className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 hover:underline transition-colors"
-        >
-          View all
-        </Link>
+        {config.viewAllHref && (
+          <Link
+            href={config.viewAllHref}
+            className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 hover:underline transition-colors"
+          >
+            View all
+          </Link>
+        )}
       </div>
       <div className="flex-1 p-2 space-y-2">
         {jobs.length === 0 ? (
           <div className="flex items-center justify-center rounded-md border border-dashed border-stone-300 dark:border-stone-700 py-6">
-            <p className="text-xs text-stone-400 dark:text-stone-500">None</p>
+            <p className="text-xs text-stone-400 dark:text-stone-500">
+              {config.emptyLabel ?? "None"}
+            </p>
           </div>
         ) : (
           jobs.map((job) => <JobCard key={job.id} job={job} today={today} />)

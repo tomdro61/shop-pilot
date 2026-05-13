@@ -78,7 +78,7 @@ This is the **current shape of the system** — what exists, where it lives, and
 ## Dashboard, Inbox, Reports
 
 ### Dashboard
-Sectioned layout — slim greeting header, KPI cluster (Today's Revenue / Week / Month / Outstanding A/R + State/TNC/Jobs Closed compact cards), divider, **Action Center** (Tasks scratchpad full-width on top; Glance card on right with Parking · Today + Awaiting Payment; 2-column needs-attention alert grid on left with 6 alert types — Unassigned/Quote Requests/Estimates Sent/DVIs Ready/Parking Leads/Aged Parts — each linking to `/inbox?tab=...`), divider, Shop Floor 3-column kanban.
+Two-column layout (`lg:grid-cols-[2fr_1fr]`). **Left column**: slim greeting header, KPI cluster (Today's Revenue / Week / Month + State/TNC compact cards), then **Action Center** (Tasks scratchpad full-width on top; needs-attention alert grid with 6 alert types — Unassigned/Quote Requests/Estimates Sent/DVIs Ready/Parking Leads/Aged Parts — each linking to `/inbox?tab=...`). **Right column** ("Today's View" aside): Parking · Today card, Scheduled Today card, then a vertical stack of 4 Shop Floor sections — Not Started (red), Waiting for Parts (amber), In Progress (blue), Completed Today (emerald, filtered to `date_finished = today`). Each Shop Floor section uses `ShopFloorColumn` (full-width card, not a horizontal kanban column).
 
 Revenue cards include inspection revenue from `daily_inspection_counts`; job line items with `category = "Inspection"` are excluded from revenue to prevent double-counting. Parking · Today scoped to `MANAGED_PARKING_LOTS` only and reports an "X/Y prepared" line under Pickups (prepared = checked_out OR lock_box_number staged).
 
