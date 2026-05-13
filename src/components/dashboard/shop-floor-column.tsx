@@ -74,10 +74,8 @@ const SHOP_FLOOR_CONFIG: Record<ShopFloorStatus, StatusConfig> = {
     label: "Completed Today",
     icon: CircleCheck,
     tone: "green",
+    viewAllHref: "/jobs?status=complete",
     emptyLabel: "Nothing yet",
-    // No viewAllHref: /jobs filters by date_received, not date_finished,
-    // so there is no canonical "all of today's completions" URL to link to.
-    // The section already shows the full set; no further drill-down needed.
   },
 };
 
