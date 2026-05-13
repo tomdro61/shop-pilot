@@ -1,8 +1,4 @@
-"use client";
-
-import { useState } from "react";
 import { signIn } from "@/lib/actions/auth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -13,21 +9,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Wrench } from "lucide-react";
+import { SubmitButton } from "./submit-button";
 
-export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+const ERROR_MESSAGES: Record<string, string> = {
+  invalid_credentials: "Invalid email or password.",
+  email_not_confirmed: "Please confirm your email before signing in.",
+  rate_limited: "Too many attempts. Please wait a moment and try again.",
+  missing_fields: "Please enter your email and password.",
+  unknown: "Sign in failed. Please try again.",
+};
 
-  async function handleSubmit(formData: FormData) {
-    setError(null);
-    setLoading(true);
-
-    const result = await signIn(formData);
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
-    }
-  }
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; email?: string }>;
+}) {
+  const { error: errorCode, email } = await searchParams;
+  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.unknown : null;
 
   return (
     <Card className="w-full max-w-sm animate-in-up">
@@ -39,7 +37,7 @@ export default function LoginPage() {
         <CardDescription className="text-xs">Sign in to manage your shop</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="space-y-4">
+        <form action={signIn} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-xs font-medium">Email</Label>
             <Input
@@ -47,6 +45,7 @@ export default function LoginPage() {
               name="email"
               type="email"
               placeholder="you@example.com"
+              defaultValue={email ?? ""}
               required
               autoComplete="email"
             />
@@ -61,12 +60,10 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
+          {errorMessage && (
+            <p className="text-sm text-destructive">{errorMessage}</p>
           )}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
-          </Button>
+          <SubmitButton />
         </form>
       </CardContent>
     </Card>
