@@ -27,11 +27,11 @@ interface QuickPayPreset {
 
 function QuickPayPresetPicker({
   presets,
-  selectedPresetId,
+  selectedPresetIds,
   onSelect,
 }: {
   presets: QuickPayPreset[];
-  selectedPresetId: string | null;
+  selectedPresetIds: string[];
   onSelect: (preset: QuickPayPreset) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -44,8 +44,13 @@ function QuickPayPresetPicker({
   const quickPresets = presets.filter(
     (p) => p.category && INSPECTION_CATEGORIES.has(p.category)
   );
+  const quickPresetIds = new Set(quickPresets.map((p) => p.id));
 
-  const selected = selectedPresetId ? presets.find((p) => p.id === selectedPresetId) : null;
+  // Selected presets not shown in the quick-services row — surface them as
+  // removable chips so the operator can see what was added via search.
+  const selectedExtraPresets = selectedPresetIds
+    .map((id) => presets.find((p) => p.id === id))
+    .filter((p): p is QuickPayPreset => p !== undefined && !quickPresetIds.has(p.id));
 
   return (
     <div className="space-y-2">
@@ -56,7 +61,7 @@ function QuickPayPresetPicker({
       {quickPresets.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {quickPresets.map((preset) => {
-            const active = selectedPresetId === preset.id;
+            const active = selectedPresetIds.includes(preset.id);
             return (
               <button
                 key={preset.id}
@@ -87,39 +92,48 @@ function QuickPayPresetPicker({
         </div>
       )}
 
-      {selected ? (
-        <div className="flex items-center gap-2 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-3 py-2">
-          <span className="flex-1 text-sm font-bold text-blue-700 dark:text-blue-400">
-            {selected.name}
-          </span>
-          <span className="text-sm font-semibold tabular-nums text-blue-700 dark:text-blue-400">
-            {formatCurrency(selected.total)}
-          </span>
-          <button
-            type="button"
-            onClick={() => onSelect(selected)}
-            className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-300"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      {selectedExtraPresets.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedExtraPresets.map((preset) => (
+            <div
+              key={preset.id}
+              className="inline-flex items-center gap-2 h-9 pl-3 pr-2 rounded-md border border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:border-blue-900 dark:text-blue-300"
+            >
+              <span className="text-sm font-medium">{preset.name}</span>
+              <span className="font-mono tabular-nums text-xs text-blue-600 dark:text-blue-400">
+                {formatCurrency(preset.total)}
+              </span>
+              <button
+                type="button"
+                onClick={() => onSelect(preset)}
+                aria-label={`Remove ${preset.name}`}
+                className="ml-1 text-blue-400 hover:text-blue-700 dark:hover:text-blue-200"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
-      ) : (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-          <Input
-            placeholder="Search presets..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setDropdownOpen(true); }}
-            onFocus={() => setDropdownOpen(true)}
-            onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
-            className="pl-9"
-          />
-          {dropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full rounded-md border border-stone-200 bg-card shadow-card dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
-              {filtered.length === 0 ? (
-                <p className="py-3 text-center text-sm text-stone-500 dark:text-stone-400">No presets match</p>
-              ) : (
-                filtered.map((preset) => (
+      )}
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+        <Input
+          placeholder="Search presets..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setDropdownOpen(true); }}
+          onFocus={() => setDropdownOpen(true)}
+          onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+          className="pl-9"
+        />
+        {dropdownOpen && (
+          <div className="absolute z-50 mt-1 w-full rounded-md border border-stone-200 bg-card shadow-card dark:border-stone-700 dark:bg-stone-900 max-h-48 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="py-3 text-center text-sm text-stone-500 dark:text-stone-400">No presets match</p>
+            ) : (
+              filtered.map((preset) => {
+                const active = selectedPresetIds.includes(preset.id);
+                return (
                   <button
                     key={preset.id}
                     type="button"
@@ -131,16 +145,21 @@ function QuickPayPresetPicker({
                     }}
                   >
                     <span className="flex-1 truncate font-medium">{preset.name}</span>
+                    {active && (
+                      <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400 shrink-0">
+                        Selected
+                      </span>
+                    )}
                     <span className="text-xs tabular-nums text-stone-500 shrink-0">
                       {formatCurrency(preset.total)}
                     </span>
                   </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      )}
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -151,7 +170,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   const [amountStr, setAmountStr] = useState("0");
   const [note, setNote] = useState("");
   const [state, setState] = useState<QuickPayState>("input");
-  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [selectedPresetIds, setSelectedPresetIds] = useState<string[]>([]);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [completedJobId, setCompletedJobId] = useState<string | null>(null);
 
@@ -175,7 +194,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   }).format(amountCents / 100);
 
   function handleKey(key: string) {
-    setSelectedPresetId(null);
+    setSelectedPresetIds([]);
     setAmountStr((prev) => {
       if (key === "." && prev.includes(".")) return prev;
       // Limit to 2 decimal places
@@ -188,7 +207,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   }
 
   function handleBackspace() {
-    setSelectedPresetId(null);
+    setSelectedPresetIds([]);
     setAmountStr((prev) => {
       if (prev.length <= 1) return "0";
       return prev.slice(0, -1);
@@ -196,25 +215,32 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
   }
 
   function handlePresetSelect(preset: QuickPayPreset) {
-    const isDeselect = selectedPresetId === preset.id;
-    if (isDeselect) {
-      setSelectedPresetId(null);
-      setAmountStr("0");
-      setNote("");
-      return;
-    }
-    setSelectedPresetId(preset.id);
-    // Convert total to string with 2 decimal places, stripping trailing zeros
-    const totalStr = preset.total % 1 === 0
-      ? String(preset.total)
-      : preset.total.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+    const isSelected = selectedPresetIds.includes(preset.id);
+    const next = isSelected
+      ? selectedPresetIds.filter((id) => id !== preset.id)
+      : [...selectedPresetIds, preset.id];
+
+    const nextPresets = next
+      .map((id) => presets.find((p) => p.id === id))
+      .filter((p): p is QuickPayPreset => Boolean(p));
+
+    const total = nextPresets.reduce((sum, p) => sum + p.total, 0);
+    const totalStr =
+      total === 0
+        ? "0"
+        : total % 1 === 0
+          ? String(total)
+          : total.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+
+    setSelectedPresetIds(next);
     setAmountStr(totalStr);
-    setNote(preset.name);
+    setNote(nextPresets.map((p) => p.name).join(", "));
   }
 
   function handleClear() {
     setAmountStr("0");
-    setSelectedPresetId(null);
+    setNote("");
+    setSelectedPresetIds([]);
   }
 
   const pollStatus = useCallback(async (piId: string) => {
@@ -270,9 +296,24 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
 
     setState("processing");
 
-    // Create skeleton job — use preset category if one is selected
-    const selectedPreset = presets.find((p) => p.id === selectedPresetId);
-    const jobResult = await createQuickPayJob(amountCents, note || undefined, selectedPreset?.category || undefined);
+    // Category for the job: only use a shared category when EVERY selected
+    // preset has it. A mix of categorized + uncategorized presets falls
+    // through to the server default ("Quick Pay") so revenue isn't silently
+    // misattributed in category-trends.
+    const selectedPresets = selectedPresetIds
+      .map((id) => presets.find((p) => p.id === id))
+      .filter((p): p is QuickPayPreset => Boolean(p));
+    const categories = selectedPresets
+      .map((p) => p.category)
+      .filter((c): c is string => Boolean(c));
+    const sharedCategory =
+      categories.length > 0 &&
+      categories.length === selectedPresets.length &&
+      categories.every((c) => c === categories[0])
+        ? categories[0]
+        : undefined;
+
+    const jobResult = await createQuickPayJob(amountCents, note || undefined, sharedCategory);
     if (jobResult.error || !jobResult.data) {
       setState("failed");
       toast.error(jobResult.error || "Failed to create job");
@@ -342,10 +383,11 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
     }
     pollStartRef.current = null;
     consecutiveErrorsRef.current = 0;
+    cancelingRef.current = false;
     setAmountStr("0");
     setNote("");
     setState("input");
-    setSelectedPresetId(null);
+    setSelectedPresetIds([]);
     setPaymentIntentId(null);
     setCompletedJobId(null);
   }
@@ -418,7 +460,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
       {presets.length > 0 && (
         <QuickPayPresetPicker
           presets={presets}
-          selectedPresetId={selectedPresetId}
+          selectedPresetIds={selectedPresetIds}
           onSelect={handlePresetSelect}
         />
       )}

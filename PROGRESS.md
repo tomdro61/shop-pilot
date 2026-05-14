@@ -2979,3 +2979,61 @@ Merged to master and pushed.
 ### Known issues
 
 - The `tone: "green"` vs `"emerald"` naming inconsistency in `src/components/ui/mini-status-card.tsx` Accent type — pre-existing, no functional impact, candidate for a follow-up rename pass.
+
+---
+
+## Session 41 — 2026-05-13 — iPad sign-in fix (login form progressive enhancement)
+
+### Why
+
+User reported they couldn't sign in on a new iPad (iPadOS 26.5, not signed into any Apple ID — meaning no autofill, no third-party browser available, and a fresh Safari install). Filled in email + password, tapped Sign in, **nothing happened**: no error, no loading state, no submission. Refresh cleared the fields, refill and retry produced the same silent no-op.
+
+Diagnosis: the login form's `action` prop was a client-side `handleSubmit` wrapper that called the `signIn` server action and managed loading/error state via `useState`. When React passes a client function as `<form action>`, it does NOT render a native HTML form action attribute — the form is purely JS-driven. If hydration doesn't complete on the device, the button is wired to nothing. That matches the symptom exactly. Sentry returned 0 client errors for the period (`level:error firstSeen:-7d`), consistent with either Sentry not initializing far enough to report OR a hydration-blocker upstream of the error path.
+
+### What shipped
+
+- **`src/app/(auth)/login/page.tsx`** — converted from `"use client"` with `useState` to a server component. Reads `error` + `email` from `searchParams`. Maps error codes (`invalid_credentials`, `email_not_confirmed`, `rate_limited`, `missing_fields`, `unknown`) to user-friendly text via a local lookup table — avoids rendering raw URL params as user-visible text (closes a reflected-content-injection vector that the code-review agent flagged).
+- **`src/app/(auth)/login/submit-button.tsx`** — NEW, tiny `"use client"` child component using `useFormStatus()` for the loading state. Degrades gracefully when JS isn't running (button stays enabled, form still submits natively).
+- **`src/lib/actions/auth.ts`** — rewrote `signIn`:
+  - Body wrapped in `try/catch`; all `redirect()` calls hoisted **outside** the try/catch so `NEXT_REDIRECT` is never accidentally caught
+  - Unknown exceptions surface as `?error=unknown` instead of a blank error.tsx page (the exact failure mode the diff was meant to eliminate)
+  - Error path returns codes, not raw `error.message`, so the page can map to safe text
+  - Missing-fields guard added (`!email || !password` → `?error=missing_fields`) so a stripped-down POST doesn't blow up the URLSearchParams constructor
+  - Dropped the post-signin `getSession()` roundtrip — uses `data.user` from `signInWithPassword` directly. Pre-existing finding from the code-review agent ("getSession is not guaranteed to revalidate the token"), folded into the rewrite.
+  - Profile-lookup error now destructured + logged. Was silently swallowed before.
+- **`CLAUDE.md`** — added a Forms-section anti-pattern note about wrapping server actions in client `handleSubmit` on routes that must work without JS. Concrete guidance: use `useFormStatus` in a tiny child component for loading state; surface errors via `searchParams` with an error-code lookup on the read side.
+
+### Review
+
+`/scoped-review` dispatched 2 agents in parallel (silent-failure-hunter + feature-dev:code-reviewer) on the original 12-line diff. Findings:
+
+- **2 Highs introduced by the diff** — both fixed before merge:
+  1. Silent exception path in the new `signIn` (anything thrown before reaching the Supabase `{error}` return would render the default error.tsx, defeating the fix's purpose). Closed by the try/catch + redirect-on-unknown rewrite.
+  2. Reflected content via `?error=` raw URL text (not script-XSS — React escapes — but an attacker could craft a phishing URL like `/login?error=Call+555-fake-to-verify` showing arbitrary red text on our login page). Closed by switching from raw messages to fixed error codes mapped on the read side.
+- **2 Mediums pre-existing**, both folded into the rewrite: `getSession()` usage, profile-lookup error swallowed.
+- **0 Criticals.**
+
+`.scoped-review-marker` written; pre-push hook accepted the push.
+
+### Files touched
+
+- `src/app/(auth)/login/page.tsx` (refactored: client → server component)
+- `src/app/(auth)/login/submit-button.tsx` (new)
+- `src/lib/actions/auth.ts` (rewrote `signIn`)
+- `CLAUDE.md` (Forms anti-pattern note)
+- `PROGRESS.md` (this entry)
+
+### Commits
+
+- `f0c78e6` fix(auth): make login form work without JS hydration
+
+Merged staging→master, pushed `39e3f40..486ac1e`. Vercel built prod. User confirmed sign-in works on the iPad.
+
+### What's next
+
+- **Audit other public-facing forms** for the same anti-pattern. Candidates: estimate approval (`/estimates/approve/[token]`), parking submit (`/api/parking/submit` is the endpoint but the calling form lives on `broadway-motors-web`), quote request, DVI inspect public surfaces. Most of these already use server actions directly per the feature-dev default, but worth confirming during the next `/scoped-review` pass.
+- The CLAUDE.md anti-pattern note now exists, so future work on `/login`-like routes should fall on the correct side of this distinction automatically.
+
+### Known issues
+
+- None from this change. Sentry remained empty for client errors during the iPad incident — worth a one-time check that the client-side Sentry init actually fires from a fresh device (no Apple ID, no cookies). If Sentry isn't reporting on those devices, we lose visibility on hydration-class bugs entirely. Low-priority follow-up.
