@@ -3037,3 +3037,66 @@ Merged staging→master, pushed `39e3f40..486ac1e`. Vercel built prod. User conf
 ### Known issues
 
 - None from this change. Sentry remained empty for client errors during the iPad incident — worth a one-time check that the client-side Sentry init actually fires from a fresh device (no Apple ID, no cookies). If Sentry isn't reporting on those devices, we lose visibility on hydration-class bugs entirely. Low-priority follow-up.
+
+---
+
+## Session 42 — 2026-05-14 → 2026-05-18 — Quick Pay multi-preset, DVI filter fix, /handoff skill, doc reconciliation
+
+### Why
+
+Catch-up session covering three threads since Session 41:
+1. Quick Pay's preset picker only allowed single selection — counter staff often ring up two services at once (e.g., inspection + valve stem)
+2. DVI "Active Jobs" was showing cancelled jobs because the filter only excluded `complete`
+3. The roadmap had drifted out of sync with code — three Phase 0 items shipped weeks ago but stayed unchecked. Built `/handoff` skill + CLAUDE.md rule so it doesn't happen again.
+
+### What shipped
+
+**Quick Pay multi-preset (commit `4fb9d7f`, May 14)**
+- Tapping a pill toggles it in/out; amount sums; note auto-fills with combined names
+- Chip row replaces single-preset summary card
+- Critical fix caught during review: `cancelingRef` was never reset in `handleReset`, so first successful cancel silently disabled the Cancel button for the rest of the session. Would have hit the iPad counter device daily.
+- Category derivation: shared category requires every selected preset to match — mixed selections fall through to server default rather than inflating one category's trends
+
+**DVI Active Jobs filter (commit `42963e2`, May 18)**
+- `getTechJobs` filter changed from `.neq("status", "complete")` to `.not("status", "in", "(complete,cancelled)")` — cancelled jobs no longer leak onto the DVI list
+- Side note: function still named `getTechJobs` but doesn't actually scope to a tech — rename deferred
+
+**`/handoff` skill + CLAUDE.md doc-reconciliation rule (commit `a3f3b7b`, May 18)**
+- New skill at `.claude/skills/handoff/SKILL.md` — audits PROGRESS / ROADMAP / ARCHITECTURE / SCHEMA against codebase state (grep for migrations, components, tables) before drafting updates
+- CLAUDE.md "After Every Change" block now includes `SHOPPILOT_ROADMAP.md` with explicit "verify against code, not the existing checkbox" instruction
+- New "At the End of a Session" section points at `/handoff`
+- Trigger: today's stale-roadmap incident — I relayed Phase 0 status from the markdown checklist instead of checking the code, told the user three items were still open when they'd actually shipped
+
+**SHOPPILOT_ROADMAP.md reconciliation (uncommitted — file lives outside any git repo)**
+- "Last updated" date refreshed to 2026-05-18
+- "Currently on staging not yet merged" paragraph replaced with the actual current state (staging↔master in sync)
+- §4.4 checkboxes ticked: smoke test, staging→master merge, estimate decoupling, Today section, customer detail spine redesign
+- Vercel Cron infrastructure live — `vercel.json` + `src/app/api/cron/health/route.ts` shipped in Session 38, also ticked off as part of this audit
+
+### Files touched
+
+- `src/components/dashboard/quick-pay-form.tsx` (Session 42a)
+- `src/lib/actions/dvi.ts` (Session 42b)
+- `.claude/skills/handoff/SKILL.md` — new (Session 42c)
+- `CLAUDE.md` (Session 42c)
+- `../SHOPPILOT_ROADMAP.md` — uncommitted, parent dir is not a git repo
+- `PROGRESS.md` (this entry)
+
+### Commits
+
+- `4fb9d7f` feat(quick-pay): multi-preset selection + Cancel-after-reset fix
+- `42963e2` fix(dvi): exclude cancelled jobs from Active Jobs list [skip-review]
+- `a3f3b7b` feat(handoff): add /handoff skill + CLAUDE.md doc-reconciliation rule [skip-review]
+
+DVI fix merged to master (`c063216`). Quick-pay and handoff commits sit on staging; handoff is 1 commit ahead of `origin/staging`.
+
+### What's next
+
+- Try `/handoff` on real session boundaries — see if the audit catches drift before it accumulates
+- Two Phase 0 items still genuinely open after this audit: `agent_tasks` and `audit_log` table migrations
+- Quick Pay multi-preset: monitor whether category-derivation falling-through-to-"Quick Pay" inflates that bucket noticeably
+- Rename `getTechJobs` → `getOpenJobs` (or similar) since it doesn't actually scope to a tech
+
+### Known issues / open questions
+
+- None from these changes.
