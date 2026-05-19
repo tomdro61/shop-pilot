@@ -55,9 +55,14 @@ Whenever code is committed, update **all** of the following that are affected:
 1. **`PROGRESS.md`** — session entry (date, what shipped, files touched, what's next, known issues)
 2. **`ARCHITECTURE.md`** — only if the *current shape* of the system changed (new feature, retired feature, changed integration). Do NOT add session-level history here.
 3. **`DATABASE_SCHEMA.md`** — only if a migration added/changed/removed columns or tables.
-4. **`src/types/supabase.ts`** — regenerate after any migration.
+4. **`../SHOPPILOT_ROADMAP.md`** — only if a roadmap checkbox actually shipped (or got un-shipped). **Verify against code, not against the existing checkbox state.** Grep for the migration / component / table / route the checkbox claims before checking it off. The May 2026 stale-checklist incident (three Phase 0 items shipped but still showed as open) was caused by reading the markdown instead of checking the code.
+5. **`src/types/supabase.ts`** — regenerate after any migration.
 
 **Do not wait until the end of a session.** Update docs as part of each commit's workflow.
+
+### At the End of a Session (or after a milestone)
+
+Run `/handoff`. It audits the docs above against actual code state, drafts the PROGRESS.md entry, and proposes roadmap/architecture updates with grep evidence. It does NOT just write a session log — the value is the audit.
 
 ### At the Start of a New Session
 
