@@ -433,7 +433,7 @@ export async function getTechJobs() {
     .select(
       "id, title, status, ro_number, notes, customers(id, first_name, last_name), vehicles(id, year, make, model), dvi_inspections(status)"
     )
-    .neq("status", "complete")
+    .not("status", "in", "(complete,cancelled)")
     .order("date_received", { ascending: false });
 
   if (error) return [];
