@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import * as Sentry from "@sentry/nextjs";
-import type Stripe from "stripe";
 import { requireManager } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { isDeletedCustomer } from "@/lib/stripe/guards";
@@ -34,11 +33,45 @@ export async function getPaymentMethod(
   if (error) {
     return { ok: false, error: `Could not load customer: ${error.message}` };
   }
-  if (!customer?.stripe_customer_id) return { ok: true, data: null };
+  return loadCardForStripeCustomer(customer?.stripe_customer_id ?? null);
+}
+
+// Parallel-friendly variant for job detail page: takes jobId so it can run in
+// the same Promise.all as getJob instead of waiting on the joined customer.
+// No requireManager() gate — read-only fetch matching getPaymentMethod's
+// rationale (manager-only routes gate this via layout auth).
+export async function getPaymentMethodForJob(
+  jobId: string
+): Promise<ActionResult<SavedCard | null>> {
+  const supabase = await createClient();
+  const { data: row, error } = await supabase
+    .from("jobs")
+    .select("customers ( stripe_customer_id )")
+    .eq("id", jobId)
+    .single();
+
+  if (error) {
+    // PGRST116 = no row; treat as "no card" rather than an error so the page
+    // can still render (the parent page calls notFound() separately).
+    if (error.code === "PGRST116") return { ok: true, data: null };
+    Sentry.captureException(error, {
+      tags: { source: "get-payment-method-for-job" },
+      extra: { jobId },
+    });
+    return { ok: false, error: `Could not load job customer: ${error.message}` };
+  }
+  const customer = row?.customers as { stripe_customer_id: string | null } | null;
+  return loadCardForStripeCustomer(customer?.stripe_customer_id ?? null);
+}
+
+async function loadCardForStripeCustomer(
+  stripeCustomerId: string | null
+): Promise<ActionResult<SavedCard | null>> {
+  if (!stripeCustomerId) return { ok: true, data: null };
 
   const stripe = getStripe();
   try {
-    const stripeCustomer = await stripe.customers.retrieve(customer.stripe_customer_id, {
+    const stripeCustomer = await stripe.customers.retrieve(stripeCustomerId, {
       expand: ["invoice_settings.default_payment_method"],
     });
 

@@ -27,6 +27,7 @@ export function CustomerLink({
     <Link
       href={`/customers/${customerId}`}
       onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
+      onKeyDown={stopPropagation ? (e) => e.stopPropagation() : undefined}
       className={`hover:text-blue-600 dark:hover:text-blue-400 hover:underline underline-offset-2 ${className}`}
     >
       {children}

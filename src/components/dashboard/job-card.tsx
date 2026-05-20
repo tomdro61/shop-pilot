@@ -43,6 +43,7 @@ function formatMonthDay(dateStr: string): string {
 
 export function JobCard({ job, showStatus = true }: JobCardProps) {
   const router = useRouter();
+  const href = `/jobs/${job.id}`;
   const total = (job.job_line_items ?? []).reduce(
     (sum, li) => sum + (li.total ?? 0),
     0
@@ -58,13 +59,15 @@ export function JobCard({ job, showStatus = true }: JobCardProps) {
       role="link"
       tabIndex={0}
       className="relative overflow-hidden rounded-md bg-card border border-stone-200 dark:border-stone-800 shadow-card transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      onClick={() => router.push(`/jobs/${job.id}`)}
+      onClick={() => router.push(href)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          router.push(`/jobs/${job.id}`);
+          router.push(href);
         }
       }}
+      onMouseEnter={() => router.prefetch(href)}
+      onFocus={() => router.prefetch(href)}
     >
       <div className="px-3 py-3 space-y-2.5">
         {/* Header — customer name + status pill */}

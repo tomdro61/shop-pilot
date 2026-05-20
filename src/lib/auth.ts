@@ -1,6 +1,7 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
-export async function requireManager(): Promise<
+export const requireManager = cache(async function requireManager(): Promise<
   { ok: true; userId: string } | { ok: false; error: string }
 > {
   const supabase = await createClient();
@@ -19,7 +20,7 @@ export async function requireManager(): Promise<
   if (profile.role === "tech") return { ok: false, error: "Forbidden" };
 
   return { ok: true, userId: user.id };
-}
+});
 
 /**
  * Auth gate for actions techs are allowed to perform: parking check-in/out,
@@ -29,7 +30,7 @@ export async function requireManager(): Promise<
  * Use this for operational mutations. Reserve `requireManager()` for
  * financial actions (invoices, payments, refunds) and settings changes.
  */
-export async function requireStaff(): Promise<
+export const requireStaff = cache(async function requireStaff(): Promise<
   { ok: true; userId: string; role: "manager" | "tech" } | { ok: false; error: string }
 > {
   const supabase = await createClient();
@@ -50,4 +51,4 @@ export async function requireStaff(): Promise<
   }
 
   return { ok: true, userId: user.id, role: profile.role as "manager" | "tech" };
-}
+});
