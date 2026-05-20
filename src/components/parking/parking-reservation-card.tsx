@@ -57,6 +57,7 @@ export function ParkingReservationCard({
   const status = reservation.status as ParkingStatus;
   const isTerminal = status === "no_show" || status === "cancelled";
   const vehicleText = [reservation.make, reservation.model].filter(Boolean).join(" ");
+  const href = `/parking/${reservation.id}`;
 
   return (
     <div className={`relative overflow-hidden rounded-lg border shadow-sm transition-colors ${STATUS_TINT[status]}`}>
@@ -64,8 +65,18 @@ export function ParkingReservationCard({
 
       <div className="pl-4 pr-3 py-3 flex items-start gap-3">
         <div
-          onClick={() => router.push(`/parking/${reservation.id}`)}
-          className="cursor-pointer min-w-0 flex-1 space-y-2"
+          role="link"
+          tabIndex={0}
+          onClick={() => router.push(href)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              router.push(href);
+            }
+          }}
+          onMouseEnter={() => router.prefetch(href)}
+          onFocus={() => router.prefetch(href)}
+          className="cursor-pointer min-w-0 flex-1 space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
         >
           {/* Header: customer name + (shuttle/valet/terminal-status) pills */}
           <div className="flex items-start justify-between gap-2">
@@ -215,6 +226,7 @@ export function ParkingReservationCardCompact({
   lockBoxCodes?: Record<number, string>;
 }) {
   const router = useRouter();
+  const href = `/parking/${reservation.id}`;
 
   const isPickup = variant === "pickup" || variant === "pickup-tomorrow" || variant === "checked-out";
   const timeLabel = isPickup ? "Pickup" : variant === "parked" ? "Departs" : "Arrival";
@@ -232,8 +244,18 @@ export function ParkingReservationCardCompact({
       <span className={`absolute inset-y-0 left-0 w-1.5 ${VARIANT_BAR[variant]}`} aria-hidden />
       <div className="pl-4 pr-3 py-3 flex items-start gap-3">
         <div
-          onClick={() => router.push(`/parking/${reservation.id}`)}
-          className="cursor-pointer min-w-0 flex-1 space-y-2"
+          role="link"
+          tabIndex={0}
+          onClick={() => router.push(href)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              router.push(href);
+            }
+          }}
+          onMouseEnter={() => router.prefetch(href)}
+          onFocus={() => router.prefetch(href)}
+          className="cursor-pointer min-w-0 flex-1 space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
         >
           {/* Header: name + time on left, status/type pills on right */}
           <div className="flex items-start justify-between gap-2">

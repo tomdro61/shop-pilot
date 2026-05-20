@@ -49,19 +49,22 @@ export function ParkingServiceLeads({
       <div className="space-y-3">
         {reservations.map((r) => {
           const statusColors = PARKING_STATUS_COLORS[r.status];
+          const href = `/parking/${r.id}`;
 
           return (
             <div
               key={r.id}
               role="link"
               tabIndex={0}
-              onClick={() => router.push(`/parking/${r.id}`)}
+              onClick={() => router.push(href)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  router.push(`/parking/${r.id}`);
+                  router.push(href);
                 }
               }}
+              onMouseEnter={() => router.prefetch(href)}
+              onFocus={() => router.prefetch(href)}
               className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card cursor-pointer transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               <div className="p-4">

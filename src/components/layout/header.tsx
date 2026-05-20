@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { signOut } from "@/lib/actions/auth";
@@ -13,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useRouter } from "next/navigation";
 import { LogOut, Wrench, Sun, Moon, Monitor, Settings, BarChart3, Receipt, MessageCircle, FileQuestion, Search, ClipboardCheck } from "lucide-react";
 import type { User } from "@/types";
 
@@ -59,7 +59,6 @@ function getPageTitle(pathname: string): string {
 
 export function Header({ user }: { user: User | null }) {
   const pathname = usePathname();
-  const router = useRouter();
   const title = getPageTitle(pathname);
   const { theme, setTheme } = useTheme();
 
@@ -104,37 +103,51 @@ export function Header({ user }: { user: User | null }) {
               <DropdownMenuLabel className="lg:hidden text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Quick Access
               </DropdownMenuLabel>
-              <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/dvi")}>
-                <Search className="mr-2 h-4 w-4" />
-                DVI
+              <DropdownMenuItem className="lg:hidden" asChild>
+                <Link href="/dvi">
+                  <Search className="mr-2 h-4 w-4" />
+                  DVI
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/inspections")}>
-                <ClipboardCheck className="mr-2 h-4 w-4" />
-                Inspections
+              <DropdownMenuItem className="lg:hidden" asChild>
+                <Link href="/inspections">
+                  <ClipboardCheck className="mr-2 h-4 w-4" />
+                  Inspections
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem className="lg:hidden" onClick={() => router.push("/quote-requests")}>
-                <FileQuestion className="mr-2 h-4 w-4" />
-                Quotes
+              <DropdownMenuItem className="lg:hidden" asChild>
+                <Link href="/quote-requests">
+                  <FileQuestion className="mr-2 h-4 w-4" />
+                  Quotes
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Admin & Utilities
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => router.push("/reports")}>
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Reports
+              <DropdownMenuItem asChild>
+                <Link href="/reports">
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Reports
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/invoices")}>
-                <Receipt className="mr-2 h-4 w-4" />
-                Invoices
+              <DropdownMenuItem asChild>
+                <Link href="/invoices">
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Invoices
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/chat")}>
-                <MessageCircle className="mr-2 h-4 w-4" />
-                AI Assistant
+              <DropdownMenuItem asChild>
+                <Link href="/chat">
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  AI Assistant
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
+              <DropdownMenuItem asChild>
+                <Link href="/settings">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Link>
               </DropdownMenuItem>
             </>
           )}

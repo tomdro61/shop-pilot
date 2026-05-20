@@ -1,12 +1,13 @@
 "use server";
 
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { shopSettingsSchema } from "@/lib/validators/settings";
 import { revalidatePath } from "next/cache";
 import type { ShopSettings, ShopSettingsUpdate } from "@/types";
 
-export async function getShopSettings(): Promise<ShopSettings | null> {
+export const getShopSettings = cache(async function getShopSettings(): Promise<ShopSettings | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("shop_settings")
@@ -19,7 +20,7 @@ export async function getShopSettings(): Promise<ShopSettings | null> {
     return null;
   }
   return data;
-}
+});
 
 export async function updateShopSettings(
   updates: ShopSettingsUpdate

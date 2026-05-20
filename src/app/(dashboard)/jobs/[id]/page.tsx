@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
 import { getInvoiceForJob } from "@/lib/actions/invoices";
-import { getPaymentMethod } from "@/lib/actions/payment-methods";
+import { getPaymentMethodForJob } from "@/lib/actions/payment-methods";
 import { getEstimateForJob } from "@/lib/actions/estimates";
 import { getInspectionForJob } from "@/lib/actions/dvi";
 import { getShopSettings } from "@/lib/actions/settings";
@@ -60,7 +60,7 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, invoice, estimate, dviInspection, settings, presets, technicians] = await Promise.all([
+  const [job, invoice, estimate, dviInspection, settings, presets, technicians, savedCardResult] = await Promise.all([
     getJob(id),
     getInvoiceForJob(id),
     getEstimateForJob(id),
@@ -68,6 +68,7 @@ export default async function JobDetailPage({
     getShopSettings(),
     getPresets(),
     getTechnicians(),
+    getPaymentMethodForJob(id),
   ]);
   if (!job) notFound();
 
@@ -82,8 +83,7 @@ export default async function JobDetailPage({
   // chargeCardOnFile preflight re-verifies the PM and surfaces a clearer
   // error, so we just hide the Charge button rather than risk showing it
   // against stale state.
-  const savedCardResult = customer ? await getPaymentMethod(customer.id) : null;
-  const savedCard = savedCardResult?.ok ? savedCardResult.data : null;
+  const savedCard = savedCardResult.ok ? savedCardResult.data : null;
 
   // Padding clears the fixed JobPaymentFooter when its action buttons
   // wrap to two rows on narrow screens.

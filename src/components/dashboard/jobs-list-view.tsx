@@ -211,18 +211,21 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           <tbody>
             {table.getRowModel().rows.map((row) => {
               const s = row.original.status as JobStatus;
+              const href = `/jobs/${row.original.id}`;
               return (
                 <tr
                   key={row.id}
                   role="link"
                   tabIndex={0}
-                  onClick={() => router.push(`/jobs/${row.original.id}`)}
+                  onClick={() => router.push(href)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      router.push(`/jobs/${row.original.id}`);
+                      router.push(href);
                     }
                   }}
+                  onMouseEnter={() => router.prefetch(href)}
+                  onFocus={() => router.prefetch(href)}
                   className={`cursor-pointer border-b border-stone-200 dark:border-stone-800 last:border-b-0 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset`}
                 >
                   {row.getVisibleCells().map((cell) => (
@@ -243,18 +246,21 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           const s = job.status as JobStatus;
           const c = job.customers;
           const t = totalForJob(job);
+          const href = `/jobs/${job.id}`;
           return (
             <div
               key={job.id}
               role="link"
               tabIndex={0}
-              onClick={() => router.push(`/jobs/${job.id}`)}
+              onClick={() => router.push(href)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  router.push(`/jobs/${job.id}`);
+                  router.push(href);
                 }
               }}
+              onMouseEnter={() => router.prefetch(href)}
+              onFocus={() => router.prefetch(href)}
               className={`cursor-pointer px-3 py-2.5 border-l-2 ${STATUS_BORDER[s]} hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset`}
             >
               <div className="flex items-center justify-between gap-2">
