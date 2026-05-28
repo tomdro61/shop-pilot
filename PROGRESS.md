@@ -3100,3 +3100,57 @@ DVI fix merged to master (`c063216`). Quick-pay and handoff commits sit on stagi
 ### Known issues / open questions
 
 - None from these changes.
+
+---
+
+## Session 43 — 2026-05-28 — Online appointment booking: PRD, technical plan, step 1 migrations
+
+### Why
+
+Online appointment booking is the top-of-funnel Phase 2 feature from `../SHOPPILOT_ROADMAP.md` §6.2 — currently ~40% of booking intent lands after hours and is lost. PRD + technical plan locked in this session against actual code (not assumptions); step 1 (schema layer) shipped.
+
+### What shipped
+
+**`../BOOKING_PRD.md` — locked**
+- 4-step multi-step form, 7 service categories (oil_change/brakes/tires/diagnostic/exhaust/suspension/other), photo upload (3 max), morning/afternoon windows, manual-confirm for first 30 days
+- Saturday cap of 4 morning / 0 afternoon (matches 10–2 hours); weekday default 8/8
+- After-hours threshold: Mon–Fri 6pm, Sat 2pm, Sun all day
+- Unified `/schedule` calendar (day/week/month) replaces the basic schedule view originally planned
+- Daily capacity override per-day via `daily_capacity_overrides`
+
+**`../BOOKING_TECHNICAL_PLAN.md` — locked + reviewed**
+- 14-PR build sequence, ~12.5 dev days
+- Reviewed by 2 agents (code-architect + code-reviewer) → 23 findings → all 23 either applied or explicitly declined-with-reason in the doc
+- Hard pass over the plan against actual shop-pilot code surfaced 7 wrong assumptions (e.g., `sendSMS` signature, `sendSms` vs `sendSMS`, `update_updated_at()` is the function name not the trigger name, `sharp` and `date-fns-tz` aren't installed, `findOrCreateVehicle` doesn't exist, `messages.related_appointment_id` had to be added) — all corrected before any code
+
+**Step 1 — Schema migrations (the work that actually landed in this repo)**
+- 5 new migrations applied to remote Supabase project + `src/types/supabase.ts` regenerated
+- Reviewed by 3 agents (broad correctness, type design, fix verification) → 1 Critical applied, 2 Criticals explicitly declined with documented column comments
+- Migration `20260508120000_add_estimate_line_item_cost.sql` was pre-existing metadata drift (column already in remote DB, migration row missing) — repaired via `supabase migration repair --status applied` before the new migrations could run
+
+### Files touched
+
+- `supabase/migrations/20260601000000_daily_capacity_overrides.sql` (new) — table + RLS + null/0 column comments
+- `supabase/migrations/20260601000001_appointments.sql` (new) — table + RLS + PL/pgSQL `enforce_appointment_capacity` trigger + 5 review-fix CHECKs + 2 declined-with-comment columns
+- `supabase/migrations/20260601000002_messages_appointment_link.sql` (new) — adds `related_appointment_id` FK to existing `messages`
+- `supabase/migrations/20260601000003_vin_decode_cache.sql` (new) — NHTSA cache, `text` PK with VIN regex (not `char(17)`), year sanity bound
+- `supabase/migrations/20260601000004_booking_photos_bucket.sql` (new) — Supabase Storage bucket + RLS
+- `src/types/supabase.ts` — regen, +221 lines
+- `../BOOKING_PRD.md`, `../BOOKING_TECHNICAL_PLAN.md` — both at monorepo root, not in this git repo
+
+### Commits
+
+- `525f9f1` feat(booking): add appointment + capacity + vin cache migrations
+- `a2e0d51` chore(types): regen supabase types after booking migrations [skip-review]
+
+Both on `staging` and pushed. DB push applied to remote. Staging not yet merged to master — waiting on step 2+.
+
+### What's next
+
+- **Step 2 — Capacity library** (`src/lib/appointments/capacity.ts` + vitest tests). Pure functions, no DB, half-day.
+- Step 3 brings the API endpoint, VIN decode, helpers — needs `sharp` install and `findOrCreateVehicle` written from scratch (helper doesn't exist today).
+- Plan §13 has the resolved decision list — every "open question" from the original draft now has a verified answer or a documented decline.
+
+### Known issues / open questions
+
+- Pre-existing migration drift surfaced this session (`20260508120000`) suggests prior schema changes hit the remote DB outside the migration tracking. Worth a `supabase db diff` audit at some point to find anything else that's drifted. Not blocking step 2.
