@@ -12,8 +12,145 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          cancelled_at: string | null
+          completed_at: string | null
+          conditional_data: Json
+          confirmed_at: string | null
+          converted_at: string | null
+          converted_job_id: string | null
+          customer_id: string | null
+          description: string
+          drop_off_or_wait: string
+          id: string
+          photo_paths: string[]
+          preferred_date: string
+          preferred_time_window: string
+          service_category: string
+          snapshot_customer_email: string | null
+          snapshot_customer_name: string
+          snapshot_customer_phone: string
+          snapshot_vehicle_make: string | null
+          snapshot_vehicle_mileage: number | null
+          snapshot_vehicle_model: string | null
+          snapshot_vehicle_vin: string | null
+          snapshot_vehicle_year: number | null
+          source: string
+          status: string
+          submitted_at: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          conditional_data?: Json
+          confirmed_at?: string | null
+          converted_at?: string | null
+          converted_job_id?: string | null
+          customer_id?: string | null
+          description: string
+          drop_off_or_wait: string
+          id?: string
+          photo_paths?: string[]
+          preferred_date: string
+          preferred_time_window: string
+          service_category: string
+          snapshot_customer_email?: string | null
+          snapshot_customer_name: string
+          snapshot_customer_phone: string
+          snapshot_vehicle_make?: string | null
+          snapshot_vehicle_mileage?: number | null
+          snapshot_vehicle_model?: string | null
+          snapshot_vehicle_vin?: string | null
+          snapshot_vehicle_year?: number | null
+          source?: string
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          conditional_data?: Json
+          confirmed_at?: string | null
+          converted_at?: string | null
+          converted_job_id?: string | null
+          customer_id?: string | null
+          description?: string
+          drop_off_or_wait?: string
+          id?: string
+          photo_paths?: string[]
+          preferred_date?: string
+          preferred_time_window?: string
+          service_category?: string
+          snapshot_customer_email?: string | null
+          snapshot_customer_name?: string
+          snapshot_customer_phone?: string
+          snapshot_vehicle_make?: string | null
+          snapshot_vehicle_mileage?: number | null
+          snapshot_vehicle_model?: string | null
+          snapshot_vehicle_vin?: string | null
+          snapshot_vehicle_year?: number | null
+          source?: string
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_converted_job_id_fkey"
+            columns: ["converted_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_items: {
         Row: {
           category: string | null
@@ -103,6 +240,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      daily_capacity_overrides: {
+        Row: {
+          afternoon_max: number | null
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          morning_max: number | null
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          afternoon_max?: number | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          morning_max?: number | null
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          afternoon_max?: number | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          morning_max?: number | null
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_capacity_overrides_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_inspection_counts: {
         Row: {
@@ -856,6 +1034,7 @@ export type Database = {
           id: string
           job_id: string | null
           phone_line: string | null
+          related_appointment_id: string | null
           sent_at: string
           status: string | null
         }
@@ -868,6 +1047,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           phone_line?: string | null
+          related_appointment_id?: string | null
           sent_at?: string
           status?: string | null
         }
@@ -880,6 +1060,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           phone_line?: string | null
+          related_appointment_id?: string | null
           sent_at?: string
           status?: string | null
         }
@@ -896,6 +1077,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_related_appointment_id_fkey"
+            columns: ["related_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
         ]
@@ -1247,6 +1435,36 @@ export type Database = {
           },
         ]
       }
+      vin_decode_cache: {
+        Row: {
+          decoded_at: string
+          make: string | null
+          model: string | null
+          raw: Json | null
+          trim: string | null
+          vin: string
+          year: number | null
+        }
+        Insert: {
+          decoded_at?: string
+          make?: string | null
+          model?: string | null
+          raw?: Json | null
+          trim?: string | null
+          vin: string
+          year?: number | null
+        }
+        Update: {
+          decoded_at?: string
+          make?: string | null
+          model?: string | null
+          raw?: Json | null
+          trim?: string | null
+          vin?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1413,6 +1631,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       customer_type: ["retail", "fleet", "parking"],
