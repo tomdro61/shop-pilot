@@ -278,9 +278,10 @@ export async function getInvoices(status?: string, search?: string, source?: str
     query = query.eq("status", status as "draft" | "sent" | "paid");
   }
 
-  if (source === "parking") {
+  const normalizedSource = source === "parking" || source === "jobs" ? source : null;
+  if (normalizedSource === "parking") {
     query = query.not("parking_reservation_id", "is", null);
-  } else if (source === "jobs") {
+  } else if (normalizedSource === "jobs") {
     query = query.not("job_id", "is", null);
   }
 

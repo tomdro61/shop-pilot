@@ -42,7 +42,7 @@ export default async function InvoicesPage({
         <Suspense>
           <InvoiceStatusFilter />
         </Suspense>
-        <span className="hidden md:inline text-xs text-stone-500 dark:text-stone-400 font-mono tabular-nums">
+        <span className="text-xs text-stone-500 dark:text-stone-400 font-mono tabular-nums">
           {invoices.length.toLocaleString()} · {formatCurrencyWhole(totalAmount)}
         </span>
       </div>
