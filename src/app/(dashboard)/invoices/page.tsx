@@ -5,6 +5,7 @@ import { INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/lib/constants";
 import { ExternalLink } from "lucide-react";
 import { InvoiceSearch } from "./invoice-search";
 import { InvoiceStatusFilter } from "./invoice-status-filter";
+import { InvoiceSourceFilter } from "./invoice-source-filter";
 import { COLUMN_HEADER } from "@/components/ui/section-card";
 import { formatCurrencyWhole, formatDate, getInitials } from "@/lib/utils/format";
 import { PageShell } from "@/components/layout/page-shell";
@@ -23,10 +24,11 @@ const STATUS_BORDER: Record<InvoiceStatus, string> = {
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; search?: string }>;
+  searchParams: Promise<{ status?: string; search?: string; source?: string }>;
 }) {
-  const { status, search } = await searchParams;
-  const invoices = await getInvoices(status, search);
+  const { status, search, source } = await searchParams;
+  const invoices = await getInvoices(status, search, source);
+  const totalAmount = invoices.reduce((sum, inv) => sum + (inv.amount ?? 0), 0);
 
   return (
     <PageShell>
@@ -35,10 +37,13 @@ export default async function InvoicesPage({
           <InvoiceSearch />
         </Suspense>
         <Suspense>
+          <InvoiceSourceFilter />
+        </Suspense>
+        <Suspense>
           <InvoiceStatusFilter />
         </Suspense>
         <span className="hidden md:inline text-xs text-stone-500 dark:text-stone-400 font-mono tabular-nums">
-          {invoices.length.toLocaleString()}
+          {invoices.length.toLocaleString()} · {formatCurrencyWhole(totalAmount)}
         </span>
       </div>
 

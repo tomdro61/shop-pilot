@@ -264,7 +264,7 @@ export async function createInvoiceFromJob(
   }
 }
 
-export async function getInvoices(status?: string, search?: string) {
+export async function getInvoices(status?: string, search?: string, source?: string) {
   const supabase = await createClient();
 
   let query = supabase
@@ -278,28 +278,32 @@ export async function getInvoices(status?: string, search?: string) {
     query = query.eq("status", status as "draft" | "sent" | "paid");
   }
 
+  if (source === "parking") {
+    query = query.not("parking_reservation_id", "is", null);
+  } else if (source === "jobs") {
+    query = query.not("job_id", "is", null);
+  }
+
   const { data, error } = await query;
 
   if (error) throw new Error(error.message);
 
   let invoices = data ?? [];
 
-  // Client-side search filter (customer name from job or parking reservation)
   if (search) {
     const term = search.toLowerCase();
     invoices = invoices.filter((inv) => {
-      // Check job customer name
       const job = inv.jobs as { customers: { first_name: string; last_name: string } | null } | null;
       const jobCustomer = job?.customers;
       if (jobCustomer) {
         const fullName = `${jobCustomer.first_name} ${jobCustomer.last_name}`.toLowerCase();
         if (fullName.includes(term)) return true;
       }
-      // Check parking reservation name
-      const reservation = inv.parking_reservations as { first_name: string; last_name: string } | null;
+      const reservation = inv.parking_reservations as { first_name: string; last_name: string; lot: string } | null;
       if (reservation) {
         const fullName = `${reservation.first_name} ${reservation.last_name}`.toLowerCase();
         if (fullName.includes(term)) return true;
+        if (reservation.lot?.toLowerCase().includes(term)) return true;
       }
       return false;
     });
