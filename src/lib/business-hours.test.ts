@@ -27,6 +27,28 @@ describe("getBusinessClosedState", () => {
     });
   });
 
+  it("uses 'evening' on Friday after 6pm (tomorrow is Saturday, still open)", () => {
+    // Fri 2026-06-05, 6pm EDT. The ack copy's "by 9am tomorrow" is correct here
+    // because Saturday morning is open — Friday is not a special case.
+    expect(getBusinessClosedState(new Date("2026-06-05T22:00:00Z"))).toEqual({
+      closed: true,
+      reason: "evening",
+    });
+  });
+
+  it("honors the cutoffs in EST (winter), not just EDT — guards the DST re-anchor", () => {
+    // Wed 2026-01-07 (EST, UTC-5): 5:59pm EST = 22:59Z (open), 6:00pm EST = 23:00Z
+    // (evening). A regression to a hardcoded -4 offset passes the June tests but
+    // fails this one.
+    expect(getBusinessClosedState(new Date("2026-01-07T22:59:00Z"))).toEqual({
+      closed: false,
+    });
+    expect(getBusinessClosedState(new Date("2026-01-07T23:00:00Z"))).toEqual({
+      closed: true,
+      reason: "evening",
+    });
+  });
+
   it("is open at 12:59pm on Saturday (morning only)", () => {
     expect(getBusinessClosedState(new Date("2026-06-06T16:59:00Z"))).toEqual({
       closed: false,

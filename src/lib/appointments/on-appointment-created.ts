@@ -27,11 +27,14 @@ export async function onAppointmentCreated(opts: {
   closedState: BusinessClosedState;
 }): Promise<AckResult> {
   const body = appointmentAckSMS(opts.closedState);
-  const from = getPhoneNumber("shop");
 
   let smsSent = false;
   let smsError: string | undefined;
   try {
+    // Inside the try so a missing phone-line env throws into smsError (logged as
+    // a status:'failed' row below) instead of propagating — the handler's
+    // contract is to return AckResult, never throw.
+    const from = getPhoneNumber("shop");
     await sendSMS({ to: opts.phone, body, from });
     smsSent = true;
   } catch (err) {

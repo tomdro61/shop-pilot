@@ -9,9 +9,10 @@
 //   return success.
 //
 // Notes:
-//   - The ack SMS is awaited (best-effort): a send failure is logged to messages
-//     (status:'failed') + console and reflected in `sms_sent`, but never fails the
-//     request — the appointment row is already saved.
+//   - The ack SMS is awaited (best-effort): a send failure is reflected in
+//     `sms_sent`, logged to console, and (when the booking has a linked customer)
+//     written to messages as status:'failed'. It never fails the request — the
+//     appointment row is already saved.
 //   - There is NO capacity-trigger error path in V1 — the trigger was dropped
 //     in commit 6df2723. Don't add a try/catch for Postgres errcode P0001.
 //   - Dedup key is phone + preferred_date + preferred_time_window (Option A
@@ -253,6 +254,16 @@ export async function POST(request: Request) {
       closedState: getBusinessClosedState(),
     });
     smsSent = ack.smsSent;
+    // If the booking has a linked customer but the ack row didn't land, the
+    // dashboard's failed-ack query (status='failed' AND related_appointment_id
+    // NOT NULL) can't surface it — log with the appointment id so the lost ack
+    // is still greppable in Vercel logs.
+    if (submission.customer_id && !ack.messageLogged) {
+      console.error(
+        `[appointments/submit] ack NOT logged to messages for ${submission.appointment_id} ` +
+          `(smsSent=${ack.smsSent}, smsError=${ack.smsError ?? "none"})`
+      );
+    }
   } catch (err) {
     console.error(
       `[appointments/submit] ack handler threw for ${submission.appointment_id}:`,

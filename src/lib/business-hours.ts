@@ -1,10 +1,9 @@
 // Shop-pilot-side business-hours / closed-state helper.
 //
-// Mirrors broadway-motors-web's src/lib/business-hours.ts (BOOKING_TECHNICAL_PLAN
-// §9.3). The two files are intentional duplicates — the projects share no code —
-// so if a DST edge is fixed in one, fix it in the other too. Used by the booking
-// acknowledgment SMS (decide "within the hour" vs a next-open-morning promise)
-// and, later, by booking metrics' after-hours share (§15).
+// The website (broadway-motors-web) will ship a parallel isShopClosed helper for
+// the same boundaries (BOOKING_TECHNICAL_PLAN §9.3, its step 11). The projects
+// share no code, so if that lands, keep the DST/cutoff logic in sync. Drives the
+// booking acknowledgment SMS copy ("within the hour" vs a next-open-morning promise).
 //
 // "Closed" here is the SMS-copy / after-hours boundary, NOT the literal lock-up
 // time: the Saturday cutoff is 1pm (shop closes 2pm) and the weekday cutoff is
