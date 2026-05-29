@@ -54,6 +54,7 @@ export type Database = {
           photo_paths: string[]
           preferred_date: string
           preferred_time_window: string
+          scheduled_at: string | null
           service_category: string
           snapshot_customer_email: string | null
           snapshot_customer_name: string
@@ -83,6 +84,7 @@ export type Database = {
           photo_paths?: string[]
           preferred_date: string
           preferred_time_window: string
+          scheduled_at?: string | null
           service_category: string
           snapshot_customer_email?: string | null
           snapshot_customer_name: string
@@ -112,6 +114,7 @@ export type Database = {
           photo_paths?: string[]
           preferred_date?: string
           preferred_time_window?: string
+          scheduled_at?: string | null
           service_category?: string
           snapshot_customer_email?: string | null
           snapshot_customer_name?: string
@@ -240,47 +243,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      daily_capacity_overrides: {
-        Row: {
-          afternoon_max: number | null
-          created_at: string
-          created_by: string | null
-          date: string
-          id: string
-          morning_max: number | null
-          note: string | null
-          updated_at: string
-        }
-        Insert: {
-          afternoon_max?: number | null
-          created_at?: string
-          created_by?: string | null
-          date: string
-          id?: string
-          morning_max?: number | null
-          note?: string | null
-          updated_at?: string
-        }
-        Update: {
-          afternoon_max?: number | null
-          created_at?: string
-          created_by?: string | null
-          date?: string
-          id?: string
-          morning_max?: number | null
-          note?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_capacity_overrides_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       daily_inspection_counts: {
         Row: {

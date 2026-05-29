@@ -3154,3 +3154,52 @@ Both on `staging` and pushed. DB push applied to remote. Staging not yet merged 
 ### Known issues / open questions
 
 - Pre-existing migration drift surfaced this session (`20260508120000`) suggests prior schema changes hit the remote DB outside the migration tracking. Worth a `supabase db diff` audit at some point to find anything else that's drifted. Not blocking step 2.
+
+---
+
+## Session 44 — 2026-05-28 (cont.) — Booking V1 scope cut: drop capacity subsystem, simpler inbox/calendar UI
+
+### Why
+
+Second-opinion review of `BOOKING_PRD.md` and `BOOKING_TECHNICAL_PLAN.md` flagged a real silent-data-loss bug in the idempotency design + 4 smaller items. While triaging those, took a step back on scope: V1's actual problem is "let customers request, give me a place to confirm/convert." Per-day capacity caps + unified operational calendar solve problems Broadway doesn't have at ~1–2 bookings/day. Cut them from V1, defer to V1.5+ against real data.
+
+### What shipped
+
+**PRD + technical plan revised** (`../BOOKING_PRD.md`, `../BOOKING_TECHNICAL_PLAN.md`)
+- Out of V1: `daily_capacity_overrides` table, `enforce_appointment_capacity` trigger/function, `capacity.ts` library + tests, `GET /api/appointments/capacity` endpoint, capacity-aware date picker, unified `/schedule` day/week/month planning calendar, `CalendarGrid` extraction from `JobsCalendarView`.
+- New V1 UI shape: `/appointments` inbox (the work queue; all status actions live here) + `/appointments/calendar` read-only confirmed-only calendar reusing the existing `JobsCalendarView` pattern as-is (no refactor).
+- Confirm action now takes a specific time (not just a window) and stamps a new `appointments.scheduled_at timestamptz` column. SMS templates updated to quote the time.
+- Idempotency dedup key changed from `phone + preferred_date` → `phone + preferred_date + preferred_time_window` — closes the silent-data-loss bug where a window-correction within 5 min would return the stale row instead of updating it.
+- `vehicle_year` Zod max → `new Date().getFullYear() + 2` (was hardcoded `2030`).
+- Saturday SMS-copy cutoff → 1pm (was 2pm) — avoids promising "within the hour" 15 minutes before close. Booking submissions still accepted until actual 2pm close.
+- Reply parsing for "C" / "R" replies locked as **V1** (reconciled stale §8.7 V1.5 text with §13 decision).
+- Revised build sequence: 12 PRs, ~9.75 dev days (down from 14 PRs / ~12.5 days).
+
+**Step 1 of revised V1 sequence shipped**
+- Migration `20260602000000_drop_capacity_add_scheduled_at.sql` — DROPs trigger/function/table; ADDs `appointments.scheduled_at timestamptz` + partial index on non-null
+- Deleted `src/lib/appointments/capacity.ts` and `capacity.test.ts` (shipped in Session 43, scope-cut now)
+- Regen `src/types/supabase.ts` — `daily_capacity_overrides` gone, `appointments.scheduled_at: string | null` present
+- Applied via `npx supabase db push` cleanly. tsc + all 124 tests still pass.
+- Reviewed by `feature-dev:code-reviewer` (scoped-review): "Marker write OK — 0 blocking issues." Two optional improvements (status→scheduled_at pairing CHECK + composite `(status, scheduled_at)` index) deferred to step 4 of the build sequence where they bundle naturally with the confirm action.
+
+### Files touched
+
+- `supabase/migrations/20260602000000_drop_capacity_add_scheduled_at.sql` (new)
+- `src/lib/appointments/capacity.ts` (deleted)
+- `src/lib/appointments/capacity.test.ts` (deleted)
+- `src/types/supabase.ts` (regen)
+- `../BOOKING_PRD.md`, `../BOOKING_TECHNICAL_PLAN.md` (substantial edits — at monorepo root, not in this git repo)
+- `PROGRESS.md` (this entry)
+
+### Commits
+
+- (this commit) `feat(booking): step 1 — scope cut, drop capacity subsystem, add scheduled_at`
+
+### What's next
+
+- **Step 2 — API endpoint** (1.5d). The big one: `/api/appointments/submit` + Zod (with the new dedup key + dynamic vehicle_year max + Saturday-afternoon refine) + multipart photo handling + EXIF strip + magic-byte check + `findOrCreateBookingCustomer` + `findOrCreateVehicle` (new helper, doesn't exist) + NHTSA VIN decode w/ DB cache + `tomorrowET` helper + `sharp` install.
+- Step 4 (confirm action) will pick up the deferred CHECK constraint + composite index suggestions from this session's review.
+
+### Known issues / open questions
+
+- None from these changes. The deferred review items are tracked above and have a clear landing point.
