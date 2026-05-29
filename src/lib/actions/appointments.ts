@@ -30,15 +30,20 @@ const TERMINAL_WINDOW_DAYS = 14;
 export async function getAppointmentInbox(): Promise<AppointmentInbox> {
   const supabase = await createClient();
 
+  // Bound the query: all pending/confirmed (any age) plus anything touched within
+  // the terminal window. Avoids pulling all-time history as volume grows.
+  const cutoff = Date.now() - TERMINAL_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const cutoffIso = new Date(cutoff).toISOString();
+
   const { data, error } = await supabase
     .from("appointments")
     .select("*")
+    .or(`status.in.(pending,confirmed),updated_at.gte.${cutoffIso}`)
     .order("submitted_at", { ascending: false });
 
   if (error) throw new Error(error.message);
   const rows = data ?? [];
 
-  const cutoff = Date.now() - TERMINAL_WINDOW_DAYS * 24 * 60 * 60 * 1000;
   return {
     pending: rows.filter((r) => r.status === "pending"),
     confirmed: rows
@@ -80,11 +85,12 @@ export type AppointmentMessage = Pick<
   "id" | "body" | "direction" | "status" | "phone_line" | "sent_at"
 >;
 
-// Communication timeline for the detail page: the ack / confirmation / reminder
-// SMS logged against this appointment via related_appointment_id.
+// Outbound SMS logged against this appointment (related_appointment_id), oldest
+// first. Returns null on query failure so the page can tell "no texts yet" apart
+// from "couldn't load."
 export async function getAppointmentMessages(
   appointmentId: string
-): Promise<AppointmentMessage[]> {
+): Promise<AppointmentMessage[] | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("messages")
@@ -96,7 +102,7 @@ export async function getAppointmentMessages(
       `[getAppointmentMessages] query failed for ${appointmentId}:`,
       error.message
     );
-    return [];
+    return null;
   }
   return data ?? [];
 }
@@ -105,7 +111,8 @@ export async function getAppointmentMessages(
 
 // Sends the confirmation SMS on the shop line + logs it. Best-effort: a send
 // failure is logged (status:'failed') but does NOT fail the action — the
-// appointment is already confirmed/rescheduled and the manager can resend.
+// appointment is already confirmed/rescheduled. Returns whether the text
+// actually sent so the caller can tell the manager the truth.
 async function sendConfirmationSms(
   supabase: ServerClient,
   appt: Pick<
@@ -113,7 +120,7 @@ async function sendConfirmationSms(
     "id" | "customer_id" | "snapshot_customer_phone" | "service_category"
   >,
   scheduledAtIso: string
-): Promise<void> {
+): Promise<{ smsSent: boolean }> {
   const body = appointmentConfirmedSMS({
     scheduledDate: new Date(scheduledAtIso).toLocaleDateString("en-US", {
       timeZone: "America/New_York",
@@ -146,13 +153,21 @@ async function sendConfirmationSms(
       status: smsSent ? "sent" : "failed",
       related_appointment_id: appt.id,
     });
+  } else {
+    // No customer link → can't log (messages.customer_id is NOT NULL). Warn so a
+    // not-sent / not-linked confirmation text is at least greppable in the logs.
+    console.warn(
+      `[appointments] confirmation SMS not logged for ${appt.id} — no customer_id (smsSent=${smsSent}).`
+    );
   }
+
+  return { smsSent };
 }
 
 export async function confirmAppointment(
   id: string,
   opts: { etDate: string; etTime: string }
-): Promise<ActionResult> {
+): Promise<ActionResult<{ smsSent: boolean }>> {
   const auth = await requireManager();
   if (!auth.ok) return { ok: false, error: auth.error };
 
@@ -181,28 +196,32 @@ export async function confirmAppointment(
     };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("appointments")
     .update({
       status: "confirmed",
       scheduled_at: scheduledAt,
       confirmed_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
   if (error) return { ok: false, error: error.message };
+  // Row vanished between the guard and the update — don't text about a ghost.
+  if (!updated) return { ok: false, error: "Appointment not found" };
 
-  await sendConfirmationSms(supabase, appt, scheduledAt);
+  const { smsSent } = await sendConfirmationSms(supabase, appt, scheduledAt);
 
   revalidatePath("/appointments");
   revalidatePath(`/appointments/${id}`);
   revalidatePath("/dashboard");
-  return { ok: true };
+  return { ok: true, data: { smsSent } };
 }
 
 export async function rescheduleAppointment(
   id: string,
   opts: { etDate: string; etTime: string }
-): Promise<ActionResult> {
+): Promise<ActionResult<{ smsSent: boolean }>> {
   const auth = await requireManager();
   if (!auth.ok) return { ok: false, error: auth.error };
 
@@ -228,18 +247,21 @@ export async function rescheduleAppointment(
     return { ok: false, error: "Only confirmed appointments can be rescheduled." };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("appointments")
     .update({ scheduled_at: scheduledAt })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
   if (error) return { ok: false, error: error.message };
+  if (!updated) return { ok: false, error: "Appointment not found" };
 
-  await sendConfirmationSms(supabase, appt, scheduledAt);
+  const { smsSent } = await sendConfirmationSms(supabase, appt, scheduledAt);
 
   revalidatePath("/appointments");
   revalidatePath(`/appointments/${id}`);
   revalidatePath("/dashboard");
-  return { ok: true };
+  return { ok: true, data: { smsSent } };
 }
 
 export async function cancelAppointment(id: string): Promise<ActionResult> {
@@ -257,8 +279,12 @@ export async function cancelAppointment(id: string): Promise<ActionResult> {
   if (appt.status === "converted_to_job") {
     return {
       ok: false,
-      error: "This appointment was already converted to a job and can't be cancelled.",
+      error:
+        "This appointment was already converted to a job and can't be cancelled.",
     };
+  }
+  if (appt.status === "cancelled" || appt.status === "completed") {
+    return { ok: false, error: `This appointment is already ${appt.status}.` };
   }
 
   const { error } = await supabase

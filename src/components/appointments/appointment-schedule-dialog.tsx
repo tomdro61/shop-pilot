@@ -72,11 +72,14 @@ export function AppointmentScheduleDialog({
       toast.error(result.error);
       return;
     }
-    toast.success(
-      mode === "confirm"
-        ? "Confirmed — text sent to the customer"
-        : "Rescheduled — text sent to the customer"
-    );
+    // Tell the truth about the text: confirm/reschedule succeed even when the
+    // best-effort SMS doesn't, so don't claim "text sent" unless it actually did.
+    const verb = mode === "confirm" ? "Confirmed" : "Rescheduled";
+    if (result.data.smsSent) {
+      toast.success(`${verb} — text sent to the customer`);
+    } else {
+      toast.warning(`${verb} — but the text didn't send. Call the customer to confirm.`);
+    }
     setOpen(false);
     router.refresh();
   }
@@ -93,7 +96,15 @@ export function AppointmentScheduleDialog({
         {triggerLabel}
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          // Don't let Escape / outside-click dismiss the dialog mid-submit —
+          // otherwise the success toast + refresh fire on a closed dialog and
+          // the manager can't tell if it worked.
+          if (!loading) setOpen(next);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>

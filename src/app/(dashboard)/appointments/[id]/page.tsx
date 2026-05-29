@@ -250,7 +250,11 @@ export default async function AppointmentDetailPage({
         <p className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
           Texts
         </p>
-        {messages.length === 0 ? (
+        {messages === null ? (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+            Couldn&apos;t load texts — try refreshing.
+          </p>
+        ) : messages.length === 0 ? (
           <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
             No texts logged yet.
           </p>

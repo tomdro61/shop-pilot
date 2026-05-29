@@ -326,7 +326,7 @@ export const QUOTE_REQUEST_STATUS_COLORS: Record<
 // ── Appointments / Online Booking ──────────────────────────
 
 // Display labels for the 7 booking service categories. Match the job-category
-// names used by convert-to-job (BOOKING_TECHNICAL_PLAN §13.1) so the wording
+// names used by convert-to-job (BOOKING_TECHNICAL_PLAN §8.5 / §13) so the wording
 // is consistent from booking → confirmation SMS → job.
 export const APPOINTMENT_SERVICE_LABELS: Record<string, string> = {
   oil_change: "Oil Change",

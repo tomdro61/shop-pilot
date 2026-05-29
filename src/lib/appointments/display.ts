@@ -43,14 +43,14 @@ export function defaultEtTimeForWindow(window: string): string {
   return window === "afternoon" ? "13:00" : "09:00";
 }
 
-// ET calendar date (YYYY-MM-DD) of a UTC instant — feeds the reschedule date input.
+// ET calendar date (YYYY-MM-DD) of a UTC instant (en-CA → YYYY-MM-DD).
 export function etDateOf(iso: string): string {
   return new Date(iso).toLocaleDateString("en-CA", {
     timeZone: "America/New_York",
   });
 }
 
-// ET wall-clock time (HH:MM, 24h) of a UTC instant — feeds the reschedule time input.
+// ET wall-clock time (HH:MM, 24h) of a UTC instant (en-GB → 24h HH:MM).
 export function etTimeOf(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-GB", {
     timeZone: "America/New_York",
