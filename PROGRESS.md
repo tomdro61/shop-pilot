@@ -3276,3 +3276,68 @@ Re-verification pass after fixes: clean. Marker write OK.
 ### Known issues / open questions
 
 - The `findOrCreateParkingCustomer` helper still has the lookup-error-discard pattern that this session's `findOrCreateBookingCustomer` fixed. V1.5 consolidation into a shared `findOrCreateCustomer(input, type)` is the right time to fix both — tracked in BOOKING_TECHNICAL_PLAN.md §13 #4.
+
+---
+
+## Session 46 — 2026-05-28 (cont.) — Booking step 2b: /api/appointments/submit route + photo upload + orchestrator
+
+### Why
+
+Step 2 of the revised booking build sequence was split into 2a (helpers + validators + tests, Session 45) and 2b (the actual route handler + photo pipeline + dedup orchestrator). 2b wires together everything 2a shipped: CORS, multipart, Zod validate, three-key dedup, EXIF-stripped photo upload, find-or-create customer + vehicle, NHTSA VIN decode, appointment insert with snapshots.
+
+### What shipped
+
+**New production**
+- `src/lib/appointments/photos.ts` — pure `detectImageMime` (magic-byte signature matching for JPEG/PNG/HEIC/WebP) + IO `processBookingPhoto` (size cap → mime whitelist → magic-byte verify → sharp.rotate().toBuffer() to strip EXIF → upload to `booking-photos` bucket at `{client_id}/{index}.{mime_ext}`)
+- `src/lib/appointments/submit.ts` — `findExistingAppointment` (three-key dedup: phone + preferred_date + preferred_time_window within 5 min) + `insertAppointment` (find-or-create wiring + NHTSA VIN decode + appointment insert with snapshots)
+- `src/app/api/appointments/submit/route.ts` — POST handler: CORS allowlist mirrors parking + Vercel previews; in-memory rate limit (5/min/IP); multipart parse; Zod validate; honeypot; dedup-before-photo-processing; per-photo validation + EXIF strip; insert; no SMS yet (step 3)
+
+**Mock extension** — added `gt`/`gte`/`lt`/`lte` chains to `src/lib/actions/__test-helpers__/supabase-mock.ts` for the dedup window check
+
+**Tests** — ~36 new tests across photos.test.ts and submit.test.ts. All 241 tests pass; tsc clean.
+
+### Review pass + fixes
+
+Dispatched 3 parallel agents (api-route security + silent-failure hunter + type-design analyzer). Surfaced 2 Criticals from silent-failure + 2 Criticals from type-design + 1 Important from api-route + several Highs/Mediums. Applied 6 fixes:
+
+1. **C1 silent-failure: `customer_link`/`vehicle_link` was unwired observable signal.** No dashboard surface consumes the flag (that lands in step 6). Until then, structured `console.warn("[booking-needs-link] ...")` with appointment id + customer/vehicle status + phone makes it greppable in Vercel logs. The route response now includes `warning: "manual_link_required"` when either link is null.
+2. **C2 silent-failure: Photo upload errors were lost to console.error.** Added `severity: "client" | "server"` to `PhotoProcessResult` error arm. `upload_failed` is `server` (logs with `[booking-storage-error]` tag and maps to HTTP 500 in the route — pages ops instead of training the manager to assume the customer uploaded a bad file). Client-fault failures (too large, invalid mime, invalid signature, processing) stay 400.
+3. **C2 type-design: `DedupCheckResult` discriminated union.** Refactored from `{ok: true, existingId: string | null} | {ok: false, message}` (two booleans in flight) to `{kind: "match" | "no_match" | "error"} ` so the "match" arm guarantees non-null id at the type level.
+4. **Important api-route: Zod `path` field leaked.** Route's 400 validation response no longer returns the issue path (would expose internal schema structure if any future refine ran on internal fields). Returns a `messages: string[]` array of all issue messages so frontend can show multi-error feedback.
+5. **H1 silent-failure: VIN decode failure invisible.** `insertAppointment` tracks `vinDecodeStatus: "decoded" | "decode_failed" | "not_attempted"` and stamps it into the appointment's `conditional_data` when a VIN was provided. Manager will see the flag at confirm time to know they need to verify Y/M/M with the customer.
+6. **H3 silent-failure: JSON.parse catch was too broad.** Narrowed to `instanceof SyntaxError`; unexpected types bubble to Next.js's 500.
+7. **M1 silent-failure: formData parse error swallowed underlying reason.** Now logs the err object to Vercel.
+
+### Declined (with reason)
+
+- Tagged-union for full route response (type-design C1) — parking precedent uses `{success: true/false, ...}`; would break API contract pattern. Defer V1.5 if a stronger frontend type contract is needed.
+- Branded `ProcessedPhotoPath` type — overkill at V1 scale; route is the only caller.
+- `createAdminClient()` env-missing guard — shared infra change affects parking too. Track separately.
+- Honeypot timing leak — bots can't realistically exploit; parking has same pattern.
+- `MAX_PHOTO_BYTES` consolidation with DVI's storage.ts — coincidental value match for different photo flows; consolidate when a third call site appears.
+- Email Zod `.transform()` — current behavior is locked across the helpers and works correctly.
+
+Re-verification pass after fixes: all 6 closed; marker write OK.
+
+### Files touched
+
+- `src/lib/appointments/photos.ts` (new), `photos.test.ts` (new)
+- `src/lib/appointments/submit.ts` (new), `submit.test.ts` (new)
+- `src/app/api/appointments/submit/route.ts` (new)
+- `src/lib/actions/__test-helpers__/supabase-mock.ts` (added `gt`/`gte`/`lt`/`lte`)
+- `PROGRESS.md` (this entry)
+
+### Commits
+
+- (this commit) `feat(booking): step 2b — POST /api/appointments/submit + photo pipeline + dedup orchestrator`
+
+### What's next
+
+- **Step 3** — SMS templates + post-submit handler + extract `logOutboundSms` helper (backfill the 3 existing call sites) + Saturday 1pm SMS cutoff in `isShopClosed`. Half day.
+- After step 3, the endpoint will send the acknowledgment SMS on success and the customer's `messages` timeline will reflect the attempt.
+- Step 4 (appointments inbox + confirm-with-time) is the first UI-heavy step.
+
+### Known issues / open questions
+
+- `[booking-needs-link]` log signal works as a stopgap but isn't operational until step 6 wires the dashboard query. If anything goes weird with find-or-create between now and then, grep Vercel logs.
+- HEIC support depends on Vercel's sharp binary including libheif. If it doesn't, HEIC uploads return `processing_failed` with a "try JPG/PNG/WebP" message — acceptable degradation but worth verifying at deployment time.

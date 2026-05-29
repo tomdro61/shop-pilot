@@ -55,6 +55,10 @@ export function createSupabaseMock(
   builder.delete = chain("delete");
   builder.eq = chain("eq");
   builder.neq = chain("neq");
+  builder.gt = chain("gt");
+  builder.gte = chain("gte");
+  builder.lt = chain("lt");
+  builder.lte = chain("lte");
   builder.in = chain("in");
   builder.is = chain("is");
   builder.not = chain("not");
