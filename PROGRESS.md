@@ -3341,3 +3341,68 @@ Re-verification pass after fixes: all 6 closed; marker write OK.
 
 - `[booking-needs-link]` log signal works as a stopgap but isn't operational until step 6 wires the dashboard query. If anything goes weird with find-or-create between now and then, grep Vercel logs.
 - HEIC support depends on Vercel's sharp binary including libheif. If it doesn't, HEIC uploads return `processing_failed` with a "try JPG/PNG/WebP" message — acceptable degradation but worth verifying at deployment time.
+
+---
+
+## Session 47 — 2026-05-29 — Booking step 3: SMS templates + ack handler + Saturday cutoff
+
+### Why
+
+Step 3 of the revised booking build. After step 2b, submissions land in `appointments` but no acknowledgment SMS is sent. This step wires the post-submit handler so the customer gets a "we got your request" text on the shop line and the attempt is logged to their `messages` timeline. It also resolves the §6.1↔§13.14 plan contradiction on the closed-hours ack copy.
+
+### What shipped
+
+**New production**
+- `src/lib/messaging/templates.ts` — three appointment templates: `appointmentAckSMS(BusinessClosedState)`, `appointmentConfirmedSMS`, `appointmentReminderSMS`.
+- `src/lib/business-hours.ts` — `getBusinessClosedState()` + `isShopClosed()`, ET-aware (matches `nowET()`'s timezone re-anchor). Cutoffs: Saturday ≥1pm (closes 2pm), weekday ≥6pm (closes 5pm), Sunday all day. The Saturday 1pm cutoff is the §13.14 locked decision — copy must not promise "within the hour" right before a 2pm close.
+- `src/lib/messaging/log.ts` — `logOutboundSms(supabase, opts)`: the single outbound-SMS insert path. Backfilled into 4 existing call sites (quote-requests route, parking on-reservation-created, sendCustomerSMS sent + failed paths). Adds `related_appointment_id` support.
+- `src/lib/appointments/on-appointment-created.ts` — `onAppointmentCreated()`: sends the ack on the shop line, logs to `messages.related_appointment_id`, returns `AckResult {smsSent, smsError?, messageLogged}`. Awaited in the submit route inside try/catch (best-effort — never 5xxes a saved booking).
+
+**Changed**
+- `src/app/api/appointments/submit/route.ts` — step 9 now calls `onAppointmentCreated` (skipped on the dedup-hit early return); response gains `sms_sent`.
+- `src/lib/appointments/submit.ts` — `insertAppointment` now also returns `customer_id` (the route needs the id to log the ack).
+
+**Ack copy decision (resolves §6.1 vs §13.14):** "Concrete time, corrected" — open → "within the hour"; weekday evening → "by 9am tomorrow"; Saturday-afternoon & Sunday → "by 9am Monday" (never promises a closed day). `appointmentAckSMS` takes `BusinessClosedState` so the copy logic lives in templates.ts.
+
+**Tests** — `templates.test.ts` (ack open/evening/sat-afternoon/sunday + confirmed + reminder), `business-hours.test.ts` (cutoff boundaries incl. Friday-evening + winter-EST), `log.test.ts` (canonical row shape + error path), `on-appointment-created.test.ts` (sent/failed/missing-env/no-customer branches). `submit.test.ts` updated for the new `customer_id` field. 83 booking/messaging tests pass; tsc + lint clean. (`tomorrowET()` from §8.7 already shipped in step 2a — nothing to add.)
+
+### Review pass + fixes
+
+5-agent scoped review (code-reviewer, silent-failure-hunter, type-design-analyzer, comment-analyzer, pr-test-analyzer), framed on the four backfilled production inserts as the only live-regression surface. **No Criticals** (prior steps had 4/2/2). All four backfills confirmed to write identical rows; two (quote-requests, parking) previously had 100%-silent insert failures that now log. Applied 4 High/Medium fixes (commit `5615ea0`):
+
+1. **getPhoneNumber("shop") moved inside onAppointmentCreated's try** — a missing phone-line env now becomes `smsError` + a `status:'failed'` row instead of throwing; the handler honors its "returns AckResult, never throws" contract.
+2. **Route logs a lost ack** — when a booking has a linked customer but the ack row didn't insert, log with the appointment id so the dashboard's failed-ack query isn't the only (silent) signal.
+3. **business-hours.ts header corrected** — the website's parallel `isShopClosed` doesn't exist yet (it's the website's step 11), so the comment no longer claims a present-tense mirror; dropped a speculative metrics reference.
+4. **Tests added** — `log.test.ts` + `on-appointment-created.test.ts` (the glue had no unit tests); business-hours Friday-evening + winter-EST guards.
+
+### Declined (with reason)
+
+- **`customer_id`/`customer_link` redundancy on `InsertAppointmentResult`** (type-design Medium) — `customer_link` is part of the route's JSON response contract; kept and documented. `customer_id` is the internal value the ack handler needs.
+- **`appointmentAckSMS` positional param** (type-design Medium) — passing the `BusinessClosedState` discriminated union directly is idiomatic; not wrapping it in an options object.
+- **Migrating the other outbound inserts** (`sendParkingSpecialsSMS`, stripe webhooks ×4, lock-boxes) to `logOutboundSms` — out of the plan's enumerated step-3 scope; incremental adoption, the helper exists for them to adopt later.
+- **`sendCustomerSMS` RLS exposure if called without an auth session** (code-reviewer, pre-existing) — not introduced here; separate concern.
+
+### Files touched
+
+- `src/lib/messaging/templates.ts`, `templates.test.ts` (new)
+- `src/lib/messaging/log.ts` (new), `log.test.ts` (new)
+- `src/lib/business-hours.ts` (new), `business-hours.test.ts` (new)
+- `src/lib/appointments/on-appointment-created.ts` (new), `on-appointment-created.test.ts` (new)
+- `src/lib/appointments/submit.ts` + `submit.test.ts` (customer_id), `src/app/api/appointments/submit/route.ts` (ack wiring)
+- `src/app/api/quote-requests/route.ts`, `src/lib/parking/on-reservation-created.ts`, `src/lib/actions/messages.ts` (logOutboundSms backfill)
+- `DATABASE_SCHEMA.md` (messages column list), `PROGRESS.md` (this entry)
+
+### Commits
+
+- `feat(booking): step 3 — SMS templates + ack handler + Saturday cutoff` (`0db1ea8`)
+- `fix(booking): step 3 review follow-ups — harden ack handler, add tests, fix comments` (`5615ea0`)
+
+### What's next
+
+- **Step 4** — `/appointments` inbox + detail page + confirm-with-specific-time action. First UI-heavy step. (The `logOutboundSms` extraction that §6.2/§13.5 slated for step 4 is already done.)
+- Not pushed to remote yet — staging-only commits awaiting the go-ahead.
+
+### Known issues / open questions
+
+- Confirmed/reminder copy shipped verbatim per §6.1 (only the ack had a plan contradiction worth confirming). Easy to revisit if a copy pass is wanted.
+- A fully-lost ack (send + log both fail) is greppable via `[appointments/submit] ack NOT logged` but not surfaced in any UI yet (dashboard failed-ack strip is step 6).

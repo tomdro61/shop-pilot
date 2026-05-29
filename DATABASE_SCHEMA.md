@@ -58,7 +58,7 @@ When a migration ships, update three things: the migration file, `src/types/supa
 - **`status`** — `draft | sent | paid`
 
 ## `messages`
-`id, customer_id, job_id, channel, direction, body, status, sent_at, phone_line`
+`id, customer_id, job_id, channel, direction, body, status, sent_at, phone_line, related_appointment_id`
 
 - **`channel`** — `sms | email`
 - **`direction`** — `in | out`
