@@ -152,6 +152,35 @@ Reusable templates with pre-filled line items, managed at `/presets`.
 - Reservation detail page shows two-column layout with customer/vehicle cards, trip timeline, and Key Pickup section (lockbox number + code or "in person")
 - Parking dashboard compact cards show lockbox info for checked-out reservations
 
+## Online Appointment Booking (Sessions 43–46, in progress on `staging`)
+
+Cross-project public form on BroadwayMotorsMA.com `/book` posts to ShopPilot's `/api/appointments/submit`. Same shape as parking + quote-requests; the manager later confirms in `/appointments`. Detailed locked spec at the monorepo root: `BOOKING_PRD.md` + `BOOKING_TECHNICAL_PLAN.md`.
+
+**V1 scope cut (2026-05-28):** per-day capacity caps (table + DB trigger + capacity library), the unified planning calendar, and the capacity-aware date picker were all removed from V1. Plain date picker (Sundays + Saturday-afternoon disabled); manager picks a specific time at confirm. Capacity work deferred to V1.5+ once real volume data justifies it.
+
+**Live on `staging` (steps 1–2b shipped):**
+- Schema: `appointments`, `vin_decode_cache`, `messages.related_appointment_id` column, `booking-photos` storage bucket
+- Helpers in `src/lib/appointments/`: `findOrCreateBookingCustomer` (sets `customer_type: 'retail'` — NOT 'parking'), `findOrCreateVehicle` (new — VIN-first then customer+Y/M/M via ilike), `processBookingPhoto` (magic-byte signature check + sharp EXIF strip + bucket upload)
+- VIN decode: `src/lib/vin/decode.ts` with DB cache via `vin_decode_cache` (NOT Next.js fetch cache — silently ignored in API routes)
+- Zod schema in `src/lib/validators/appointments.ts` with Sunday + Saturday-afternoon refines, dynamic `vehicle_year.max`, description `btrim` ≥ 20
+- API: `POST /api/appointments/submit` — CORS allowlist + 5/min/IP rate limit + multipart parse + Zod validate + honeypot + three-key dedup (`phone + preferred_date + preferred_time_window` within 5 min) + EXIF-stripped photo upload + find-or-create customer + find-or-create vehicle + NHTSA VIN decode + appointment insert with snapshots
+- Client-generated UUID acts as both the appointment row's PK AND the storage folder prefix (`booking-photos/{uuid}/{index}.{ext}`) — eliminates the photo-upload-before-row-insert orphan race
+
+**Not yet shipped:**
+- Step 3 — SMS templates + post-submit handler + `logOutboundSms` helper extraction + Saturday 1pm SMS-copy cutoff
+- Step 4 — `/appointments` inbox (the work queue) + detail page + confirm-with-specific-time action
+- Step 5 — `/appointments/calendar` read-only confirmed-only calendar (reuses `JobsCalendarView` pattern as-is, no refactor)
+- Step 6 — dashboard Today integration (pending alert + today's confirmed)
+- Step 7 — convert-to-job action
+- Step 8 — 24h reminder cron + photo orphan cleanup cron
+- Step 9 — booking metrics tile
+- Steps 10–11 — website `/book` page + multi-step form + hero/nav/sticky CTAs + after-hours banner
+- Step 12 — end-to-end verification
+
+**Operational signals until step 6 wires the dashboard:**
+- `[booking-needs-link]` — `console.warn` from `insertAppointment` when find-or-create-customer or -vehicle returns null. Appointment still saves with `customer_id` / `vehicle_id` null; the route returns `warning: "manual_link_required"`. Grep Vercel logs.
+- `[booking-storage-error]` — `console.error` from `processBookingPhoto` on upload failure (bucket misconfigured, RLS denied, etc.). The route returns 500 (not 400 — server fault, not customer's file).
+
 ## Vercel Cron (Session 38)
 - `vercel.json` declares schedules → Vercel auto-calls `/api/cron/*` routes
 - Auth via `Authorization: Bearer ${CRON_SECRET}` (auto-injected by Vercel when crons are detected; not manually set)
