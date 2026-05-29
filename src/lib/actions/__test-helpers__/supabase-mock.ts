@@ -50,6 +50,7 @@ export function createSupabaseMock(
   builder.from = chain("from");
   builder.select = chain("select");
   builder.insert = chain("insert");
+  builder.upsert = chain("upsert");
   builder.update = chain("update");
   builder.delete = chain("delete");
   builder.eq = chain("eq");

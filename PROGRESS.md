@@ -3203,3 +3203,76 @@ Second-opinion review of `BOOKING_PRD.md` and `BOOKING_TECHNICAL_PLAN.md` flagge
 ### Known issues / open questions
 
 - None from these changes. The deferred review items are tracked above and have a clear landing point.
+
+---
+
+## Session 45 — 2026-05-28 (cont.) — Booking step 2a: helpers, VIN decode, Zod validators, sharp install
+
+### Why
+
+Step 2 of the revised booking build sequence was split into 2a (helpers + validators + tests) and 2b (the actual `/api/appointments/submit` route handler). Rationale: `findOrCreateVehicle` is net-new with non-trivial matching logic (VIN-first then customer+Y/M/M with case-insensitive fallback) and will get reused beyond booking. Reviewing it on its own — not buried inside a 1.5-day endpoint PR — means actually looking at it. Tests-with-helpers (capacity precedent) so 2a lands as a fully-tested unit.
+
+### What shipped
+
+**New production helpers**
+- `src/lib/utils.ts` — `tomorrowET()` (noon-anchored to dodge DST edges)
+- `src/lib/vin/decode.ts` — pure `parseNhtsaResponse` (NHTSA JSON → `VinDecode`) + IO `decodeVin` (cache via `vin_decode_cache` → NHTSA → upsert; stale-fallback when NHTSA fails; `VIN_REGEX` exported as the single source of truth, imported by the validators file)
+- `src/lib/appointments/find-or-create-customer.ts` — mirrors `findOrCreateParkingCustomer` BUT stamps `customer_type: 'retail'` and fixes the inherited lookup-error-discard bug (returns null on lookup error instead of falling through to insert)
+- `src/lib/appointments/find-or-create-vehicle.ts` — net-new helper, no equivalent exists. Pure `decideVehicleAction` (VIN-first; YMM fallback; create otherwise; with re-link flag if VIN changed owners) wrapped by IO `findOrCreateVehicle`. Same lookup-error-discard fix applied to both VIN and YMM lookups.
+- `src/lib/validators/appointments.ts` — Zod `appointmentSubmitSchema` with dynamic `vehicle_year.max` (`new Date().getFullYear() + 2`), dual `.refine`s (Sundays rejected entirely; Saturday-afternoon rejected separately), client-generated UUID for the row id, description btrim-min-20, conditional_data jsonb passthrough, honeypot
+- `src/lib/actions/__test-helpers__/supabase-mock.ts` — added `upsert` to the chainable mock so VIN cache writes are testable
+
+**Sharp** — `^0.34.5` added to dependencies. Used in 2b for EXIF stripping. Pre-built binaries via Vercel runtime; no native build step.
+
+**Tests (alongside, all new):** ~80 tests added across 5 files — `decode.test.ts`, `find-or-create-customer.test.ts`, `find-or-create-vehicle.test.ts`, `validators/appointments.test.ts`, `utils.test.ts` (extended with tomorrowET cases including DST edges, leap day, month/year rollover, UTC-midnight crossover). All 205 tests pass; `tsc --noEmit` clean.
+
+### Review pass + fixes
+
+Dispatched 4 parallel agents (general correctness + type design + test coverage + silent-failure hunter). Surfaced 4 Criticals:
+
+1. **`findOrCreateBookingCustomer` swallowed lookup errors** → transient DB error would silently create a duplicate customer. Fixed by destructuring `error` on both lookups and returning null on error (no fallthrough).
+2. **`findOrCreateVehicle` same pattern, with worse consequences** (duplicate-VIN rows would persist since `vehicles` has no UNIQUE on `vin`). Same fix.
+3. **Sunday silently accepted by the Zod refine** (only Saturday-afternoon was caught). Added a second refine that rejects any Sunday submission.
+4. **`createAdminClient()` config errors collapsed into null** → a missing service-role key would silently dump every customer link onto the dashboard's "needs manual link" pile. Fixed by moving the call outside the try-catch in both helpers so config errors propagate as 500.
+
+Plus four High/Medium type-design fixes:
+- `BookingCustomerInput.email: string | null` (dropped empty-string sentinel)
+- `VehicleInput` field optionality → `?: T` only (no `?: T | null` double-encoding)
+- `VinDecode` cache-row mapping typed against `VinDecode & { decoded_at }` (drift-resistant)
+- `VIN_REGEX` hoisted (single source of truth)
+
+Two new VIN cache tests (TTL boundary at exactly TTL + upsert-failure path) lock the documented "best-effort upsert" contract. Three new Sunday-rejection tests.
+
+Re-verification pass after fixes: clean. Marker write OK.
+
+### Declined (with reason)
+
+- `VehicleDecision` 3-arm tag (type-design recommendation) — works as-is, defer
+- Top-level discriminated `{ kind: 'ok' | 'error' }` return (silent-failure recommendation) — plan §5.1 step 5 documents null as the contract; inner error-check fixes address the actual bug class. Defer with V1.5 parking-helper consolidation.
+- Re-link failure structured signal — defer V1.5
+- `logError` / `errorIds` pattern — project doesn't use it; `console.error` stays consistent with existing helpers
+- Description double `.refine` → `.trim().min().max()` — `.trim()` is a transform that mutates the value; behavior parity with the DB CHECK is cleaner via the current refine
+
+### Files touched
+
+- `src/lib/utils.ts`, `src/lib/utils.test.ts`
+- `src/lib/vin/decode.ts` (new), `src/lib/vin/decode.test.ts` (new)
+- `src/lib/appointments/find-or-create-customer.ts` (new), `find-or-create-customer.test.ts` (new)
+- `src/lib/appointments/find-or-create-vehicle.ts` (new), `find-or-create-vehicle.test.ts` (new)
+- `src/lib/validators/appointments.ts` (new), `appointments.test.ts` (new)
+- `src/lib/actions/__test-helpers__/supabase-mock.ts` (added `upsert`)
+- `package.json` + `package-lock.json` (added sharp ^0.34.5)
+- `PROGRESS.md` (this entry)
+
+### Commits
+
+- (this commit) `feat(booking): step 2a — helpers, VIN decode, Zod validators, sharp install`
+
+### What's next
+
+- **Step 2b** — the actual `/api/appointments/submit` route handler: CORS, rate limit, multipart parse (metadata JSON + photo files), magic-byte image check, sharp EXIF strip, photo upload via admin client to `booking-photos` bucket using the client_id as folder prefix, idempotency dedup (`phone + date + window` within 5 min), find-or-create wiring, NHTSA decode wiring, appointment insert with snapshots, post-submit handler returning 200 + ack SMS.
+- Step 2b will catch the deferred Saturday-afternoon Zod refine surfacing concern (test-coverage agent flagged that the message needs to be rendered, not aggregated as a generic field error in the API response).
+
+### Known issues / open questions
+
+- The `findOrCreateParkingCustomer` helper still has the lookup-error-discard pattern that this session's `findOrCreateBookingCustomer` fixed. V1.5 consolidation into a shared `findOrCreateCustomer(input, type)` is the right time to fix both — tracked in BOOKING_TECHNICAL_PLAN.md §13 #4.

@@ -4,12 +4,14 @@
  * Vercel's UTC runtime parses ambiguous date strings — both happened to
  * the first version of this code, both are caught here now.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   etDateTimeToUtcIso,
   formatTimeEt,
   isScheduledOnEtDate,
   shiftScheduledAtToNewDate,
+  todayET,
+  tomorrowET,
 } from "./utils";
 
 describe("etDateTimeToUtcIso", () => {
@@ -204,5 +206,64 @@ describe("formatTimeEt", () => {
     expect(formatTimeEt(etDateTimeToUtcIso("2026-01-15", "09:15"))).toBe(
       "9:15 AM"
     );
+  });
+});
+
+describe("tomorrowET", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("returns the ET calendar date one day after todayET", () => {
+    // At noon UTC on 2026-06-15 (a Monday), todayET is 2026-06-15 (8am EDT).
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
+    expect(todayET()).toBe("2026-06-15");
+    expect(tomorrowET()).toBe("2026-06-16");
+  });
+
+  it("rolls month over correctly", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-30T12:00:00Z"));
+    expect(tomorrowET()).toBe("2026-07-01");
+  });
+
+  it("rolls year over correctly", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-12-31T12:00:00Z"));
+    expect(tomorrowET()).toBe("2027-01-01");
+  });
+
+  it("handles ET-vs-UTC date crossover at end of day in ET", () => {
+    // 2026-06-15T23:30 EDT is 2026-06-16T03:30 UTC — todayET should still be 2026-06-15,
+    // tomorrowET should be 2026-06-16.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-16T03:30:00Z"));
+    expect(todayET()).toBe("2026-06-15");
+    expect(tomorrowET()).toBe("2026-06-16");
+  });
+
+  it("is timezone-stable across the spring DST transition", () => {
+    // 2026-03-08 is the spring-forward Sunday (EST→EDT). tomorrow should be 2026-03-09 Monday.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-08T12:00:00Z"));
+    expect(tomorrowET()).toBe("2026-03-09");
+  });
+
+  it("is timezone-stable across the fall DST transition", () => {
+    // 2026-11-01 is the fall-back Sunday (EDT→EST). tomorrow should be 2026-11-02 Monday.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+    expect(tomorrowET()).toBe("2026-11-02");
+  });
+
+  it("handles leap day → March 1 (next year is non-leap)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-02-28T12:00:00Z"));
+    expect(tomorrowET()).toBe("2025-03-01");
+  });
+
+  it("handles leap day → Feb 29 → March 1", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-02-29T12:00:00Z"));
+    expect(tomorrowET()).toBe("2024-03-01");
   });
 });

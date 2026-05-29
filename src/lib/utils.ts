@@ -10,6 +10,18 @@ export function todayET(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
+/**
+ * Get tomorrow's date as YYYY-MM-DD in Eastern Time.
+ * Uses noon-anchored math so DST edges don't shift the result by a day —
+ * see the daysBetween() comment for the same pattern.
+ */
+export function tomorrowET(): string {
+  const today = todayET();
+  const noon = new Date(today + "T12:00:00Z"); // noon UTC is safely inside ET day
+  noon.setUTCDate(noon.getUTCDate() + 1);
+  return noon.toISOString().slice(0, 10);
+}
+
 /** Get a Date object representing "now" in Eastern Time, for computing week/month bounds. */
 export function nowET(): Date {
   const eastern = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
