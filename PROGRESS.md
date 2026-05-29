@@ -3406,3 +3406,58 @@ Step 3 of the revised booking build. After step 2b, submissions land in `appoint
 
 - Confirmed/reminder copy shipped verbatim per §6.1 (only the ack had a plan contradiction worth confirming). Easy to revisit if a copy pass is wanted.
 - A fully-lost ack (send + log both fail) is greppable via `[appointments/submit] ack NOT logged` but not surfaced in any UI yet (dashboard failed-ack strip is step 6).
+
+---
+
+## Session 48 — 2026-05-29 (cont.) — Booking step 4: appointments inbox + detail + confirm/cancel/reschedule + card redesign
+
+### Why
+
+Step 4 is the manager's work queue: triage pending online bookings, confirm with a specific time (fires the step-3 confirmation SMS), reschedule, cancel. First UI-heavy step. Convert-to-job is deferred to step 7.
+
+### What shipped
+
+**Server actions** — `src/lib/actions/appointments.ts` (requireManager, ActionResult):
+- `getAppointmentInbox()` — one bounded query (pending/confirmed any-age + terminal touched within 14d), partitioned in JS into pending / confirmed (sorted by scheduled_at) / terminal.
+- `getAppointment(id)`, `getPendingAppointmentCount()` (nav badge), `getAppointmentMessages(id)` (detail timeline; returns null on query error so the page tells "no texts" apart from "couldn't load").
+- `confirmAppointment` (pending→confirmed), `rescheduleAppointment` (confirmed→new time), `cancelAppointment`. Confirm/reschedule return `ActionResult<{smsSent}>` and send `appointmentConfirmedSMS` via `logOutboundSms` (best-effort); ET→UTC via `etDateTimeToUtcIso`, server-side only. Guards: confirm only pending, reschedule only confirmed, cancel blocks converted/cancelled/completed; both re-check the update hit a row before texting.
+
+**UI**:
+- `/appointments` inbox — Pending / Confirmed (Today/Tomorrow/Later) / collapsed 14-day terminal.
+- `/appointments/[id]` detail — full snapshot, signed-URL photos, SMS timeline, same actions.
+- `appointment-card`, `appointment-status-badge`, `appointment-cancel-button` (AlertDialog), `appointment-schedule-dialog` (confirm + reschedule; "Customer requested" line in view; **time is a fixed hourly dropdown 9am–4pm, whole hours**; no client-side TZ conversion — native `<select>`/`<input type=date>` pass raw ET strings, server converts once).
+- `src/lib/appointments/display.ts` — pure label/format helpers.
+- Constants: APPOINTMENT_SERVICE_LABELS / STATUS_LABELS / STATUS_COLORS / TIME_WINDOW / DROP_OFF / TIME_SLOTS.
+- Nav: sidebar "Appointments" (before Jobs) + pending-count badge via the layout's Promise.all; mobile bottom-nav "Booking".
+
+**Card redesign (owner iterated live)** — final: violet customer header, the WHEN as the typographic hero (bold mono + blue CalendarClock icon, NOT a pill), vehicle as icon+text sized to content (NOT a full-width panel), service as the lone category pill, photos/submitted split across the width. Rejected en route: calendar-tile+stack, value-over-label chunks, full-width vehicle panel, date-as-pill, colored status spine.
+
+### Review + verify
+
+- 5-agent scoped review on the first step-4 commit → no Criticals; HIGH fixes (8c70132): **truthful confirm toast** (action returns smsSent; dialog claims "text sent" only when it did, else "couldn't send — call the customer"), dialog not dismissable mid-submit, cancel guards, bounded inbox query, update-hit-a-row check before texting, getAppointmentMessages null-on-error. Added `display.test.ts` (reschedule TZ round-trip) + `appointments.test.ts` (guards, best-effort SMS, bucketing).
+- 1-agent focused review on the redesign/time-slot commit (d7b3138) → clean.
+- **verify-flow**: confirm + cancel exercised on the running app — good. (Dev = Quo test mode → only the green "text sent" path reproducible; failure-path toast is unit-tested.)
+- 290 tests pass; tsc + lint clean.
+
+### Declined / deferred
+
+- manager-note + cancellation-reason (no columns) → their own migration step; NOT stashed in conditional_data (keeps it customer-only).
+- Convert-to-job → step 7. Saturday-specific slots → flat 9–4 for now. Detail-page card-style mirror → optional polish (detail still uses labeled-Field layout).
+
+### Files touched
+
+- NEW: actions/appointments.ts (+test), appointments/display.ts (+test), app/(dashboard)/appointments/page.tsx + [id]/page.tsx, components/appointments/{appointment-card, -status-badge, -cancel-button, -schedule-dialog}.tsx
+- MOD: lib/constants.ts, components/layout/{sidebar,bottom-nav}.tsx, app/(dashboard)/layout.tsx (pending badge), PROGRESS.md
+
+### Commits (on staging, pushed)
+
+- 95fd347 feat(booking): step 4 — inbox + detail + confirm/cancel/reschedule + nav
+- 8c70132 fix(booking): step 4 review follow-ups — truthful confirm toast, guards, tests
+- d7b3138 feat(booking): hourly confirm time slots + appointment card redesign
+
+### What's next
+
+- Step 5 — read-only confirmed-appointments calendar (reuses JobsCalendarView pattern).
+- Steps 6–9 (dashboard tile, convert-to-job, reminder cron, metrics), then 10–11 (website `/book` form — nothing customer-facing exists yet).
+- Test data: a "Verify Tester" appointment + customer linger in staging from verify-flow seeding — clean up when convenient.
+- ARCHITECTURE.md / roadmap: update at the staging→master merge (booking is staging-only).
