@@ -122,3 +122,49 @@ created_at, updated_at
 - **`status`** — `parking_status` enum: `reserved → checked_in → checked_out` (or `no_show | cancelled`)
 - **`specials_sent_at`** — timestamptz, nullable. Set when parking specials SMS sent.
 - **`lock_box_number`** — int, nullable.
+
+## `appointments` (Session 43, V1 scope cut Session 44)
+
+```
+id,
+customer_id, vehicle_id,
+service_category, description, conditional_data,
+preferred_date, preferred_time_window, scheduled_at,
+drop_off_or_wait, photo_paths,
+status, source,
+submitted_at, confirmed_at, cancelled_at, completed_at, converted_at,
+converted_job_id,
+snapshot_customer_name, snapshot_customer_phone, snapshot_customer_email,
+snapshot_vehicle_year, snapshot_vehicle_make, snapshot_vehicle_model,
+snapshot_vehicle_vin, snapshot_vehicle_mileage,
+updated_at
+```
+
+- **`id`** — uuid. **Client-generated** by the booking form and sent as `client_id` in the metadata; the route inserts with that value as the row's PK so it can double as the `booking-photos/{id}/` storage folder prefix. Eliminates the photo-upload-before-row-insert orphan race.
+- **`service_category`** — `oil_change | brakes | tires | diagnostic | exhaust | suspension | other`. No inspection categories (state + TNC are walk-ins per [[parking-architecture]]).
+- **`description`** — text, NOT NULL with `CHECK (length(btrim(description)) >= 20)`. Required, customer-written.
+- **`preferred_time_window`** — `morning | afternoon`. The customer's preference at submit time.
+- **`scheduled_at`** — timestamptz, nullable. The manager-assigned appointment time, set when status flips to `confirmed`. Mirrors `jobs.scheduled_at`. Added in `20260602000000_drop_capacity_add_scheduled_at.sql` as part of the V1 scope cut.
+- **`status`** — `pending → confirmed → completed` or `cancelled` or `converted_to_job`. Paired with `*_at` timestamps via table-level CHECK constraints (defense-in-depth; server actions normally maintain the pairing).
+- **`source`** — `website | walk_in | phone`. Only `website` for now.
+- **`snapshot_*`** — denormalized at insert. FKs (`customer_id`, `vehicle_id`) are ON DELETE SET NULL; snapshots are the authoritative historical record if a customer or vehicle is deleted. `snapshot_customer_phone` has a CHECK for E.164.
+- **`converted_job_id`** — nullable FK with ON DELETE SET NULL. If the converted job is later deleted, status stays `converted_to_job` and the link goes null — that pair is the explicit "job was removed" signal (intentional; do NOT add a CHECK forcing both to be set together).
+- **`photo_paths`** — text[] with CHECK `array_length(...) <= 3`. Storage paths under the `booking-photos` bucket.
+- **`conditional_data`** — jsonb. Category-dependent (brake position, tire need, check-engine state). Also carries `vin_decode_status: 'decoded' | 'decode_failed' | 'not_attempted'` when a VIN was submitted — lets the manager flag "VIN didn't decode" at confirm time.
+- **Capacity trigger and `daily_capacity_overrides` table — DROPPED** in `20260602000000_drop_capacity_add_scheduled_at.sql` as part of the V1 scope cut. No per-day caps in V1. Deferred to V1.5+ when real volume justifies the complexity.
+
+## `vin_decode_cache` (Session 43)
+
+```
+vin, year, make, model, trim, raw, decoded_at
+```
+
+- **`vin`** — text PK with CHECK `~ '^[A-HJ-NPR-Z0-9]{17}$'`. NOT `char(17)` — char would pad stored values with trailing spaces and break equality against unpadded TypeScript inputs. Regex also excludes I/O/Q (illegal in VINs per NHTSA).
+- **`year`** — int, nullable, with CHECK `year is null OR (year between 1981 and extract(year from now())::int + 2)`. 1981 is the start of the 17-character VIN standard.
+- **`decoded_at`** — TTL marker. `decodeVin()` refreshes from NHTSA when the row is > 30 days old. On NHTSA failure during a refresh, the stale cache row is returned rather than null (degraded data beats no data for the booking auto-populate use case).
+- **`raw`** — jsonb, full NHTSA response for debugging.
+- Used during `/api/appointments/submit` to fill missing year/make/model when a VIN is supplied.
+
+## `messages` — `related_appointment_id` column added (Session 43)
+
+Existing `messages` table gained `related_appointment_id uuid references appointments(id) on delete set null` in `20260601000002_messages_appointment_link.sql`, plus a partial index `WHERE related_appointment_id IS NOT NULL`. Lets booking-related SMS (acknowledgment, confirmation, reminder) link back to the originating appointment so the dashboard can surface failed acks via `SELECT ... WHERE status = 'failed' AND related_appointment_id IS NOT NULL`.
