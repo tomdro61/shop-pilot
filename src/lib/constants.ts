@@ -323,6 +323,65 @@ export const QUOTE_REQUEST_STATUS_COLORS: Record<
   },
 };
 
+// ── Appointments / Online Booking ──────────────────────────
+
+// Display labels for the 7 booking service categories. Match the job-category
+// names used by convert-to-job (BOOKING_TECHNICAL_PLAN §13.1) so the wording
+// is consistent from booking → confirmation SMS → job.
+export const APPOINTMENT_SERVICE_LABELS: Record<string, string> = {
+  oil_change: "Oil Change",
+  brakes: "Brake Service",
+  tires: "Tire Service",
+  diagnostic: "Diagnostic",
+  exhaust: "Exhaust",
+  suspension: "Suspension",
+  other: "Other",
+};
+
+export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  cancelled: "Cancelled",
+  completed: "Completed",
+  converted_to_job: "Converted",
+};
+
+export const APPOINTMENT_STATUS_COLORS: Record<
+  string,
+  { bg: string; text: string }
+> = {
+  pending: {
+    bg: "bg-amber-100 dark:bg-amber-950",
+    text: "text-amber-700 dark:text-amber-400",
+  },
+  confirmed: {
+    bg: "bg-blue-100 dark:bg-blue-950",
+    text: "text-blue-700 dark:text-blue-400",
+  },
+  cancelled: {
+    bg: "bg-stone-100 dark:bg-stone-800",
+    text: "text-stone-500 dark:text-stone-400",
+  },
+  completed: {
+    bg: "bg-emerald-100 dark:bg-emerald-950",
+    text: "text-emerald-700 dark:text-emerald-400",
+  },
+  converted_to_job: {
+    bg: "bg-indigo-100 dark:bg-indigo-950",
+    text: "text-indigo-700 dark:text-indigo-400",
+  },
+};
+
+export const APPOINTMENT_TIME_WINDOW_LABELS: Record<string, string> = {
+  morning: "Morning",
+  afternoon: "Afternoon",
+};
+
+export const APPOINTMENT_DROP_OFF_LABELS: Record<string, string> = {
+  drop_off: "Drop-off",
+  wait: "Wait",
+};
+
 // ── DVI Inspection ─────────────────────────────────────────
 
 export const DVI_STATUS_ORDER: DviStatus[] = [

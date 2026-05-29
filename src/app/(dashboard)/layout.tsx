@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/actions/auth";
 import { getNewQuoteRequestCount } from "@/lib/actions/quote-requests";
 import { getPendingDviRequestCount } from "@/lib/actions/dvi";
 import { getInboxTotalCount } from "@/lib/actions/inbox";
+import { getPendingAppointmentCount } from "@/lib/actions/appointments";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
@@ -12,17 +13,21 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, newQuoteCount, pendingDviCount, inboxTotal] = await Promise.all([
-    getCurrentUser(),
-    getNewQuoteRequestCount(),
-    getPendingDviRequestCount(),
-    getInboxTotalCount(),
-  ]);
+  const [user, newQuoteCount, pendingDviCount, inboxTotal, pendingAppointmentCount] =
+    await Promise.all([
+      getCurrentUser(),
+      getNewQuoteRequestCount(),
+      getPendingDviRequestCount(),
+      getInboxTotalCount(),
+      getPendingAppointmentCount(),
+    ]);
 
   const badgeCounts: Record<string, number> = {};
   if (newQuoteCount > 0) badgeCounts["/quote-requests"] = newQuoteCount;
   if (pendingDviCount > 0) badgeCounts["/dvi"] = pendingDviCount;
   if (inboxTotal > 0) badgeCounts["/inbox"] = inboxTotal;
+  if (pendingAppointmentCount > 0)
+    badgeCounts["/appointments"] = pendingAppointmentCount;
 
   const userRole = user?.role ?? "manager";
 
