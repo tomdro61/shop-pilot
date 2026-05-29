@@ -5,10 +5,13 @@
 //   dedup check (phone + date + window) → if hit, return existing →
 //   process photos (size, mime, magic bytes, EXIF strip, storage upload) →
 //   insertAppointment (find-or-create customer + vehicle + VIN decode + insert) →
+//   onAppointmentCreated (ack SMS + message-timeline log) →
 //   return success.
 //
 // Notes:
-//   - SMS acknowledgment is wired in step 3 (templates + post-submit handler).
+//   - The ack SMS is awaited (best-effort): a send failure is logged to messages
+//     (status:'failed') + console and reflected in `sms_sent`, but never fails the
+//     request — the appointment row is already saved.
 //   - There is NO capacity-trigger error path in V1 — the trigger was dropped
 //     in commit 6df2723. Don't add a try/catch for Postgres errcode P0001.
 //   - Dedup key is phone + preferred_date + preferred_time_window (Option A
@@ -24,6 +27,8 @@ import {
   findExistingAppointment,
   insertAppointment,
 } from "@/lib/appointments/submit";
+import { onAppointmentCreated } from "@/lib/appointments/on-appointment-created";
+import { getBusinessClosedState } from "@/lib/business-hours";
 
 // ── CORS ────────────────────────────────────────────────────────
 
@@ -236,12 +241,30 @@ export async function POST(request: Request) {
     );
   }
 
-  // 9. Acknowledgment SMS is wired in step 3 — for now just return success.
-  //    Surface a `warning` if customer or vehicle find-or-create failed so the
-  //    frontend can show "your request was received; we'll match it to your
-  //    record manually." Until step 6 wires the dashboard's needs-link query,
-  //    the structured `[booking-needs-link]` log line in insertAppointment is
-  //    the operational signal.
+  // 9. Acknowledgment SMS — awaited, best-effort. The appointment is already
+  //    saved, so an ack failure (Quo down, missing phone-line env) is logged and
+  //    surfaced via `sms_sent`, never turned into a 5xx the customer would see.
+  let smsSent = false;
+  try {
+    const ack = await onAppointmentCreated({
+      appointmentId: submission.appointment_id,
+      customerId: submission.customer_id,
+      phone: data.phone,
+      closedState: getBusinessClosedState(),
+    });
+    smsSent = ack.smsSent;
+  } catch (err) {
+    console.error(
+      `[appointments/submit] ack handler threw for ${submission.appointment_id}:`,
+      err
+    );
+  }
+
+  // Surface a `warning` if customer or vehicle find-or-create failed so the
+  // frontend can show "your request was received; we'll match it to your record
+  // manually." Until step 6 wires the dashboard's needs-link query, the
+  // structured `[booking-needs-link]` log line in insertAppointment is the
+  // operational signal.
   const needsLink = !submission.customer_link || !submission.vehicle_link;
   return NextResponse.json(
     {
@@ -249,6 +272,7 @@ export async function POST(request: Request) {
       appointment_id: submission.appointment_id,
       customer_link: submission.customer_link,
       vehicle_link: submission.vehicle_link,
+      sms_sent: smsSent,
       dedup_hit: false,
       ...(needsLink ? { warning: "manual_link_required" } : {}),
     },

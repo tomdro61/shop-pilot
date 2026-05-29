@@ -4,6 +4,7 @@ import { sendSMS } from "@/lib/quo/client";
 import { getPhoneNumber, getParkingLine } from "@/lib/quo/routing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { reservationConfirmationSMS, valetReservationInternalSMS } from "@/lib/messaging/templates";
+import { logOutboundSms } from "@/lib/messaging/log";
 
 /**
  * Called after a parking reservation is created (from Wix webhook or direct form).
@@ -98,12 +99,11 @@ export async function onReservationCreated({
 
     if (customerId) {
       const supabase = createAdminClient();
-      await supabase.from("messages").insert({
+      await logOutboundSms(supabase, {
         customer_id: customerId,
-        channel: "sms" as const,
-        direction: "out" as const,
         body,
         phone_line: line,
+        status: "sent",
       });
     }
   } catch (err) {

@@ -269,3 +269,40 @@ export function valetReservationInternalSMS({
 }) {
   return `New valet reservation: ${firstName} ${lastName}, drop off ${dropOffDate} at ${dropOffTime}, pick up ${pickUpDate} at ${pickUpTime}. Phone: ${phone}`;
 }
+
+// ── Appointment Booking Templates ──────────────────────────
+
+import type { BusinessClosedState } from "@/lib/business-hours";
+
+export function appointmentAckSMS(closed: BusinessClosedState): string {
+  const PREFIX = "Hi! We got your appointment request — we'll text you";
+  if (!closed.closed) {
+    return `${PREFIX} within the hour to confirm. — Broadway Motors`;
+  }
+  // Closed → promise the next open morning, never a day the shop is shut.
+  // Weekday evening → tomorrow; Saturday afternoon (closed Sun) and Sunday → Monday.
+  const when = closed.reason === "evening" ? "by 9am tomorrow" : "by 9am Monday";
+  return `${PREFIX} ${when} to confirm. — Broadway Motors`;
+}
+
+export function appointmentConfirmedSMS({
+  scheduledDate,
+  scheduledTime,
+  serviceCategory,
+}: {
+  scheduledDate: string; // ET-formatted, e.g. "Wed, Jun 3"
+  scheduledTime: string; // ET-formatted, e.g. "9:30am"
+  serviceCategory: string; // human-readable, e.g. "Brake Service"
+}): string {
+  return `Confirmed for ${scheduledDate} at ${scheduledTime}. See you then for your ${serviceCategory}. — Broadway Motors`;
+}
+
+export function appointmentReminderSMS({
+  scheduledDate,
+  scheduledTime,
+}: {
+  scheduledDate: string;
+  scheduledTime: string;
+}): string {
+  return `Reminder: appointment tomorrow at ${scheduledTime} (${scheduledDate}). Reply C to confirm or R to reschedule. — Broadway Motors`;
+}

@@ -6,6 +6,7 @@ import { toE164 } from "@/lib/quo/format";
 import { sendSMS } from "@/lib/quo/client";
 import { getPhoneNumber } from "@/lib/quo/routing";
 import { quoteRequestAckSMS, quoteRequestInternalSMS } from "@/lib/messaging/templates";
+import { logOutboundSms } from "@/lib/messaging/log";
 import { revalidatePath } from "next/cache";
 
 const ALLOWED_ORIGINS = [
@@ -170,12 +171,11 @@ export async function POST(request: Request) {
 
         // Log customer SMS to messages table
         if (customerId) {
-          await supabase.from("messages").insert({
+          await logOutboundSms(supabase, {
             customer_id: customerId,
-            channel: "sms" as const,
-            direction: "out" as const,
             body: ackBody,
             phone_line: "shop",
+            status: "sent",
           });
         }
 

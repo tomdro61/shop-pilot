@@ -154,6 +154,7 @@ describe("insertAppointment", () => {
     expect(result).toEqual({
       ok: true,
       appointment_id: CLIENT_ID,
+      customer_id: "cust-1",
       customer_link: true,
       vehicle_link: true,
     });
@@ -271,6 +272,7 @@ describe("insertAppointment", () => {
     expect(result).toEqual({
       ok: true,
       appointment_id: CLIENT_ID,
+      customer_id: null,
       customer_link: false,
       vehicle_link: false,
     });

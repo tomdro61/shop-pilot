@@ -64,6 +64,7 @@ export type InsertAppointmentResult =
   | {
       ok: true;
       appointment_id: string;
+      customer_id: string | null; // the value behind customer_link; the route needs the id itself to log the ack SMS
       customer_link: boolean; // false if find-or-create-customer failed
       vehicle_link: boolean; // false if no vehicle info OR helper failed
     }
@@ -201,6 +202,7 @@ export async function insertAppointment(
   return {
     ok: true,
     appointment_id: inserted.id,
+    customer_id: customerId,
     customer_link: customerId !== null,
     vehicle_link: vehicleId !== null,
   };

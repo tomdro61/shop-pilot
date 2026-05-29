@@ -6,6 +6,7 @@ import { requireManager, requireStaff } from "@/lib/auth";
 import { toE164 } from "@/lib/quo/format";
 import { sendSMS, isQuoConfigured } from "@/lib/quo/client";
 import { getPhoneNumber, type PhoneLine } from "@/lib/quo/routing";
+import { logOutboundSms } from "@/lib/messaging/log";
 
 export async function sendCustomerSMS({
   customerId,
@@ -42,19 +43,13 @@ export async function sendCustomerSMS({
     const result = await sendSMS({ to: phone, body, from });
 
     // Log to messages table regardless of mode
-    const { error: insertError } = await supabase.from("messages").insert({
+    await logOutboundSms(supabase, {
       customer_id: customerId,
       job_id: jobId ?? null,
-      channel: "sms" as const,
-      direction: "out" as const,
       body,
       status: "sent",
       phone_line: line,
     });
-
-    if (insertError) {
-      console.error("Failed to log outbound SMS:", insertError.message);
-    }
 
     return {
       data: {
@@ -69,18 +64,13 @@ export async function sendCustomerSMS({
 
     // Log a "failed" row so the customer's timeline shows the attempt — mirrors
     // sendCustomerEmail's behavior. Without this the SMS silently disappears.
-    const { error: insertError } = await supabase.from("messages").insert({
+    await logOutboundSms(supabase, {
       customer_id: customerId,
       job_id: jobId ?? null,
-      channel: "sms" as const,
-      direction: "out" as const,
       body,
       status: "failed",
       phone_line: line,
     });
-    if (insertError) {
-      console.error("Failed to log failed SMS:", insertError.message);
-    }
 
     return { error: message };
   }
