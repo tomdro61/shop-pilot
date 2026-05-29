@@ -15,6 +15,7 @@ import {
   confirmAppointment,
   rescheduleAppointment,
 } from "@/lib/actions/appointments";
+import { APPOINTMENT_TIME_SLOTS } from "@/lib/constants";
 
 // Confirm-with-time (pending → confirmed) and reschedule (confirmed → new time)
 // share this dialog. CRITICAL: the date/time `<input>`s yield raw ET wall-clock
@@ -144,12 +145,22 @@ export function AppointmentScheduleDialog({
               <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                 Time
               </span>
-              <input
-                type="time"
+              <select
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="mt-1 h-11 w-full rounded-md border border-stone-200 bg-stone-50 px-3 text-sm font-mono tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-stone-800 dark:bg-stone-900/60"
-              />
+                className="mt-1 h-11 w-full rounded-md border border-stone-200 bg-stone-50 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-stone-800 dark:bg-stone-900/60"
+              >
+                {/* Preserve an out-of-range existing time (e.g. a legacy half-hour) so
+                    reschedule doesn't silently snap it to a different slot. */}
+                {!APPOINTMENT_TIME_SLOTS.some((s) => s.value === time) && (
+                  <option value={time}>{time}</option>
+                )}
+                {APPOINTMENT_TIME_SLOTS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
 
