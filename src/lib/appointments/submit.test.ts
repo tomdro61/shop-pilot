@@ -36,7 +36,7 @@ function baseInsertInput(overrides: Record<string, unknown> = {}) {
     description: "Front brakes grinding when I stop, started last week.",
     conditional_data: {},
     preferred_date: "2026-06-15",
-    preferred_time_window: "morning" as const,
+    preferred_time: "09:00" as const,
     drop_off_or_wait: "drop_off" as const,
     photo_paths: [] as string[],
     ...overrides,
@@ -55,7 +55,7 @@ describe("findExistingAppointment", () => {
     const result = await findExistingAppointment({
       phone: "+16175551234",
       preferred_date: "2026-06-15",
-      preferred_time_window: "morning",
+      preferred_time: "09:00",
     });
 
     expect(result).toEqual({ kind: "no_match" });
@@ -73,13 +73,13 @@ describe("findExistingAppointment", () => {
     const result = await findExistingAppointment({
       phone: "+16175551234",
       preferred_date: "2026-06-15",
-      preferred_time_window: "morning",
+      preferred_time: "09:00",
     });
 
     expect(result).toEqual({ kind: "match", existingId: "appt-existing" });
   });
 
-  it("uses the three-key dedup (phone + date + window) — verifies all three .eq calls", async () => {
+  it("uses the three-key dedup (phone + date + time) — verifies all three .eq calls", async () => {
     const mock = createSupabaseMock({ data: null, error: null });
     vi.mocked(createAdminClient).mockReturnValue(
       mock.client as unknown as ReturnType<typeof createAdminClient>
@@ -88,12 +88,12 @@ describe("findExistingAppointment", () => {
     await findExistingAppointment({
       phone: "+16175551234",
       preferred_date: "2026-06-15",
-      preferred_time_window: "afternoon",
+      preferred_time: "13:00",
     });
 
-    // The most important invariant in step 2b: time_window must be in the dedup key.
-    // Without it, a customer correcting morning→afternoon would silently get back
-    // the stale morning row.
+    // The most important invariant: preferred_time must be in the dedup key.
+    // Without it, a customer correcting 1pm→2pm would silently get back the
+    // stale 1pm row instead of a new one for the manager to reconcile.
     expect(mock.calls).toContainEqual({
       method: "eq",
       args: ["snapshot_customer_phone", "+16175551234"],
@@ -104,7 +104,7 @@ describe("findExistingAppointment", () => {
     });
     expect(mock.calls).toContainEqual({
       method: "eq",
-      args: ["preferred_time_window", "afternoon"],
+      args: ["preferred_time", "13:00"],
     });
   });
 
@@ -120,7 +120,7 @@ describe("findExistingAppointment", () => {
     const result = await findExistingAppointment({
       phone: "+16175551234",
       preferred_date: "2026-06-15",
-      preferred_time_window: "morning",
+      preferred_time: "09:00",
     });
 
     expect(result).toEqual(
@@ -175,6 +175,40 @@ describe("insertAppointment", () => {
 
     const insertCall = mock.calls.find((c) => c.method === "insert");
     expect(insertCall?.args[0]).toMatchObject({ id: CLIENT_ID });
+  });
+
+  it("writes preferred_time and derives the afternoon window at the noon boundary", async () => {
+    const mock = createSupabaseMock({ data: { id: CLIENT_ID }, error: null });
+    vi.mocked(createAdminClient).mockReturnValue(
+      mock.client as unknown as ReturnType<typeof createAdminClient>
+    );
+    vi.mocked(findOrCreateBookingCustomer).mockResolvedValue("cust-1");
+
+    // 12:00 is the load-bearing boundary: `< 12 ? morning : afternoon` must put
+    // noon in the afternoon bucket. The derived window feeds the manager inbox.
+    await insertAppointment(baseInsertInput({ preferred_time: "12:00" }));
+
+    const insertCall = mock.calls.find((c) => c.method === "insert");
+    expect(insertCall?.args[0]).toMatchObject({
+      preferred_time: "12:00",
+      preferred_time_window: "afternoon",
+    });
+  });
+
+  it("derives the morning window for an hour before noon", async () => {
+    const mock = createSupabaseMock({ data: { id: CLIENT_ID }, error: null });
+    vi.mocked(createAdminClient).mockReturnValue(
+      mock.client as unknown as ReturnType<typeof createAdminClient>
+    );
+    vi.mocked(findOrCreateBookingCustomer).mockResolvedValue("cust-1");
+
+    await insertAppointment(baseInsertInput({ preferred_time: "11:00" }));
+
+    const insertCall = mock.calls.find((c) => c.method === "insert");
+    expect(insertCall?.args[0]).toMatchObject({
+      preferred_time: "11:00",
+      preferred_time_window: "morning",
+    });
   });
 
   it("populates snapshot columns from input + decoded VIN fields", async () => {

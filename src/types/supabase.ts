@@ -53,6 +53,7 @@ export type Database = {
           id: string
           photo_paths: string[]
           preferred_date: string
+          preferred_time: string | null
           preferred_time_window: string
           scheduled_at: string | null
           service_category: string
@@ -83,6 +84,7 @@ export type Database = {
           id?: string
           photo_paths?: string[]
           preferred_date: string
+          preferred_time?: string | null
           preferred_time_window: string
           scheduled_at?: string | null
           service_category: string
@@ -113,6 +115,7 @@ export type Database = {
           id?: string
           photo_paths?: string[]
           preferred_date?: string
+          preferred_time?: string | null
           preferred_time_window?: string
           scheduled_at?: string | null
           service_category?: string

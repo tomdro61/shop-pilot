@@ -15,8 +15,9 @@
 //     appointment row is already saved.
 //   - There is NO capacity-trigger error path in V1 — the trigger was dropped
 //     in commit 6df2723. Don't add a try/catch for Postgres errcode P0001.
-//   - Dedup key is phone + preferred_date + preferred_time_window (Option A
-//     from BOOKING_PRD.md §13). DO NOT trim time_window from the key.
+//   - Dedup key is phone + preferred_date + preferred_time (the requested hour,
+//     evolved from the coarse window in BOOKING_PRD.md §13). DO NOT trim the
+//     time from the key — a time-correction must land as a new row.
 //
 // Mirrors the structure of /api/parking/submit/route.ts and /api/quote-requests/route.ts.
 
@@ -171,11 +172,11 @@ export async function POST(request: Request) {
   }
 
   // 6. Dedup BEFORE photo processing — a double-tap shouldn't burn storage
-  //    on photos we'd discard. Three-key Option A: phone + date + window.
+  //    on photos we'd discard. Three-key: phone + date + requested time.
   const dedup = await findExistingAppointment({
     phone: data.phone,
     preferred_date: data.preferred_date,
-    preferred_time_window: data.preferred_time_window,
+    preferred_time: data.preferred_time,
   });
   if (dedup.kind === "error") {
     return NextResponse.json(

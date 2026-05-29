@@ -3461,3 +3461,50 @@ Step 4 is the manager's work queue: triage pending online bookings, confirm with
 - Steps 6–9 (dashboard tile, convert-to-job, reminder cron, metrics), then 10–11 (website `/book` form — nothing customer-facing exists yet).
 - Test data: a "Verify Tester" appointment + customer linger in staging from verify-flow seeding — clean up when convenient.
 - ARCHITECTURE.md / roadmap: update at the staging→master merge (booking is staging-only).
+
+---
+
+## Session 49 — 2026-05-29 (cont.) — Customer hourly time picker (`preferred_time` column) + website `/book` form (step 10) shipped & verified end-to-end
+
+### Why
+
+Two things: (1) the booking form should let customers pick a specific hour (9am–4pm weekdays, 10am–1pm Sat), not a coarse morning/afternoon window; (2) build the public `/book` form (step 10) in the sibling `broadway-motors-web` repo and verify the first real form→inbox submission. The window→hour change is a schema change (chose a real `preferred_time` column over stashing it in conditional_data), so it touches the validator, dedup, insert, and the manager inbox/detail UI on the ShopPilot side.
+
+### What shipped (ShopPilot side)
+
+**Schema** — `supabase/migrations/20260603000000_appointments_preferred_time.sql`: `preferred_time text` (nullable, CHECK `^([01][0-9]|2[0-3]):[0-5][0-9]$`). Applied to remote DB via `supabase db push`. `preferred_time_window` KEPT — now DERIVED server-side from the hour (`<12?morning:afternoon`) for legacy rows + the existing date/window index. Types regenerated (`gen types --linked` confirmed byte-identical to the hand-edit).
+
+**Validator** (`src/lib/validators/appointments.ts`) — replaced `preferred_time_window: z.enum([...])` with `preferred_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)`. The booking-hours refine enforces, server-side as the trust boundary (the form is in a separate repo): top-of-hour only (`minute === 0`), weekdays 9–16, Saturday 10–13. Format regex stays equal to the DB CHECK; variable business hours live in the refine.
+
+**Dedup + insert** (`src/lib/appointments/submit.ts`) — three-key dedup now keys on `preferred_time` (exact hour) not the window, so a time-correction (9am→10am) lands as a NEW row the manager reconciles. Insert writes `preferred_time` + the derived window.
+
+**Route** (`src/app/api/appointments/submit/route.ts`) — dedup call passes `data.preferred_time`; comments updated.
+
+**Manager UI** — `appointment-card.tsx` + `appointments/[id]/page.tsx` show the requested hour via new `formatHourLabel()` in `display.ts`, falling back to `windowLabel()` only for legacy null rows.
+
+### Website `/book` form (step 10, sibling repo `broadway-motors-web`)
+
+Multi-step guided form (service category → vehicle → photos → when/contact). Hourly `<select>` (WEEKDAY_HOURS 9–16, SATURDAY_HOURS 10–13, all top-of-hour), Sunday disabled, picked time cleared when switching to a day where it no longer fits. Posts multipart (`metadata` JSON + photos) to ShopPilot `/api/appointments/submit` via `src/lib/api/booking.ts` (the cross-project contract; client-generated `client_id` UUID = row PK + photo folder). NEW: `book/page.tsx` (+`?service=` deep link), `book/thank-you/page.tsx`, `components/booking/{booking-form,photo-upload}.tsx`, `lib/{business-hours,booking-categories}.ts`, `lib/api/booking.ts`. Committed separately in that repo.
+
+### Review + verify
+
+- **End-to-end verified**: a real website submission (weekday 9:00 AM) landed as a pending card in the ShopPilot inbox showing "9:00 AM". (The first attempt before `db push` correctly 500'd at the dedup step — fail-loud, no orphan row — which is how we confirmed the missing column was the only blocker.)
+- **4-agent scoped review** (feature-dev:code-reviewer, silent-failure-hunter, type-design-analyzer, pr-test-analyzer) → no Criticals; the silent-failure paths are clean (query/insert errors still surface as 500, never a silent pass). Fixed: the refine was hour-granular while `preferred_time` carries minutes (`16:59`, Sat `13:59` slipped past close) and it accepted Saturday 9am → now minute-exact + per-day open/close + top-of-hour. Added tests: Saturday-9am reject, non-top-of-hour reject, derived-window noon boundary (12:00→afternoon), and `preferred_time` written to the insert payload.
+- 54 booking validator/submit tests pass; tsc + lint clean both repos. The website form's offered slots were verified to match the tightened server exactly, so no legitimate booking is rejected.
+- Deferred (noted, not done): extract a `windowForTime()` helper to single-source the hour→window derivation — only one writer today (the insert), YAGNI until reschedule-by-hour ships.
+
+### Files touched (ShopPilot)
+
+- NEW: `supabase/migrations/20260603000000_appointments_preferred_time.sql`
+- MOD: `lib/validators/appointments.ts` (+test), `lib/appointments/submit.ts` (+test), `app/api/appointments/submit/route.ts`, `lib/appointments/display.ts`, `components/appointments/appointment-card.tsx`, `app/(dashboard)/appointments/[id]/page.tsx`, `types/supabase.ts`, PROGRESS.md
+
+### Commits (on staging)
+
+- feat(booking): customer hourly time picker — `preferred_time` column, validator/dedup/insert, manager UI + review fixes
+
+### What's next
+
+- Website: nav "Book" link + hero CTA + after-hours banner (step 11) — not started; `/book` is reachable by URL only.
+- Production deploy (at staging→master merge): set `NEXT_PUBLIC_BOOKING_API_URL` in broadway-motors-web's Vercel env → prod ShopPilot `/api/appointments/submit`. Migration is already applied to the shared DB.
+- Step 5 — read-only confirmed-appointments calendar.
+- Test data: prior verify-flow "Verify Tester" + today's website test booking linger in staging — clean when convenient.

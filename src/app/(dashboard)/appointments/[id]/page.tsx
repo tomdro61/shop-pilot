@@ -22,6 +22,7 @@ import {
   etTimeOf,
   formatEtDate,
   formatEtTime,
+  formatHourLabel,
 } from "@/lib/appointments/display";
 
 export default async function AppointmentDetailPage({
@@ -109,8 +110,8 @@ export default async function AppointmentDetailPage({
                 appointmentId={a.id}
                 mode="confirm"
                 defaultEtDate={a.preferred_date}
-                defaultEtTime={defaultEtTimeForWindow(a.preferred_time_window)}
-                requestedLabel={`${formatEtDate(a.preferred_date)} · ${windowLabel(a.preferred_time_window)}`}
+                defaultEtTime={a.preferred_time ?? defaultEtTimeForWindow(a.preferred_time_window)}
+                requestedLabel={`${formatEtDate(a.preferred_date)} · ${a.preferred_time ? formatHourLabel(a.preferred_time) : windowLabel(a.preferred_time_window)}`}
                 triggerLabel="Confirm with a time"
                 triggerSize="default"
               />
@@ -164,7 +165,7 @@ export default async function AppointmentDetailPage({
             <span className="font-mono tabular-nums">
               {a.status === "confirmed" && a.scheduled_at
                 ? `${formatEtDate(a.scheduled_at)} · ${formatEtTime(a.scheduled_at)}`
-                : `${formatEtDate(a.preferred_date)} · ${windowLabel(a.preferred_time_window)}`}
+                : `${formatEtDate(a.preferred_date)} · ${a.preferred_time ? formatHourLabel(a.preferred_time) : windowLabel(a.preferred_time_window)}`}
             </span>
           </Field>
           {vehicle && (

@@ -75,7 +75,9 @@ export const appointmentSubmitSchema = z
     vehicle_mileage: z.coerce.number().int().min(0).max(1_000_000).optional(),
 
     preferred_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    preferred_time_window: z.enum(["morning", "afternoon"]),
+    // Requested hour, HH:MM (24h). The coarse morning/afternoon window is derived
+    // from this server-side on insert.
+    preferred_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a valid time."),
     drop_off_or_wait: z.enum(["drop_off", "wait"]),
 
     // Client-generated UUID — becomes the appointment row's primary key AND the
@@ -101,14 +103,24 @@ export const appointmentSubmitSchema = z
   )
   .refine(
     (data) => {
-      // Saturday afternoon is invalid — shop closes at 2pm.
+      // Booking hours, enforced server-side. The public form lives in a separate
+      // repo, so this schema is the real trust boundary — don't assume the client
+      // only sends the top-of-hour slots it offers. Re-check exactly:
+      //   • top of the hour only (we book hourly slots, not :30/:45)
+      //   • weekdays 9am–4pm, Saturday 10am–1pm (shop closes 2pm)
+      // Sundays are rejected by the refine above. Comparing whole hours is exact
+      // once we've required minute === 0.
       const dow = new Date(data.preferred_date + "T12:00:00Z").getUTCDay();
-      return !(dow === 6 && data.preferred_time_window === "afternoon");
+      const [hour, minute] = data.preferred_time.split(":").map(Number);
+      if (minute !== 0) return false;
+      const open = dow === 6 ? 10 : 9;
+      const close = dow === 6 ? 13 : 16;
+      return hour >= open && hour <= close;
     },
     {
       message:
-        "Saturday afternoon appointments aren't available — our shop closes at 2pm.",
-      path: ["preferred_time_window"],
+        "Please pick a time during our booking hours (9am–4pm, Sat 10am–1pm).",
+      path: ["preferred_time"],
     },
   );
 

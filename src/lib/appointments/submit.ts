@@ -20,18 +20,18 @@ export type DedupCheckResult =
   | { kind: "error"; message: string };
 
 /**
- * Look for a recent submission with the SAME phone + date + time-window.
+ * Look for a recent submission with the SAME phone + date + requested time.
  *
- * **Three-key dedup (phone + preferred_date + preferred_time_window).** Catches
- * true double-taps (network retry, double-click) but lets a window-correction
- * land as a NEW row that the manager reconciles on the inbox. The earlier draft
- * dedup'd on phone+date only — that silently lost a customer's actual choice
- * (they meant afternoon, DB kept morning). Do NOT drop time_window from this key.
+ * **Three-key dedup (phone + preferred_date + preferred_time).** Catches true
+ * double-taps (network retry, double-click) but lets a time-correction (9am →
+ * 10am) land as a NEW row the manager reconciles on the inbox. Keying on the
+ * exact hour (not the coarse morning/afternoon window) preserves that
+ * "corrections create a new row" intent at hour granularity — don't drop it.
  */
 export async function findExistingAppointment(opts: {
   phone: string;
   preferred_date: string;
-  preferred_time_window: "morning" | "afternoon";
+  preferred_time: string;
   supabase?: SupabaseClient<Database>;
 }): Promise<DedupCheckResult> {
   const supabase = opts.supabase ?? createAdminClient();
@@ -42,7 +42,7 @@ export async function findExistingAppointment(opts: {
     .select("id")
     .eq("snapshot_customer_phone", opts.phone)
     .eq("preferred_date", opts.preferred_date)
-    .eq("preferred_time_window", opts.preferred_time_window)
+    .eq("preferred_time", opts.preferred_time)
     .gte("submitted_at", fiveMinAgo)
     .limit(1)
     .maybeSingle();
@@ -170,7 +170,11 @@ export async function insertAppointment(
         ...(input.vehicle_vin ? { vin_decode_status: vinDecodeStatus } : {}),
       } as Json,
       preferred_date: input.preferred_date,
-      preferred_time_window: input.preferred_time_window,
+      preferred_time: input.preferred_time,
+      // Coarse window derived from the requested hour (kept for the
+      // Saturday-afternoon guard + legacy grouping; the form no longer sends it).
+      preferred_time_window:
+        Number(input.preferred_time.slice(0, 2)) < 12 ? "morning" : "afternoon",
       drop_off_or_wait: input.drop_off_or_wait,
       photo_paths: input.photo_paths,
       source: "website",

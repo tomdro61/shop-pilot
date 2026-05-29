@@ -14,6 +14,7 @@ import {
   etTimeOf,
   formatEtDate,
   formatEtTime,
+  formatHourLabel,
   relativeTime,
 } from "@/lib/appointments/display";
 
@@ -27,12 +28,15 @@ export function AppointmentCard({ appointment: a }: { appointment: Appointment }
   );
   const photoCount = a.photo_paths.length;
   const isConfirmed = a.status === "confirmed" && a.scheduled_at;
+  // Pending shows the customer's requested hour (fallback to the coarse window
+  // for any legacy row without one); confirmed shows the scheduled time.
+  const pendingTimeLabel = a.preferred_time
+    ? formatHourLabel(a.preferred_time)
+    : windowLabel(a.preferred_time_window);
   const whenDate = isConfirmed
     ? formatEtDate(a.scheduled_at!)
     : formatEtDate(a.preferred_date);
-  const whenTime = isConfirmed
-    ? formatEtTime(a.scheduled_at!)
-    : windowLabel(a.preferred_time_window);
+  const whenTime = isConfirmed ? formatEtTime(a.scheduled_at!) : pendingTimeLabel;
   return (
     <div className="overflow-hidden rounded-md border border-stone-200 bg-card shadow-card dark:border-stone-800">
       <Link
@@ -129,14 +133,17 @@ export function AppointmentCard({ appointment: a }: { appointment: Appointment }
 
 function AppointmentCardActions({ appointment: a }: { appointment: Appointment }) {
   if (a.status === "pending") {
+    const pendingTimeLabel = a.preferred_time
+      ? formatHourLabel(a.preferred_time)
+      : windowLabel(a.preferred_time_window);
     return (
       <div className="flex items-center gap-2 border-t border-stone-200 px-4 py-2.5 dark:border-stone-800">
         <AppointmentScheduleDialog
           appointmentId={a.id}
           mode="confirm"
           defaultEtDate={a.preferred_date}
-          defaultEtTime={defaultEtTimeForWindow(a.preferred_time_window)}
-          requestedLabel={`${formatEtDate(a.preferred_date)} · ${windowLabel(a.preferred_time_window)}`}
+          defaultEtTime={a.preferred_time ?? defaultEtTimeForWindow(a.preferred_time_window)}
+          requestedLabel={`${formatEtDate(a.preferred_date)} · ${pendingTimeLabel}`}
           triggerLabel="Confirm"
         />
         <AppointmentCancelButton appointmentId={a.id} />

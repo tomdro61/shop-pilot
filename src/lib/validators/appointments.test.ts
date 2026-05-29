@@ -16,7 +16,7 @@ function baseInput(overrides: Record<string, unknown> = {}) {
     service_category: "brakes" as const,
     description: "Front brakes grinding when I stop, started last week.",
     preferred_date: "2026-06-15", // Monday
-    preferred_time_window: "morning" as const,
+    preferred_time: "09:00" as const,
     drop_off_or_wait: "drop_off" as const,
     client_id: VALID_UUID,
     website: "",
@@ -116,7 +116,7 @@ describe("appointmentSubmitSchema — Sunday refine", () => {
   it("rejects Sunday morning (entire day closed)", () => {
     // 2026-06-07 is Sunday
     const result = appointmentSubmitSchema.safeParse(
-      baseInput({ preferred_date: "2026-06-07", preferred_time_window: "morning" })
+      baseInput({ preferred_date: "2026-06-07", preferred_time: "09:00" })
     );
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -127,7 +127,7 @@ describe("appointmentSubmitSchema — Sunday refine", () => {
 
   it("rejects Sunday afternoon", () => {
     const result = appointmentSubmitSchema.safeParse(
-      baseInput({ preferred_date: "2026-06-07", preferred_time_window: "afternoon" })
+      baseInput({ preferred_date: "2026-06-07", preferred_time: "13:00" })
     );
     expect(result.success).toBe(false);
   });
@@ -135,38 +135,101 @@ describe("appointmentSubmitSchema — Sunday refine", () => {
   it("accepts the Sunday of the spring DST transition (still rejected as a Sunday)", () => {
     // 2026-03-08 is spring-forward Sunday. Should still be rejected.
     const result = appointmentSubmitSchema.safeParse(
-      baseInput({ preferred_date: "2026-03-08", preferred_time_window: "morning" })
+      baseInput({ preferred_date: "2026-03-08", preferred_time: "09:00" })
     );
     expect(result.success).toBe(false);
   });
 });
 
-describe("appointmentSubmitSchema — Saturday-afternoon refine", () => {
-  it("rejects Saturday + afternoon", () => {
-    // 2026-06-06 is Saturday
+describe("appointmentSubmitSchema — Saturday-hours refine", () => {
+  it("rejects Saturday after 1pm (shop closes 2pm Saturday)", () => {
+    // 2026-06-06 is Saturday; 2pm is past the Saturday cutoff.
     const result = appointmentSubmitSchema.safeParse(
-      baseInput({ preferred_date: "2026-06-06", preferred_time_window: "afternoon" })
+      baseInput({ preferred_date: "2026-06-06", preferred_time: "14:00" })
     );
     expect(result.success).toBe(false);
     if (!result.success) {
       const issues = result.error.issues;
-      expect(issues.some((i) => i.path.includes("preferred_time_window"))).toBe(true);
+      expect(issues.some((i) => i.path.includes("preferred_time"))).toBe(true);
     }
   });
 
-  it("accepts Saturday + morning", () => {
+  it("accepts Saturday at 1pm (the last bookable Saturday hour)", () => {
     const result = appointmentSubmitSchema.safeParse(
-      baseInput({ preferred_date: "2026-06-06", preferred_time_window: "morning" })
+      baseInput({ preferred_date: "2026-06-06", preferred_time: "13:00" })
     );
     expect(result.success).toBe(true);
   });
 
-  it("accepts weekday afternoon", () => {
+  it("rejects Saturday at 9am (Saturday opens at 10am, not 9am)", () => {
+    // The weekday 9am floor must NOT apply on Saturday — defense in depth against
+    // a client that bypasses the form, which only offers Sat 10am–1pm.
+    const result = appointmentSubmitSchema.safeParse(
+      baseInput({ preferred_date: "2026-06-06", preferred_time: "09:00" })
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a weekday afternoon hour (3pm Wednesday)", () => {
     // 2026-06-03 is Wednesday
     const result = appointmentSubmitSchema.safeParse(
-      baseInput({ preferred_date: "2026-06-03", preferred_time_window: "afternoon" })
+      baseInput({ preferred_date: "2026-06-03", preferred_time: "15:00" })
     );
     expect(result.success).toBe(true);
+  });
+});
+
+describe("appointmentSubmitSchema — booking-hours refine", () => {
+  it("rejects an hour before 9am", () => {
+    // 2026-06-15 is a Monday — only the hour is out of range.
+    const result = appointmentSubmitSchema.safeParse(
+      baseInput({ preferred_time: "08:00" })
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((i) => i.path.includes("preferred_time"))
+      ).toBe(true);
+    }
+  });
+
+  it("rejects an hour after 4pm", () => {
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ preferred_time: "17:00" })).success
+    ).toBe(false);
+  });
+
+  it("accepts the 9am opening hour", () => {
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ preferred_time: "09:00" })).success
+    ).toBe(true);
+  });
+
+  it("accepts the 4pm closing hour (last weekday slot)", () => {
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ preferred_time: "16:00" })).success
+    ).toBe(true);
+  });
+
+  it("rejects a malformed time string", () => {
+    // single-digit hour and out-of-range hour both fail the HH:MM regex
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ preferred_time: "9:00" })).success
+    ).toBe(false);
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ preferred_time: "25:00" })).success
+    ).toBe(false);
+  });
+
+  it("rejects a non-top-of-hour time (we book hourly slots only)", () => {
+    // In-range hour, but :30 isn't a bookable slot — the format regex allows any
+    // minute, so the refine is what enforces top-of-hour at the trust boundary.
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ preferred_time: "09:30" })).success
+    ).toBe(false);
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ preferred_time: "16:30" })).success
+    ).toBe(false);
   });
 });
 

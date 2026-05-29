@@ -83,6 +83,14 @@ export function formatEtTime(iso: string): string {
   });
 }
 
+// "10:00" (HH:MM) → "10:00 AM" — the customer's requested booking hour.
+export function formatHourLabel(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 // Compact submitted-ago label: "just now" / "5m ago" / "3h ago" / "2d ago".
 export function relativeTime(iso: string, now: number = Date.now()): string {
   const mins = Math.floor((now - new Date(iso).getTime()) / 60000);
