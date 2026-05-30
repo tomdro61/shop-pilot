@@ -3508,3 +3508,40 @@ Multi-step guided form (service category → vehicle → photos → when/contact
 - Production deploy (at staging→master merge): set `NEXT_PUBLIC_BOOKING_API_URL` in broadway-motors-web's Vercel env → prod ShopPilot `/api/appointments/submit`. Migration is already applied to the shared DB.
 - Step 5 — read-only confirmed-appointments calendar.
 - Test data: prior verify-flow "Verify Tester" + today's website test booking linger in staging — clean when convenient.
+
+---
+
+## Session 50 — 2026-05-30 — Booking polish: site-wide Book CTAs (step 11), form-validation tightening, +4 service categories
+
+### Why
+
+Make the new `/book` form discoverable from the public site (step 11), tighten the form per owner (vehicle required, shorter description floor), and expand the bookable categories. Cross-project: website (`broadway-motors-web`) UI + shop-pilot validator / labels / DB.
+
+### What shipped (on `staging`, both repos)
+
+**Website — step 11 (discoverability):** Hero `Book Online` (primary) + `Get an Estimate` (Call moved off the hero per owner, kept in header + the new mobile sticky bar + Visit Us). Header desktop `Book Online` button; mobile-nav `Book Online` primary + Call secondary; footer Book link; homepage Visit Us Book CTA; services-hub Book CTA; per-service "Book This Service" deep-link `/book?service=<category>` via `bookingCategoryForServiceSlug`. NEW `after-hours-banner.tsx` — closed-state hero message, a CLIENT component via `useSyncExternalStore` (server snapshot = open) so the homepage stays statically prerendered yet shows the visitor's real ET time. NEW `mobile-sticky-cta.tsx` — fixed Call·Book·Directions, `md:hidden`, hidden on `/book`, safe-area inset, sibling spacer so it never covers the footer. CLAUDE.md: `NEXT_PUBLIC_BOOKING_API_URL` + booking-integration section.
+
+**Form validation (`booking-form.tsx`):** Year/Make/Model now REQUIRED (step-2 Next gated on a valid 4-digit year + make + model; submit-time guard bounces to step 2). Mileage stays optional. Vehicle is enforced client-only — shop-pilot's `vehicle_*` stay optional to preserve the no-vehicle / VIN-fills-missing path + its tests (the form is the only caller). Description minimum 20→10, **bilateral**: website counter + shop-pilot Zod refine + the DB CHECK (see review catch) + boundary tests (9 reject / 10 accept).
+
+**+4 service categories (7→11):** AC Service (`ac_service`), Detailing (`detailing`), Battery / Electrical (`battery_electrical`), Tune-Up (`tune_up`) — website `BOOKING_CATEGORIES` tiles + value type + slug deep-link map, shop-pilot `SERVICE_CATEGORIES` + `APPOINTMENT_SERVICE_LABELS`, migration `20260604000000` (widens the `service_category` CHECK to 11).
+
+**Migrations (applied to the shared DB via `supabase db push`):**
+- `20260604000000_appointments_service_categories.sql` — widen service_category CHECK to 11 values (drop-if-exists + re-add).
+- `20260604000001_appointments_description_min.sql` — lower the description CHECK from 20→10 (drop-if-exists + re-add).
+
+### Review + verify
+
+- **Scoped review (1 focused agent) on the shop-pilot diff caught a real Critical:** the `appointments` table had its OWN inline CHECK `length(btrim(description)) >= 20` (original migration line 21) that I'd missed when lowering the Zod min — a 10–19 char description would have passed the form + Zod and then 500'd at insert. Fixed with the description-min migration. Also hardened the categories migration with `drop ... if exists` and fixed a stale "7 categories" comment. The Zod↔DB drift is exactly the class the Investigation Discipline (CLAUDE.md) warns about — caught pre-merge.
+- Both migrations applied cleanly (confirms the auto-generated constraint names + SQL).
+- shop-pilot tsc + 54 booking tests pass; website tsc + lint + `next build` pass (homepage stays ○ Static, `/services/[slug]` SSG all 15, `/book` dynamic). Step 11 visually reviewed + approved by the owner on the running site.
+
+### Files touched
+
+- shop-pilot: `lib/validators/appointments.ts` (+test), `lib/constants.ts`, `supabase/migrations/20260604000000_*.sql` + `20260604000001_*.sql`, PROGRESS.md
+- broadway-motors-web: `components/site/{hero,header,footer,mobile-nav}.tsx` + NEW `{after-hours-banner,mobile-sticky-cta}.tsx`, `app/(site)/{layout,page,services/page,services/[slug]/page}.tsx`, `components/booking/booking-form.tsx`, `lib/booking-categories.ts`, CLAUDE.md
+
+### What's next
+
+- **Step 7 — convert-to-job** (the workflow handoff): next.
+- Step 5 — confirmed-appointments calendar; Steps 6/8/9 — dashboard tile, reminder cron, metrics.
+- Production cutover: merge `staging → master` (both repos) + set `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel prod env (migrations already on the shared DB).

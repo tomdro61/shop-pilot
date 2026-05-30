@@ -37,6 +37,10 @@ export const SERVICE_CATEGORIES = [
   "diagnostic",
   "exhaust",
   "suspension",
+  "ac_service",
+  "detailing",
+  "battery_electrical",
+  "tune_up",
   "other",
 ] as const;
 
@@ -56,8 +60,8 @@ export const appointmentSubmitSchema = z
     description: z
       .string()
       .refine(
-        (v) => v.trim().length >= 20,
-        "Tell us a bit more about what's going on (20+ characters).",
+        (v) => v.trim().length >= 10,
+        "Tell us a bit more about what's going on (10+ characters).",
       )
       .refine((v) => v.length <= 2000, "Description is too long."),
 

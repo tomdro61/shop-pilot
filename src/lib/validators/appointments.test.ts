@@ -41,7 +41,7 @@ describe("appointmentSubmitSchema — happy path", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts all seven service categories", () => {
+  it("accepts all eleven service categories", () => {
     for (const category of SERVICE_CATEGORIES) {
       const result = appointmentSubmitSchema.safeParse(
         baseInput({ service_category: category })
@@ -100,14 +100,14 @@ describe("appointmentSubmitSchema — description validation", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects a description of 19 chars + trailing space (still 19 after trim)", () => {
-    const desc = "x".repeat(19) + " ";
+  it("rejects a description of 9 chars + trailing space (still 9 after trim)", () => {
+    const desc = "x".repeat(9) + " ";
     expect(appointmentSubmitSchema.safeParse(baseInput({ description: desc })).success).toBe(false);
   });
 
-  it("accepts exactly 20 characters of real content", () => {
+  it("accepts exactly 10 characters of real content", () => {
     expect(
-      appointmentSubmitSchema.safeParse(baseInput({ description: "x".repeat(20) })).success
+      appointmentSubmitSchema.safeParse(baseInput({ description: "x".repeat(10) })).success
     ).toBe(true);
   });
 });
