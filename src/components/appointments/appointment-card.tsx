@@ -4,6 +4,7 @@ import type { Database } from "@/types/supabase";
 import { AppointmentStatusBadge } from "./appointment-status-badge";
 import { AppointmentScheduleDialog } from "./appointment-schedule-dialog";
 import { AppointmentCancelButton } from "./appointment-cancel-button";
+import { AppointmentConvertButton } from "./appointment-convert-button";
 import {
   serviceLabel,
   windowLabel,
@@ -153,7 +154,8 @@ function AppointmentCardActions({ appointment: a }: { appointment: Appointment }
 
   if (a.status === "confirmed" && a.scheduled_at) {
     return (
-      <div className="flex items-center gap-2 border-t border-stone-200 px-4 py-2.5 dark:border-stone-800">
+      <div className="flex flex-wrap items-center gap-2 border-t border-stone-200 px-4 py-2.5 dark:border-stone-800">
+        <AppointmentConvertButton appointmentId={a.id} />
         <AppointmentScheduleDialog
           appointmentId={a.id}
           mode="reschedule"

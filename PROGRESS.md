@@ -3545,3 +3545,33 @@ Make the new `/book` form discoverable from the public site (step 11), tighten t
 - **Step 7 — convert-to-job** (the workflow handoff): next.
 - Step 5 — confirmed-appointments calendar; Steps 6/8/9 — dashboard tile, reminder cron, metrics.
 - Production cutover: merge `staging → master` (both repos) + set `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel prod env (migrations already on the shared DB).
+
+---
+
+## Session 51 — 2026-05-30 — Booking step 7: convert a confirmed appointment into a Job
+
+### Why
+
+The workflow handoff: the manager confirms an online booking, then turns it into an actual Job on the Shop Floor. Closes the booking→work loop. shop-pilot only (no website change).
+
+### What shipped (on `staging`)
+
+- **`convertAppointmentToJob(id)`** in `src/lib/actions/appointments.ts` → `ActionResult<{ jobId }>`. Deliberately mirrors `convertEstimateToJob`: `requireManager()`; **confirmed-only** guard; **non-null-customer** guard (jobs.customer_id is NOT NULL — a booking whose find-or-create failed must get a customer linked first); direct `jobs` insert; then an **atomic link-back** (`UPDATE … .eq("id").eq("status","confirmed")` with `count:"exact"`, strict `linkCount !== 1` → roll the job back) flipping the appointment to `converted_to_job` + stamping `converted_job_id`/`converted_at` (the DB CHECK requires `converted_at` in that update).
+- **Field mapping**: customer→customer, vehicle→vehicle, `service_category`→job `category` (human label), `description`→`notes`, snapshot vehicle→`title` ("2018 Honda Accord – Brake Service"), `scheduled_at`→`scheduled_at`, ET date of `scheduled_at`→`date_received`, mileage→`mileage_in`, status `not_started`, payment_status `unpaid`. **Photos NOT copied (V1)** — jobs have no photo storage; they stay on the appointment, which the job links back to.
+- **`AppointmentConvertButton`** (`src/components/appointments/appointment-convert-button.tsx`) — primary action + confirm dialog; on success `toast` + `router.push('/jobs/${jobId}')` (loading latched through navigation). Wired into the confirmed-state action row on the card (now `flex-wrap` for 3 buttons) + the detail page.
+
+### Review + verify
+
+- **2-agent scoped review** (code-reviewer + silent-failure-hunter). They split on the `linkError` branch: the reference `convertEstimateToJob` leaves the orphan job, but here the appointment stays `confirmed` with the Convert button live, so a retry would accumulate duplicate jobs. **Decision: roll the job back on `linkError` too** (best-effort delete; only leave it for manual cleanup if the delete also fails). Added a test for it. Other findings cleared (return-shape was the agent reading an elided snippet; date_received-null withdrawn; button stuck-state is a pre-existing cosmetic LOW that revalidate/unmount resolves).
+- tsc + lint clean; full suite **304 tests** pass (5 new convert tests: non-confirmed reject, null-customer reject, happy path + atomic update payload, count-mismatch rollback, link-error rollback).
+- Live verify (convert a confirmed appointment → job) is the owner's next check on staging.
+
+### Files touched
+
+- `src/lib/actions/appointments.ts` (+`appointments.test.ts`), NEW `src/components/appointments/appointment-convert-button.tsx`, `src/components/appointments/appointment-card.tsx`, `src/app/(dashboard)/appointments/[id]/page.tsx`, PROGRESS.md
+
+### What's next
+
+- Step 5 — `/appointments/calendar` read-only confirmed-only calendar.
+- Steps 6, 8, 9 — dashboard tile, reminder cron, booking metrics.
+- Production cutover: merge `staging → master` (both repos) + set `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel prod env.

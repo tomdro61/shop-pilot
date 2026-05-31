@@ -11,6 +11,7 @@ import {
 import { AppointmentStatusBadge } from "@/components/appointments/appointment-status-badge";
 import { AppointmentScheduleDialog } from "@/components/appointments/appointment-schedule-dialog";
 import { AppointmentCancelButton } from "@/components/appointments/appointment-cancel-button";
+import { AppointmentConvertButton } from "@/components/appointments/appointment-convert-button";
 import {
   serviceLabel,
   windowLabel,
@@ -120,6 +121,7 @@ export default async function AppointmentDetailPage({
           )}
           {a.status === "confirmed" && a.scheduled_at && (
             <>
+              <AppointmentConvertButton appointmentId={a.id} size="default" />
               <AppointmentScheduleDialog
                 appointmentId={a.id}
                 mode="reschedule"

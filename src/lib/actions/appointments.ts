@@ -9,6 +9,7 @@ import { logOutboundSms } from "@/lib/messaging/log";
 import { appointmentConfirmedSMS } from "@/lib/messaging/templates";
 import { etDateTimeToUtcIso, formatTimeEt } from "@/lib/utils";
 import { APPOINTMENT_SERVICE_LABELS } from "@/lib/constants";
+import { etDateOf } from "@/lib/appointments/display";
 import type { ActionResult } from "./_types";
 import type { Database } from "@/types/supabase";
 
@@ -297,4 +298,165 @@ export async function cancelAppointment(id: string): Promise<ActionResult> {
   revalidatePath(`/appointments/${id}`);
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+// Convert a CONFIRMED appointment into a Job (the manager's workflow handoff).
+// Mirrors convertEstimateToJob: direct job insert, then an atomic link-back
+// scoped by status='confirmed' as the race gate (two concurrent clicks each
+// insert a job, but only one UPDATE matches the still-confirmed row; the loser
+// rolls its job back). Photos are NOT copied in V1 — jobs have no photo storage;
+// they stay viewable on the appointment, which the job links back to.
+export async function convertAppointmentToJob(
+  id: string
+): Promise<ActionResult<{ jobId: string }>> {
+  const auth = await requireManager();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: appt, error: loadErr } = await supabase
+    .from("appointments")
+    .select(
+      "id, status, customer_id, vehicle_id, service_category, description, snapshot_vehicle_year, snapshot_vehicle_make, snapshot_vehicle_model, snapshot_vehicle_mileage, scheduled_at, preferred_date"
+    )
+    .eq("id", id)
+    .single();
+  if (loadErr || !appt) return { ok: false, error: "Appointment not found" };
+  if (appt.status !== "confirmed") {
+    return {
+      ok: false,
+      error: `Only confirmed appointments can be converted to a job (this one is ${appt.status}).`,
+    };
+  }
+  // jobs.customer_id is NOT NULL. A booking whose find-or-create failed has no
+  // customer link; the manager must link one (via the customer UI) before
+  // converting, rather than us silently creating a duplicate customer here.
+  if (!appt.customer_id) {
+    return {
+      ok: false,
+      error:
+        "This appointment has no linked customer. Link a customer to it before converting to a job.",
+    };
+  }
+
+  const serviceLabel =
+    APPOINTMENT_SERVICE_LABELS[appt.service_category] ?? "Service";
+  const vehicleParts = [
+    appt.snapshot_vehicle_year,
+    appt.snapshot_vehicle_make,
+    appt.snapshot_vehicle_model,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  // Always non-empty: serviceLabel is the floor, vehicle prefixes it when known.
+  const title = vehicleParts ? `${vehicleParts} – ${serviceLabel}` : serviceLabel;
+  // The car arrives on the scheduled day, so date_received tracks that (fall back
+  // to the requested date if somehow unscheduled).
+  const dateReceived = appt.scheduled_at
+    ? etDateOf(appt.scheduled_at)
+    : appt.preferred_date;
+
+  const { data: job, error: jobError } = await supabase
+    .from("jobs")
+    .insert({
+      customer_id: appt.customer_id,
+      vehicle_id: appt.vehicle_id,
+      status: "not_started",
+      title,
+      category: serviceLabel,
+      notes: appt.description,
+      date_received: dateReceived,
+      scheduled_at: appt.scheduled_at,
+      mileage_in: appt.snapshot_vehicle_mileage,
+      payment_status: "unpaid",
+    })
+    .select("id, ro_number")
+    .single();
+  if (jobError) return { ok: false, error: jobError.message };
+  if (!job) return { ok: false, error: "Failed to create job" };
+
+  // Atomic link-back — the `status='confirmed'` scope is the race gate. The DB
+  // CHECK (status != 'converted_to_job' or converted_at is not null) requires
+  // converted_at in this same update.
+  const { error: linkError, count: linkCount } = await supabase
+    .from("appointments")
+    .update(
+      {
+        status: "converted_to_job",
+        converted_job_id: job.id,
+        converted_at: new Date().toISOString(),
+      },
+      { count: "exact" }
+    )
+    .eq("id", id)
+    .eq("status", "confirmed");
+
+  if (linkError) {
+    // The link-back UPDATE itself errored — almost always means it never
+    // committed, so the appointment is still `confirmed` and the Convert button
+    // stays live. Roll the orphan job back so a retry can't accumulate
+    // duplicates; only if the rollback ALSO fails do we leave it for manual
+    // cleanup (by RO number). (Diverges from convertEstimateToJob, which leaves
+    // the orphan — here the live button makes accumulation the bigger risk.)
+    const roLabel = job.ro_number
+      ? `RO-${String(job.ro_number).padStart(4, "0")}`
+      : "the new job";
+    const { error: rollbackError } = await supabase
+      .from("jobs")
+      .delete()
+      .eq("id", job.id);
+    if (rollbackError) {
+      console.error(
+        "[convertAppointmentToJob] link-back failed AND rollback failed — orphan job left:",
+        { linkError, rollbackError, appointmentId: id, jobId: job.id }
+      );
+      return {
+        ok: false,
+        error: `Couldn't link the new job (${roLabel}) to the appointment, and cleanup failed — find it on the Shop Floor and delete it manually.`,
+      };
+    }
+    console.error(
+      "[convertAppointmentToJob] link-back failed; rolled the new job back:",
+      { linkError, appointmentId: id, jobId: job.id }
+    );
+    return {
+      ok: false,
+      error: "Couldn't convert this appointment to a job — please try again.",
+    };
+  }
+
+  // Strict !== 1 (Supabase can return count: null on RLS edge cases) — treat
+  // anything but exactly-one-row as race-loser and roll the duplicate job back.
+  if (linkCount !== 1) {
+    const { error: rollbackError } = await supabase
+      .from("jobs")
+      .delete()
+      .eq("id", job.id);
+    if (rollbackError) {
+      console.error(
+        "[convertAppointmentToJob] race-loser rollback failed — orphan duplicate job",
+        { rollbackError, jobId: job.id, appointmentId: id }
+      );
+      const roLabel = job.ro_number
+        ? `RO-${String(job.ro_number).padStart(4, "0")}`
+        : "a duplicate job";
+      return {
+        ok: false,
+        error: `This appointment was already being converted in another tab. We tried to discard the duplicate (${roLabel}) but cleanup failed — find and delete it manually.`,
+      };
+    }
+    return {
+      ok: false,
+      error:
+        "This appointment was already converted (likely from another tab). Refresh to see the linked job.",
+    };
+  }
+
+  revalidatePath("/appointments");
+  revalidatePath(`/appointments/${id}`);
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${job.id}`);
+  revalidatePath(`/customers/${appt.customer_id}`);
+  revalidatePath("/dashboard");
+  return { ok: true, data: { jobId: job.id } };
 }

@@ -16,6 +16,7 @@ import {
   confirmAppointment,
   rescheduleAppointment,
   cancelAppointment,
+  convertAppointmentToJob,
   getAppointmentInbox,
 } from "./appointments";
 
@@ -140,6 +141,99 @@ describe("cancelAppointment", () => {
     expect(result).toEqual({ ok: true });
     const update = mock.calls.find((c) => c.method === "update");
     expect(update?.args[0]).toMatchObject({ status: "cancelled" });
+  });
+});
+
+const CONFIRMED_APPT = {
+  id: "a1",
+  status: "confirmed",
+  customer_id: "c1",
+  vehicle_id: "v1",
+  service_category: "brakes",
+  description: "Front brakes grinding when I stop.",
+  snapshot_vehicle_year: 2018,
+  snapshot_vehicle_make: "Honda",
+  snapshot_vehicle_model: "Accord",
+  snapshot_vehicle_mileage: 45000,
+  scheduled_at: "2026-07-15T17:00:00Z", // 1pm ET, 2026-07-15
+  preferred_date: "2026-07-15",
+};
+
+describe("convertAppointmentToJob", () => {
+  it("rejects a non-confirmed appointment without creating a job", async () => {
+    const mock = useMock({ data: { ...CONFIRMED_APPT, status: "pending" }, error: null });
+    const result = await convertAppointmentToJob("a1");
+    expect(result.ok).toBe(false);
+    expect(mock.calls.some((c) => c.method === "insert")).toBe(false);
+  });
+
+  it("rejects an appointment with no linked customer (jobs require a customer)", async () => {
+    const mock = useMock({ data: { ...CONFIRMED_APPT, customer_id: null }, error: null });
+    const result = await convertAppointmentToJob("a1");
+    expect(result.ok).toBe(false);
+    expect(mock.calls.some((c) => c.method === "insert")).toBe(false);
+  });
+
+  it("creates a job from a confirmed appointment and links it back atomically", async () => {
+    const mock = useMock([
+      { data: CONFIRMED_APPT, error: null }, // load appointment
+      { data: { id: "job1", ro_number: 7 }, error: null }, // insert job
+      { count: 1, error: null }, // atomic link-back hits exactly one row
+    ]);
+
+    const result = await convertAppointmentToJob("a1");
+    expect(result).toEqual({ ok: true, data: { jobId: "job1" } });
+
+    const insert = mock.calls.find((c) => c.method === "insert");
+    expect(insert?.args[0]).toMatchObject({
+      customer_id: "c1",
+      vehicle_id: "v1",
+      status: "not_started",
+      category: "Brake Service",
+      notes: "Front brakes grinding when I stop.",
+      date_received: "2026-07-15", // ET date of scheduled_at
+      scheduled_at: "2026-07-15T17:00:00Z",
+      mileage_in: 45000,
+      payment_status: "unpaid",
+    });
+    // Title is "{year make model} – {service}" (en-dash); assert the parts to
+    // stay robust against the exact separator character.
+    const title = (insert?.args[0] as { title: string }).title;
+    expect(title).toContain("2018 Honda Accord");
+    expect(title).toContain("Brake Service");
+
+    const update = mock.calls.find((c) => c.method === "update");
+    expect(update?.args[0]).toMatchObject({
+      status: "converted_to_job",
+      converted_job_id: "job1",
+      converted_at: expect.any(String),
+    });
+  });
+
+  it("rolls back the new job when the atomic link-back loses the race (count != 1)", async () => {
+    const mock = useMock([
+      { data: CONFIRMED_APPT, error: null }, // load appointment
+      { data: { id: "job1", ro_number: 7 }, error: null }, // insert job
+      { count: 0, error: null }, // race lost — another tab already converted
+      { error: null }, // rollback delete succeeds
+    ]);
+
+    const result = await convertAppointmentToJob("a1");
+    expect(result.ok).toBe(false);
+    expect(mock.calls.some((c) => c.method === "delete")).toBe(true);
+  });
+
+  it("rolls back the new job when the link-back query itself errors", async () => {
+    const mock = useMock([
+      { data: CONFIRMED_APPT, error: null }, // load appointment
+      { data: { id: "job1", ro_number: 7 }, error: null }, // insert job
+      { error: { message: "deadlock detected" }, count: null }, // link-back errors
+      { error: null }, // rollback delete succeeds
+    ]);
+
+    const result = await convertAppointmentToJob("a1");
+    expect(result.ok).toBe(false);
+    expect(mock.calls.some((c) => c.method === "delete")).toBe(true);
   });
 });
 
