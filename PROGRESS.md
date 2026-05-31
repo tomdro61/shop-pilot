@@ -3575,3 +3575,32 @@ The workflow handoff: the manager confirms an online booking, then turns it into
 - Step 5 — `/appointments/calendar` read-only confirmed-only calendar.
 - Steps 6, 8, 9 — dashboard tile, reminder cron, booking metrics.
 - Production cutover: merge `staging → master` (both repos) + set `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel prod env.
+
+---
+
+## Session 52 — 2026-05-30 — Booking step 5: read-only confirmed-appointments calendar
+
+### Why
+
+A glance view of what's on the books. Read-only — distinct from the inbox work queue. shop-pilot only.
+
+### What shipped (on `staging`)
+
+- **`getConfirmedAppointments()`** read in `src/lib/actions/appointments.ts` — all `confirmed` rows with a non-null `scheduled_at`, earliest first; throws on error (matches `getAppointmentInbox`). Pulls the full set (no date-range scope) — fine at ~1–2 bookings/day; navigates client-side like the jobs calendar.
+- **`AppointmentsCalendarView`** (`src/components/appointments/appointments-calendar-view.tsx`) — a **parallel** month/week calendar mirroring `JobsCalendarView` (date-fns grid, month/week toggle, prev/next). NOT a refactor of the jobs one (it's hard-typed to `JobRow` + hard-links `/jobs/[id]`), per the plan's "reuse the pattern, no refactor." Entries link to `/appointments/[id]`, single blue accent (all confirmed), time + customer + vehicle (+ service in week view).
+- **`/appointments/calendar/page.tsx`** — server page; fetches + renders the calendar; empty state; back-to-inbox link. A **Calendar** button added to the inbox header (sidebar already startsWith-matches `/appointments`).
+
+### Review + verify
+
+- **1-agent scoped review caught a real HIGH**: the calendar bucketed appointments by `etDateOf(scheduled_at)` (ET date) but the grid keyed cells with date-fns `format(day)` (browser-local) — an **asymmetry** that only aligns when the browser is ET, and can make appointments invisible otherwise. **Fixed** by bucketing with the same `format(new Date(scheduled_at), "yyyy-MM-dd")` the grid uses — symmetric, browser-is-ET assumption identical to the jobs calendar, and still avoids the UTC-`split` mis-bucket trap. Also tidied the `Infinity`-based overflow count.
+- tsc + lint clean; full suite **306 tests** (2 new for `getConfirmedAppointments`).
+- Owner to eyeball the calendar live on the staging preview.
+
+### Files touched
+
+- `src/lib/actions/appointments.ts` (+`appointments.test.ts`), NEW `src/components/appointments/appointments-calendar-view.tsx`, NEW `src/app/(dashboard)/appointments/calendar/page.tsx`, `src/app/(dashboard)/appointments/page.tsx`, PROGRESS.md
+
+### What's next
+
+- Steps 6, 8, 9 — dashboard pending-count tile, reminder cron, booking metrics.
+- Production cutover: merge `staging → master` (both repos) + set `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel prod env.

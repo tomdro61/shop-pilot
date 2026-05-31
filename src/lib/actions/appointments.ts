@@ -60,6 +60,22 @@ export async function getAppointmentInbox(): Promise<AppointmentInbox> {
   };
 }
 
+// All confirmed appointments (any date), earliest scheduled first — feeds the
+// read-only calendar. Volume is low (~1–2 bookings/day) so the calendar pulls the
+// full set and navigates client-side, mirroring the jobs calendar; add a
+// date-range scope here if confirmed volume ever grows large.
+export async function getConfirmedAppointments(): Promise<Appointment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("*")
+    .eq("status", "confirmed")
+    .not("scheduled_at", "is", null)
+    .order("scheduled_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function getAppointment(id: string): Promise<Appointment | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

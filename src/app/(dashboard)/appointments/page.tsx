@@ -1,4 +1,5 @@
-import { CalendarCheck } from "lucide-react";
+import Link from "next/link";
+import { CalendarCheck, CalendarDays } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { getAppointmentInbox } from "@/lib/actions/appointments";
 import { AppointmentCard } from "@/components/appointments/appointment-card";
@@ -28,13 +29,22 @@ export default async function AppointmentsPage() {
 
   return (
     <PageShell>
-      <div className="flex items-center gap-2.5">
-        <span className="grid h-7 w-7 place-items-center rounded-md border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
-          <CalendarCheck className="h-4 w-4" />
-        </span>
-        <h1 className="text-base font-semibold tracking-tight lg:text-lg">
-          Appointments
-        </h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-7 w-7 place-items-center rounded-md border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+            <CalendarCheck className="h-4 w-4" />
+          </span>
+          <h1 className="text-base font-semibold tracking-tight lg:text-lg">
+            Appointments
+          </h1>
+        </div>
+        <Link
+          href="/appointments/calendar"
+          className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 px-3 py-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 dark:border-stone-800 dark:text-stone-400 dark:hover:bg-stone-800/50 dark:hover:text-stone-100"
+        >
+          <CalendarDays className="h-4 w-4" />
+          Calendar
+        </Link>
       </div>
 
       <Section title="Pending" count={pending.length}>

@@ -18,6 +18,7 @@ import {
   cancelAppointment,
   convertAppointmentToJob,
   getAppointmentInbox,
+  getConfirmedAppointments,
 } from "./appointments";
 
 function useMock(result: Parameters<typeof createSupabaseMock>[0]) {
@@ -256,5 +257,27 @@ describe("getAppointmentInbox", () => {
     expect(inbox.terminal.map((r) => r.id)).toEqual(["t_recent"]);
 
     vi.useRealTimers();
+  });
+});
+
+describe("getConfirmedAppointments", () => {
+  it("returns confirmed appointments, filtered by status", async () => {
+    const rows = [
+      { id: "c1", status: "confirmed", scheduled_at: "2026-07-15T17:00:00Z" },
+      { id: "c2", status: "confirmed", scheduled_at: "2026-07-16T13:00:00Z" },
+    ];
+    const mock = useMock({ data: rows, error: null });
+
+    const result = await getConfirmedAppointments();
+    expect(result).toEqual(rows);
+    expect(mock.calls).toContainEqual({
+      method: "eq",
+      args: ["status", "confirmed"],
+    });
+  });
+
+  it("throws on query error", async () => {
+    useMock({ data: null, error: { message: "boom" } });
+    await expect(getConfirmedAppointments()).rejects.toThrow("boom");
   });
 });
