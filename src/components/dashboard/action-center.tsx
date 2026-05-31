@@ -11,6 +11,7 @@ import {
   Loader2,
   UserX,
   MessageSquareQuote,
+  CalendarClock,
   FileText,
   MapPin,
   Gift,
@@ -27,6 +28,7 @@ import { TONE_CLASSES, type Tone } from "@/lib/ui/alert-tone";
 interface NeedsAttention {
   unassignedJobs: number;
   quoteRequests: number;
+  pendingAppointments: number;
   pendingEstimates: number;
   parkingLeads: number;
   awaitingPayments: number;
@@ -45,6 +47,7 @@ export function ActionCenter({
   const attentionTotal =
     needsAttention.unassignedJobs +
     needsAttention.quoteRequests +
+    needsAttention.pendingAppointments +
     needsAttention.pendingEstimates +
     needsAttention.parkingLeads +
     needsAttention.awaitingPayments +
@@ -111,6 +114,15 @@ function NeedsAttentionCards({ attention }: { attention: NeedsAttention }) {
       href: "/inbox?tab=quotes",
       icon: MessageSquareQuote,
       tone: "blue",
+    },
+    {
+      key: "pendingAppointments",
+      count: attention.pendingAppointments,
+      label: "Booking Requests",
+      descriptor: "Online bookings to confirm",
+      href: "/appointments",
+      icon: CalendarClock,
+      tone: "violet",
     },
     {
       key: "pendingEstimates",

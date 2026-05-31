@@ -3604,3 +3604,31 @@ A glance view of what's on the books. Read-only — distinct from the inbox work
 
 - Steps 6, 8, 9 — dashboard pending-count tile, reminder cron, booking metrics.
 - Production cutover: merge `staging → master` (both repos) + set `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel prod env.
+
+---
+
+## Session 53 — 2026-05-30 — Booking step 6: dashboard integration (pending alert + today's confirmed)
+
+### Why
+
+Surface online bookings where the manager starts their day — the main dashboard. Two pieces per §8.4: a pending-needs-confirmation alert + today's confirmed appointments. shop-pilot only.
+
+### What shipped (on `staging`)
+
+- **"Booking Requests" alert** in the Action Center (`src/components/dashboard/action-center.tsx`): added `pendingAppointments` to the `NeedsAttention` interface + `attentionTotal` + a new alert spec (violet, `CalendarClock`, "Online bookings to confirm", links to `/appointments`). Sits with Quote Requests — both inbound customer requests.
+- **"Booked · Today" card** (NEW `src/components/dashboard/appointments-today-card.tsx`) in the Today's View aside — today's CONFIRMED appointments (time + customer + service), each linking to its detail. Pre-conversion; a converted appointment leaves this list and shows as a job.
+- **Two reads added to the dashboard `Promise.all`** (`src/app/(dashboard)/dashboard/page.tsx`): a `head:true` pending count, and a confirmed-appointments select filtered to today in JS via `isScheduledOnEtDate` (same pattern as `scheduledToday`). No extra round-trips beyond the existing batch.
+
+### Review + verify
+
+- **2-agent scoped review** (code-reviewer + silent-failure-hunter) → **CLEAN, no findings.** Confirmed the `Promise.all` order alignment (11 existing + 2 new, correctly matched — the classic mismatch bug), the count-query usage, and that both new reads throw on `.error` (loud, consistent with the rest of `getDashboardData`). Noted out-of-scope: the sibling `getPendingAppointmentCount` (nav badge) does `if (error) return 0` — a silent hide, but acceptable for a layout badge (don't crash the shell on a count failure); not changed.
+- tsc clean; full suite **306**; new/changed files lint-clean (the one `page.tsx` warning is a pre-existing dead `pendingEstimates` var, not this diff).
+
+### Files touched
+
+- `src/app/(dashboard)/dashboard/page.tsx`, `src/components/dashboard/action-center.tsx`, NEW `src/components/dashboard/appointments-today-card.tsx`, PROGRESS.md
+
+### What's next
+
+- Steps 8, 9 — appointment-reminder cron, booking metrics. Optional; the booking feature's core + dashboard surfacing are complete on staging.
+- Production cutover: merge `staging → master` (both repos) + set `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel prod env.

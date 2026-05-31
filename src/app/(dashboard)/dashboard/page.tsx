@@ -20,6 +20,7 @@ import { KpiCompactCard } from "@/components/dashboard/kpi-compact-card";
 import { ActionCenter } from "@/components/dashboard/action-center";
 import { ParkingTodayCard } from "@/components/dashboard/parking-today-card";
 import { ScheduledTodayCard } from "@/components/dashboard/scheduled-today-card";
+import { AppointmentsTodayCard } from "@/components/dashboard/appointments-today-card";
 import { ShopFloorColumn } from "@/components/dashboard/shop-floor-column";
 import { getOpenTasks } from "@/lib/actions/tasks";
 
@@ -56,6 +57,8 @@ async function getDashboardData() {
     manualIncomeRangeResult,
     completedJobsRangeResult,
     completedTodayResult,
+    pendingAppointmentsResult,
+    confirmedAppointmentsResult,
   ] = await Promise.all([
     supabase
       .from("jobs")
@@ -128,6 +131,18 @@ async function getDashboardData() {
       .eq("status", "complete")
       .eq("date_finished", today)
       .order("ro_number", { ascending: false }),
+    supabase
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("appointments")
+      .select(
+        "id, scheduled_at, snapshot_customer_name, service_category, snapshot_vehicle_year, snapshot_vehicle_make, snapshot_vehicle_model"
+      )
+      .eq("status", "confirmed")
+      .not("scheduled_at", "is", null)
+      .order("scheduled_at", { ascending: true }),
   ]);
 
   if (activeJobsResult.error)
@@ -152,6 +167,10 @@ async function getDashboardData() {
     throw new Error(`Failed to load completed jobs: ${completedJobsRangeResult.error.message}`);
   if (completedTodayResult.error)
     throw new Error(`Failed to load completed-today jobs: ${completedTodayResult.error.message}`);
+  if (pendingAppointmentsResult.error)
+    throw new Error(`Failed to load pending appointments: ${pendingAppointmentsResult.error.message}`);
+  if (confirmedAppointmentsResult.error)
+    throw new Error(`Failed to load confirmed appointments: ${confirmedAppointmentsResult.error.message}`);
 
   const activeJobs = activeJobsResult.data || [];
   const completedJobs = completedJobsRangeResult.data || [];
@@ -255,7 +274,14 @@ async function getDashboardData() {
 
   const openParkingLeads = (parkingLeadsResult.data ?? []).filter(hasPendingService);
 
+  // Confirmed online bookings scheduled for today (ET) — shown in Today's View.
+  // Filtered in JS like scheduledToday since scheduled_at is a UTC instant.
+  const appointmentsToday = (confirmedAppointmentsResult.data ?? []).filter((a) =>
+    isScheduledOnEtDate(a.scheduled_at, today)
+  );
+
   return {
+    appointmentsToday,
     stats: {
       todayRevenue:
         sumJobRevenue(todayCompleted) + sumInspectionRev(inspToday) + sumManualIncome(manualIncomeToday),
@@ -289,6 +315,7 @@ async function getDashboardData() {
     needsAttention: {
       unassignedJobs: unassignedJobsCount,
       quoteRequests: (newQuoteRequestsResult.data ?? []).length,
+      pendingAppointments: pendingAppointmentsResult.count ?? 0,
       pendingEstimates: (pendingEstimatesResult.data ?? []).length,
       parkingLeads: openParkingLeads.length,
       awaitingPayments: unpaidJobs.length,
@@ -320,7 +347,7 @@ export default async function DashboardPage() {
   const firstName = user?.name?.split(" ")[0] ?? null;
   const greeting = firstName ? `${getGreeting()}, ${firstName}` : getGreeting();
 
-  const { stats, ops, shopFloor, parking, needsAttention } = data;
+  const { stats, ops, shopFloor, parking, needsAttention, appointmentsToday } = data;
   // Derive Scheduled Today from the already-fetched active jobs to avoid a
   // second Supabase round-trip. The ET-date comparison lives in
   // isScheduledOnEtDate so the timezone handling is testable in isolation.
@@ -433,6 +460,8 @@ export default async function DashboardPage() {
           <ParkingTodayCard today={today} parking={parking} />
 
           <ScheduledTodayCard jobs={scheduledToday} />
+
+          <AppointmentsTodayCard appointments={appointmentsToday} />
 
           <div className="space-y-2">
             <ShopFloorColumn status="not_started" jobs={shopFloor.notStarted} today={today} />
