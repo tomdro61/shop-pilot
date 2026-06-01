@@ -1,4 +1,5 @@
 import { getQuoteRequests } from "@/lib/actions/quote-requests";
+import { createClient } from "@/lib/supabase/server";
 import { QuoteRequestList } from "@/components/quote-requests/quote-request-list";
 import { PageShell } from "@/components/layout/page-shell";
 import { MessageSquareQuote } from "lucide-react";
@@ -26,6 +27,20 @@ export default async function QuoteRequestsPage({
     search,
   });
 
+  // booking-photos is a private bucket; sign the stored paths for display. One
+  // batch call for the whole page → a path→URL map the cards read from.
+  const allPaths = quoteRequests.flatMap((qr) => qr.photo_paths ?? []);
+  const photoUrls: Record<string, string> = {};
+  if (allPaths.length > 0) {
+    const supabase = await createClient();
+    const { data } = await supabase.storage
+      .from("booking-photos")
+      .createSignedUrls(allPaths, 60 * 60);
+    for (const item of data ?? []) {
+      if (item.signedUrl && item.path) photoUrls[item.path] = item.signedUrl;
+    }
+  }
+
   return (
     <PageShell width="wide">
       <div className="flex items-center gap-2.5">
@@ -41,7 +56,7 @@ export default async function QuoteRequestsPage({
           </p>
         </div>
       </div>
-      <QuoteRequestList quoteRequests={quoteRequests} />
+      <QuoteRequestList quoteRequests={quoteRequests} photoUrls={photoUrls} />
     </PageShell>
   );
 }

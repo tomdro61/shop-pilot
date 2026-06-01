@@ -52,8 +52,10 @@ function ageBadgeClass(days: number): string {
 
 export function QuoteRequestList({
   quoteRequests,
+  photoUrls,
 }: {
   quoteRequests: QuoteRequest[];
+  photoUrls: Record<string, string>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -141,7 +143,7 @@ export function QuoteRequestList({
         ) : (
           <div className="space-y-3">
             {quoteRequests.map((qr) => (
-              <QuoteRequestCard key={qr.id} quoteRequest={qr} />
+              <QuoteRequestCard key={qr.id} quoteRequest={qr} photoUrls={photoUrls} />
             ))}
           </div>
         )}
@@ -184,7 +186,13 @@ function MessageBlock({ message }: { message: string }) {
   );
 }
 
-function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) {
+function QuoteRequestCard({
+  quoteRequest: qr,
+  photoUrls,
+}: {
+  quoteRequest: QuoteRequest;
+  photoUrls: Record<string, string>;
+}) {
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const status = qr.status as QuoteRequestStatus;
@@ -333,6 +341,28 @@ function QuoteRequestCard({ quoteRequest: qr }: { quoteRequest: QuoteRequest }) 
 
         {/* Customer note */}
         {qr.message && <MessageBlock message={qr.message} />}
+
+        {/* Customer photos — open full-size in a new tab */}
+        {qr.photo_paths.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {qr.photo_paths.map((p) => {
+              const url = photoUrls[p];
+              if (!url) return null;
+              return (
+                <a
+                  key={p}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block overflow-hidden rounded-md border border-stone-200 dark:border-stone-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="Customer-submitted photo" className="h-16 w-16 object-cover" />
+                </a>
+              );
+            })}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex items-center gap-3 pt-1">
