@@ -96,11 +96,13 @@ function lineItemsTable(lineItems: LineItem[], totals: TotalsBreakdown): string 
     </tr>`;
   }
 
-  summaryRows += `
+  if (totals.taxAmount > 0) {
+    summaryRows += `
     <tr>
       <td style="padding:4px 0;color:#78716c;font-size:14px;">Tax (${(totals.taxRate * 100).toFixed(2)}%)</td>
       <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(totals.taxAmount)}</td>
     </tr>`;
+  }
 
   return `
   <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">

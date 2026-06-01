@@ -133,7 +133,12 @@ export function calculateTotals(
     | "hazmat_label"
     | "shop_supplies_categories"
     | "hazmat_categories"
-  > | null
+  > | null,
+  // Per-job/estimate switch. Default true = charge tax (existing behavior).
+  // Set false for jobs where the shop bills an outsourced part it didn't buy —
+  // the part is charged but no sales tax applies. Only zeroes tax; labor/parts/
+  // supplies/hazmat are unaffected.
+  chargeSalesTax: boolean = true
 ): TotalsBreakdown {
   const s = settings ?? DEFAULT_SETTINGS;
 
@@ -169,8 +174,9 @@ export function calculateTotals(
     );
   const hazmat = hazmatEnabled ? s.hazmat_amount : 0;
 
-  // Tax applies to parts only (NOT labor, NOT shop supplies, NOT hazmat)
-  const taxableAmount = partsTotal;
+  // Tax applies to parts only (NOT labor, NOT shop supplies, NOT hazmat), and
+  // only when this job/estimate charges sales tax (see chargeSalesTax above).
+  const taxableAmount = chargeSalesTax ? partsTotal : 0;
   const taxRate = s.tax_rate;
   const taxAmount = Math.round(taxableAmount * taxRate * 100) / 100;
 

@@ -7,6 +7,7 @@ import { getInspectionCountsRange } from "@/lib/actions/inspections";
 import { INSPECTION_CATEGORIES, calcInspectionRevenue, sumManualIncome, sumManualIncomeProfit } from "@/lib/utils/revenue";
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
+import { getShopSettings } from "@/lib/actions/settings";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -612,22 +613,25 @@ const MONTH_NAMES = [
 
 export async function getTaxReportData(year: number, customerType?: string): Promise<TaxReportData> {
   const supabase = await createClient();
-  const taxRate = MA_SALES_TAX_RATE;
   const isFiltered = !!(customerType && customerType !== "all");
 
   const jobSelect: string = isFiltered
-    ? "id, paid_at, date_finished, customers!inner(customer_type), job_line_items(type, total, category)"
-    : "id, paid_at, date_finished, job_line_items(type, total, category)";
+    ? "id, paid_at, date_finished, charge_sales_tax, customers!inner(customer_type), job_line_items(type, total, category)"
+    : "id, paid_at, date_finished, charge_sales_tax, job_line_items(type, total, category)";
   let jobQuery = supabase
     .from("jobs")
     .select(jobSelect)
     .eq("payment_status", "paid");
   if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
 
-  const [jobResult, taxManualEntries] = await Promise.all([
+  const [jobResult, taxManualEntries, settings] = await Promise.all([
     jobQuery,
     isFiltered ? Promise.resolve([]) : getManualIncomeForRange(`${year}-01-01`, `${year}-12-31`),
+    getShopSettings(),
   ]);
+  // Read the live rate from settings (don't hard-code) so the report matches the
+  // rate actually charged on invoices.
+  const taxRate = settings?.tax_rate ?? MA_SALES_TAX_RATE;
   const jobs = ((jobResult as any).data || []) as any[];
 
   // Aggregate by month
@@ -651,13 +655,17 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
     const month = etMonth; // 1-12
 
     const lineItems = (job.job_line_items as { type: string; total: number; category: string | null }[]) || [];
+    // A job with sales tax turned off bills its parts, but they are NOT taxable
+    // (e.g. outsourced parts the shop didn't buy) — count them as revenue but
+    // exclude from the taxable base so the MA DOR filing isn't overstated.
+    const chargeTax = job.charge_sales_tax !== false;
 
     lineItems
       .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
       .forEach((li) => {
         const total = li.total || 0;
         monthBuckets[month].totalRevenue += total;
-        if (li.type === "part") {
+        if (li.type === "part" && chargeTax) {
           monthBuckets[month].partsTotal += total;
         }
       });

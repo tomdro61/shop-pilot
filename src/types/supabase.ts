@@ -616,6 +616,7 @@ export type Database = {
           approval_token: string | null
           approved_at: string | null
           approved_by_user_id: string | null
+          charge_sales_tax: boolean
           created_at: string
           customer_id: string
           declined_at: string | null
@@ -634,6 +635,7 @@ export type Database = {
           approval_token?: string | null
           approved_at?: string | null
           approved_by_user_id?: string | null
+          charge_sales_tax?: boolean
           created_at?: string
           customer_id: string
           declined_at?: string | null
@@ -652,6 +654,7 @@ export type Database = {
           approval_token?: string | null
           approved_at?: string | null
           approved_by_user_id?: string | null
+          charge_sales_tax?: boolean
           created_at?: string
           customer_id?: string
           declined_at?: string | null
@@ -840,6 +843,7 @@ export type Database = {
         Row: {
           assigned_tech: string | null
           category: string | null
+          charge_sales_tax: boolean
           created_at: string
           customer_id: string
           date_finished: string | null
@@ -861,6 +865,7 @@ export type Database = {
         Insert: {
           assigned_tech?: string | null
           category?: string | null
+          charge_sales_tax?: boolean
           created_at?: string
           customer_id: string
           date_finished?: string | null
@@ -882,6 +887,7 @@ export type Database = {
         Update: {
           assigned_tech?: string | null
           category?: string | null
+          charge_sales_tax?: boolean
           created_at?: string
           customer_id?: string
           date_finished?: string | null

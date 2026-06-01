@@ -76,7 +76,7 @@ export default async function JobDetailPage({
   const vehicle = job.vehicles as Vehicle | null;
   const tech = job.users as Pick<UserType, "id" | "name"> | null;
   const lineItems = (job.job_line_items || []) as JobLineItem[];
-  const totals = calculateTotals(lineItems, settings);
+  const totals = calculateTotals(lineItems, settings, job.charge_sales_tax);
   const grandTotal = totals.grandTotal;
 
   // If the lookup fails (Stripe outage, etc.) treat as "no card" — the
@@ -341,7 +341,13 @@ export default async function JobDetailPage({
             title="Line items"
             action={<LineItemsAddButton jobId={id} settings={settings} presets={presets} />}
           />
-          <LineItemsList jobId={id} lineItems={lineItems} settings={settings} />
+          <LineItemsList
+            jobId={id}
+            lineItems={lineItems}
+            settings={settings}
+            chargeSalesTax={job.charge_sales_tax}
+            salesTaxLocked={(job.payment_status ?? "unpaid") !== "unpaid"}
+          />
         </section>
 
         <section>

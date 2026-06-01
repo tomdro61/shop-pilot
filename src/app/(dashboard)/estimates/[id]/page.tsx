@@ -282,6 +282,7 @@ export default async function EstimateDetailPage({
           lineItems={lineItems}
           readOnly={!isDraft}
           settings={settings}
+          chargeSalesTax={estimate.charge_sales_tax}
         />
       </section>
 

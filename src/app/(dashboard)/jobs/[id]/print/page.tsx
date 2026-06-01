@@ -82,7 +82,7 @@ export default async function PrintRepairOrderPage({
 
   // Calculate totals
   const settings = await getShopSettings();
-  const totals = calculateTotals(lineItems, settings);
+  const totals = calculateTotals(lineItems, settings, job.charge_sales_tax);
 
   return (
     <div className="print-ro mx-auto max-w-3xl bg-white p-8 text-stone-900">
@@ -246,10 +246,12 @@ export default async function PrintRepairOrderPage({
               <span className="tabular-nums">{formatCurrency(totals.hazmat)}</span>
             </div>
           )}
-          <div className="flex justify-between py-1 text-stone-500">
-            <span>Tax ({(totals.taxRate * 100).toFixed(2)}%)</span>
-            <span className="tabular-nums">{formatCurrency(totals.taxAmount)}</span>
-          </div>
+          {totals.taxAmount > 0 && (
+            <div className="flex justify-between py-1 text-stone-500">
+              <span>Tax ({(totals.taxRate * 100).toFixed(2)}%)</span>
+              <span className="tabular-nums">{formatCurrency(totals.taxAmount)}</span>
+            </div>
+          )}
           <div className="mt-1 flex justify-between border-t-2 border-stone-900 pt-2 text-base font-bold">
             <span>Total</span>
             <span className="tabular-nums">{formatCurrency(totals.grandTotal)}</span>

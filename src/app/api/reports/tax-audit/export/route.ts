@@ -4,6 +4,7 @@ import { requireManager } from "@/lib/auth";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
+import { getShopSettings } from "@/lib/actions/settings";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -45,19 +46,20 @@ export async function GET(req: NextRequest) {
   }
   const isFiltered = !!(customerType && customerType !== "all");
 
-  // Match the on-screen Tax Summary exactly. reports.ts:615 hard-codes MA_SALES_TAX_RATE
-  // (does NOT read shop_settings). Diverging would cause the CSV totals to drift from the
-  // numbers the operator is reconciling against.
-  const taxRate = MA_SALES_TAX_RATE;
-
   const supabase = await createClient();
 
+  // Live rate from settings, matching the on-screen Tax Summary. A job with sales
+  // tax turned off contributes 0 taxable parts + 0 tax — its parts are still billed
+  // in Subtotal/Total but are non-taxable (e.g. outsourced parts).
+  const settings = await getShopSettings();
+  const taxRate = settings?.tax_rate ?? MA_SALES_TAX_RATE;
+
   const jobSelect = isFiltered
-    ? `id, ro_number, paid_at, date_finished, payment_method,
+    ? `id, ro_number, paid_at, date_finished, payment_method, charge_sales_tax,
        customers!inner(first_name, last_name, customer_type),
        vehicles(year, make, model, license_plate),
        job_line_items(type, description, quantity, unit_cost, total, cost, category, part_number)`
-    : `id, ro_number, paid_at, date_finished, payment_method,
+    : `id, ro_number, paid_at, date_finished, payment_method, charge_sales_tax,
        customers(first_name, last_name, customer_type),
        vehicles(year, make, model, license_plate),
        job_line_items(type, description, quantity, unit_cost, total, cost, category, part_number)`;
@@ -127,6 +129,7 @@ export async function GET(req: NextRequest) {
     lineItems: LineItem[];
     labor: number;
     parts: number;
+    taxableParts: number;
     subtotal: number;
     tax: number;
     total: number;
@@ -139,6 +142,7 @@ export async function GET(req: NextRequest) {
       paid_at: string | null;
       date_finished: string | null;
       payment_method: string | null;
+      charge_sales_tax: boolean;
       customers: Customer | null;
       vehicles: Vehicle | null;
       job_line_items: LineItem[] | null;
@@ -172,8 +176,10 @@ export async function GET(req: NextRequest) {
       if (li.type === "labor") labor += t;
       else if (li.type === "part") parts += t;
     }
+    // Parts are billed either way, but only taxable when the job charges tax.
+    const taxableParts = job.charge_sales_tax !== false ? parts : 0;
     const subtotal = Math.round((labor + parts) * 100) / 100;
-    const tax = Math.round(parts * taxRate * 100) / 100;
+    const tax = Math.round(taxableParts * taxRate * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
 
     filteredJobs.push({
@@ -186,6 +192,7 @@ export async function GET(req: NextRequest) {
       lineItems,
       labor,
       parts,
+      taxableParts,
       subtotal,
       tax,
       total,
@@ -221,6 +228,7 @@ export async function GET(req: NextRequest) {
   rows.push(`Generated: ${new Date().toISOString()}`);
   rows.push(`Tax rate applied: ${(taxRate * 100).toFixed(2)}%`);
   rows.push(`Source: jobs where payment_status='paid', bucketed by paid_at (ET); inspection-category line items excluded`);
+  rows.push(`Note: jobs with sales tax turned off (e.g. outsourced parts) show 0 in Parts (Taxable) and 0 tax; those parts stay in Subtotal/Total as non-taxable revenue`);
   if (isFiltered) {
     rows.push(`Filter: customer_type='${customerType}' (jobs with no linked customer are excluded)`);
   }
@@ -247,7 +255,7 @@ export async function GET(req: NextRequest) {
       : "";
 
     totalLabor += j.labor;
-    totalParts += j.parts;
+    totalParts += j.taxableParts;
     totalTax += j.tax;
     totalSubtotal += j.subtotal;
     totalJobGrand += j.total;
@@ -262,7 +270,7 @@ export async function GET(req: NextRequest) {
       j.customer?.customer_type,
       j.payment_method,
       fmt(j.labor),
-      fmt(j.parts),
+      fmt(j.taxableParts),
       fmt(j.subtotal),
       fmt(j.tax),
       fmt(j.total),

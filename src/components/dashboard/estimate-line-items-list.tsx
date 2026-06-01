@@ -50,6 +50,10 @@ interface EstimateLineItemsListProps {
   lineItems: EstimateLineItem[];
   readOnly?: boolean;
   settings?: ShopSettings | null;
+  // Inherited from the job (or default true for standalone estimates). The tax
+  // toggle itself lives on the job; the estimate just reflects it so the
+  // customer-facing total matches the invoice.
+  chargeSalesTax?: boolean;
 }
 
 export function EstimateLineItemsList({
@@ -57,11 +61,12 @@ export function EstimateLineItemsList({
   lineItems,
   readOnly = false,
   settings,
+  chargeSalesTax = true,
 }: EstimateLineItemsListProps) {
   const [editItem, setEditItem] = useState<EstimateLineItem | null>(null);
   const categories = resolveConfiguredCategories(settings);
 
-  const totals = calculateTotals(lineItems, settings);
+  const totals = calculateTotals(lineItems, settings, chargeSalesTax);
 
   async function handleDelete(id: string) {
     const result = await deleteEstimateLineItem(id, estimateId);

@@ -263,6 +263,36 @@ const EDITABLE_KEYS = [
   "vehicle_id",
 ] as const satisfies readonly (keyof JobFieldPatch)[];
 
+// Per-job sales-tax toggle. Kept OUT of updateJobFields / EDITABLE_KEYS because
+// it must be LOCKED once the job is invoiced — flipping it after the Stripe
+// invoice is finalized would make the job total disagree with the sent invoice.
+// The UI also disables the toggle once invoiced; this server check is the gate.
+export async function setJobChargeSalesTax(id: string, charge: boolean) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: job, error: fetchError } = await supabase
+    .from("jobs")
+    .select("payment_status")
+    .eq("id", id)
+    .single();
+  if (fetchError || !job) return { error: "Job not found" };
+  if (job.payment_status !== "unpaid") {
+    return { error: "Sales tax is locked once the job is invoiced." };
+  }
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ charge_sales_tax: charge })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/jobs/${id}`);
+  return { success: true };
+}
+
 export async function updateJobFields(id: string, patch: JobFieldPatch) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };

@@ -184,6 +184,7 @@ export async function createInvoiceFromJob(
         jobCategory: derivedCategory !== "Uncategorized" ? derivedCategory : null,
         settings: shopSettings,
         hasEmail: !!customer.email,
+        chargeSalesTax: job.charge_sales_tax,
       });
 
     const invoiceStatus = (sendText || sendEmail) ? "sent" : "draft";

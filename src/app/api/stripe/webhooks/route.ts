@@ -311,7 +311,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   const { data: jobData, error: jobFetchErr } = await supabase
     .from("jobs")
     .select(
-      "id, title, payment_method, customers(id, first_name, last_name, email, phone), vehicles(year, make, model), job_line_items(type, description, quantity, unit_cost)"
+      "id, title, payment_method, charge_sales_tax, customers(id, first_name, last_name, email, phone), vehicles(year, make, model), job_line_items(type, description, quantity, unit_cost)"
     )
     .eq("id", invoice.job_id)
     .single();
@@ -372,7 +372,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         unit_cost: number;
       }[];
 
-      const totals = calculateTotals(lineItems, settingsRow);
+      const totals = calculateTotals(lineItems, settingsRow, jobData.charge_sales_tax);
       const vehicleDesc = vehicle
         ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")
         : "Vehicle";

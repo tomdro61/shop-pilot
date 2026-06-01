@@ -55,7 +55,7 @@ export default async function EstimateApprovalPage({
   const customer = (estimate.customers as Customer | null) ?? null;
   const vehicle = (estimate.vehicles as Vehicle | null) ?? null;
 
-  const totals = calculateTotals(lineItems, settings);
+  const totals = calculateTotals(lineItems, settings, estimate.charge_sales_tax);
 
   // Group by category
   const categoryGroups: Record<string, EstimateLineItem[]> = {};

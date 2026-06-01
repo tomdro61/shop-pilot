@@ -123,6 +123,9 @@ interface CreateStripeInvoiceParams {
   jobCategory?: string | null;
   settings?: ShopSettings | null;
   hasEmail?: boolean;
+  // false → no sales tax on this invoice (the tax line item is suppressed
+  // because totals.taxAmount becomes 0). Default true = existing behavior.
+  chargeSalesTax?: boolean;
 }
 
 interface CreateStripeInvoiceResult {
@@ -137,9 +140,10 @@ export async function createStripeInvoice({
   jobCategory,
   settings,
   hasEmail = true,
+  chargeSalesTax = true,
 }: CreateStripeInvoiceParams): Promise<CreateStripeInvoiceResult> {
   const stripe = getStripe();
-  const totals = calculateTotals(lineItems, settings);
+  const totals = calculateTotals(lineItems, settings, chargeSalesTax);
 
   const invoice = await stripe.invoices.create({
     customer: stripeCustomerId,

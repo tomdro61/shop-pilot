@@ -75,7 +75,7 @@ export async function sendEstimateEmail({
     supabase
       .from("estimates")
       .select(
-        "id, approval_token, tax_rate, job_id, customers(id, first_name, last_name, email), vehicles(id, year, make, model), jobs(id, title), estimate_line_items(type, description, quantity, unit_cost)"
+        "id, approval_token, tax_rate, charge_sales_tax, job_id, customers(id, first_name, last_name, email), vehicles(id, year, make, model), jobs(id, title), estimate_line_items(type, description, quantity, unit_cost)"
       )
       .eq("id", estimateId)
       .single(),
@@ -115,7 +115,7 @@ export async function sendEstimateEmail({
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const approvalUrl = `${appUrl}/estimates/approve/${estimate.approval_token}`;
 
-  const totals = calculateTotals(lineItems, settings);
+  const totals = calculateTotals(lineItems, settings, estimate.charge_sales_tax);
 
   const { subject, html } = estimateReadyEmail({
     customerName: customer.first_name,
@@ -145,7 +145,7 @@ export async function sendPaymentReceiptEmail({
     supabase
       .from("jobs")
       .select(
-        "id, title, customer_id, vehicle_id, payment_method, customers(id, first_name, last_name, email), vehicles(id, year, make, model), job_line_items(type, description, quantity, unit_cost)"
+        "id, title, customer_id, vehicle_id, payment_method, charge_sales_tax, customers(id, first_name, last_name, email), vehicles(id, year, make, model), job_line_items(type, description, quantity, unit_cost)"
       )
       .eq("id", jobId)
       .single(),
@@ -182,7 +182,7 @@ export async function sendPaymentReceiptEmail({
     unit_cost: number;
   }[];
 
-  const totals = calculateTotals(lineItems, settings);
+  const totals = calculateTotals(lineItems, settings, job.charge_sales_tax);
 
   const { subject, html } = paymentReceiptEmail({
     customerName: customer.first_name,

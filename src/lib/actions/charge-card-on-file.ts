@@ -36,7 +36,7 @@ export async function chargeCardOnFile(jobId: string): Promise<ActionResult<Char
   const { data: job, error: jobError } = await supabase
     .from("jobs")
     .select(
-      "id, status, payment_status, customers(id, first_name, last_name, email, phone, stripe_customer_id), job_line_items(type, description, quantity, unit_cost, category)"
+      "id, status, payment_status, charge_sales_tax, customers(id, first_name, last_name, email, phone, stripe_customer_id), job_line_items(type, description, quantity, unit_cost, category)"
     )
     .eq("id", jobId)
     .single();
@@ -143,7 +143,7 @@ export async function chargeCardOnFile(jobId: string): Promise<ActionResult<Char
       error: "Couldn't load shop settings — refresh and try again, or check Settings → Rates & Fees.",
     };
   }
-  const totals = calculateTotals(lineItems, shopSettings);
+  const totals = calculateTotals(lineItems, shopSettings, job.charge_sales_tax);
 
   if (totals.grandTotal <= 0) {
     return { ok: false, error: "Job total must be greater than zero" };

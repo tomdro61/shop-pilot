@@ -34,7 +34,7 @@ export async function createEstimateFromJob(jobId: string) {
 
   const { data: job, error: jobError } = await supabase
     .from("jobs")
-    .select("id, customer_id, vehicle_id")
+    .select("id, customer_id, vehicle_id, charge_sales_tax")
     .eq("id", jobId)
     .single();
 
@@ -56,6 +56,9 @@ export async function createEstimateFromJob(jobId: string) {
       vehicle_id: job.vehicle_id,
       status: "draft",
       tax_rate: settings?.tax_rate ?? 0.0625,
+      // Inherit the job's tax setting so the estimate the customer approves
+      // shows the same (no-)tax total the invoice will charge.
+      charge_sales_tax: job.charge_sales_tax,
     })
     .select()
     .single();

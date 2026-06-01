@@ -44,7 +44,8 @@ Payment methods: stripe (card), cash, check, ach
 
 ## Business Rules
 - **Tax, fees, and rates are configurable** via shop settings (Settings > Rates & Fees). Use get_shop_settings to check current rates before quoting totals to the manager.
-- Tax applies to parts + shop supplies only. Labor and environmental fees are tax-exempt.
+- Tax applies to parts only. Labor, shop supplies, and environmental fees are tax-exempt.
+- Sales tax can be turned OFF per job (a "Charge sales tax" toggle on the job — e.g. outsourced parts the shop bills but didn't buy). When off, that job and its estimate/invoice charge no tax. Trust the job's computed total rather than recomputing tax from parts × rate.
 - Shop supplies fee and environmental fee are optional and may be disabled.
 - Cannot delete a customer who has active jobs (not_started, waiting_for_parts, in_progress)
 - Cannot create an invoice unless the job status is "complete"

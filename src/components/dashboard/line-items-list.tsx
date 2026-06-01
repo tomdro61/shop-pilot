@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useTransition, useOptimistic } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LineItemForm } from "@/components/forms/line-item-form";
@@ -8,6 +9,7 @@ import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { deleteLineItem, createLineItem } from "@/lib/actions/job-line-items";
 import { saveToCatalog, incrementUsageCount } from "@/lib/actions/catalog";
 import { applyPresetToJob } from "@/lib/actions/presets";
+import { setJobChargeSalesTax } from "@/lib/actions/jobs";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/utils/format";
 import { calculateTotals, resolveConfiguredCategories } from "@/lib/utils/totals";
@@ -22,6 +24,9 @@ interface LineItemsListProps {
   jobId: string;
   lineItems: JobLineItem[];
   settings?: ShopSettings | null;
+  chargeSalesTax: boolean;
+  // Tax can't change after the job is invoiced — render the toggle read-only.
+  salesTaxLocked: boolean;
 }
 
 export function LineItemsAddButton({
@@ -51,10 +56,28 @@ export function LineItemsAddButton({
   );
 }
 
-export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps) {
+export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, salesTaxLocked }: LineItemsListProps) {
+  const router = useRouter();
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
+  // Optimistic so the toggle + totals flip instantly. useOptimistic auto-reverts
+  // to the server value when the transition ends: on error there's no refresh, so
+  // it snaps back; on success router.refresh() updates the prop and it re-syncs.
+  const [optimisticCharge, setOptimisticCharge] = useOptimistic(chargeSalesTax);
+  const [taxPending, startTaxTransition] = useTransition();
 
-  const totals = calculateTotals(lineItems, settings);
+  const totals = calculateTotals(lineItems, settings, optimisticCharge);
+
+  function handleToggleTax(next: boolean) {
+    startTaxTransition(async () => {
+      setOptimisticCharge(next);
+      const res = await setJobChargeSalesTax(jobId, next);
+      if (res && "error" in res && res.error) {
+        toast.error(res.error);
+      } else {
+        router.refresh();
+      }
+    });
+  }
 
   async function handleDelete(id: string) {
     const result = await deleteLineItem(id, jobId);
@@ -255,6 +278,37 @@ export function LineItemsList({ jobId, lineItems, settings }: LineItemsListProps
             </>
           )}
         </dl>
+        {/* Per-job sales-tax toggle. Off = bill parts with no tax (e.g. outsourced
+            parts the shop didn't buy). Locked once the job is invoiced. */}
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span className="text-xs text-stone-500 dark:text-stone-400">
+            Charge sales tax
+            {salesTaxLocked && (
+              <span className="ml-1.5 text-[10px] text-stone-400 dark:text-stone-500">
+                locked · invoiced
+              </span>
+            )}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={optimisticCharge}
+            aria-label="Charge sales tax on this job"
+            disabled={salesTaxLocked || taxPending}
+            onClick={() => handleToggleTax(!optimisticCharge)}
+            className={cn(
+              "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+              optimisticCharge ? "bg-blue-600" : "bg-stone-300 dark:bg-stone-700"
+            )}
+          >
+            <span
+              className={cn(
+                "inline-block h-3 w-3 transform rounded-full bg-white transition-transform",
+                optimisticCharge ? "translate-x-3.5" : "translate-x-0.5"
+              )}
+            />
+          </button>
+        </div>
         <div className="mt-2 pt-2 border-t border-stone-200 dark:border-stone-700 flex items-baseline justify-between">
           <span className={SECTION_LABEL}>Total</span>
           <span className="font-mono tabular-nums text-base font-semibold text-stone-900 dark:text-stone-50">
