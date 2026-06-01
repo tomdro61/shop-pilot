@@ -20,6 +20,7 @@ export type QuoteAckResult = {
 };
 
 export async function onQuoteRequestCreated(opts: {
+  quoteRequestId: string;
   customerId: string | null; // null when find-or-create-customer failed
   phone: string; // E.164
   closedState: BusinessClosedState;
@@ -58,6 +59,11 @@ export async function onQuoteRequestCreated(opts: {
       status: smsSent ? "sent" : "failed",
     });
     messageLogged = !error;
+  } else {
+    console.warn(
+      `[onQuoteRequestCreated] No customer_id for quote ${opts.quoteRequestId} — ` +
+        `skipping messages log. Manager must link this request to a customer manually.`
+    );
   }
 
   await notifyOwnersOfQuoteRequest(opts);

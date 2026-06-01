@@ -33,11 +33,22 @@ export default async function QuoteRequestsPage({
   const photoUrls: Record<string, string> = {};
   if (allPaths.length > 0) {
     const supabase = await createClient();
-    const { data } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from("booking-photos")
       .createSignedUrls(allPaths, 60 * 60);
+    // Don't fail the page, but never swallow a signing failure: a broken/renamed
+    // bucket or denied policy would otherwise render zero thumbnails with no
+    // signal. Log loudly (greppable); the card shows a placeholder for any path
+    // that didn't resolve so the manager knows a photo exists but didn't load.
+    if (error) {
+      console.error("[quote-requests][signed-url-error] bucket=booking-photos:", error.message);
+    }
     for (const item of data ?? []) {
-      if (item.signedUrl && item.path) photoUrls[item.path] = item.signedUrl;
+      if (item.signedUrl && item.path) {
+        photoUrls[item.path] = item.signedUrl;
+      } else if (item.error) {
+        console.error("[quote-requests][signed-url-item] failed to sign a photo:", item.error);
+      }
     }
   }
 

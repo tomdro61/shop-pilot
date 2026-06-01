@@ -107,26 +107,12 @@ export async function POST(request: Request) {
       ? await buildFromMultipart(request, headers)
       : await buildFromJson(request, headers);
 
-    // A path returned an early response (honeypot, validation error, photo error).
+    // A path returned an early response (honeypot, validation, dedup hit, photo error).
     if ("response" in built) return built.response;
     const { fields } = built;
 
-    // 2. Dedup BEFORE persisting — a double-tap shouldn't create two requests.
-    const dedup = await findRecentQuoteRequest({ phone: storedPhone(fields.phone) });
-    if (dedup.kind === "error") {
-      return NextResponse.json(
-        { success: false, error: dedup.message },
-        { status: 500, headers }
-      );
-    }
-    if (dedup.kind === "match") {
-      return NextResponse.json(
-        { success: true, quote_request_id: dedup.existingId, dedup_hit: true },
-        { status: 200, headers }
-      );
-    }
-
-    // 3. Persist (customer + Quo contact + insert)
+    // Persist (customer + Quo contact + insert). Dedup already ran inside the build
+    // step — before any photo upload — so we only reach here for a fresh request.
     const persisted = await persistQuoteRequest(fields);
     if (!persisted.ok) {
       return NextResponse.json(
@@ -138,10 +124,14 @@ export async function POST(request: Request) {
     revalidatePath("/dashboard");
     revalidatePath("/quote-requests");
 
-    // 4. Ack SMS + owner alert — awaited, best-effort (never fails the 200).
+    // Ack SMS + owner alert — awaited, best-effort (never fails the 200). Surface a
+    // degraded ack so a lost send / log is greppable, mirroring the booking route.
+    // messageLogged is expected-false when there's no linked customer, so only flag
+    // it as degraded when a customer DID link.
     if (persisted.e164) {
       try {
-        await onQuoteRequestCreated({
+        const ack = await onQuoteRequestCreated({
+          quoteRequestId: persisted.id,
           customerId: persisted.customerId,
           phone: persisted.e164,
           closedState: getBusinessClosedState(),
@@ -152,11 +142,15 @@ export async function POST(request: Request) {
           vehicleMake: fields.vehicleMake,
           vehicleModel: fields.vehicleModel,
         });
+        if (!ack.smsSent || (persisted.customerId && !ack.messageLogged)) {
+          console.error(`[quote-requests] ack degraded for ${persisted.id}:`, {
+            smsSent: ack.smsSent,
+            smsError: ack.smsError,
+            messageLogged: ack.messageLogged,
+          });
+        }
       } catch (err) {
-        console.error(
-          `[quote-requests] ack handler threw for ${persisted.id}:`,
-          err
-        );
+        console.error(`[quote-requests] ack handler threw for ${persisted.id}:`, err);
       }
     }
 
@@ -232,6 +226,26 @@ async function buildFromMultipart(
   // Honeypot — silently succeed so the bot can't tell it was rejected.
   if (data.website && data.website.length > 0) {
     return { response: NextResponse.json({ success: true }, { headers }) };
+  }
+
+  // Dedup BEFORE photo upload — a double-tap shouldn't burn storage on photos we'd
+  // then discard (there's no orphan-cleanup cron yet). Mirrors the booking route.
+  const dedup = await findRecentQuoteRequest({ phone: storedPhone(data.phone) });
+  if (dedup.kind === "error") {
+    return {
+      response: NextResponse.json(
+        { success: false, error: dedup.message },
+        { status: 500, headers }
+      ),
+    };
+  }
+  if (dedup.kind === "match") {
+    return {
+      response: NextResponse.json(
+        { success: true, quote_request_id: dedup.existingId, dedup_hit: true },
+        { status: 200, headers }
+      ),
+    };
   }
 
   // Photos → quotes/{client_id}/{index}.{ext} in the booking-photos bucket.
@@ -362,6 +376,24 @@ async function buildFromJson(
       response: NextResponse.json(
         { success: false, error: "Please select a service" },
         { status: 400, headers }
+      ),
+    };
+  }
+
+  const dedup = await findRecentQuoteRequest({ phone: storedPhone(phone) });
+  if (dedup.kind === "error") {
+    return {
+      response: NextResponse.json(
+        { success: false, error: dedup.message },
+        { status: 500, headers }
+      ),
+    };
+  }
+  if (dedup.kind === "match") {
+    return {
+      response: NextResponse.json(
+        { success: true, quote_request_id: dedup.existingId, dedup_hit: true },
+        { status: 200, headers }
       ),
     };
   }

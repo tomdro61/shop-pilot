@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Wrench,
   Trash2,
+  ImageOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -347,7 +348,19 @@ function QuoteRequestCard({
           <div className="flex flex-wrap gap-2">
             {qr.photo_paths.map((p) => {
               const url = photoUrls[p];
-              if (!url) return null;
+              // A path with no signed URL = the photo exists but failed to load.
+              // Show a placeholder rather than silently dropping it.
+              if (!url) {
+                return (
+                  <div
+                    key={p}
+                    title="Photo couldn't be loaded"
+                    className="grid h-16 w-16 place-items-center rounded-md border border-dashed border-stone-300 text-stone-400 dark:border-stone-700 dark:text-stone-500"
+                  >
+                    <ImageOff className="h-4 w-4" />
+                  </div>
+                );
+              }
               return (
                 <a
                   key={p}

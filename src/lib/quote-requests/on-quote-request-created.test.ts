@@ -11,6 +11,7 @@ import { logOutboundSms } from "@/lib/messaging/log";
 import { onQuoteRequestCreated } from "./on-quote-request-created";
 
 const base = {
+  quoteRequestId: "qr-1",
   customerId: "cust-1" as string | null,
   phone: "+16175551234",
   closedState: { closed: false } as const,
