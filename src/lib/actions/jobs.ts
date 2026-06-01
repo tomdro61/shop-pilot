@@ -264,9 +264,14 @@ const EDITABLE_KEYS = [
 ] as const satisfies readonly (keyof JobFieldPatch)[];
 
 // Per-job sales-tax toggle. Kept OUT of updateJobFields / EDITABLE_KEYS because
-// it must be LOCKED once the job is invoiced — flipping it after the Stripe
-// invoice is finalized would make the job total disagree with the sent invoice.
-// The UI also disables the toggle once invoiced; this server check is the gate.
+// it must be LOCKED once the job is invoiced — the finalized Stripe invoice is
+// immutable, so flipping tax afterward would desync the receipt + tax reports
+// from what was actually charged. payment_status alone is NOT a sufficient gate:
+// createInvoiceFromJob finalizes + sends the invoice without flipping the job off
+// 'unpaid', so we also reject when an invoices row already exists. The UI mirrors
+// this (salesTaxLocked); this server check is the real gate.
+const SALES_TAX_LOCKED_MSG = "Sales tax is locked once the job is invoiced.";
+
 export async function setJobChargeSalesTax(id: string, charge: boolean) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
@@ -280,8 +285,16 @@ export async function setJobChargeSalesTax(id: string, charge: boolean) {
     .single();
   if (fetchError || !job) return { error: "Job not found" };
   if (job.payment_status !== "unpaid") {
-    return { error: "Sales tax is locked once the job is invoiced." };
+    return { error: SALES_TAX_LOCKED_MSG };
   }
+
+  const { data: invoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("job_id", id)
+    .maybeSingle();
+  if (invoiceError) return { error: invoiceError.message };
+  if (invoice) return { error: SALES_TAX_LOCKED_MSG };
 
   const { error } = await supabase
     .from("jobs")

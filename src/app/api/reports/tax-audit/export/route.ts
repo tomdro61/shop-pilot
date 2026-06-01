@@ -130,6 +130,7 @@ export async function GET(req: NextRequest) {
     labor: number;
     parts: number;
     taxableParts: number;
+    chargeTax: boolean;
     subtotal: number;
     tax: number;
     total: number;
@@ -193,6 +194,7 @@ export async function GET(req: NextRequest) {
       labor,
       parts,
       taxableParts,
+      chargeTax: job.charge_sales_tax !== false,
       subtotal,
       tax,
       total,
@@ -238,7 +240,7 @@ export async function GET(req: NextRequest) {
   rows.push(toCSVRow([
     "Month", "RO #", "Paid Date", "Customer", "Vehicle", "License Plate",
     "Customer Type", "Payment Method", "Labor", "Parts (Taxable)", "Subtotal",
-    "Sales Tax", "Total",
+    "Sales Tax", "Total", "Tax Charged?",
   ]));
 
   let totalLabor = 0;
@@ -274,6 +276,7 @@ export async function GET(req: NextRequest) {
       fmt(j.subtotal),
       fmt(j.tax),
       fmt(j.total),
+      j.chargeTax ? "Yes" : "No",
     ]));
   }
 

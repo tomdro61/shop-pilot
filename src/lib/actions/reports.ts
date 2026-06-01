@@ -632,6 +632,13 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
   // Read the live rate from settings (don't hard-code) so the report matches the
   // rate actually charged on invoices.
   const taxRate = settings?.tax_rate ?? MA_SALES_TAX_RATE;
+  // Don't let a failed query silently render a $0 tax report — on a surface used
+  // for DOR filings, "query failed" must not look like "a quiet year".
+  if ((jobResult as { error?: { message: string } }).error) {
+    throw new Error(
+      `Failed to load jobs for tax report: ${(jobResult as { error: { message: string } }).error.message}`
+    );
+  }
   const jobs = ((jobResult as any).data || []) as any[];
 
   // Aggregate by month

@@ -346,7 +346,7 @@ export default async function JobDetailPage({
             lineItems={lineItems}
             settings={settings}
             chargeSalesTax={job.charge_sales_tax}
-            salesTaxLocked={(job.payment_status ?? "unpaid") !== "unpaid"}
+            salesTaxLocked={!!invoice || (job.payment_status ?? "unpaid") !== "unpaid"}
           />
         </section>
 

@@ -73,9 +73,10 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
       const res = await setJobChargeSalesTax(jobId, next);
       if (res && "error" in res && res.error) {
         toast.error(res.error);
-      } else {
-        router.refresh();
       }
+      // Refresh either way: on success to pick up the saved value, on error (e.g.
+      // the job was invoiced in another tab) to re-sync the now-locked state.
+      router.refresh();
     });
   }
 
