@@ -11,6 +11,7 @@ import {
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC, MANAGED_PARKING_LOTS } from "@/lib/constants";
 import { formatCurrencyWhole } from "@/lib/utils/format";
 import { todayET, nowET, isScheduledOnEtDate } from "@/lib/utils";
+import { etDateOf } from "@/lib/appointments/display";
 import { sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { hasPendingService } from "@/lib/utils/parking";
@@ -18,6 +19,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { KpiCompactCard } from "@/components/dashboard/kpi-compact-card";
 import { ActionCenter } from "@/components/dashboard/action-center";
+import { UpcomingBookingsCard } from "@/components/dashboard/upcoming-bookings-card";
 import { ParkingTodayCard } from "@/components/dashboard/parking-today-card";
 import { ScheduledTodayCard } from "@/components/dashboard/scheduled-today-card";
 import { AppointmentsTodayCard } from "@/components/dashboard/appointments-today-card";
@@ -279,9 +281,15 @@ async function getDashboardData() {
   const appointmentsToday = (confirmedAppointmentsResult.data ?? []).filter((a) =>
     isScheduledOnEtDate(a.scheduled_at, today)
   );
+  // Confirmed bookings today-and-forward (ET) — the runway shown on the dashboard
+  // so future bookings stay visible. Already ordered by scheduled_at ascending.
+  const upcomingAppointments = (confirmedAppointmentsResult.data ?? []).filter(
+    (a) => a.scheduled_at != null && etDateOf(a.scheduled_at) >= today
+  );
 
   return {
     appointmentsToday,
+    upcomingAppointments,
     stats: {
       todayRevenue:
         sumJobRevenue(todayCompleted) + sumInspectionRev(inspToday) + sumManualIncome(manualIncomeToday),
@@ -347,7 +355,7 @@ export default async function DashboardPage() {
   const firstName = user?.name?.split(" ")[0] ?? null;
   const greeting = firstName ? `${getGreeting()}, ${firstName}` : getGreeting();
 
-  const { stats, ops, shopFloor, parking, needsAttention, appointmentsToday } = data;
+  const { stats, ops, shopFloor, parking, needsAttention, appointmentsToday, upcomingAppointments } = data;
   // Derive Scheduled Today from the already-fetched active jobs to avoid a
   // second Supabase round-trip. The ET-date comparison lives in
   // isScheduledOnEtDate so the timezone handling is testable in isolation.
@@ -445,6 +453,8 @@ export default async function DashboardPage() {
             tasks={tasks}
             needsAttention={needsAttention}
           />
+
+          <UpcomingBookingsCard bookings={upcomingAppointments} />
         </div>
 
         <aside className="space-y-3 min-w-0">

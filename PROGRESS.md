@@ -3632,3 +3632,34 @@ Surface online bookings where the manager starts their day — the main dashboar
 
 - Steps 8, 9 — appointment-reminder cron, booking metrics. Optional; the booking feature's core + dashboard surfacing are complete on staging.
 - Production cutover: merge `staging → master` (both repos) + set `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel prod env.
+
+---
+
+## Session 54 — 2026-05-31 — Dashboard "Upcoming Bookings" card + step 8 backlogged
+
+### Why
+
+Owner caught a real gap while reviewing step 6: the dashboard's "Booked · Today" card is today-only, so a future booking (e.g., June 1) wasn't visible until its day — you'd have to open the calendar. The dashboard should show what's on the books going forward. Owner chose a prominent second card (keep the focused today card, add a broader upcoming one).
+
+### What shipped (on `staging`)
+
+- **NEW `src/components/dashboard/upcoming-bookings-card.tsx`** — a main-column card (under the Action Center) listing confirmed bookings **today-and-forward**, chronological, each row date · time · customer · vehicle · service linking to `/appointments/[id]`. Capped at 6 with a "+N more on the calendar" row + a "Full calendar →" header link. Persistent with a quiet empty state (a permanent fixture, unlike the hide-when-empty day cards).
+- **`src/app/(dashboard)/dashboard/page.tsx`** — derives `upcomingAppointments` (`confirmed` filtered to `etDateOf(scheduled_at) >= todayET()`) from the **already-fetched** `confirmedAppointmentsResult` (no new round-trip; same query that feeds "Booked · Today"). Today's confirmed intentionally appears in both cards.
+
+### Review + verify
+
+- **1-agent scoped review → clean, no findings.** Confirmed the lexicographic `etDateOf >= today` comparison is correct, the data reuse (no double-fetch), the cap/overflow/empty-state logic, and a11y (all rows are `<Link>`s).
+- tsc clean; full suite **306**; new file lint-clean (the one `page.tsx` warning is the pre-existing dead `pendingEstimates` var).
+
+### Files touched
+
+- NEW `src/components/dashboard/upcoming-bookings-card.tsx`, `src/app/(dashboard)/dashboard/page.tsx`, PROGRESS.md
+
+### Backlogged (owner call 2026-05-31)
+
+- **Step 8 — appointment-reminder cron — DEFERRED.** Low no-show volume at ~1–2/day + the dashboard now shows upcoming bookings. The `appointmentReminderSMS` copy exists but is unused; building it later needs a cron route + dedup bookkeeping (`reminder_sent_at` column or messages-log check). Recorded in the booking-feature memory.
+
+### What's next
+
+- **Production cutover** (when owner is ready): owner does one end-to-end click-through on the staging site (book → confirm → SMS → convert) + sets `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel **prod** env → then merge **both** repos `staging → master` (migrations already on the shared DB).
+- Step 9 (booking metrics) — optional, after there's volume to measure.
