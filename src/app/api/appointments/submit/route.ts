@@ -253,6 +253,11 @@ export async function POST(request: Request) {
       customerId: submission.customer_id,
       phone: data.phone,
       closedState: getBusinessClosedState(),
+      firstName: data.first_name,
+      lastName: data.last_name,
+      serviceCategory: data.service_category,
+      preferredDate: data.preferred_date,
+      preferredTime: data.preferred_time,
     });
     smsSent = ack.smsSent;
     // If the booking has a linked customer but the ack row didn't land, the

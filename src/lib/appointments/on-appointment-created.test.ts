@@ -15,12 +15,19 @@ const base = {
   customerId: "cust-1" as string | null,
   phone: "+16175551234",
   closedState: { closed: false } as const,
+  firstName: "Maria",
+  lastName: "Silva",
+  serviceCategory: "brakes",
+  preferredDate: "2026-06-15",
+  preferredTime: "09:00",
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getPhoneNumber).mockReturnValue("+1shopline");
   vi.mocked(logOutboundSms).mockResolvedValue({});
+  // Default: no owner-alert list, so the existing ack-only assertions hold.
+  delete process.env.INTERNAL_NOTIFICATION_PHONES;
 });
 
 describe("onAppointmentCreated", () => {
@@ -82,5 +89,49 @@ describe("onAppointmentCreated", () => {
     expect(res.smsSent).toBe(true);
     expect(res.messageLogged).toBe(false);
     expect(logOutboundSms).not.toHaveBeenCalled();
+  });
+
+  it("fans out a 'new booking request' alert to INTERNAL_NOTIFICATION_PHONES", async () => {
+    vi.mocked(sendSMS).mockResolvedValue({ success: true, testMode: false });
+    process.env.INTERNAL_NOTIFICATION_PHONES = "+1ownerA, +1ownerB";
+
+    await onAppointmentCreated(base);
+
+    expect(sendSMS).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "+1ownerA", from: "+1shopline" })
+    );
+    expect(sendSMS).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "+1ownerB", from: "+1shopline" })
+    );
+    const ownerCall = vi
+      .mocked(sendSMS)
+      .mock.calls.find((c) => c[0].to === "+1ownerA");
+    expect(ownerCall?.[0].body).toContain("New booking request");
+  });
+
+  it("isolates an owner-alert send failure — the ack result is unaffected", async () => {
+    process.env.INTERNAL_NOTIFICATION_PHONES = "+1ownerA";
+    vi.mocked(sendSMS).mockImplementation(({ to }) =>
+      to === "+1ownerA"
+        ? Promise.reject(new Error("owner unreachable"))
+        : Promise.resolve({ success: true, testMode: false })
+    );
+
+    const res = await onAppointmentCreated(base);
+
+    expect(res.smsSent).toBe(true); // the customer ack still went
+    expect(res.messageLogged).toBe(true);
+  });
+
+  it("skips the owner alert when INTERNAL_NOTIFICATION_PHONES is unset", async () => {
+    vi.mocked(sendSMS).mockResolvedValue({ success: true, testMode: false });
+
+    await onAppointmentCreated(base);
+
+    // only the customer ack — no owner fan-out
+    expect(sendSMS).toHaveBeenCalledTimes(1);
+    expect(sendSMS).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "+16175551234" })
+    );
   });
 });

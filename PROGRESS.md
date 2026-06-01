@@ -3688,3 +3688,30 @@ Confirm the live **confirmation SMS** actually fires: book on the live site → 
 
 - **Step 9** — booking metrics (volume/conversion KPI), once there's real volume.
 - **Step 8** — appointment-reminder cron — BACKLOGGED (low no-show volume; needs a cron route + `reminder_sent_at` dedup; the `appointmentReminderSMS` copy already exists, unused).
+
+---
+
+## Session 56 — 2026-06-01 — Owner SMS alert on new booking requests
+
+### Why
+
+Owner request: text the shop owners the moment an online booking request lands (separate from the customer's acknowledgment text), so they don't have to watch the inbox. Mirrors the existing payment + quote-request internal alerts.
+
+### What shipped (on `staging`)
+
+- **`bookingRequestInternalSMS`** template (`src/lib/messaging/templates.ts`) — *"New booking request: {name} — {service}, requested {day · time}. Confirm in ShopPilot."*
+- **`onAppointmentCreated`** (`src/lib/appointments/on-appointment-created.ts`) now fans out that alert to **`INTERNAL_NOTIFICATION_PHONES`** (comma-separated; the SAME list the Stripe payment-received alert uses — owner chose to reuse it rather than a separate list). Sent from the shop line, **best-effort**: the whole fan-out is wrapped in try/catch + each send individually `.catch`'d, so a bad number / missing line / formatter can't break the booking or the customer ack. Runs even when there's no linked customer (owners still want to know). The route threads the booking details (`firstName/lastName/serviceCategory/preferredDate/preferredTime`) into the handler.
+
+### Review + verify
+
+- **1-agent silent-failure review → "ship it"**: properly isolated, per-send-isolated, logged-not-swallowed, and double-contained (helper try/catch + the route's existing try/catch around `onAppointmentCreated`, with the appointment row already persisted). Applied its one optional hardening (wrap the whole helper body, not just `getPhoneNumber`, in the try/catch).
+- tsc + lint clean (changed files); full suite **309** (3 new handler tests: fan-out, send-failure isolation, skip-when-unset).
+
+### Config / go-live
+
+- Reuses **`INTERNAL_NOTIFICATION_PHONES`** — the owner + brother's cells must be on that list **in shop-pilot's prod Vercel** (if they already get payment alerts, they're set). If the var is unset/missing their numbers, the alert silently no-ops (by design).
+- On `staging` now; needs a `staging → master` cutover to go live in prod.
+
+### Files touched
+
+- `src/lib/messaging/templates.ts`, `src/lib/appointments/on-appointment-created.ts` (+`.test.ts`), `src/app/api/appointments/submit/route.ts`, PROGRESS.md

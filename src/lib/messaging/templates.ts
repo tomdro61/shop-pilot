@@ -147,6 +147,23 @@ export function quoteRequestInternalSMS({
   return msg;
 }
 
+// Internal owner alert when a new online booking request lands. Sent to the
+// shop's INTERNAL_NOTIFICATION_PHONES list (same as the payment-received alert).
+// `service` is the human label; `when` is the pre-formatted requested day + time.
+export function bookingRequestInternalSMS({
+  firstName,
+  lastName,
+  service,
+  when,
+}: {
+  firstName: string;
+  lastName: string;
+  service: string;
+  when: string;
+}) {
+  return `New booking request: ${firstName} ${lastName} — ${service}, requested ${when}. Confirm in ShopPilot.`;
+}
+
 export function paymentReceivedInternalSMS({
   firstName,
   lastName,
