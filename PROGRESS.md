@@ -3663,3 +3663,28 @@ Owner caught a real gap while reviewing step 6: the dashboard's "Booked · Today
 
 - **Production cutover** (when owner is ready): owner does one end-to-end click-through on the staging site (book → confirm → SMS → convert) + sets `NEXT_PUBLIC_BOOKING_API_URL` in the website's Vercel **prod** env → then merge **both** repos `staging → master` (migrations already on the shared DB).
 - Step 9 (booking metrics) — optional, after there's volume to measure.
+
+---
+
+## Session 55 — 2026-06-01 — 🚀 Production cutover: online booking is LIVE
+
+### What happened
+
+Merged the entire booking feature `staging → master` on **both** repos (clean fast-forwards, no conflicts) and pushed → Vercel production deploys:
+- **shop-pilot** `e3d6794..dc471fa` (master) — `/api/appointments/submit` endpoint, inbox, confirm/reschedule/cancel, convert-to-job, calendar, dashboard surfacing.
+- **broadway-motors-web** `88bff91..edde03b` (master) — public `/book` form + site-wide Book CTAs + after-hours banner + mobile sticky bar.
+
+Prereqs done: `NEXT_PUBLIC_BOOKING_API_URL` set in the **website's** Vercel Production env (Production scope only — not Preview, so preview deploys don't write to prod); DB migrations already applied to the shared Supabase; CORS on the endpoint already allows both prod domains.
+
+### Pre-merge review
+
+2-agent pre-merge sweep (website customer surfaces + cross-project contract): **contract VERIFIED** (field/format/enum match, response shapes, CORS prod domains). Two fixes applied + shipped in `edde03b`: dropped `capture="environment"` on the photo input (it forced camera-only + disabled multi-select on iPhone), and corrected a stale "CROSS-PROJECT CONTRACT" comment (`>=10` / `preferred_time`).
+
+### Post-cutover TODO (the one path staging couldn't prove)
+
+Confirm the live **confirmation SMS** actually fires: book on the live site → confirm from the inbox → the text should land. Staging couldn't verify this (Quo may be test mode + the prod endpoint didn't exist pre-merge). If it doesn't arrive, check Quo prod config / `QUO_SHOP_PHONE_NUMBER`.
+
+### Remaining (non-blocking)
+
+- **Step 9** — booking metrics (volume/conversion KPI), once there's real volume.
+- **Step 8** — appointment-reminder cron — BACKLOGGED (low no-show volume; needs a cron route + `reminder_sent_at` dedup; the `appointmentReminderSMS` copy already exists, unused).
