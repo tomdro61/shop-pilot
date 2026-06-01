@@ -121,8 +121,16 @@ export function pickupReadySMS({
   return `Hi ${firstName}, your vehicle is ready for pickup!\n\nYour keys are in lock box #${boxNumber}, code: ${boxCode}.\n\nThank you for parking with Broadway Motors! If you have a moment, a Google review would mean a lot to a local business like ours. https://g.page/r/CTjykJeAA929EBM/review`;
 }
 
-export function quoteRequestAckSMS({ firstName }: { firstName: string }) {
-  return `Thanks for requesting a quote from Broadway Motors! We'll be in touch shortly.`;
+// Customer ack when a new estimate request lands. Business-hours-aware, matching
+// appointmentAckSMS — never promise a fast follow-up on a day the shop is shut.
+export function quoteRequestAckSMS(closed: BusinessClosedState): string {
+  const PREFIX = "Thanks for requesting an estimate from Broadway Motors! We'll review it and text you";
+  if (!closed.closed) {
+    return `${PREFIX} shortly. — Broadway Motors`;
+  }
+  // Closed → promise the next open morning, never a day the shop is shut.
+  const when = closed.reason === "evening" ? "by 9am tomorrow" : "by 9am Monday";
+  return `${PREFIX} ${when}. — Broadway Motors`;
 }
 
 export function quoteRequestInternalSMS({

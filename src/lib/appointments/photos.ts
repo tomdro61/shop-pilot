@@ -1,10 +1,11 @@
-// Photo processing for online appointment booking submissions.
+// Photo processing for public photo uploads (booking + estimate-request forms).
 // Per BOOKING_TECHNICAL_PLAN.md §5.3.
 //
 // Pipeline per photo: size check → claimed-mime whitelist → magic-byte signature
 // match (defends against extension-renamed/disguised uploads) → sharp EXIF strip
 // (default behavior; .rotate() bakes in orientation first) → upload to the
-// 'booking-photos' bucket at appointments/{clientId}/{index}.{ext}.
+// 'booking-photos' bucket at {folder}/{index}.{ext} (folder = the appointment's
+// client_id for bookings, quotes/{client_id} for estimate requests).
 //
 // Mime-derived extension only — NEVER from the original filename. A filename
 // like "photo.jpg.php" becomes "0.jpg".
@@ -115,13 +116,13 @@ export type PhotoProcessResult =
 
 export type ProcessPhotoInput = {
   file: File;
-  clientId: string; // appointment row's UUID = storage folder prefix
+  folder: string; // storage folder prefix (no trailing slash), e.g. the row's UUID
   index: number; // 0, 1, or 2
   supabase: SupabaseClient<Database>;
 };
 
 /**
- * Validate, EXIF-strip, and upload one booking photo. Returns the storage path
+ * Validate, EXIF-strip, and upload one uploaded photo. Returns the storage path
  * on success or a structured error so the route handler can return a useful
  * message to the customer.
  *
@@ -130,10 +131,10 @@ export type ProcessPhotoInput = {
  * Orphaned uploads from a later failure are cleaned by the daily orphan-cleanup
  * cron (step 8).
  */
-export async function processBookingPhoto(
+export async function processPhotoUpload(
   input: ProcessPhotoInput
 ): Promise<PhotoProcessResult> {
-  const { file, clientId, index, supabase } = input;
+  const { file, folder, index, supabase } = input;
   const photoLabel = `Photo ${index + 1}`;
 
   // 1. Size cap
@@ -189,7 +190,7 @@ export async function processBookingPhoto(
     // client-fault error rather than a 500 — the customer can try a different
     // format. (Corrupt-image failures also land here; they're equally fixable
     // by the customer.)
-    console.error(`[processBookingPhoto] sharp failed for ${file.type}:`, err);
+    console.error(`[processPhotoUpload] sharp failed for ${file.type}:`, err);
     return {
       ok: false,
       severity: "client",
@@ -200,7 +201,7 @@ export async function processBookingPhoto(
 
   // 6. Upload — extension derived from validated mime (NEVER the original filename)
   const ext = MIME_TO_EXT[detected];
-  const path = `${clientId}/${index}.${ext}`;
+  const path = `${folder}/${index}.${ext}`;
   const { error: uploadErr } = await supabase.storage
     .from(STORAGE_BUCKET)
     .upload(path, cleaned, {
@@ -228,4 +229,21 @@ export async function processBookingPhoto(
   }
 
   return { ok: true, path };
+}
+
+// Booking photos: the storage folder is the appointment's client_id (its row PK),
+// so photos land at booking-photos/{clientId}/{index}.{ext}. Thin wrapper kept so
+// the booking route + tests address photos by appointment id, not raw folder.
+export async function processBookingPhoto(input: {
+  file: File;
+  clientId: string;
+  index: number;
+  supabase: SupabaseClient<Database>;
+}): Promise<PhotoProcessResult> {
+  return processPhotoUpload({
+    file: input.file,
+    folder: input.clientId,
+    index: input.index,
+    supabase: input.supabase,
+  });
 }

@@ -1179,6 +1179,7 @@ export type Database = {
           last_name: string
           message: string | null
           phone: string
+          photo_paths: string[]
           quo_contact_id: string | null
           services: string[]
           status: string
@@ -1196,6 +1197,7 @@ export type Database = {
           last_name: string
           message?: string | null
           phone: string
+          photo_paths?: string[]
           quo_contact_id?: string | null
           services?: string[]
           status?: string
@@ -1213,6 +1215,7 @@ export type Database = {
           last_name?: string
           message?: string | null
           phone?: string
+          photo_paths?: string[]
           quo_contact_id?: string | null
           services?: string[]
           status?: string
