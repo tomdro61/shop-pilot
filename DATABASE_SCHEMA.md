@@ -18,12 +18,13 @@ When a migration ships, update three things: the migration file, `src/types/supa
 `id, customer_id, year, make, model, vin, license_plate, mileage, color, notes`
 
 ## `jobs`
-`id, customer_id, vehicle_id, status, title, category, assigned_tech, date_received, date_finished, scheduled_at, notes, payment_status, payment_method, mileage_in, stripe_payment_intent_id, ro_number`
+`id, customer_id, vehicle_id, status, title, category, assigned_tech, date_received, date_finished, scheduled_at, notes, payment_status, payment_method, charge_sales_tax, mileage_in, stripe_payment_intent_id, ro_number`
 
 - **`category`** — deprecated. Exists in DB but no longer set or displayed. Line-item categories are the source of truth for service categorization.
 - **`date_received`** — DATE, surfaced in UI as "Drop-off date"
 - **`scheduled_at`** — timestamptz, nullable. Customer-agreed drop-off time, anchored to `date_received` via cascade in `updateJobFields`
 - **`ro_number`** — auto-assigned sequential integer via `ro_number_seq` PostgreSQL sequence. Displayed as `RO-0001`.
+- **`charge_sales_tax`** — boolean, NOT NULL default true (Session 58). Per-job sales-tax toggle: false = bill parts with no tax (e.g. outsourced parts the shop didn't buy). `calculateTotals` zeroes tax when false. Set via `setJobChargeSalesTax`, **locked once an invoices row exists** (the finalized Stripe invoice is immutable). The Tax Summary report + tax-audit CSV drop a tax-off job's parts from the taxable base (still counted as revenue) so MA DOR filings aren't overstated.
 
 **Statuses:**
 - `status`: `Not Started → Waiting for Parts → In Progress → Complete`
@@ -47,10 +48,11 @@ When a migration ships, update three things: the migration file, `src/types/supa
 `id, name, category, line_items (JSONB), created_at`
 
 ## `estimates`
-`id, job_id, status, sent_at, approved_at, declined_at, approval_token, tax_rate, created_at`
+`id, job_id, status, sent_at, approved_at, declined_at, approval_token, tax_rate, charge_sales_tax, created_at`
 
 - **`status`** — `draft | sent | approved | declined`
 - **`approval_token`** — used for public approval page links
+- **`charge_sales_tax`** — boolean, NOT NULL default true (Session 58). Inherited from the job at creation (`createEstimateFromJob`); standalone estimates default true. The approval page + estimate email honor it so the customer-facing total matches the invoice.
 
 ## `invoices`
 `id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at`

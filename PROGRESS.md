@@ -3754,3 +3754,32 @@ Deploy **shop-pilot to master FIRST** (endpoint accepts both old JSON + new mult
 ### Files touched
 - web: `src/components/site/estimate-form.tsx`, `src/lib/api/estimate.ts`, `src/app/(site)/contact/page.tsx`, `src/app/(site)/contact/thank-you/page.tsx`, CLAUDE.md
 - shop-pilot: `src/app/api/quote-requests/route.ts`, `src/lib/validators/quote-requests.ts`, `src/lib/quote-requests/{submit,on-quote-request-created}.ts` (+`.test.ts`), `src/lib/appointments/photos.ts`, `src/lib/messaging/templates.ts`, `src/app/(dashboard)/quote-requests/page.tsx`, `src/components/quote-requests/quote-request-list.tsx`, `supabase/migrations/20260605000000_quote_requests_photos.sql`, PROGRESS.md, DATABASE_SCHEMA.md
+
+---
+
+## Session 58 — 2026-06-01 — Per-job sales-tax toggle (outsourced parts)
+
+### Why
+Owner: some jobs outsource the work, so the shop bills the customer for the part but isn't the taxable seller — they need to charge the part with NO sales tax. A per-job toggle.
+
+### What shipped (on `staging`)
+- Migration `20260605000001_charge_sales_tax.sql` — `jobs.charge_sales_tax` + `estimates.charge_sales_tax` (boolean, NOT NULL default true → every existing row unaffected).
+- **One math change drives it all:** `calculateTotals(lineItems, settings, chargeSalesTax = true)` zeroes tax when false. Threaded into every surface that computes totals: job detail, line items, print RO, Stripe invoice (`createStripeInvoice`), charge-card-on-file, payment webhook + receipt email, estimate display/approval/email. Stripe already suppresses the tax line item when `taxAmount === 0` (manual flat-fee item, no Stripe Tax engine).
+- **Toggle** on the job detail by the totals (`line-items-list`, optimistic via `useOptimistic`). `setJobChargeSalesTax` server action — **locked once an `invoices` row exists** (payment_status alone is insufficient: `createInvoiceFromJob` sends the invoice without flipping it off `'unpaid'`). Not in EDITABLE_KEYS, so it can't be smuggled via `updateJobFields`.
+- **Estimates inherit** the job flag at creation (`createEstimateFromJob`) so the customer-facing estimate total matches the invoice.
+- **MA DOR compliance:** the Tax Summary report + tax-audit CSV exclude a tax-off job's parts from the TAXABLE base (still counted as revenue), and both now read `shop_settings.tax_rate` instead of hard-coding 6.25% (a pre-existing bug). CSV gained a "Tax Charged?" column.
+- Print RO + receipt email no longer print a "$0.00 tax" line.
+- AI system prompt notes the per-job toggle + corrects the tax rule (parts only, not "parts + shop supplies").
+
+### Review + verify
+- 2-agent review (code-reviewer + silent-failure-hunter). Fixed: **CRITICAL** — lock keyed on invoice existence, not payment_status (the old gate never engaged in the invoiced-but-unpaid window); **HIGH** — toggle refreshes on the error branch to re-sync the lock; report throws on a query error (no silent $0); CSV "Tax Charged?" column for per-row clarity.
+- tsc + build clean; 321 tests pass (4 new in `totals.test.ts`). No new lint errors.
+
+### Decisions (owner)
+Toggle lives on the job detail by the totals; estimates honor it too.
+
+### Cutover
+On `staging`; migration already applied to the shared DB (additive). Needs a `staging → master` cutover. Post-cutover: set a job tax-off, confirm the total + invoice show no tax and the Tax report excludes it from the taxable base.
+
+### Files touched
+- `src/lib/utils/totals.ts` (+`.test.ts`), `src/lib/stripe/create-invoice.ts`, `src/lib/actions/{jobs,invoices,charge-card-on-file,reports,estimates,email}.ts`, `src/components/dashboard/{line-items-list,estimate-line-items-list}.tsx`, `src/app/(dashboard)/jobs/[id]/{page,print/page}.tsx`, `src/app/(dashboard)/estimates/[id]/page.tsx`, `src/app/estimates/approve/[token]/page.tsx`, `src/app/api/stripe/webhooks/route.ts`, `src/app/api/reports/tax-audit/export/route.ts`, `src/lib/resend/templates.ts`, `src/lib/ai/system-prompt.ts`, `supabase/migrations/20260605000001_charge_sales_tax.sql`, PROGRESS.md, DATABASE_SCHEMA.md
