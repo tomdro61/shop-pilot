@@ -3715,3 +3715,42 @@ Owner request: text the shop owners the moment an online booking request lands (
 ### Files touched
 
 - `src/lib/messaging/templates.ts`, `src/lib/appointments/on-appointment-created.ts` (+`.test.ts`), `src/app/api/appointments/submit/route.ts`, PROGRESS.md
+
+---
+
+## Session 57 — 2026-06-01 — Estimate-request flow rebuilt to match the booking flow
+
+### Why
+
+Owner: "update the estimate flow to be similar to the book online flow." The public estimate-request form was a single page (one service dropdown, free-text vehicle, optional notes, JSON POST, no photos); the booking flow had since become a polished multi-step wizard. Bring estimates up to the same bar — and let customers attach photos of the problem (arguably more useful for a quote than for a booking).
+
+### What shipped (on `staging`, both repos)
+
+**Website (broadway-motors-web) — `/contact` is now a 4-step wizard** mirroring `/book`: service multi-select → vehicle (year/make/model required) → describe the issue (≥10 chars) + up to 3 photos → contact → `/contact/thank-you` (business-hours-aware copy, `force-dynamic`).
+- `src/lib/api/estimate.ts` — typed multipart wrapper (the cross-project contract); client-generated `client_id`; posts `metadata` JSON + `photo` parts to `NEXT_PUBLIC_QUOTE_API_URL`. Reuses the booking `PhotoUpload`; double-submit guard; E.164 phone; honeypot.
+
+**ShopPilot — `/api/quote-requests` is now photo-capable + hardened:**
+- Migration `20260605000000_quote_requests_photos.sql` — `quote_requests.photo_paths text[]` (≤3 CHECK). Photos reuse the `booking-photos` bucket under `quotes/{client_id}/`.
+- `quoteRequestSubmitSchema` (Zod): multi-select services (≥1), required ≥10-char description, optional vehicle.
+- Generalized the booking photo pipeline → `processPhotoUpload` (booking byte-identical via a thin `processBookingPhoto` wrapper).
+- `src/lib/quote-requests/{submit,on-quote-request-created}.ts` — dedup (phone + 10-min window, **before** photo upload), persist (customer/Quo/insert), business-hours-aware ack SMS + owner alert (+ 8 tests).
+- Route is **dual-path** (new multipart + legacy JSON) for a zero-downtime cutover; CORS hardened (preview origins, no fallback origin); in-memory rate limit. `quoteRequestAckSMS` now business-hours-aware.
+- Manager view: the Quote Requests page batch-signs `photo_paths` and renders click-to-open thumbnails per card (placeholder tile if a photo fails to load; signing failures logged, not swallowed). The dashboard inbox quote row already deep-links here.
+
+### Decisions (owner)
+Mirror booking: year/make/model required + describe required (≥10). Services multi-select. Photos yes. **No** timing fields (a quote isn't a slot); **no** mileage.
+
+### Review + verify
+- 3-agent review (shop-pilot code-reviewer + silent-failure-hunter; website code-reviewer). No Critical. Fixes applied: dedup moved before photo upload (orphan avoidance, no cleanup cron exists), signed-URL failures surfaced (page logs + card placeholder), degraded-ack logged at the route call site, no-customer warn + `quoteRequestId` correlation, client year ceiling aligned to server (+2).
+- tsc + builds clean both repos; quote tests pass.
+- Finding (not a bug): the dashboard "Quote Requests" → `/inbox?tab=quotes` link is **not** broken — `/inbox` is a real page. No change.
+
+### Cutover (zero-downtime)
+Deploy **shop-pilot to master FIRST** (endpoint accepts both old JSON + new multipart, so the live form never breaks), **then broadway-motors-web**. `NEXT_PUBLIC_QUOTE_API_URL` already set in the website's prod Vercel. Migration already applied to the shared DB (additive). Post-cutover: a test estimate from the live site → confirm it lands in Quote Requests with the photo.
+
+### Aside (not touched — out of scope)
+`book/thank-you` is statically rendered (hours-aware copy can be stale) and `appointments/[id]` has the same signed-URL swallow now fixed in the quote page — both pre-existing in the booking feature, left alone (flagged to owner).
+
+### Files touched
+- web: `src/components/site/estimate-form.tsx`, `src/lib/api/estimate.ts`, `src/app/(site)/contact/page.tsx`, `src/app/(site)/contact/thank-you/page.tsx`, CLAUDE.md
+- shop-pilot: `src/app/api/quote-requests/route.ts`, `src/lib/validators/quote-requests.ts`, `src/lib/quote-requests/{submit,on-quote-request-created}.ts` (+`.test.ts`), `src/lib/appointments/photos.ts`, `src/lib/messaging/templates.ts`, `src/app/(dashboard)/quote-requests/page.tsx`, `src/components/quote-requests/quote-request-list.tsx`, `supabase/migrations/20260605000000_quote_requests_photos.sql`, PROGRESS.md, DATABASE_SCHEMA.md

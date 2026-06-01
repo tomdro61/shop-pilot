@@ -123,6 +123,27 @@ created_at, updated_at
 - **`specials_sent_at`** — timestamptz, nullable. Set when parking specials SMS sent.
 - **`lock_box_number`** — int, nullable.
 
+## `quote_requests`
+
+```
+id,
+customer_id, quo_contact_id,
+first_name, last_name, email, phone,
+services (text[]), message,
+vehicle_year, vehicle_make, vehicle_model,
+photo_paths (text[]),
+status,
+created_at, updated_at
+```
+
+- The public **estimate-request** table — submissions from the `/contact` multi-step wizard on the website via `POST /api/quote-requests`. Worked on the Quote Requests page (and the dashboard inbox `quotes` tab); convert-to-job pre-fills the new-job form.
+- **`customer_id`** — FK to `customers`, nullable, linked via `findOrCreateParkingCustomer()` on submit (a null id still saves the request; the manager links it manually).
+- **`services`** — text[]. Multi-select display labels (e.g. "Brake Repair"); at least one.
+- **`message`** — text, nullable in DB; the form requires ≥10 chars (enforced in `quoteRequestSubmitSchema`, not a DB CHECK).
+- **`photo_paths`** — text[] with CHECK `array_length(...) <= 3` (Session 57, `20260605000000_quote_requests_photos.sql`). Storage paths under the `booking-photos` bucket at `quotes/{client_id}/` — the form's client-generated UUID is the folder prefix (the row PK stays server-generated). Signed on the Quote Requests page for display.
+- **`status`** — `new | contacted | pending | converted`.
+- The endpoint accepts both multipart (current form: `metadata` JSON + `photo` parts) and legacy JSON (transitional, removable once the JSON form is gone from prod).
+
 ## `appointments` (Session 43, V1 scope cut Session 44)
 
 ```
