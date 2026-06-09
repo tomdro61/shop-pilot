@@ -264,7 +264,7 @@ export const PARKING_SPECIALS = [
   { label: "Full Synthetic Oil Change", price: "10% off", note: "for any Vehicle" },
   { label: "Free Diagnostics", price: "" },
   { label: "Tire Rotation", price: "$40" },
-  { label: "Interior Detail all cars", price: "$225", note: "Limited Time Offer!!" },
+  { label: "Interior Detail", price: "$225", note: "Limited Time Offer!!" },
   { label: "New Windshield Wipers", price: "$35", note: "pair" },
   { label: "Exterior Wash", price: "$45" },
 ] as const;
