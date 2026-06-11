@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parkingSubmitSchema } from "@/lib/validators/parking";
-import { findOrCreateParkingCustomer } from "@/lib/parking-customer";
+import { findOrCreateCustomer } from "@/lib/parking-customer";
 
 // ── CORS ────────────────────────────────────────────────────────
 
@@ -122,12 +122,15 @@ export async function POST(request: Request) {
   }
 
   // Find or create a customer record for this parking reservation
-  const customerId = await findOrCreateParkingCustomer({
-    first_name: parsed.data.first_name,
-    last_name: parsed.data.last_name,
-    email: parsed.data.email,
-    phone: parsed.data.phone,
-  });
+  const customerId = await findOrCreateCustomer(
+    {
+      first_name: parsed.data.first_name,
+      last_name: parsed.data.last_name,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+    },
+    "parking"
+  );
 
   // Write to Supabase
   const supabase = createAdminClient();

@@ -11,6 +11,7 @@ import type { AppointmentSubmitInput } from "@/lib/validators/appointments";
 import { findOrCreateBookingCustomer } from "./find-or-create-customer";
 import { findOrCreateVehicle } from "./find-or-create-vehicle";
 import { decodeVin } from "@/lib/vin/decode";
+import { createOrUpdateQuoContact } from "@/lib/quo/contacts";
 
 const DEDUP_WINDOW_MS = 5 * 60 * 1000;
 
@@ -92,6 +93,26 @@ export async function insertAppointment(
     phone: input.phone,
   });
 
+  // 1b. Create/update the Quo (OpenPhone) contact so the booker is reachable from
+  //     the inbox, mirroring the parking + estimate flows. Best-effort and
+  //     independent of the customer link — a Quo failure never blocks the booking.
+  //     input.phone is already E.164 (schema-validated).
+  let quoContactId: string | null = null;
+  try {
+    const quo = await createOrUpdateQuoContact({
+      phone: input.phone,
+      firstName: input.first_name,
+      lastName: input.last_name,
+      email: input.email && input.email.length > 0 ? input.email : undefined,
+    });
+    quoContactId = quo.contactId ?? null;
+  } catch (err) {
+    console.error(
+      `[insertAppointment] Quo contact error for ${input.client_id}:`,
+      err instanceof Error ? err.message : err
+    );
+  }
+
   // 2. VIN decode + find-or-create vehicle (only if there's something to match on)
   let vehicleId: string | null = null;
   let snapshotYear = input.vehicle_year;
@@ -161,6 +182,7 @@ export async function insertAppointment(
       id: input.client_id,
       customer_id: customerId,
       vehicle_id: vehicleId,
+      quo_contact_id: quoContactId,
       service_category: input.service_category,
       description: input.description,
       // Zod parses conditional_data as Record<string, unknown>; cast to Json

@@ -55,6 +55,7 @@ export type Database = {
           preferred_date: string
           preferred_time: string | null
           preferred_time_window: string
+          quo_contact_id: string | null
           scheduled_at: string | null
           service_category: string
           snapshot_customer_email: string | null
@@ -87,6 +88,7 @@ export type Database = {
           preferred_date: string
           preferred_time?: string | null
           preferred_time_window: string
+          quo_contact_id?: string | null
           scheduled_at?: string | null
           service_category: string
           snapshot_customer_email?: string | null
@@ -119,6 +121,7 @@ export type Database = {
           preferred_date?: string
           preferred_time?: string | null
           preferred_time_window?: string
+          quo_contact_id?: string | null
           scheduled_at?: string | null
           service_category?: string
           snapshot_customer_email?: string | null

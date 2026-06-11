@@ -1,7 +1,7 @@
 // Find-or-create the customer record behind an online appointment booking.
 //
-// Mirrors findOrCreateParkingCustomer (src/lib/parking-customer.ts) BUT stamps
-// `customer_type: 'retail'` instead of `'parking'`. The two helpers will
+// Mirrors findOrCreateCustomer (src/lib/parking-customer.ts) BUT always stamps
+// `customer_type: 'retail'`. The two helpers will
 // consolidate into a single shared `findOrCreateCustomer(input, type)` in V1.5
 // (per BOOKING_TECHNICAL_PLAN.md §13 #4); for V1 they live as siblings to
 // avoid bundling a wider refactor with the booking work.

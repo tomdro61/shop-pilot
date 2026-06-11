@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Car, Phone, Mail, Gauge, Hash } from "lucide-react";
+import { ChevronLeft, Car, Phone, Mail, Gauge, Hash, ExternalLink } from "lucide-react";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -95,6 +95,17 @@ export default async function AppointmentDetailPage({
                   >
                     <Mail className="h-3 w-3" />
                     {a.snapshot_customer_email}
+                  </a>
+                )}
+                {a.quo_contact_id && (
+                  <a
+                    href={`https://my.quo.com/inbox/PNq6UNTzCW/c/${a.quo_contact_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Open in Quo
                   </a>
                 )}
               </p>

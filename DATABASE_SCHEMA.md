@@ -139,7 +139,7 @@ created_at, updated_at
 ```
 
 - The public **estimate-request** table — submissions from the `/contact` multi-step wizard on the website via `POST /api/quote-requests`. Worked on the Quote Requests page (and the dashboard inbox `quotes` tab); convert-to-job pre-fills the new-job form.
-- **`customer_id`** — FK to `customers`, nullable, linked via `findOrCreateParkingCustomer()` on submit (a null id still saves the request; the manager links it manually).
+- **`customer_id`** — FK to `customers`, nullable, linked via `findOrCreateCustomer(input, "retail")` on submit — estimate requesters are **retail** customers, not parking (a null id still saves the request; the manager links it manually). An existing customer matched by email/phone keeps its current type.
 - **`services`** — text[]. Multi-select display labels (e.g. "Brake Repair"); at least one.
 - **`vehicle_vin`** / **`license_plate`** — text, nullable (`20260610000001_quote_requests_vehicle_id.sql`). From the estimate form's required "License Plate or VIN" field, split client-side: a 17-char VIN → `vehicle_vin`, anything else → `license_plate`. `quoteRequestSubmitSchema` requires at least one (multipart path only; the legacy JSON path never collected one and is unaffected). No DB CHECK — validated at the Zod boundary.
 - **`message`** — text, nullable in DB; the form requires ≥10 chars (enforced in `quoteRequestSubmitSchema`, not a DB CHECK).
@@ -151,7 +151,7 @@ created_at, updated_at
 
 ```
 id,
-customer_id, vehicle_id,
+customer_id, vehicle_id, quo_contact_id,
 service_category, description, conditional_data,
 preferred_date, preferred_time_window, scheduled_at,
 drop_off_or_wait, photo_paths,
@@ -171,6 +171,7 @@ updated_at
 - **`scheduled_at`** — timestamptz, nullable. The manager-assigned appointment time, set when status flips to `confirmed`. Mirrors `jobs.scheduled_at`. Added in `20260602000000_drop_capacity_add_scheduled_at.sql` as part of the V1 scope cut.
 - **`status`** — `pending → confirmed → completed` or `cancelled` or `converted_to_job`. Paired with `*_at` timestamps via table-level CHECK constraints (defense-in-depth; server actions normally maintain the pairing).
 - **`source`** — `website | walk_in | phone`. Only `website` for now.
+- **`quo_contact_id`** — text, nullable (`20260611000000_appointments_quo_contact.sql`). The Quo (OpenPhone) contact created/updated on submit via `createOrUpdateQuoContact` in `insertAppointment` (best-effort — null if Quo is unreachable; never blocks the booking), mirroring the parking + estimate flows. The appointment detail page deep-links to it ("Open in Quo"), matching the Quote Requests card.
 - **`snapshot_*`** — denormalized at insert. FKs (`customer_id`, `vehicle_id`) are ON DELETE SET NULL; snapshots are the authoritative historical record if a customer or vehicle is deleted. `snapshot_customer_phone` has a CHECK for E.164.
 - **`snapshot_vehicle_plate`** — text, nullable (`20260610000000_appointments_snapshot_plate.sql`). The license plate from the booking form's required "License Plate or VIN" field. The form splits that one field client-side: a 17-char VIN fills `snapshot_vehicle_vin` (and is NHTSA-decoded), anything else fills the plate. The Zod schema requires at least one of plate/VIN. No DB CHECK (plate formats vary; validated at the Zod boundary, like `snapshot_vehicle_vin`).
 - **`converted_job_id`** — nullable FK with ON DELETE SET NULL. If the converted job is later deleted, status stays `converted_to_job` and the link goes null — that pair is the explicit "job was removed" signal (intentional; do NOT add a CHECK forcing both to be set together).

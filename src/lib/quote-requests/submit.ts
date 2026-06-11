@@ -3,7 +3,7 @@
 // and legacy JSON paths. Mirrors src/lib/appointments/submit.ts.
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { findOrCreateParkingCustomer } from "@/lib/parking-customer";
+import { findOrCreateCustomer } from "@/lib/parking-customer";
 import { createOrUpdateQuoContact } from "@/lib/quo/contacts";
 import { toE164 } from "@/lib/quo/format";
 
@@ -81,12 +81,16 @@ export async function persistQuoteRequest(fields: QuoteFields): Promise<PersistR
   // booking flow's null-customer handling. Logged loudly, never silently dropped.
   let customerId: string | null = null;
   try {
-    customerId = await findOrCreateParkingCustomer({
-      first_name: fields.firstName,
-      last_name: fields.lastName,
-      email: fields.email,
-      phone: fields.phone,
-    });
+    customerId = await findOrCreateCustomer(
+      {
+        first_name: fields.firstName,
+        last_name: fields.lastName,
+        email: fields.email,
+        phone: fields.phone,
+      },
+      // Estimate requesters are retail customers, not parking.
+      "retail"
+    );
   } catch (err) {
     console.error("[quote-requests] customer upsert failed:", err);
   }

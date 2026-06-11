@@ -8,11 +8,13 @@ vi.mock("./find-or-create-vehicle", () => ({
   findOrCreateVehicle: vi.fn(),
 }));
 vi.mock("@/lib/vin/decode", () => ({ decodeVin: vi.fn() }));
+vi.mock("@/lib/quo/contacts", () => ({ createOrUpdateQuoContact: vi.fn() }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findOrCreateBookingCustomer } from "./find-or-create-customer";
 import { findOrCreateVehicle } from "./find-or-create-vehicle";
 import { decodeVin } from "@/lib/vin/decode";
+import { createOrUpdateQuoContact } from "@/lib/quo/contacts";
 import {
   findExistingAppointment,
   insertAppointment,
@@ -23,6 +25,12 @@ const CLIENT_ID = "11111111-1111-4111-9111-111111111111";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // insertAppointment now always creates a Quo contact; default it to success so
+  // existing tests don't need to care. Individual tests override as needed.
+  vi.mocked(createOrUpdateQuoContact).mockResolvedValue({
+    success: true,
+    contactId: "quo-1",
+  });
 });
 
 function baseInsertInput(overrides: Record<string, unknown> = {}) {
@@ -265,6 +273,64 @@ describe("insertAppointment", () => {
     );
     const insertCall = mock.calls.find((c) => c.method === "insert");
     expect(insertCall?.args[0]).toMatchObject({ snapshot_vehicle_plate: "1ABC23" });
+  });
+
+  it("creates a Quo contact and stores its id on the appointment", async () => {
+    const mock = createSupabaseMock({ data: { id: CLIENT_ID }, error: null });
+    vi.mocked(createAdminClient).mockReturnValue(
+      mock.client as unknown as ReturnType<typeof createAdminClient>
+    );
+    vi.mocked(findOrCreateBookingCustomer).mockResolvedValue("cust-1");
+    vi.mocked(createOrUpdateQuoContact).mockResolvedValue({
+      success: true,
+      contactId: "quo-42",
+    });
+
+    await insertAppointment(baseInsertInput());
+
+    expect(vi.mocked(createOrUpdateQuoContact)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone: "+16175551234",
+        firstName: "Maria",
+        lastName: "Silva",
+      })
+    );
+    const insertCall = mock.calls.find((c) => c.method === "insert");
+    expect(insertCall?.args[0]).toMatchObject({ quo_contact_id: "quo-42" });
+  });
+
+  it("stores quo_contact_id null when Quo resolves { success: false } (the real failure mode), booking still saves", async () => {
+    // createOrUpdateQuoContact never throws — it returns { success: false } on
+    // API error. This is the failure path that actually happens in production.
+    const mock = createSupabaseMock({ data: { id: CLIENT_ID }, error: null });
+    vi.mocked(createAdminClient).mockReturnValue(
+      mock.client as unknown as ReturnType<typeof createAdminClient>
+    );
+    vi.mocked(findOrCreateBookingCustomer).mockResolvedValue("cust-1");
+    vi.mocked(createOrUpdateQuoContact).mockResolvedValue({ success: false });
+
+    const result = await insertAppointment(baseInsertInput());
+
+    expect(result.ok).toBe(true);
+    const insertCall = mock.calls.find((c) => c.method === "insert");
+    expect(insertCall?.args[0]).toMatchObject({ quo_contact_id: null });
+  });
+
+  it("still saves the appointment if Quo creation throws (defensive catch), quo_contact_id null", async () => {
+    const mock = createSupabaseMock({ data: { id: CLIENT_ID }, error: null });
+    vi.mocked(createAdminClient).mockReturnValue(
+      mock.client as unknown as ReturnType<typeof createAdminClient>
+    );
+    vi.mocked(findOrCreateBookingCustomer).mockResolvedValue("cust-1");
+    vi.mocked(createOrUpdateQuoContact).mockRejectedValue(new Error("Quo down"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await insertAppointment(baseInsertInput());
+
+    expect(result.ok).toBe(true);
+    const insertCall = mock.calls.find((c) => c.method === "insert");
+    expect(insertCall?.args[0]).toMatchObject({ quo_contact_id: null });
+    consoleSpy.mockRestore();
   });
 
   it("does NOT overwrite Y/M/M from VIN decode if the form supplied them", async () => {

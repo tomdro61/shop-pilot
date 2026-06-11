@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { findOrCreateParkingCustomer } from "@/lib/parking-customer";
+import { findOrCreateCustomer } from "@/lib/parking-customer";
 
 // ── Helpers (adapted from scripts/import-parking-reservations.ts) ──
 
@@ -212,12 +212,15 @@ export async function POST(request: Request) {
 
     // 8. Find or create customer
     const customerId = (email || phone)
-      ? await findOrCreateParkingCustomer({
-          first_name: firstName,
-          last_name: lastName,
-          email: email,
-          phone: phone,
-        })
+      ? await findOrCreateCustomer(
+          {
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            phone: phone,
+          },
+          "parking"
+        )
       : null;
 
     // 9. Insert parking reservation

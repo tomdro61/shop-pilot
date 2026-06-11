@@ -3807,3 +3807,24 @@ Migrations are additive/backward-compatible. Order: push shop-pilot first (serve
 ### Files touched
 - **web:** `src/lib/vehicle-id.ts` (new), `src/components/booking/booking-form.tsx`, `src/components/site/estimate-form.tsx`, `src/lib/api/{booking,estimate}.ts`, `CLAUDE.md`
 - **shop-pilot:** `src/lib/validators/{appointments,quote-requests}.ts` (+`.test.ts`), `src/lib/appointments/{submit,find-or-create-vehicle}.ts`, `src/lib/appointments/submit.test.ts`, `src/lib/quote-requests/submit.ts`, `src/app/api/quote-requests/route.ts`, `src/app/(dashboard)/appointments/[id]/page.tsx`, `src/components/quote-requests/quote-request-list.tsx`, `src/lib/actions/quote-requests.ts`, `src/types/supabase.ts`, `supabase/migrations/20260610000000_appointments_snapshot_plate.sql`, `supabase/migrations/20260610000001_quote_requests_vehicle_id.sql`, PROGRESS.md, DATABASE_SCHEMA.md
+
+## Session 60 — 2026-06-11 — Bookings create a Quo contact; estimate customers are now retail
+
+### Why
+Owner: a booking (online appointment) should create a Quo contact + a ShopPilot customer the same way parking and estimates already do. Found during research that **estimates already do both**; **bookings created the customer but no Quo contact**. Also: estimate-request customers were being mislabeled `customer_type: 'parking'` (they reused the parking helper) — should be `'retail'`.
+
+### What shipped (on `staging`)
+- **Booking → Quo contact.** `insertAppointment` now calls `createOrUpdateQuoContact` (best-effort, never blocks the booking; phone is already E.164) and stores the result on the new nullable `appointments.quo_contact_id` (migration `20260611000000_appointments_quo_contact.sql`). The appointment **detail page** shows an "Open in Quo" deep-link when present, mirroring the Quote Requests card (same `my.quo.com/inbox/PNq6UNTzCW/c/<id>` URL pattern). Booking already created the ShopPilot customer (`findOrCreateBookingCustomer`, type `retail`) — unchanged.
+- **Estimate customers → retail.** Generalized the shared `findOrCreateParkingCustomer` → `findOrCreateCustomer(input, customerType)` in `src/lib/parking-customer.ts` (file name kept; it's no longer parking-only). Parking submit + Wix webhook pass `"parking"` (behavior unchanged); the estimate flow (`persistQuoteRequest`) passes `"retail"`. Existing matched customers keep their type — only NEW estimate customers are stamped retail (no backfill of historical 'parking'-tagged estimate customers).
+
+### Verify
+- tsc clean; tests green (added 2 booking cases: Quo contact id stored + Quo failure → `quo_contact_id` null, booking still saves); changed files lint clean; build clean. Scoped review run.
+
+### Decisions (owner)
+Scope = add Quo contact to the booking flow only (estimates already had it). Store `quo_contact_id` on the appointment + "Open in Quo" link on the detail page. Estimate customers created as retail. No Quo tagging/differentiation (one generic ShopPilot contact, as today).
+
+### Cutover (NOT done — needs `staging → master` on shop-pilot only; no web change this session)
+Migration `20260611000000` is additive/nullable. Apply to the shared DB (`npx supabase db push`) at/with cutover. Post-cutover: a real booking should appear as a Quo contact + show "Open in Quo" on its detail page, and a new estimate requester should land as a `retail` customer.
+
+### Files touched
+- `src/lib/parking-customer.ts` (rename + type param), `src/lib/quote-requests/submit.ts`, `src/app/api/parking/submit/route.ts`, `src/app/api/webhooks/wix-parking/route.ts`, `src/lib/appointments/submit.ts` (+`submit.test.ts`), `src/app/(dashboard)/appointments/[id]/page.tsx`, `src/types/supabase.ts`, `supabase/migrations/20260611000000_appointments_quo_contact.sql`, PROGRESS.md, DATABASE_SCHEMA.md
