@@ -182,6 +182,11 @@ export default async function AppointmentDetailPage({
               </span>
             </Field>
           )}
+          {a.snapshot_vehicle_plate && (
+            <Field label="Plate" icon={<Hash className="h-3 w-3" />}>
+              <span className="font-mono uppercase">{a.snapshot_vehicle_plate}</span>
+            </Field>
+          )}
           {a.snapshot_vehicle_vin && (
             <Field label="VIN" icon={<Hash className="h-3 w-3" />}>
               <span className="font-mono">{a.snapshot_vehicle_vin}</span>

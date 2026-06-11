@@ -248,6 +248,25 @@ describe("insertAppointment", () => {
     });
   });
 
+  it("writes snapshot_vehicle_plate and passes license_plate to findOrCreateVehicle", async () => {
+    const mock = createSupabaseMock({ data: { id: CLIENT_ID }, error: null });
+    vi.mocked(createAdminClient).mockReturnValue(
+      mock.client as unknown as ReturnType<typeof createAdminClient>
+    );
+    vi.mocked(findOrCreateBookingCustomer).mockResolvedValue("cust-1");
+    vi.mocked(findOrCreateVehicle).mockResolvedValue("veh-1");
+
+    // Plate only, no VIN, no Y/M/M — hasAnyVehicleInfo must still be true so the
+    // vehicle helper runs and the plate is recorded.
+    await insertAppointment(baseInsertInput({ license_plate: "1ABC23" }));
+
+    expect(vi.mocked(findOrCreateVehicle)).toHaveBeenCalledWith(
+      expect.objectContaining({ license_plate: "1ABC23" })
+    );
+    const insertCall = mock.calls.find((c) => c.method === "insert");
+    expect(insertCall?.args[0]).toMatchObject({ snapshot_vehicle_plate: "1ABC23" });
+  });
+
   it("does NOT overwrite Y/M/M from VIN decode if the form supplied them", async () => {
     const mock = createSupabaseMock({
       data: { id: CLIENT_ID },

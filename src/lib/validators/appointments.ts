@@ -75,7 +75,17 @@ export const appointmentSubmitSchema = z
       .optional(),
     vehicle_make: z.string().min(1).max(80).optional(),
     vehicle_model: z.string().min(1).max(80).optional(),
-    vehicle_vin: z.string().regex(VIN_REGEX, "Invalid VIN").optional(),
+    // Normalize before the regex: VINs are upper-case and unpadded, so a
+    // lowercase or space-padded VIN is still valid input (and stored canonically
+    // for the NHTSA decode). Empty/whitespace → undefined (treated as omitted).
+    vehicle_vin: z.preprocess(
+      (v) => (typeof v === "string" ? v.trim().toUpperCase() || undefined : v),
+      z.string().regex(VIN_REGEX, "Invalid VIN").optional(),
+    ),
+    // License plate — the alternative to a VIN. The website's single "License
+    // Plate or VIN" field is split client-side: a 17-char VIN fills vehicle_vin,
+    // anything else fills this. At least one of the two is required (refine below).
+    license_plate: z.string().trim().min(1).max(20).optional(),
     vehicle_mileage: z.coerce.number().int().min(0).max(1_000_000).optional(),
 
     preferred_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -92,6 +102,15 @@ export const appointmentSubmitSchema = z
     // Honeypot — submissions with anything in `website` are silently rejected.
     website: z.string().optional(),
   })
+  .refine(
+    (data) => Boolean(data.vehicle_vin) || Boolean(data.license_plate),
+    {
+      // Vehicle identity is required — the form makes the combined "License Plate
+      // or VIN" field mandatory; this is the server-side trust-boundary mirror.
+      message: "Please add your license plate or VIN.",
+      path: ["license_plate"],
+    },
+  )
   .refine(
     (data) => {
       // Sunday is closed all day. Defense in depth — the UI disables Sundays,

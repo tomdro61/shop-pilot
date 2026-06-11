@@ -333,7 +333,7 @@ export async function convertAppointmentToJob(
   const { data: appt, error: loadErr } = await supabase
     .from("appointments")
     .select(
-      "id, status, customer_id, vehicle_id, service_category, description, snapshot_vehicle_year, snapshot_vehicle_make, snapshot_vehicle_model, snapshot_vehicle_mileage, scheduled_at, preferred_date"
+      "id, status, customer_id, vehicle_id, service_category, description, snapshot_vehicle_year, snapshot_vehicle_make, snapshot_vehicle_model, snapshot_vehicle_plate, snapshot_vehicle_vin, snapshot_vehicle_mileage, scheduled_at, preferred_date"
     )
     .eq("id", id)
     .single();
@@ -365,7 +365,11 @@ export async function convertAppointmentToJob(
     .filter(Boolean)
     .join(" ");
   // Always non-empty: serviceLabel is the floor, vehicle prefixes it when known.
-  const title = vehicleParts ? `${vehicleParts} – ${serviceLabel}` : serviceLabel;
+  // Fall back to the plate/VIN so a booking without year/make/model still gets a
+  // vehicle hint in the title instead of collapsing to just the service label.
+  const titleVehicle =
+    vehicleParts || appt.snapshot_vehicle_plate || appt.snapshot_vehicle_vin || "";
+  const title = titleVehicle ? `${titleVehicle} – ${serviceLabel}` : serviceLabel;
   // The car arrives on the scheduled day, so date_received tracks that (fall back
   // to the requested date if somehow unscheduled).
   const dateReceived = appt.scheduled_at

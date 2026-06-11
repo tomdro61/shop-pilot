@@ -141,6 +141,7 @@ created_at, updated_at
 - The public **estimate-request** table — submissions from the `/contact` multi-step wizard on the website via `POST /api/quote-requests`. Worked on the Quote Requests page (and the dashboard inbox `quotes` tab); convert-to-job pre-fills the new-job form.
 - **`customer_id`** — FK to `customers`, nullable, linked via `findOrCreateParkingCustomer()` on submit (a null id still saves the request; the manager links it manually).
 - **`services`** — text[]. Multi-select display labels (e.g. "Brake Repair"); at least one.
+- **`vehicle_vin`** / **`license_plate`** — text, nullable (`20260610000001_quote_requests_vehicle_id.sql`). From the estimate form's required "License Plate or VIN" field, split client-side: a 17-char VIN → `vehicle_vin`, anything else → `license_plate`. `quoteRequestSubmitSchema` requires at least one (multipart path only; the legacy JSON path never collected one and is unaffected). No DB CHECK — validated at the Zod boundary.
 - **`message`** — text, nullable in DB; the form requires ≥10 chars (enforced in `quoteRequestSubmitSchema`, not a DB CHECK).
 - **`photo_paths`** — text[] with CHECK `array_length(...) <= 3` (Session 57, `20260605000000_quote_requests_photos.sql`). Storage paths under the `booking-photos` bucket at `quotes/{client_id}/` — the form's client-generated UUID is the folder prefix (the row PK stays server-generated). Signed on the Quote Requests page for display.
 - **`status`** — `new | contacted | pending | converted`.
@@ -159,7 +160,7 @@ submitted_at, confirmed_at, cancelled_at, completed_at, converted_at,
 converted_job_id,
 snapshot_customer_name, snapshot_customer_phone, snapshot_customer_email,
 snapshot_vehicle_year, snapshot_vehicle_make, snapshot_vehicle_model,
-snapshot_vehicle_vin, snapshot_vehicle_mileage,
+snapshot_vehicle_plate, snapshot_vehicle_vin, snapshot_vehicle_mileage,
 updated_at
 ```
 
@@ -171,6 +172,7 @@ updated_at
 - **`status`** — `pending → confirmed → completed` or `cancelled` or `converted_to_job`. Paired with `*_at` timestamps via table-level CHECK constraints (defense-in-depth; server actions normally maintain the pairing).
 - **`source`** — `website | walk_in | phone`. Only `website` for now.
 - **`snapshot_*`** — denormalized at insert. FKs (`customer_id`, `vehicle_id`) are ON DELETE SET NULL; snapshots are the authoritative historical record if a customer or vehicle is deleted. `snapshot_customer_phone` has a CHECK for E.164.
+- **`snapshot_vehicle_plate`** — text, nullable (`20260610000000_appointments_snapshot_plate.sql`). The license plate from the booking form's required "License Plate or VIN" field. The form splits that one field client-side: a 17-char VIN fills `snapshot_vehicle_vin` (and is NHTSA-decoded), anything else fills the plate. The Zod schema requires at least one of plate/VIN. No DB CHECK (plate formats vary; validated at the Zod boundary, like `snapshot_vehicle_vin`).
 - **`converted_job_id`** — nullable FK with ON DELETE SET NULL. If the converted job is later deleted, status stays `converted_to_job` and the link goes null — that pair is the explicit "job was removed" signal (intentional; do NOT add a CHECK forcing both to be set together).
 - **`photo_paths`** — text[] with CHECK `array_length(...) <= 3`. Storage paths under the `booking-photos` bucket.
 - **`conditional_data`** — jsonb. Category-dependent (brake position, tire need, check-engine state). Also carries `vin_decode_status: 'decoded' | 'decode_failed' | 'not_attempted'` when a VIN was submitted — lets the manager flag "VIN didn't decode" at confirm time.

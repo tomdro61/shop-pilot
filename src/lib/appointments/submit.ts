@@ -102,6 +102,7 @@ export async function insertAppointment(
 
   const hasAnyVehicleInfo =
     input.vehicle_vin ||
+    input.license_plate ||
     input.vehicle_year ||
     input.vehicle_make ||
     input.vehicle_model;
@@ -134,6 +135,7 @@ export async function insertAppointment(
       make: snapshotMake,
       model: snapshotModel,
       vin: input.vehicle_vin,
+      license_plate: input.license_plate,
       mileage: input.vehicle_mileage,
     });
   }
@@ -185,6 +187,7 @@ export async function insertAppointment(
       snapshot_vehicle_year: snapshotYear ?? null,
       snapshot_vehicle_make: snapshotMake ?? null,
       snapshot_vehicle_model: snapshotModel ?? null,
+      snapshot_vehicle_plate: input.license_plate ?? null,
       snapshot_vehicle_vin: input.vehicle_vin ?? null,
       snapshot_vehicle_mileage: input.vehicle_mileage ?? null,
     })

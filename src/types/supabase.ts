@@ -63,6 +63,7 @@ export type Database = {
           snapshot_vehicle_make: string | null
           snapshot_vehicle_mileage: number | null
           snapshot_vehicle_model: string | null
+          snapshot_vehicle_plate: string | null
           snapshot_vehicle_vin: string | null
           snapshot_vehicle_year: number | null
           source: string
@@ -94,6 +95,7 @@ export type Database = {
           snapshot_vehicle_make?: string | null
           snapshot_vehicle_mileage?: number | null
           snapshot_vehicle_model?: string | null
+          snapshot_vehicle_plate?: string | null
           snapshot_vehicle_vin?: string | null
           snapshot_vehicle_year?: number | null
           source?: string
@@ -125,6 +127,7 @@ export type Database = {
           snapshot_vehicle_make?: string | null
           snapshot_vehicle_mileage?: number | null
           snapshot_vehicle_model?: string | null
+          snapshot_vehicle_plate?: string | null
           snapshot_vehicle_vin?: string | null
           snapshot_vehicle_year?: number | null
           source?: string
@@ -1183,6 +1186,7 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          license_plate: string | null
           message: string | null
           phone: string
           photo_paths: string[]
@@ -1192,6 +1196,7 @@ export type Database = {
           updated_at: string
           vehicle_make: string | null
           vehicle_model: string | null
+          vehicle_vin: string | null
           vehicle_year: number | null
         }
         Insert: {
@@ -1201,6 +1206,7 @@ export type Database = {
           first_name: string
           id?: string
           last_name: string
+          license_plate?: string | null
           message?: string | null
           phone: string
           photo_paths?: string[]
@@ -1210,6 +1216,7 @@ export type Database = {
           updated_at?: string
           vehicle_make?: string | null
           vehicle_model?: string | null
+          vehicle_vin?: string | null
           vehicle_year?: number | null
         }
         Update: {
@@ -1219,6 +1226,7 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          license_plate?: string | null
           message?: string | null
           phone?: string
           photo_paths?: string[]
@@ -1228,6 +1236,7 @@ export type Database = {
           updated_at?: string
           vehicle_make?: string | null
           vehicle_model?: string | null
+          vehicle_vin?: string | null
           vehicle_year?: number | null
         }
         Relationships: [

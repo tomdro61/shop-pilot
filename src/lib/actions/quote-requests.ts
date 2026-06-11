@@ -23,7 +23,7 @@ export async function getQuoteRequests(filters?: {
   if (filters?.search) {
     const s = filters.search.toLowerCase();
     query = query.or(
-      `first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%,vehicle_make.ilike.%${s}%,vehicle_model.ilike.%${s}%`
+      `first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%,vehicle_make.ilike.%${s}%,vehicle_model.ilike.%${s}%,license_plate.ilike.%${s}%,vehicle_vin.ilike.%${s}%`
     );
   }
 

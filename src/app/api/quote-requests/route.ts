@@ -292,6 +292,8 @@ async function buildFromMultipart(
       vehicleYear: data.vehicle_year ?? null,
       vehicleMake: data.vehicle_make ?? null,
       vehicleModel: data.vehicle_model ?? null,
+      vehicleVin: data.vehicle_vin ?? null,
+      licensePlate: data.license_plate ?? null,
       message: data.message.trim(),
       photoPaths,
     },
@@ -408,6 +410,9 @@ async function buildFromJson(
       vehicleYear: vehicleYearRaw ? parseInt(vehicleYearRaw, 10) || null : null,
       vehicleMake: vehicleMake || null,
       vehicleModel: vehicleModel || null,
+      // Legacy JSON path predates the plate/VIN field — it never collected one.
+      vehicleVin: null,
+      licensePlate: null,
       message: message || null,
       photoPaths: [],
     },

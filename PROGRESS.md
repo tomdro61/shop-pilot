@@ -3783,3 +3783,27 @@ On `staging`; migration already applied to the shared DB (additive). Needs a `st
 
 ### Files touched
 - `src/lib/utils/totals.ts` (+`.test.ts`), `src/lib/stripe/create-invoice.ts`, `src/lib/actions/{jobs,invoices,charge-card-on-file,reports,estimates,email}.ts`, `src/components/dashboard/{line-items-list,estimate-line-items-list}.tsx`, `src/app/(dashboard)/jobs/[id]/{page,print/page}.tsx`, `src/app/(dashboard)/estimates/[id]/page.tsx`, `src/app/estimates/approve/[token]/page.tsx`, `src/app/api/stripe/webhooks/route.ts`, `src/app/api/reports/tax-audit/export/route.ts`, `src/lib/resend/templates.ts`, `src/lib/ai/system-prompt.ts`, `supabase/migrations/20260605000001_charge_sales_tax.sql`, PROGRESS.md, DATABASE_SCHEMA.md
+
+## Session 59 — 2026-06-10 — Required "License Plate or VIN" on booking + estimate forms
+
+### Why
+Owner: both public forms (online booking `/book` and the estimate request `/contact`) should require the customer to identify their vehicle by license plate **or** VIN. One combined required field (owner's choice over two separate fields), lowest friction.
+
+### What shipped (on `staging`, both repos)
+- **broadway-motors-web:** new `src/lib/vehicle-id.ts` (`VIN_REGEX` + `classifyVehicleId()`) — a 17-char value matching the VIN charset is treated as a VIN, anything else as a plate. Both `booking-form.tsx` and `site/estimate-form.tsx` gained a **required** "License Plate or VIN" field on step 2 (gates Next + submit); on submit the value is split into `vehicle_vin` (NHTSA-decoded server-side) or `license_plate`. Contracts updated: `api/booking.ts` (+`license_plate`), `api/estimate.ts` (+`vehicle_vin`,+`license_plate`).
+- **shop-pilot — schema:** `appointmentSubmitSchema` + `quoteRequestSubmitSchema` gained `license_plate` (and `vehicle_vin` on the quote schema) plus a `.refine` requiring **at least one of VIN/plate** — the server-side mirror of the form requirement. Legacy JSON quote path bypasses the schema (unaffected).
+- **shop-pilot — storage:** migrations `20260610000000_appointments_snapshot_plate.sql` (`appointments.snapshot_vehicle_plate`) + `20260610000001_quote_requests_vehicle_id.sql` (`quote_requests.vehicle_vin` + `license_plate`). `insertAppointment` threads the plate into the snapshot + `findOrCreateVehicle` (which now writes `vehicles.license_plate`); `persistQuoteRequest` writes both. Types hand-added to `supabase.ts`.
+- **shop-pilot — manager view:** appointment detail page shows a "Plate" field beside VIN; the Quote Requests card shows plate/VIN under the vehicle; quote search now matches `license_plate` + `vehicle_vin`. (Appointment **card** layout left untouched — owner-approved dense design.)
+
+### Verify
+- Both repos: tsc clean. shop-pilot: 333 tests pass (added plate/VIN cases to `appointments.test.ts` + new `quote-requests.test.ts` + a plate case in `submit.test.ts`). All changed files lint clean (pre-existing `no-explicit-any` errors in untouched report/trends files remain). Website `npm run build` clean (33 routes incl. `/book`, `/contact`).
+
+### Decisions (owner)
+One combined required field "License Plate or VIN" (not two separate fields, not VIN-only/plate-only). Required enforced both client-side (form gate) and server-side (Zod refine).
+
+### Cutover (NOT done — needs `staging → master` on BOTH repos)
+Migrations are additive/backward-compatible. Order: push shop-pilot first (server accepts the new fields before the new forms send them), then broadway-motors-web. Post-cutover: submit a real booking + a real estimate with a plate, and one with a VIN, and confirm the plate/VIN lands on the appointment detail / Quote Requests card. **Migrations must be applied to the shared Supabase DB (`npx supabase db push`) before/at cutover** — the new forms 500 at insert otherwise.
+
+### Files touched
+- **web:** `src/lib/vehicle-id.ts` (new), `src/components/booking/booking-form.tsx`, `src/components/site/estimate-form.tsx`, `src/lib/api/{booking,estimate}.ts`, `CLAUDE.md`
+- **shop-pilot:** `src/lib/validators/{appointments,quote-requests}.ts` (+`.test.ts`), `src/lib/appointments/{submit,find-or-create-vehicle}.ts`, `src/lib/appointments/submit.test.ts`, `src/lib/quote-requests/submit.ts`, `src/app/api/quote-requests/route.ts`, `src/app/(dashboard)/appointments/[id]/page.tsx`, `src/components/quote-requests/quote-request-list.tsx`, `src/lib/actions/quote-requests.ts`, `src/types/supabase.ts`, `supabase/migrations/20260610000000_appointments_snapshot_plate.sql`, `supabase/migrations/20260610000001_quote_requests_vehicle_id.sql`, PROGRESS.md, DATABASE_SCHEMA.md

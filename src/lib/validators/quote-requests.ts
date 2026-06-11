@@ -10,6 +10,7 @@
 // public form lives in a separate repo, so this schema is the real trust boundary.
 
 import { z } from "zod";
+import { VIN_REGEX } from "@/lib/vin/decode";
 
 const E164 = /^\+1\d{10}$/;
 
@@ -52,6 +53,21 @@ export const quoteRequestSubmitSchema = z.object({
   vehicle_make: z.preprocess(emptyToUndefined, z.string().trim().max(80).optional()),
   vehicle_model: z.preprocess(emptyToUndefined, z.string().trim().max(80).optional()),
 
+  // Vehicle identity — the website's single "License Plate or VIN" field is split
+  // client-side: a 17-char VIN fills vehicle_vin, anything else fills license_plate.
+  // At least one is required (refine below).
+  vehicle_vin: z.preprocess(
+    // Normalize first (upper-case, unpadded) so a lowercase/padded VIN is valid
+    // and stored canonically; empty/whitespace → undefined.
+    (v) =>
+      typeof v === "string" ? v.trim().toUpperCase() || undefined : emptyToUndefined(v),
+    z.string().regex(VIN_REGEX, "Invalid VIN").optional(),
+  ),
+  license_plate: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().min(1).max(20).optional(),
+  ),
+
   // Client-generated UUID — the storage folder prefix for uploaded photos
   // (quotes/{client_id}/). Mirrors the booking flow's orphan-free upload: the
   // folder name is known before insert, so a failed insert can't strand photos
@@ -60,6 +76,15 @@ export const quoteRequestSubmitSchema = z.object({
 
   // Honeypot — submissions with anything here are silently accepted-and-dropped.
   website: z.string().optional(),
-});
+}).refine(
+  (data) => Boolean(data.vehicle_vin) || Boolean(data.license_plate),
+  {
+    // Vehicle identity is required — mirrors the form's mandatory "License Plate
+    // or VIN" field at the server trust boundary. (Legacy JSON path doesn't use
+    // this schema, so old Wix-style submissions are unaffected.)
+    message: "Please add your license plate or VIN.",
+    path: ["license_plate"],
+  },
+);
 
 export type QuoteRequestSubmitInput = z.infer<typeof quoteRequestSubmitSchema>;

@@ -19,6 +19,7 @@ function baseInput(overrides: Record<string, unknown> = {}) {
     preferred_time: "09:00" as const,
     drop_off_or_wait: "drop_off" as const,
     client_id: VALID_UUID,
+    license_plate: "1ABC23",
     website: "",
     ...overrides,
   };
@@ -296,6 +297,67 @@ describe("appointmentSubmitSchema — VIN validation", () => {
       appointmentSubmitSchema.safeParse(
         baseInput({ vehicle_vin: "1HGCM82633A1234567" })
       ).success
+    ).toBe(false);
+  });
+});
+
+describe("appointmentSubmitSchema — license plate / VIN requirement", () => {
+  it("rejects when neither a plate nor a VIN is provided", () => {
+    const { license_plate: _, ...withoutPlate } = baseInput();
+    const result = appointmentSubmitSchema.safeParse(withoutPlate);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((i) => i.path.includes("license_plate"))
+      ).toBe(true);
+    }
+  });
+
+  it("accepts a plate alone (no VIN)", () => {
+    // baseInput already supplies license_plate and no vin.
+    expect(appointmentSubmitSchema.safeParse(baseInput()).success).toBe(true);
+  });
+
+  it("accepts a VIN alone (no plate)", () => {
+    expect(
+      appointmentSubmitSchema.safeParse(
+        baseInput({ license_plate: undefined, vehicle_vin: "1HGCM82633A123456" })
+      ).success
+    ).toBe(true);
+  });
+
+  it("rejects an empty-string plate with no VIN", () => {
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ license_plate: "" })).success
+    ).toBe(false);
+  });
+
+  it("rejects a whitespace-only plate with no VIN", () => {
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ license_plate: "   " })).success
+    ).toBe(false);
+  });
+
+  it("rejects a malformed VIN (contains I/O/Q) as the only identifier", () => {
+    expect(
+      appointmentSubmitSchema.safeParse(
+        baseInput({ license_plate: undefined, vehicle_vin: "1HGCM82633A1234I6" })
+      ).success
+    ).toBe(false);
+  });
+
+  it("normalizes a lowercase/padded VIN and accepts it as the only identifier", () => {
+    const result = appointmentSubmitSchema.safeParse(
+      baseInput({ license_plate: undefined, vehicle_vin: "  1hgcm82633a123456  " })
+    );
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.vehicle_vin).toBe("1HGCM82633A123456");
+  });
+
+  it("trims and caps plate length", () => {
+    expect(
+      appointmentSubmitSchema.safeParse(baseInput({ license_plate: "x".repeat(21) }))
+        .success
     ).toBe(false);
   });
 });

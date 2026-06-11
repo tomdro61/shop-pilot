@@ -16,6 +16,8 @@ export type QuoteFields = {
   vehicleYear: number | null;
   vehicleMake: string | null;
   vehicleModel: string | null;
+  vehicleVin: string | null;
+  licensePlate: string | null;
   message: string | null;
   photoPaths: string[];
 };
@@ -117,6 +119,8 @@ export async function persistQuoteRequest(fields: QuoteFields): Promise<PersistR
       vehicle_make: fields.vehicleMake,
       vehicle_model: fields.vehicleModel,
       vehicle_year: fields.vehicleYear,
+      vehicle_vin: fields.vehicleVin,
+      license_plate: fields.licensePlate,
       message: fields.message,
       photo_paths: fields.photoPaths,
       status: "new",

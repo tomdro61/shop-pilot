@@ -25,6 +25,7 @@ export type VehicleInput = {
   make?: string;
   model?: string;
   vin?: string;
+  license_plate?: string;
   mileage?: number;
 };
 
@@ -132,6 +133,7 @@ export async function findOrCreateVehicle(input: VehicleInput): Promise<string |
         make: input.make ?? null,
         model: input.model ?? null,
         vin: input.vin ?? null,
+        license_plate: input.license_plate ?? null,
         mileage: input.mileage ?? null,
       })
       .select("id")

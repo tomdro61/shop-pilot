@@ -202,6 +202,13 @@ function QuoteRequestCard({
   const vehicle = [qr.vehicle_year, qr.vehicle_make, qr.vehicle_model]
     .filter(Boolean)
     .join(" ");
+  // One submission carries a plate OR a VIN (the website splits the combined
+  // field). Prefer showing the plate; fall back to the VIN.
+  const plateOrVin = qr.license_plate
+    ? { label: "Plate", value: qr.license_plate }
+    : qr.vehicle_vin
+      ? { label: "VIN", value: qr.vehicle_vin }
+      : null;
   const date = new Date(qr.created_at).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -311,15 +318,24 @@ function QuoteRequestCard({
       {/* Body */}
       <div className="px-5 py-4 space-y-4">
         {/* Vehicle + services */}
-        {(vehicle || qr.services.length > 0) && (
+        {(vehicle || plateOrVin || qr.services.length > 0) && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            {vehicle ? (
-              <div className="inline-flex items-center gap-2">
+            {vehicle || plateOrVin ? (
+              <div className="inline-flex items-center gap-2 min-w-0">
                 <span className="w-7 h-7 rounded-md grid place-items-center border bg-stone-100 text-stone-600 border-stone-200 dark:bg-stone-900 dark:text-stone-300 dark:border-stone-800 flex-none">
                   <Car className="h-3.5 w-3.5" />
                 </span>
-                <span className="text-sm font-medium text-stone-900 dark:text-stone-50">
-                  {vehicle}
+                <span className="min-w-0">
+                  {vehicle && (
+                    <span className="block text-sm font-medium text-stone-900 dark:text-stone-50 truncate">
+                      {vehicle}
+                    </span>
+                  )}
+                  {plateOrVin && (
+                    <span className="block font-mono text-xs uppercase text-stone-500 dark:text-stone-400 truncate">
+                      {plateOrVin.label} {plateOrVin.value}
+                    </span>
+                  )}
                 </span>
               </div>
             ) : (
