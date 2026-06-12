@@ -56,7 +56,7 @@ This is the **current shape of the system** — what exists, where it lives, and
   - APB — 978-644-9391 (`QUO_APB_PHONE_NUMBER`)
 - Auto-texts estimate/invoice links on shop line
 - Lot-specific confirmation SMS for all 5 lots
-- Quo contact auto-creation for parking customers with "Parking" tag
+- Quo contact auto-creation (via `createOrUpdateQuoContact`, deduped by phone) on parking, estimate-request, AND online-booking submissions. No tag is actually set — the "Parking tag" in older notes was never implemented.
 - 7 SMS templates in `src/lib/messaging/templates.ts` (reservation confirmation is lot-aware)
 - Phone line tracked on all messages (`messages.phone_line`)
 - **Blocked on A2P registration** (waiting on number port + paid plan)
@@ -152,13 +152,15 @@ Reusable templates with pre-filled line items, managed at `/presets`.
 - Reservation detail page shows two-column layout with customer/vehicle cards, trip timeline, and Key Pickup section (lockbox number + code or "in person")
 - Parking dashboard compact cards show lockbox info for checked-out reservations
 
-## Online Appointment Booking (Sessions 43–46, in progress on `staging`)
+## Online Appointment Booking (LIVE in production; Sessions 43–60)
 
 Cross-project public form on BroadwayMotorsMA.com `/book` posts to ShopPilot's `/api/appointments/submit`. Same shape as parking + quote-requests; the manager later confirms in `/appointments`. Detailed locked spec at the monorepo root: `BOOKING_PRD.md` + `BOOKING_TECHNICAL_PLAN.md`.
 
+**Status (2026-06): LIVE in production.** Beyond the original spec, bookings now collect a **required "License Plate or VIN"** field (split client-side into `vehicle_vin`/`license_plate`; Session 59) and create a **Quo contact** on submit (`appointments.quo_contact_id`, with an "Open in Quo" link on the detail page; Session 60) — the same Quo-contact pattern parking + estimates use.
+
 **V1 scope cut (2026-05-28):** per-day capacity caps (table + DB trigger + capacity library), the unified planning calendar, and the capacity-aware date picker were all removed from V1. Plain date picker (Sundays + Saturday-afternoon disabled); manager picks a specific time at confirm. Capacity work deferred to V1.5+ once real volume data justifies it.
 
-**Live on `staging` (steps 1–2b shipped):**
+**Shipped internals:**
 - Schema: `appointments`, `vin_decode_cache`, `messages.related_appointment_id` column, `booking-photos` storage bucket
 - Helpers in `src/lib/appointments/`: `findOrCreateBookingCustomer` (sets `customer_type: 'retail'` — NOT 'parking'), `findOrCreateVehicle` (new — VIN-first then customer+Y/M/M via ilike), `processBookingPhoto` (magic-byte signature check + sharp EXIF strip + bucket upload)
 - VIN decode: `src/lib/vin/decode.ts` with DB cache via `vin_decode_cache` (NOT Next.js fetch cache — silently ignored in API routes)
