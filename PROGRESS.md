@@ -3801,8 +3801,8 @@ Owner: both public forms (online booking `/book` and the estimate request `/cont
 ### Decisions (owner)
 One combined required field "License Plate or VIN" (not two separate fields, not VIN-only/plate-only). Required enforced both client-side (form gate) and server-side (Zod refine).
 
-### Cutover (NOT done — needs `staging → master` on BOTH repos)
-Migrations are additive/backward-compatible. Order: push shop-pilot first (server accepts the new fields before the new forms send them), then broadway-motors-web. Post-cutover: submit a real booking + a real estimate with a plate, and one with a VIN, and confirm the plate/VIN lands on the appointment detail / Quote Requests card. **Migrations must be applied to the shared Supabase DB (`npx supabase db push`) before/at cutover** — the new forms 500 at insert otherwise.
+### Cutover — 🚀 DONE 2026-06-11 (both repos on `master`)
+Cut over **web first, then shop-pilot** (NOT the "shop-pilot first" originally drafted here): the server `.refine` makes plate/VIN a *required* field, so the live form had to be sending it before the server enforced it — server-first would 400 in-flight old-form submissions during the deploy gap. Migrations applied to the shared Supabase DB before cutover. shop-pilot `master` `ed594cb`, web `master` `310cb6f`. Prod verified: a no-plate/VIN POST is rejected with "Please add your license plate or VIN." Still worth a manual end-to-end (a real booking + estimate, one plate / one VIN) to confirm the value lands on the appointment detail / Quote Requests card.
 
 ### Files touched
 - **web:** `src/lib/vehicle-id.ts` (new), `src/components/booking/booking-form.tsx`, `src/components/site/estimate-form.tsx`, `src/lib/api/{booking,estimate}.ts`, `CLAUDE.md`
@@ -3818,13 +3818,13 @@ Owner: a booking (online appointment) should create a Quo contact + a ShopPilot 
 - **Estimate customers → retail.** Generalized the shared `findOrCreateParkingCustomer` → `findOrCreateCustomer(input, customerType)` in `src/lib/parking-customer.ts` (file name kept; it's no longer parking-only). Parking submit + Wix webhook pass `"parking"` (behavior unchanged); the estimate flow (`persistQuoteRequest`) passes `"retail"`. Existing matched customers keep their type — only NEW estimate customers are stamped retail (no backfill of historical 'parking'-tagged estimate customers).
 
 ### Verify
-- tsc clean; tests green (added 2 booking cases: Quo contact id stored + Quo failure → `quo_contact_id` null, booking still saves); changed files lint clean; build clean. Scoped review run.
+- tsc clean; **347 tests** green; changed files lint clean; build clean. 4-agent scoped review caught + fixed an empty-email mis-link in the shared customer helper (`ilike ''` could match an unrelated empty-email customer) and prompted contract tests: `customerType → customer_type` (new `parking-customer.test.ts`), the estimate→`"retail"` wiring (new `quote-requests/submit.test.ts`), and the realistic Quo `{success:false}` path. Pre-existing `.single()`-without-error-check in the shared helper left for the V1.5 helper merge.
 
 ### Decisions (owner)
 Scope = add Quo contact to the booking flow only (estimates already had it). Store `quo_contact_id` on the appointment + "Open in Quo" link on the detail page. Estimate customers created as retail. No Quo tagging/differentiation (one generic ShopPilot contact, as today).
 
-### Cutover (NOT done — needs `staging → master` on shop-pilot only; no web change this session)
-Migration `20260611000000` is additive/nullable. Apply to the shared DB (`npx supabase db push`) at/with cutover. Post-cutover: a real booking should appear as a Quo contact + show "Open in Quo" on its detail page, and a new estimate requester should land as a `retail` customer.
+### Cutover — 🚀 DONE 2026-06-12 (shop-pilot `master` `97f1fe6`; web unaffected)
+Migration `20260611000000` applied to the shared DB. Post-deploy health smoke passed (booking endpoint alive + intact). True end-to-end (Quo contact created on a real booking + "Open in Quo" link + retail estimate customer) requires a manual live submission — flagged to the owner.
 
 ### Files touched
-- `src/lib/parking-customer.ts` (rename + type param), `src/lib/quote-requests/submit.ts`, `src/app/api/parking/submit/route.ts`, `src/app/api/webhooks/wix-parking/route.ts`, `src/lib/appointments/submit.ts` (+`submit.test.ts`), `src/app/(dashboard)/appointments/[id]/page.tsx`, `src/types/supabase.ts`, `supabase/migrations/20260611000000_appointments_quo_contact.sql`, PROGRESS.md, DATABASE_SCHEMA.md
+- `src/lib/parking-customer.ts` (rename + type param + empty-email guard fix) (+`parking-customer.test.ts`), `src/lib/quote-requests/submit.ts` (+`submit.test.ts`), `src/app/api/parking/submit/route.ts`, `src/app/api/webhooks/wix-parking/route.ts`, `src/lib/appointments/submit.ts` (+`submit.test.ts`), `src/lib/appointments/find-or-create-customer.ts` (comment), `src/app/(dashboard)/appointments/[id]/page.tsx`, `src/types/supabase.ts`, `supabase/migrations/20260611000000_appointments_quo_contact.sql`, PROGRESS.md, DATABASE_SCHEMA.md
