@@ -93,7 +93,10 @@ export function InvoiceSection({
       );
     }
 
-    if (hasCardOnFile && jobStatus === "complete") {
+    // Fleet accounts are billed off-platform and never get a Stripe invoice, so a
+    // fleet customer with a card on file is steered to charge-the-card instead.
+    // Non-fleet customers keep the standard invoice option below, even with a card.
+    if (isFleet && hasCardOnFile && jobStatus === "complete") {
       return (
         <MiniStatusCard
           accent="blue"

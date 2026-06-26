@@ -3828,3 +3828,19 @@ Migration `20260611000000` applied to the shared DB. Post-deploy health smoke pa
 
 ### Files touched
 - `src/lib/parking-customer.ts` (rename + type param + empty-email guard fix) (+`parking-customer.test.ts`), `src/lib/quote-requests/submit.ts` (+`submit.test.ts`), `src/app/api/parking/submit/route.ts`, `src/app/api/webhooks/wix-parking/route.ts`, `src/lib/appointments/submit.ts` (+`submit.test.ts`), `src/lib/appointments/find-or-create-customer.ts` (comment), `src/app/(dashboard)/appointments/[id]/page.tsx`, `src/types/supabase.ts`, `supabase/migrations/20260611000000_appointments_quo_contact.sql`, PROGRESS.md, DATABASE_SCHEMA.md
+
+---
+
+## Session 61 — 2026-06-26 — Card-on-file customers can still send an invoice
+
+### Why
+Owner: when a customer has a card on file, the InvoiceSection on a completed job showed only a "Card on file — use Charge Card on File below" callout, with **no way to create/send a Stripe invoice** from that section. Sending an invoice should always be an option; charging the card is the separate footer button (`ChargeCardOnFileButton`), which is unchanged.
+
+### What shipped (on `staging`)
+- Scoped the "Card on file" callout in `InvoiceSection` to **fleet accounts only** by adding `isFleet &&` to the branch condition. The callout was originally meant for fleet+card (fleet is billed off-platform, so steer staff to charge-the-card), but it had been written without the `isFleet` qualifier, so it leaked onto every regular customer with a card on file and hid their invoice button. Regular card-on-file customers now fall through to the standard "Create & Send invoice" card. Fleet behavior unchanged.
+
+### Verify
+2-agent scoped review (correctness + comment) — clean. No double-billing coupling: "Create & Send invoice" and "Charge Card on File" are independent manual buttons. Both options are now live at once for a regular card-on-file customer (intended).
+
+### Files touched
+- `src/components/dashboard/invoice-section.tsx`, PROGRESS.md
