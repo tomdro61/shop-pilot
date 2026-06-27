@@ -3844,3 +3844,21 @@ Owner: when a customer has a card on file, the InvoiceSection on a completed job
 
 ### Files touched
 - `src/components/dashboard/invoice-section.tsx`, PROGRESS.md
+
+---
+
+## Session 62 — 2026-06-27 — Inspection categories reliably excluded from revenue (case-insensitive)
+
+### Why
+Owner: make sure inspection job categories don't count toward revenue. Investigation against live data found the real situation: the owner's "State Inspection" catalog preset is categorized `"Inspection"`, and revenue exclusion matched categories **case-sensitively** (`INSPECTION_CATEGORIES.has(category ?? "")`). It happened to work for today's exact-case data, but any casing drift (a preset or hand-typed `"state inspection"`) would silently count as revenue and double-count against the daily inspection tally. That's the documented H-3 finding. The separate daily inspection tally (4,558 state + 1,117 TNC YTD at $35/$15 fixed rates, ~$176k/6mo) was deliberately left counting per owner's choice ("only job-category inspections").
+
+### What shipped (on `staging`)
+- **Case-insensitive exclusion.** Replaced the case-sensitive `INSPECTION_CATEGORIES` Set with a single `isInspectionCategory()` helper in `src/lib/utils/revenue.ts` (`.trim().toLowerCase()` normalization). Routed all ~14 revenue call sites across 10 files through it: dashboard KPIs (via `sumJobRevenue`), `reports.ts`, all three `*-trends.ts`, `receivables.ts`, `customer-insights.ts` (lifetime spend), both `reports/**/export` CSV routes, and `quick-pay-form.tsx`. Keys are derived from canonical display-cased names through the same normalization, so future additions can't drift (closes M-8). Added `revenue.test.ts` (7 cases) locking in casing/whitespace/null behavior. Resolves **H-3, M-8, M-9**.
+- **AI daily-summary revenue leak fixed.** `getDailySummary()` (used by the AI handler to answer "how much did we make today") summed inspection line items as revenue — now excludes them like every other surface.
+- **Dead code removed.** Deleted never-called `getDailyRevenueSparkline()` (zero callers; would have double-counted inspections if wired up) and an unused `calcInspectionRevenue` import in the reports CSV export route.
+
+### Verify
+3-agent scoped review (correctness/completeness + type-design + comment) — all findings addressed, no Criticals. tsc clean; **354 tests** green (7 new); no new lint (pre-existing `any`/unused warnings in `reports.ts` untouched). Daily inspection tally intentionally unchanged.
+
+### Files touched
+- `src/lib/utils/revenue.ts` (+`revenue.test.ts`), `src/lib/actions/{reports,receivables,trends,category-trends,customer-insights,tech-trends}.ts`, `src/app/api/reports/{export,tax-audit/export}/route.ts`, `src/components/dashboard/quick-pay-form.tsx`, PROGRESS.md, REVIEW-FINDINGS.md

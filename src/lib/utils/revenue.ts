@@ -4,11 +4,22 @@ import {
   INSPECTION_COST_STATE,
 } from "@/lib/constants";
 
-export const INSPECTION_CATEGORIES = new Set([
-  "Inspection",
-  "State Inspection",
-  "TNC Inspection",
-]);
+// Excluded from service revenue: inspections are billed separately at fixed
+// per-inspection rates (see calcInspectionRevenue), so counting their line
+// items here too would double-count. Categories have shipped in mixed casing
+// (catalog presets, hand-typed), so match on a normalized key — keys are
+// derived from the canonical names through the same normalization as the
+// lookup, so a new entry can be added in readable display case.
+const INSPECTION_CATEGORIES = ["Inspection", "State Inspection", "TNC Inspection"] as const;
+const INSPECTION_CATEGORY_KEYS = new Set(
+  INSPECTION_CATEGORIES.map((c) => c.trim().toLowerCase())
+);
+
+export function isInspectionCategory(
+  category: string | null | undefined
+): boolean {
+  return INSPECTION_CATEGORY_KEYS.has((category ?? "").trim().toLowerCase());
+}
 
 type LineItem = { total: number; category?: string | null };
 
@@ -20,7 +31,7 @@ export function sumJobRevenue(
     jobs?.reduce((sum, job) => {
       const items = (job.job_line_items as LineItem[]) || [];
       const jobTotal = items
-        .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
+        .filter((li) => !isInspectionCategory(li.category))
         .reduce((s, li) => s + (li.total || 0), 0);
       return sum + jobTotal;
     }, 0) || 0

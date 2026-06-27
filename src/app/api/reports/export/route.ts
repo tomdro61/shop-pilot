@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
-import {
-  INSPECTION_CATEGORIES,
-  calcInspectionRevenue,
-} from "@/lib/utils/revenue";
+import { isInspectionCategory } from "@/lib/utils/revenue";
 import {
   INSPECTION_RATE_STATE,
   INSPECTION_RATE_TNC,
@@ -135,7 +132,7 @@ export async function GET(req: NextRequest) {
 
     // Filter out inspection-category items (counted separately)
     const reportableItems = lineItems.filter(
-      (li) => !INSPECTION_CATEGORIES.has(li.category ?? "")
+      (li) => !isInspectionCategory(li.category)
     );
 
     if (reportableItems.length === 0) {

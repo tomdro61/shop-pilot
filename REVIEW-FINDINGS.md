@@ -351,7 +351,9 @@ The blanket `typeof raw === "string" && raw.trim() === "" ? null : raw` rule app
 
 ---
 
-## H-3 — `INSPECTION_CATEGORIES` Set is case-sensitive
+## H-3 — `INSPECTION_CATEGORIES` Set is case-sensitive ✅ RESOLVED (2026-06-27)
+
+Replaced the case-sensitive Set with `isInspectionCategory()` — normalizes input via `.trim().toLowerCase()` and is the single source of truth across all ~14 revenue call sites. Keys are derived from canonical display-cased names through the same normalization, so future additions can't drift. Covered by `src/lib/utils/revenue.test.ts`.
 
 **File:** `src/lib/utils/revenue.ts`
 
@@ -1085,7 +1087,9 @@ Never referenced. Likely leftover from a removed "Today's Schedule" section.
 
 ---
 
-## M-8 — `INSPECTION_CATEGORIES` should be a typed union
+## M-8 — `INSPECTION_CATEGORIES` should be a typed union ✅ RESOLVED (2026-06-27) — won't-implement-as-filed
+
+The encapsulation refactor (H-3) delivered M-8's real intent: a single source of truth, no magic-string drift across callers. A typed union of the three literals provides no upstream enforcement here — `category` arrives as unconstrained `string | null` from the DB and `job_categories` is free-text per-shop. The canonical names now live in one `as const` array; a `type InspectionCategory = (typeof …)[number]` is available for free if a display-side consumer ever needs it.
 
 **File:** `src/lib/utils/revenue.ts`
 
@@ -1099,7 +1103,9 @@ const INSPECTION_CATEGORIES: Set<InspectionCategory> = new Set([...]);
 
 ---
 
-## M-9 — `INSPECTION_CATEGORIES` has no comment explaining business rule
+## M-9 — `INSPECTION_CATEGORIES` has no comment explaining business rule ✅ RESOLVED (2026-06-27)
+
+Added a comment explaining the double-count-avoidance rule (inspections billed separately at fixed per-inspection rates via `calcInspectionRevenue`) and the lowercase-key normalization.
 
 **File:** `src/lib/utils/revenue.ts`
 

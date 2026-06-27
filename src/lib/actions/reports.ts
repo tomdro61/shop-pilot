@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { subDays, differenceInDays, parseISO } from "date-fns";
 import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
-import { INSPECTION_CATEGORIES, calcInspectionRevenue, sumManualIncome, sumManualIncomeProfit } from "@/lib/utils/revenue";
+import { isInspectionCategory, calcInspectionRevenue, sumManualIncome, sumManualIncomeProfit } from "@/lib/utils/revenue";
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { getShopSettings } from "@/lib/actions/settings";
@@ -97,7 +97,7 @@ export async function getReportData(params: {
 
   function sumLineItemTotals(job: { job_line_items: unknown }): number {
     return getLineItems(job)
-      .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
+      .filter((li) => !isInspectionCategory(li.category))
       .reduce((s, li) => s + (li.total || 0), 0);
   }
 
@@ -116,7 +116,7 @@ export async function getReportData(params: {
     let priorPartsCost = 0;
     priorJobs.forEach((job) => {
       const items = (job.job_line_items as { type: string; total: number; cost: number | null; quantity: number; category: string | null }[]) || [];
-      items.filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? "")).forEach((li) => {
+      items.filter((li) => !isInspectionCategory(li.category)).forEach((li) => {
         priorRev += li.total || 0;
         if (li.type === "part") {
           priorPartsCost += li.cost != null ? li.cost * li.quantity : (li.total || 0) * 0.6;
@@ -154,7 +154,7 @@ export async function getReportData(params: {
     const user = job.users as { name: string } | null;
     const techName = user?.name || "Unassigned";
     const custType = (job.customers as { customer_type: string } | null)?.customer_type || "retail";
-    const lineItems = getLineItems(job).filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""));
+    const lineItems = getLineItems(job).filter((li) => !isInspectionCategory(li.category));
     const jobTotal = lineItems.reduce((s, li) => s + (li.total || 0), 0);
 
     // Derive job category from highest-revenue line-item category
@@ -479,43 +479,6 @@ export async function getFleetARSummary() {
     .sort((a, b) => b.total - a.total);
 }
 
-export async function getDailyRevenueSparkline(days: number) {
-  const supabase = await createClient();
-  const start = toDateStr(subDays(new Date(), days - 1));
-  const end = toDateStr(new Date());
-
-  const { data } = await supabase
-    .from("jobs")
-    .select("date_finished, updated_at, job_line_items(total)")
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-
-  // Build a map of date -> revenue
-  const revenueByDate: Record<string, number> = {};
-
-  // Initialize all dates to 0
-  for (let i = 0; i < days; i++) {
-    const d = toDateStr(subDays(new Date(), days - 1 - i));
-    revenueByDate[d] = 0;
-  }
-
-  data?.forEach((job) => {
-    const dateStr = (job.date_finished || job.updated_at || "").split("T")[0];
-    if (dateStr && revenueByDate[dateStr] !== undefined) {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce(
-        (s, li) => s + (li.total || 0),
-        0
-      ) || 0;
-      revenueByDate[dateStr] += jobTotal;
-    }
-  });
-
-  return Object.entries(revenueByDate)
-    .map(([date, revenue]) => ({ date, revenue }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
 export async function getStaleJobsCount() {
   const supabase = await createClient();
   const twoDaysAgo = toDateStr(subDays(new Date(), 2));
@@ -547,7 +510,9 @@ export async function getDailySummary() {
 
   jobs.forEach((job) => {
     if (job.payment_status === "paid" || job.status === "complete") {
-      const jobTotal = (job.job_line_items as { total: number }[])?.reduce((s, li) => s + (li.total || 0), 0) || 0;
+      const jobTotal = ((job.job_line_items as { total: number; category: string | null }[]) || [])
+        .filter((li) => !isInspectionCategory(li.category))
+        .reduce((s, li) => s + (li.total || 0), 0);
       const method = (job.payment_method as string) || "unrecorded";
       revenueByMethod[method] = (revenueByMethod[method] || 0) + jobTotal;
       totalRevenue += jobTotal;
@@ -668,7 +633,7 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
     const chargeTax = job.charge_sales_tax !== false;
 
     lineItems
-      .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
+      .filter((li) => !isInspectionCategory(li.category))
       .forEach((li) => {
         const total = li.total || 0;
         monthBuckets[month].totalRevenue += total;

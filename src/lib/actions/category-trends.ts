@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { todayET } from "@/lib/utils";
-import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
+import { isInspectionCategory } from "@/lib/utils/revenue";
 import {
   INSPECTION_RATE_STATE,
   INSPECTION_RATE_TNC,
@@ -149,7 +149,7 @@ export async function getCategoryTrendData(
     if (!bucket) continue;
 
     const lineItems = ((job.job_line_items as LineItem[]) || []).filter(
-      (li) => !INSPECTION_CATEGORIES.has(li.category ?? "")
+      (li) => !isInspectionCategory(li.category)
     );
 
     // Revenue per line item category (for determining job's primary category)

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
-import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
+import { isInspectionCategory } from "@/lib/utils/revenue";
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
 import { getShopSettings } from "@/lib/actions/settings";
 
@@ -167,7 +167,7 @@ export async function GET(req: NextRequest) {
     if (month !== null && etMonth !== month) continue;
 
     const lineItems = (job.job_line_items ?? []).filter(
-      (li) => !INSPECTION_CATEGORIES.has(li.category ?? "")
+      (li) => !isInspectionCategory(li.category)
     );
 
     let labor = 0;

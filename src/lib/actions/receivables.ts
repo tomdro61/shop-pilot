@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { todayET } from "@/lib/utils";
-import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
+import { isInspectionCategory } from "@/lib/utils/revenue";
 import { differenceInDays, parseISO } from "date-fns";
 
 // ── Types ────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ export async function getReceivablesSummary(): Promise<{ totalOutstanding: numbe
 
   for (const job of (data || [])) {
     const amount = ((job.job_line_items as LI[]) || [])
-      .filter((li) => !INSPECTION_CATEGORIES.has(li.category ?? ""))
+      .filter((li) => !isInspectionCategory(li.category))
       .reduce((s, li) => s + (li.total || 0), 0);
     if (amount <= 0) continue;
     totalOutstanding += amount;
@@ -116,7 +116,7 @@ export async function getReceivablesData(customerType?: string): Promise<Receiva
     if (!customer) continue;
 
     const lineItems = ((job.job_line_items as LineItem[]) || []).filter(
-      (li) => !INSPECTION_CATEGORIES.has(li.category ?? "")
+      (li) => !isInspectionCategory(li.category)
     );
     const amount = lineItems.reduce((s, li) => s + (li.total || 0), 0);
     if (amount <= 0) continue;

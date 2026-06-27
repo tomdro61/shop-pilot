@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle2, XCircle, Delete, Search, X } from "lucide-react";
 import { createQuickPayJob } from "@/lib/actions/terminal";
 import { formatCurrency } from "@/lib/utils/format";
-import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
+import { isInspectionCategory } from "@/lib/utils/revenue";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 2000;
@@ -41,9 +41,7 @@ function QuickPayPresetPicker({
     (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
   );
 
-  const quickPresets = presets.filter(
-    (p) => p.category && INSPECTION_CATEGORIES.has(p.category)
-  );
+  const quickPresets = presets.filter((p) => isInspectionCategory(p.category));
   const quickPresetIds = new Set(quickPresets.map((p) => p.id));
 
   // Selected presets not shown in the quick-services row — surface them as

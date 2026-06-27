@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { todayET } from "@/lib/utils";
-import { INSPECTION_CATEGORIES } from "@/lib/utils/revenue";
+import { isInspectionCategory } from "@/lib/utils/revenue";
 import {
   type Granularity,
   buildBucketKeys,
@@ -89,7 +89,7 @@ export async function getTechTrendData(
     const techName = user?.name || "Unassigned";
 
     const lineItems = ((job.job_line_items as LineItem[]) || []).filter(
-      (li) => !INSPECTION_CATEGORIES.has(li.category ?? "")
+      (li) => !isInspectionCategory(li.category)
     );
 
     const accum = getOrCreate(bucket.techs, techName);
