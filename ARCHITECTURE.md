@@ -29,11 +29,12 @@ This is the **current shape of the system** — what exists, where it lives, and
 
 ### Stripe Terminal (WisePOS E)
 - Server-driven, fully operational
-- 3 API routes: `/api/terminal/pay`, `/status`, `/cancel`
+- 3 API routes: `/api/terminal/pay`, `/status`, `/cancel` — all gated by `requireStaff()` (manager or tech; Session 63 closed a prior no-auth gap)
 - TerminalPayButton on job detail
-- Quick Pay page at `/quick-pay` with numpad UI + presets
+- Quick Pay page at `/quick-pay` with numpad UI + presets. **Accessible to techs** (in `TECH_ALLOWED`), not just managers — Session 63, so counter staff can take payments while managers log the jobs
+- Job creation for Quick Pay runs in `POST /api/quick-pay` with the **admin client** (not a server action) — techs have no RLS INSERT on `jobs`/`job_line_items`, so the write must bypass RLS; `requireStaff()` is the authz gate
 - Reader registered ("Front-desk 1"), auto-marks jobs as paid on card tap
-- Walk-in sentinel customer (`00000000-...`) for Quick Pay jobs
+- Walk-in sentinel customer (`00000000-...`) for Quick Pay jobs; these jobs default `charge_sales_tax = false` (flat all-in counter amount), so a later itemized reconciliation sums to exactly what was collected
 
 ### Card on File (Session 36/37, built for DriveWhip B2B)
 - Saved-card + merchant-initiated charge flow

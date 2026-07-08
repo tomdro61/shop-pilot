@@ -1450,6 +1450,18 @@ Double-click on save → `runSave` should be called once (currently called twice
 
 ---
 
+## QP-1 — Quick Pay for techs: server-action insert blocked by RLS (caught in review, fixed pre-ship)
+
+**File:** `src/app/api/quick-pay/route.ts` (fix), `src/lib/actions/terminal.ts` (deleted `createQuickPayJob`)
+
+**Session 63.** Extending Quick Pay to techs, the original `createQuickPayJob` **server action** inserted into `jobs`/`job_line_items` via the session client → runs under the caller's RLS. There is no tech INSERT policy on those tables (only `managers_full_jobs`), so a tech's charge would be rejected by Postgres at the first write — feature dead-on-arrival for the target user. Scoped review flagged it **Critical**; fixed by moving the write into `POST /api/quick-pay` (admin client, bypasses RLS) gated by `requireStaff()`. A verification pass confirmed it closed before merge.
+
+**Lesson:** Any new tech-reachable write to a manager-owned table fails at runtime under RLS — invisible to tsc/type review. Route it through an API route (admin client) OR add a scoped tech RLS policy. This is exactly Investigation Discipline #2 (check DB/RLS, not just the JS layer).
+
+**Also this batch:** closed a pre-existing no-auth gap on `/api/terminal/{pay,status,cancel}` (now `requireStaff`); Quick Pay jobs now default `charge_sales_tax = false`.
+
+---
+
 # What's Clean (verified safe)
 
 These were checked and confirmed correct — no need to revisit:
