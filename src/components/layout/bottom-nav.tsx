@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Inbox, Users, Wrench, PlaneLanding, Search, CalendarCheck } from "lucide-react";
+import { LayoutDashboard, Inbox, Users, Wrench, PlaneLanding, Search, CalendarCheck, CircleDollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -18,6 +18,7 @@ const allNavItems: NavItem[] = [
   { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/jobs", label: "Jobs", icon: Wrench },
   { href: "/customers", label: "Customers", icon: Users },
+  { href: "/quick-pay", label: "Pay", icon: CircleDollarSign, techVisible: true },
   { href: "/parking", label: "Parking", icon: PlaneLanding, techVisible: true },
   { href: "/dvi", label: "DVI", icon: Search, techVisible: true },
 ];
@@ -27,8 +28,8 @@ export function BottomNav({ userRole }: { userRole?: string }) {
   const isTech = userRole === "tech";
 
   const navItems = isTech
-    ? allNavItems.filter((item) => item.techVisible)
-    : allNavItems.filter((item) => item.href !== "/dvi"); // managers see original 5 items on mobile
+    ? allNavItems.filter((item) => item.techVisible) // Pay, Parking, DVI
+    : allNavItems.filter((item) => item.href !== "/dvi" && item.href !== "/quick-pay"); // managers reach Quick Pay from the dashboard
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 lg:hidden">

@@ -3862,3 +3862,23 @@ Owner: make sure inspection job categories don't count toward revenue. Investiga
 
 ### Files touched
 - `src/lib/utils/revenue.ts` (+`revenue.test.ts`), `src/lib/actions/{reports,receivables,trends,category-trends,customer-insights,tech-trends}.ts`, `src/app/api/reports/{export,tax-audit/export}/route.ts`, `src/components/dashboard/quick-pay-form.tsx`, PROGRESS.md, REVIEW-FINDINGS.md
+
+---
+
+## Session 63 — 2026-07-07 — Techs can access Quick Pay
+
+### Why
+Owner: with both managers (Tom + John) out of the shop for a couple of days, a tech (Christian) needs to be able to take counter payments while the managers still log the jobs remotely. Decision (owner's call): grant Quick Pay to **all techs**, not a per-tech permission or a full manager promotion. Managers keep logging jobs; techs get one new surface (Quick Pay) and nothing else.
+
+### What shipped (on `staging`)
+- **Techs may reach `/quick-pay`.** Added `/quick-pay` to `TECH_ALLOWED` in `middleware.ts` (previously techs were hard-restricted to `/dvi` + `/parking`).
+- **Nav.** Quick Pay marked `techVisible` in the desktop sidebar; added a "Pay" item to the mobile bottom nav for techs only (managers' mobile nav unchanged — they still reach Quick Pay from the dashboard).
+- **Job creation moved from a server action to `POST /api/quick-pay` (admin client).** This was the review's Critical: `createQuickPayJob` ran under the caller's RLS, and there is **no tech INSERT policy** on `jobs`/`job_line_items` (only `managers_full_jobs`). A tech's charge would have been rejected by Postgres at the first write. The insert now runs in an API route with `createAdminClient()` gated by `requireStaff()` — the same pattern the terminal routes already use — so no RLS migration is needed and the role model is unchanged. `createQuickPayJob` server action deleted; the form `fetch`es the route.
+- **Closed a pre-existing auth hole.** The three `/api/terminal/{pay,status,cancel}` routes had **no auth check at all** — an unauthenticated request could push a charge to the physical reader. All now gate on `requireStaff()`. Legit callers (Quick Pay form + manager terminal-pay button) are all staff. The dead `linkQuickPayToCustomer` action (no caller yet) now gates on `requireManager()` (it updates arbitrary jobs via the RLS client, which only managers can do).
+- **"View Job" hidden for techs.** The Quick Pay success screen linked to `/jobs/[id]` (manager-only, financial). Threaded a `canViewJob` prop so techs don't see a button that would just bounce them to `/dvi`.
+
+### Verify
+tsc clean; no new lint on touched files (pre-existing `any` debt in reports/trends untouched). No DB migration — role model unchanged (still `manager` | `tech`). Scoped review (2 agents) surfaced the RLS Critical above; fixed and re-verified before commit.
+
+### Files touched
+- `src/middleware.ts`, `src/components/layout/{sidebar,bottom-nav}.tsx`, `src/app/api/quick-pay/route.ts` (new), `src/lib/actions/terminal.ts`, `src/app/api/terminal/{pay,status,cancel}/route.ts`, `src/components/dashboard/quick-pay-form.tsx`, `src/app/(dashboard)/quick-pay/page.tsx`, PROGRESS.md

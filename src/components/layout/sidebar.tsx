@@ -22,7 +22,7 @@ const navGroups: NavGroup[] = [
     label: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/quick-pay", label: "Quick Pay", icon: CircleDollarSign },
+      { href: "/quick-pay", label: "Quick Pay", icon: CircleDollarSign, techVisible: true },
       { href: "/inspections", label: "Inspections", icon: ClipboardCheck },
     ],
   },

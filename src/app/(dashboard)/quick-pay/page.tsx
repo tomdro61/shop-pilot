@@ -1,5 +1,6 @@
 import { QuickPayForm } from "@/components/dashboard/quick-pay-form";
 import { getPresets } from "@/lib/actions/presets";
+import { getCurrentUser } from "@/lib/actions/auth";
 import { PageShell } from "@/components/layout/page-shell";
 import { CircleDollarSign } from "lucide-react";
 import type { PresetLineItem } from "@/types";
@@ -9,7 +10,7 @@ export const metadata = {
 };
 
 export default async function QuickPayPage() {
-  const presets = await getPresets();
+  const [presets, user] = await Promise.all([getPresets(), getCurrentUser()]);
 
   const presetsWithTotals = presets.map((p) => {
     const lineItems = p.line_items as PresetLineItem[];
@@ -33,7 +34,7 @@ export default async function QuickPayPage() {
         </div>
       </div>
 
-      <QuickPayForm presets={presetsWithTotals} />
+      <QuickPayForm presets={presetsWithTotals} canViewJob={user?.role !== "tech"} />
     </PageShell>
   );
 }

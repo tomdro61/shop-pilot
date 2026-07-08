@@ -5,7 +5,7 @@ const BOT_PATTERN =
   /bot|crawler|spider|crawling|slurp|baidu|yandex|sogou|semrush|ahrefs|dotbot|mj12bot|bytespider|gptbot|claudebot|facebookexternalhit|linkedinbot|twitterbot|pinterestbot|applebot|bingpreview|petalbot|dataforseo|ccbot|amazonbot/i;
 
 // Routes techs are allowed to access
-const TECH_ALLOWED = ["/dvi", "/parking"];
+const TECH_ALLOWED = ["/dvi", "/parking", "/quick-pay"];
 
 export async function middleware(request: NextRequest) {
   // Block bots immediately — no Supabase call, no SSR, no CPU burned

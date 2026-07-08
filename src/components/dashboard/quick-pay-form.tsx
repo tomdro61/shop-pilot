@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle2, XCircle, Delete, Search, X } from "lucide-react";
-import { createQuickPayJob } from "@/lib/actions/terminal";
 import { formatCurrency } from "@/lib/utils/format";
 import { isInspectionCategory } from "@/lib/utils/revenue";
 import { cn } from "@/lib/utils";
@@ -164,7 +163,13 @@ function QuickPayPresetPicker({
 
 const NUM_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"];
 
-export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
+export function QuickPayForm({
+  presets = [],
+  canViewJob = true,
+}: {
+  presets?: QuickPayPreset[];
+  canViewJob?: boolean;
+}) {
   const [amountStr, setAmountStr] = useState("0");
   const [note, setNote] = useState("");
   const [state, setState] = useState<QuickPayState>("input");
@@ -253,6 +258,14 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
 
     try {
       const res = await fetch(`/api/terminal/status?pi=${piId}`);
+      if (res.status === 401 || res.status === 403) {
+        // Session expired mid-poll — stop polling and tell them to re-auth.
+        // The Stripe webhook records the payment independently, so a charge
+        // that cleared on the reader is not lost.
+        setState("failed");
+        toast.error("Session expired — sign in again and verify payment on the terminal");
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -311,14 +324,26 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
         ? categories[0]
         : undefined;
 
-    const jobResult = await createQuickPayJob(amountCents, note || undefined, sharedCategory);
-    if (jobResult.error || !jobResult.data) {
+    let jobId: string;
+    try {
+      const res = await fetch("/api/quick-pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountCents, note: note || undefined, category: sharedCategory }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.jobId) {
+        setState("failed");
+        toast.error(data.error || "Failed to create job");
+        return;
+      }
+      jobId = data.jobId;
+    } catch {
       setState("failed");
-      toast.error(jobResult.error || "Failed to create job");
+      toast.error("Failed to create job");
       return;
     }
 
-    const jobId = jobResult.data.jobId;
     setCompletedJobId(jobId);
 
     // Send to terminal
@@ -414,7 +439,7 @@ export function QuickPayForm({ presets = [] }: { presets?: QuickPayPreset[] }) {
               <CheckCircle2 className="h-12 w-12 text-emerald-500 dark:text-emerald-400" />
               <p className="text-lg font-medium text-emerald-600 dark:text-emerald-400">Payment Complete</p>
               <div className="flex gap-2">
-                {completedJobId && (
+                {canViewJob && completedJobId && (
                   <Link href={`/jobs/${completedJobId}`}>
                     <Button variant="outline" size="sm">View Job</Button>
                   </Link>

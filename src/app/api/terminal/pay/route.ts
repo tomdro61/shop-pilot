@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireStaff } from "@/lib/auth";
 import {
   createTerminalPaymentIntent,
   processReaderPayment,
 } from "@/lib/stripe/terminal";
 
 export async function POST(request: Request) {
+  const auth = await requireStaff();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
+  }
+
   try {
     const { jobId, amountCents } = await request.json();
 

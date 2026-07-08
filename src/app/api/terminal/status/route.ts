@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaymentIntentStatus } from "@/lib/stripe/terminal";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireStaff } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
+  const auth = await requireStaff();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
+  }
+
   const pi = request.nextUrl.searchParams.get("pi");
 
   if (!pi) {
