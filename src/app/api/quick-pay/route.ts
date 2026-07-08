@@ -33,6 +33,10 @@ export async function POST(request: Request) {
       date_finished: todayET(),
       notes: note || null,
       payment_status: "unpaid",
+      // Quick Pay is a flat, tax-inclusive counter amount — nothing to tax on
+      // top. Defaulting these jobs to tax-off keeps a later itemized
+      // reconciliation (parts + labor) summing to exactly what was collected.
+      charge_sales_tax: false,
     })
     .select()
     .single();
