@@ -3883,3 +3883,25 @@ tsc clean; no new lint on touched files (pre-existing `any` debt in reports/tren
 
 ### Files touched
 - `src/middleware.ts`, `src/components/layout/{sidebar,bottom-nav}.tsx`, `src/app/api/quick-pay/route.ts` (new), `src/lib/actions/terminal.ts`, `src/app/api/terminal/{pay,status,cancel}/route.ts`, `src/components/dashboard/quick-pay-form.tsx`, `src/app/(dashboard)/quick-pay/page.tsx`, PROGRESS.md
+
+## Session 64 — 2026-07-14 — Quick Pay defers job creation until payment succeeds
+
+### Why
+Owner noticed a pile of jobs marked **complete + unpaid** and worried staff had failed to collect money. Root cause: Quick Pay created the job (`status=complete`, `payment_status=unpaid`) up front in `POST /api/quick-pay`, then charged the reader. Canceling/abandoning/declining/timing-out the charge left the job orphaned — every one of those paths (including a closed browser tab, which the client can't clean up) leaked a phantom completed-unpaid job. The money on those was never collected (a canceled PaymentIntent captures nothing), so it was clutter, not lost revenue — but the pile was real and the fix is to never create the job unless the money actually lands.
+
+### What shipped (on `staging`)
+- **Deferred creation.** New `POST /api/quick-pay/charge` only arms the reader — it creates a PaymentIntent carrying `{quick_pay, note, category}` metadata and returns `{paymentIntentId}`. No job row. A canceled/failed/abandoned charge now creates nothing.
+- **Atomic materialize-on-success.** New Postgres function `record_quick_pay_job()` (migration `20260714000000`) inserts the job **and** its labor line item in one transaction, so there's no "paid job with $0 line items" window. Idempotent across the two success callers (client status poll + Stripe webhook) via a new unique index on `jobs.stripe_payment_intent_id` + `ON CONFLICT DO NOTHING`. Amount comes from `pi.amount` (what Stripe actually charged), never the client-echoed value. Function is `SECURITY INVOKER` with `REVOKE ALL FROM public` + `GRANT EXECUTE TO service_role` so PostgREST can't expose it as a fake-paid-job RPC.
+- **Both success paths record.** `/api/terminal/status` (poll) and the `payment_intent.succeeded` webhook both call the writer, routed on the `quick_pay` marker separately from the existing real-job (`job_id`) path. Webhook returns **non-2xx** when the record fails so Stripe redelivers (the durable backstop for a closed tab) — a swallowed 200 there would have meant charged card, no record.
+- **Client** (`quick-pay-form.tsx`): single charge call; `completedJobId` set from the success poll; bounded finalize re-poll so the job/"View Job" link lands before declaring success; **cancel-vs-tap reconcile** — a cancel that can't be confirmed now shows a new amber `"unconfirmed"` state ("verify before charging again") instead of a red "failed" + Try-Again that invited a double-charge; a post-success poll timeout resolves to success, not failure.
+- **Reader-arm failure** cancels the stray PI (+ logs/Sentry) so a metadata-carrying intent can't settle later and conjure a job.
+- **Old `POST /api/quick-pay`** kept as a deprecated shim so a stale browser tab mid-deploy still behaves; slated for removal after 2026-07-21 (confirm zero traffic first).
+
+### Review
+`/sketch-flow` first (money path). Plan then triple-checked by 3 adversarial agents (grounding / concurrency / migration) — caught the `getPaymentIntentStatus` no-`.id` gap, the deploy-order trap, and the webhook-discriminator requirement before any code. Post-implementation `/scoped-review` (4 agents) found 1 Critical (webhook swallowed record-failure → Stripe never retried), 2 High (client asserted success without a record; unconfirmable cancel shown as failed), 1 Medium — all fixed and re-verified (SHIP). tsc + lint + build clean.
+
+### ⚠️ Deploy sequence (NOT yet pushed — order matters)
+The `ON CONFLICT`/RPC code fails if the migration isn't applied first. Correct order: (1) run the duplicate-check on prod (`select stripe_payment_intent_id, count(*) from jobs where stripe_payment_intent_id is not null group by 1 having count(*)>1` → expect 0 rows); (2) `npx supabase db push` to create the index + function; (3) push code to `staging`; (4) `/verify-flow quick-pay`. Also pending: one-time cleanup of the existing orphaned completed-unpaid walk-in jobs (query owner still to run).
+
+### Files touched
+- `supabase/migrations/20260714000000_quick_pay_deferred_creation.sql` (new), `src/lib/stripe/quick-pay.ts` (new), `src/app/api/quick-pay/charge/route.ts` (new), `src/app/api/quick-pay/route.ts` (deprecated), `src/app/api/terminal/status/route.ts`, `src/app/api/stripe/webhooks/route.ts`, `src/components/dashboard/quick-pay-form.tsx`, `src/types/supabase.ts`, `ARCHITECTURE.md`, `.claude/skills/verify-flow/SKILL.md`, PROGRESS.md

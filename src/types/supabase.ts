@@ -1465,6 +1465,15 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       is_manager: { Args: never; Returns: boolean }
+      record_quick_pay_job: {
+        Args: {
+          p_pi: string
+          p_amount_cents: number
+          p_note: string | null
+          p_category: string | null
+        }
+        Returns: string | null
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }

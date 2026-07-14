@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordQuickPayJob } from "@/lib/stripe/quick-pay";
 import { sendSMS } from "@/lib/quo/client";
 import { toE164 } from "@/lib/quo/format";
 import { getPhoneNumber, getParkingLine } from "@/lib/quo/routing";
@@ -47,7 +48,26 @@ export async function POST(request: Request) {
 
   if (event.type === "payment_intent.succeeded") {
     const pi = event.data.object as Stripe.PaymentIntent;
-    if (pi.metadata?.job_id) {
+    if (pi.metadata?.quick_pay === "true") {
+      // Durable backstop for Quick Pay when the client poll never sees success
+      // (tab closed, session expired). Idempotent with the status route; see
+      // record_quick_pay_job.
+      const jobId = await recordQuickPayJob({
+        paymentIntentId: pi.id,
+        amountCents: pi.amount,
+        note: pi.metadata.note ?? null,
+        category: pi.metadata.category ?? null,
+        source: "stripe-webhook",
+      });
+      if (!jobId) {
+        // The record failed and this is the last automatic retry path (the client
+        // poll stops after one success). Return non-2xx so Stripe redelivers —
+        // safe because record_quick_pay_job is idempotent (ON CONFLICT) and sends
+        // no customer-facing side effects. Without this, a charged card could go
+        // permanently unrecorded with only a Sentry event as the trace.
+        return NextResponse.json({ error: "quick_pay record failed" }, { status: 500 });
+      }
+    } else if (pi.metadata?.job_id) {
       await handleTerminalPayment(pi);
     }
   }

@@ -280,13 +280,18 @@ registered as "Front-desk 1" (or whatever's in `STRIPE_TERMINAL_READER_ID`).
 - Assert: status indicator transitions from "Sending to reader..." to
   "Waiting for tap..."
 
-**Scenario 2 — Cancel reports the actual API result (C-7 regression)**
+**Scenario 2 — Cancel before tap creates NO job (the deferred-creation guarantee)**
 - After Scenario 1, before tapping the test card, click Cancel
-- Assert: if the Stripe API returns non-2xx on cancel, the toast says
-  "Couldn't cancel — try again" (NOT "Cancelled")
-- ❌ FAIL signal: `toast.success("Cancelled")` regardless of API result.
-  That's C-7 back. The handler must check `res.ok` before claiming
-  success.
+- Assert (DB): `select count(*) from jobs where stripe_payment_intent_id = '<pi>'`
+  returns **0** — canceling must not leave a completed-unpaid job behind. This is
+  the entire point of the deferred-creation refactor.
+- Assert (UI): on a clean cancel the state shows "Payment canceled"; if the cancel
+  API returns non-2xx and the PI can't be confirmed, the state shows
+  "unconfirmed" with "Couldn't confirm — verify on the terminal before charging
+  again" (NOT a red "Payment failed" + Try Again — that invites a double-charge).
+- ❌ FAIL signals: a `jobs` row exists after cancel (deferred creation regressed to
+  eager creation); OR `toast.success("Cancelled")` regardless of API result (C-7);
+  OR an indeterminate cancel rendered as "failed".
 
 **Scenario 3 — Polling has bounded retries (C-8 regression)**
 - Disconnect the test reader (or mock the status endpoint to error)
@@ -296,11 +301,25 @@ registered as "Front-desk 1" (or whatever's in `STRIPE_TERMINAL_READER_ID`).
 - ❌ FAIL signal: spinner runs forever. That's C-8 — the polling loop
   needs a max-retries + unmount cleanup.
 
-**Scenario 4 — Successful tap auto-marks job paid**
+**Scenario 4 — Successful tap CREATES the job, marked paid**
 - Tap test card `4242 4242 4242 4242` after Charge
-- Assert: payment_intent_id stored on the walk-in or selected job
-- Assert: `payment_status = "paid"` in the DB
-- Assert: success toast and Quick Pay resets
+- Assert (DB): a `jobs` row now exists for the PI (it did NOT exist before the tap —
+  `record_quick_pay_job` creates it on success), with `payment_status = "paid"`,
+  `payment_method = "terminal"`, `stripe_payment_intent_id = '<pi>'`, and exactly
+  one `job_line_items` labor row whose `unit_cost` equals the charged amount.
+- Assert (UI): success toast + "View Job" link resolves to the new job; Quick Pay
+  resets.
+- ❌ FAIL signal: two line items, or a job with zero line items ($0 revenue), or a
+  job that existed before the tap.
+
+**Scenario 5 — Webhook backstop records the job when the client never sees success**
+- Charge, tap the test card, then immediately close the tab / kill the poll before
+  it observes `succeeded`
+- Assert (DB): the job is still created (with its line item, marked paid) — the
+  Stripe `payment_intent.succeeded` webhook is the durable backstop
+- ❌ FAIL signal: money collected in Stripe but no job row — the webhook branch
+  isn't routing `quick_pay` metadata, or it 200s on a failed record instead of
+  letting Stripe retry.
 
 ---
 

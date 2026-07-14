@@ -6,6 +6,14 @@ import { todayET } from "@/lib/utils";
 
 const WALK_IN_CUSTOMER_ID = "00000000-0000-0000-0000-000000000000";
 
+// DEPRECATED — superseded by /api/quick-pay/charge, which defers job creation
+// until the terminal payment succeeds (this route creates the job up front, which
+// orphans a completed-unpaid job on cancel/timeout/decline). Kept only so a stale
+// browser tab still running the old two-step client (POST here → POST
+// /api/terminal/pay) behaves safely across the deploy window. Safe to delete after
+// 2026-07-21: confirm zero requests to /api/quick-pay (not /charge) in Vercel/Sentry
+// logs for a full business day, then remove this route.
+//
 // Quick Pay job creation runs here (admin client) rather than in a server
 // action so techs — who have no RLS INSERT on jobs/job_line_items — can still
 // take counter payments. requireStaff() is the authorization gate.

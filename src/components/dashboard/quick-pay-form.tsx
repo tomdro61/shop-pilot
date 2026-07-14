@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, CheckCircle2, XCircle, Delete, Search, X } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, Delete, Search, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { isInspectionCategory } from "@/lib/utils/revenue";
 import { cn } from "@/lib/utils";
@@ -14,8 +14,12 @@ const POLL_INTERVAL_MS = 2000;
 const ERROR_BACKOFF_MS = 3000;
 const MAX_POLL_DURATION_MS = 5 * 60 * 1000;
 const MAX_CONSECUTIVE_ERRORS = 5;
+// After the payment succeeds but before the job record lands, keep re-polling this
+// many times (~20s) so the actual job + "View Job" link surface. The webhook is the
+// durable backstop if we give up first — the money is already collected either way.
+const FINALIZE_MAX_ATTEMPTS = 10;
 
-type QuickPayState = "input" | "processing" | "succeeded" | "failed" | "canceled";
+type QuickPayState = "input" | "processing" | "succeeded" | "failed" | "canceled" | "unconfirmed";
 
 interface QuickPayPreset {
   id: string;
@@ -182,6 +186,7 @@ export function QuickPayForm({
   const pollStartRef = useRef<number | null>(null);
   const consecutiveErrorsRef = useRef(0);
   const cancelingRef = useRef(false);
+  const finalizeAttemptsRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -251,8 +256,16 @@ export function QuickPayForm({
 
     if (pollStartRef.current === null) pollStartRef.current = Date.now();
     if (Date.now() - pollStartRef.current > MAX_POLL_DURATION_MS) {
-      setState("failed");
-      toast.error("Payment timed out — verify status on terminal");
+      if (finalizeAttemptsRef.current > 0) {
+        // We already observed the charge succeed and are only waiting on the job
+        // record. Never render a re-charge-inviting "failed" here — the money is
+        // collected and the webhook is the record backstop.
+        setState("succeeded");
+        toast.success("Payment collected!");
+      } else {
+        setState("failed");
+        toast.error("Payment timed out — verify status on terminal");
+      }
       return;
     }
 
@@ -274,6 +287,22 @@ export function QuickPayForm({
       consecutiveErrorsRef.current = 0;
 
       if (data.status === "succeeded") {
+        if (data.jobId) {
+          setCompletedJobId(data.jobId);
+          setState("succeeded");
+          toast.success("Payment collected!");
+          return;
+        }
+        // Card cleared, but the job record hasn't landed yet (the status route's
+        // own record attempt failed transiently, or the webhook hasn't caught up).
+        // Keep polling briefly — each poll re-attempts the idempotent record — so
+        // the actual job surfaces. Give up to the webhook after the cap; money is
+        // already collected, so we still show success.
+        finalizeAttemptsRef.current += 1;
+        if (finalizeAttemptsRef.current < FINALIZE_MAX_ATTEMPTS) {
+          pollTimeoutRef.current = setTimeout(() => pollStatus(piId), POLL_INTERVAL_MS);
+          return;
+        }
         setState("succeeded");
         toast.success("Payment collected!");
         return;
@@ -324,39 +353,20 @@ export function QuickPayForm({
         ? categories[0]
         : undefined;
 
-    let jobId: string;
+    // Arm the reader. No job is created yet — record_quick_pay_job materializes it
+    // only on payment success (via the status poll below or the Stripe webhook), so
+    // a canceled/timed-out/declined charge leaves nothing behind. completedJobId is
+    // set later, from the poll's success response.
     try {
-      const res = await fetch("/api/quick-pay", {
+      const res = await fetch("/api/quick-pay/charge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amountCents, note: note || undefined, category: sharedCategory }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.jobId) {
-        setState("failed");
-        toast.error(data.error || "Failed to create job");
-        return;
-      }
-      jobId = data.jobId;
-    } catch {
-      setState("failed");
-      toast.error("Failed to create job");
-      return;
-    }
-
-    setCompletedJobId(jobId);
-
-    // Send to terminal
-    try {
-      const res = await fetch("/api/terminal/pay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId, amountCents }),
-      });
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data.paymentIntentId) {
         setState("failed");
         toast.error(data.error || "Failed to start terminal payment");
         return;
@@ -365,11 +375,51 @@ export function QuickPayForm({
       setPaymentIntentId(data.paymentIntentId);
       pollStartRef.current = null;
       consecutiveErrorsRef.current = 0;
+      finalizeAttemptsRef.current = 0;
       pollTimeoutRef.current = setTimeout(() => pollStatus(data.paymentIntentId), POLL_INTERVAL_MS);
     } catch {
       setState("failed");
       toast.error("Failed to connect to terminal");
     }
+  }
+
+  // A cancel can legitimately fail because the customer tapped at the same instant
+  // and the PaymentIntent already succeeded (Stripe won't cancel a succeeded PI).
+  // Re-check the real status so we never tell the operator a cleared charge
+  // "failed" — which would tempt a re-charge. Returns only what we could actually
+  // determine; the job is materialized by the status route / webhook.
+  async function reconcileAfterFailedCancel(): Promise<"succeeded" | "canceled" | "unknown"> {
+    if (!paymentIntentId) return "unknown";
+    try {
+      const res = await fetch(`/api/terminal/status?pi=${paymentIntentId}`);
+      if (!res.ok) return "unknown";
+      const data = await res.json();
+      if (data.status === "succeeded") {
+        if (data.jobId) setCompletedJobId(data.jobId);
+        setState("succeeded");
+        toast.success("Payment collected!");
+        return "succeeded";
+      }
+      if (data.status === "canceled") return "canceled";
+      // requires_payment_method / processing / requires_action — the card could
+      // still be tapped. Not a confirmed failure; don't invite a re-charge.
+      return "unknown";
+    } catch {
+      return "unknown";
+    }
+  }
+
+  function resolveFailedCancel(outcome: "succeeded" | "canceled" | "unknown") {
+    if (outcome === "succeeded") return; // reconcile already moved us to success
+    if (outcome === "canceled") {
+      setState("canceled");
+      toast("Payment canceled");
+      return;
+    }
+    // Indeterminate — surface it plainly instead of a false "failed" + Try Again,
+    // which would invite re-charging a card that may have already cleared.
+    toast.error("Couldn't confirm — verify on the terminal before charging again");
+    setState("unconfirmed");
   }
 
   async function handleCancel() {
@@ -386,15 +436,14 @@ export function QuickPayForm({
         body: JSON.stringify({ paymentIntentId }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "Cancel may have failed — verify on terminal");
+        resolveFailedCancel(await reconcileAfterFailedCancel());
         cancelingRef.current = false;
         return;
       }
       setState("canceled");
       toast("Payment canceled");
     } catch {
-      toast.error("Cancel may have failed — verify on terminal");
+      resolveFailedCancel(await reconcileAfterFailedCancel());
       cancelingRef.current = false;
     }
   }
@@ -407,6 +456,7 @@ export function QuickPayForm({
     pollStartRef.current = null;
     consecutiveErrorsRef.current = 0;
     cancelingRef.current = false;
+    finalizeAttemptsRef.current = 0;
     setAmountStr("0");
     setNote("");
     setState("input");
@@ -461,6 +511,16 @@ export function QuickPayForm({
             <>
               <XCircle className="h-12 w-12 text-stone-400 dark:text-stone-500" />
               <p className="text-sm text-stone-500 dark:text-stone-400">Payment canceled</p>
+              <Button variant="outline" onClick={handleReset}>Start Over</Button>
+            </>
+          )}
+
+          {state === "unconfirmed" && (
+            <>
+              <AlertTriangle className="h-12 w-12 text-amber-500 dark:text-amber-400" />
+              <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
+                Couldn&apos;t confirm the payment. Check the terminal before charging again.
+              </p>
               <Button variant="outline" onClick={handleReset}>Start Over</Button>
             </>
           )}
