@@ -25,6 +25,7 @@ When a migration ships, update three things: the migration file, `src/types/supa
 - **`scheduled_at`** — timestamptz, nullable. Customer-agreed drop-off time, anchored to `date_received` via cascade in `updateJobFields`
 - **`ro_number`** — auto-assigned sequential integer via `ro_number_seq` PostgreSQL sequence. Displayed as `RO-0001`.
 - **`charge_sales_tax`** — boolean, NOT NULL default true (Session 58). Per-job sales-tax toggle: false = bill parts with no tax (e.g. outsourced parts the shop didn't buy). `calculateTotals` zeroes tax when false. Set via `setJobChargeSalesTax`, **locked once an invoices row exists** (the finalized Stripe invoice is immutable). The Tax Summary report + tax-audit CSV drop a tax-off job's parts from the taxable base (still counted as revenue) so MA DOR filings aren't overstated.
+- **`stripe_payment_intent_id`** — text, **uniquely indexed** (`idx_jobs_stripe_payment_intent_id`, non-partial so NULLs are allowed for non-terminal jobs). Enforces one job per Stripe PaymentIntent and is the `ON CONFLICT` arbiter for `record_quick_pay_job(p_pi, p_amount_cents, p_note, p_category)` — the service-role-locked function (Session 64) that atomically creates a Quick Pay job + labor line item on payment success. Quick Pay defers job creation until the charge succeeds, so a canceled/abandoned charge writes nothing.
 
 **Statuses:**
 - `status`: `Not Started → Waiting for Parts → In Progress → Complete`
