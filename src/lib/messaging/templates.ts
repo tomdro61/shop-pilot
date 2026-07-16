@@ -121,6 +121,23 @@ export function pickupReadySMS({
   return `Hi ${firstName}, your vehicle is ready for pickup!\n\nYour keys are in lock box #${boxNumber}, code: ${boxCode}.\n\nThank you for parking with Broadway Motors! If you have a moment, a Google review would mean a lot to a local business like ours. https://g.page/r/CTjykJeAA929EBM/review`;
 }
 
+// Internal owner alert (INTERNAL_NOTIFICATION_PHONES) for the 7 PM nightly
+// check: Broadway Motors cars due for pickup while the shop is closed that
+// aren't staged in a lockbox with the code sent yet. `cars` is pre-formatted
+// for display; the caller only builds this when there's at least one to flag.
+export function parkingPrepReminderInternalSMS(
+  cars: Array<{ name: string; vehicle: string; pickUp: string; reason: string }>,
+  parkingUrl?: string
+): string {
+  const label = cars.length === 1 ? "car needs" : "cars need";
+  const lines = cars.map(
+    (c) => `• ${c.name} — ${c.vehicle}, pickup ${c.pickUp} — ${c.reason}`
+  );
+  let msg = `⚠️ ${cars.length} ${label} prep for tonight (pickup while we're closed):\n${lines.join("\n")}`;
+  if (parkingUrl) msg += `\n\n${parkingUrl}`;
+  return msg;
+}
+
 // Customer ack when a new estimate request lands. Business-hours-aware, matching
 // appointmentAckSMS — never promise a fast follow-up on a day the shop is shut.
 export function quoteRequestAckSMS(closed: BusinessClosedState): string {

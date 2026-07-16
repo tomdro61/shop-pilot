@@ -3040,6 +3040,63 @@ Merged staging→master, pushed `39e3f40..486ac1e`. Vercel built prod. User conf
 
 ---
 
+## Session 42 — 2026-07-16 — Parking prep reminder (7 PM nightly cron)
+
+### Why
+
+The brother pulled a customer's car out of storage overnight but forgot to text them the lockbox code, so the customer couldn't get their keys during off-hours. The shop is closed 5 PM–9 AM; any car due for pickup in that window has to be pulled out and staged in a lockbox (with the code texted) *before* close, because no one's there to hand over keys. User asked for a 7 PM reminder that flags anything not prepped for the overnight window.
+
+### What shipped
+
+- **New cron `src/app/api/cron/parking-prep-reminder/route.ts`** — runs 7 PM ET nightly. Finds Broadway Motors reservations due for pickup in the closed window (5 PM today → 9 AM tomorrow) that aren't fully prepped (NOT `checked_out` with a `lock_box_number`), and texts the owner list (`INTERNAL_NOTIFICATION_PHONES`) from the shop line. **Stays silent when everything's handled** (owner's explicit choice). Fails loud (500 + Sentry) on query error or unset `QUO_API_KEY` — never collapses a failure into a false all-clear.
+- **`src/lib/parking/prep-reminder.ts`** — the query + pure `selectUnpreppedCars(rows, today, tomorrow)` window/classification logic. Discriminated `{ ok: true; cars } | { ok: false; error }` result. Reason is a two-value union (`"not pulled out"` / `"checked out, no lockbox code sent"`).
+- **`src/lib/cron/auth.ts`** (new) — `requireCronSecret(request)`, extracted from the inline check in `health/route.ts` now that a second real cron route exists (per the ARCHITECTURE.md plan). `health/route.ts` refactored to use it.
+- **`parkingPrepReminderInternalSMS`** template in `src/lib/messaging/templates.ts`.
+- **`vercel.json`** — two DST-straddling UTC entries (`0 23` + `0 0`) gated on `nowET().getHours() === 19`, so it fires at 7 PM ET year-round without a fixed-UTC one-hour DST drift.
+- **`src/lib/parking/prep-reminder.test.ts`** (new) — 16 tests: window boundaries (16:59/17:00 today, 08:59/09:00 tomorrow), classification (checked_in/reserved → "not pulled out", checked_out w/o lockbox → "no code sent", checked_out w/ lockbox and lockbox #0 → excluded), display formatting, and query wiring (Broadway scope, date-in filter, cancelled/no-show exclusion, query-error → ok:false).
+
+Scope decisions (from the user): Broadway Motors self-park only (not APB self-park, not valet); stay silent when nothing needs attention.
+
+### Review
+
+`/scoped-review` dispatched 3 agents in parallel (feature-dev:code-reviewer, silent-failure-hunter, type-design-analyzer). **0 Criticals, 0 Highs.** Core correctness — window math, DST straddle, PostgREST negated-IN syntax, prepped classification, silent-failure handling, SMS fan-out — all verified correct. 5 Mediums, all fixed pre-commit:
+
+1. `QUO_API_KEY` unset → `sendSMS` returns test-mode success without sending (false all-clear). Added an `isQuoConfigured()` guard that fails loud when there are cars to flag.
+2. `toE164` silently drops malformed recipient numbers. Added a configured-vs-resolved count check → Sentry warning on partial drop.
+3. Narrowed `UnpreppedCar.reason` from `string` to the two-value literal union.
+4. Extracted cron auth to `src/lib/cron/auth.ts` (the documented "do this at the 2nd route" trigger).
+5. Added the unit test file.
+
+**Verified:** `tsc --noEmit` clean · `eslint` clean · 16/16 new tests pass.
+
+### Files touched
+
+- `src/app/api/cron/parking-prep-reminder/route.ts` (new)
+- `src/lib/parking/prep-reminder.ts` (new)
+- `src/lib/parking/prep-reminder.test.ts` (new)
+- `src/lib/cron/auth.ts` (new)
+- `src/app/api/cron/health/route.ts` (use shared auth helper)
+- `src/lib/messaging/templates.ts` (new template)
+- `vercel.json` (two cron entries)
+- `ARCHITECTURE.md` (cron section), `PROGRESS.md` (this entry)
+
+### Commits
+
+- `feat(parking): 7 PM nightly reminder for unprepped overnight-pickup cars` — pushed to `staging`.
+
+### What's next / action items
+
+- **Set `INTERNAL_NOTIFICATION_PHONES` in Vercel prod** with the owner + brother's cells if not already populated — otherwise the reminder finds cars but has no one to text (logs a Sentry warning rather than failing silently, but no text goes out).
+- **Cron count** — this brings Vercel to 3 cron entries. Hobby plan caps at 2; if on Hobby the extra entries may not register (Pro removes the cap). Existing health cron works, so crons are enabled — just confirm the count.
+- **Crons fire on production only**, not staging — this won't run until merged to master. To smoke-test before then, hit the route on prod with the CRON_SECRET bearer at a moment when it's 7 PM ET, or temporarily relax the hour gate.
+- **Coverage gap (optional):** 7 PM is a checkpoint, not a guarantee — a car booked after 7 PM for an early-morning pickup wouldn't be caught until the next evening. If overnight same-night bookings are common, add a second sweep (e.g. 9 PM) or trigger a check on new same-night reservations. Discussed with user; left out of v1.
+
+### Known issues
+
+- None from this change.
+
+---
+
 ## Session 42 — 2026-05-14 → 2026-05-18 — Quick Pay multi-preset, DVI filter fix, /handoff skill, doc reconciliation
 
 ### Why

@@ -186,10 +186,12 @@ Cross-project public form on BroadwayMotorsMA.com `/book` posts to ShopPilot's `
 
 ## Vercel Cron (Session 38)
 - `vercel.json` declares schedules → Vercel auto-calls `/api/cron/*` routes
-- Auth via `Authorization: Bearer ${CRON_SECRET}` (auto-injected by Vercel when crons are detected; not manually set)
+- Auth via `requireCronSecret(request)` in `src/lib/cron/auth.ts` — checks `Authorization: Bearer ${CRON_SECRET}` (auto-injected by Vercel when crons are detected; not manually set). Extracted from the inline check once the second real route shipped.
 - Pipeline-proving endpoint at `src/app/api/cron/health/route.ts` — daily 14:00 UTC
+- **Parking prep reminder** at `src/app/api/cron/parking-prep-reminder/route.ts` — 7 PM ET nightly. Texts `INTERNAL_NOTIFICATION_PHONES` (owner + brother's cells) when a Broadway Motors car is due for pickup during the closed window (5 PM–9 AM) but isn't checked out with a lockbox code sent. Silent when all clear; fails loud (500 + Sentry) on query error or missing Quo config. Window/classification logic in `src/lib/parking/prep-reminder.ts` (unit-tested in `prep-reminder.test.ts`).
+- **7-PM-ET-across-DST pattern**: Vercel cron is UTC-only, so a fixed UTC time drifts an hour across DST. For a cron that must fire at a wall-clock ET time, register TWO UTC entries straddling it (`0 23` + `0 0` for 7 PM ET) and gate the handler on `nowET().getHours() === <hour>` — exactly one firing does work year-round, the other early-returns.
 - Real cron jobs (Maintenance Reminders, DVI deferred-work follow-ups, etc.) plug in by adding new `/api/cron/*` routes + `vercel.json` entries
-- Pattern for new routes: kebab-case `source: "cron-<name>"` Sentry tag; once 2+ routes ship, extract auth check to `src/lib/cron/auth.ts`
+- Pattern for new routes: kebab-case `source: "cron-<name>"` Sentry tag; reuse `requireCronSecret` for auth
 - **Crons fire on production deployments only**, not preview/staging
 
 ## Shared modules

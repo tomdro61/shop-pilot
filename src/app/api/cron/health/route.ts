@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
+import { requireCronSecret } from "@/lib/cron/auth";
 
 /**
  * Pipeline-proving cron endpoint. Vercel calls this on the schedule in
- * vercel.json. Real cron jobs live in sibling /api/cron/* routes.
- *
- * Auth: Vercel sends `Authorization: Bearer ${CRON_SECRET}` to every
- * scheduled invocation. The CRON_SECRET env var is **auto-generated and
- * auto-injected by Vercel** when crons are declared in vercel.json — you
- * don't set it manually in the Vercel dashboard or .env.local. Without the
- * guard, anyone with the URL could trigger the endpoint manually.
+ * vercel.json. Real cron jobs live in sibling /api/cron/* routes. Auth is the
+ * shared CRON_SECRET check in requireCronSecret.
  */
 export async function GET(request: Request) {
-  const auth = request.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
+  const unauthorized = requireCronSecret(request);
+  if (unauthorized) return unauthorized;
 
   const ranAt = new Date().toISOString();
 
