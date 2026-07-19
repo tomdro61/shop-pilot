@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/parking-prep-reminder",
       "schedule": "0 23 * * *"
-    },
-    {
-      "path": "/api/cron/parking-prep-reminder",
-      "schedule": "0 0 * * *"
     }
   ]
 }

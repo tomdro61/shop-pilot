@@ -3966,3 +3966,59 @@ Scope decisions (from the user): Broadway Motors self-park only (not APB self-pa
 ### Handoff note (doc-filing correction)
 
 The initial commit `13554b5` filed this entry as "Session 42" and inserted it mid-file after Session 41 — a stale line-count made it look like the file ended there, when it actually runs to Session 64. This handoff pass moved the entry to the end and renumbered it 65. Lesson: verify the true end of PROGRESS.md (`grep -n "^## Session" | tail`) before appending, don't trust a `wc -l` read taken earlier in the session.
+
+---
+
+## Session 66 — 2026-07-19 — Parking reminder didn't fire: single daily cron + drop the hour gate
+
+### Why
+
+The Session 65 reminder sent zero texts for three nights. User flagged it ("didn't work") and confirmed `INTERNAL_NOTIFICATION_PHONES` is set (payment alerts arrive). Investigated with real prod data via the Supabase MCP instead of guessing.
+
+### Root cause (confirmed against data)
+
+Reconstructed each night since deploy using `checked_out_at` timestamps to know each car's state at 7 PM ET:
+- **07-16 / 07-17:** every overnight-window Broadway car was already checked out with a lockbox well before 7 PM → correctly silent.
+- **07-18:** THREE Broadway cars due before 9 AM (Anil Patil 3 AM, Vinay Shinde 3 AM, Melanie Allen 7 AM) were NOT staged at 7 PM — their lockbox checkouts landed 7:52–8:16 PM, *after* the reminder should have fired. A text should have gone out; it didn't. So the failure was cron delivery, not the query (which would have flagged exactly those three; `lot = "Broadway Motors"` matches all 2,754 rows).
+
+Two design faults, both mine:
+1. **Hobby 2-cron cap.** vercel.json had 3 entries (health + two parking). Hobby caps at 2, so the parking crons likely never registered.
+2. **Brittle exact-hour gate.** Handler gated on `nowET().getHours() === 19`. Vercel cron delivery isn't minute-precise; a fire drifting out of the 7 PM ET hour skipped silently (HTTP 200, no log, no Sentry).
+
+Compounding both: a successful/silent run left NO trace, so "did it even fire?" was unanswerable. Sentry info/warning events for crons turned out not reliably queryable (couldn't find `cron_health_ok` either).
+
+### What shipped
+
+- **Single cron entry** `0 23 * * *` (7 PM ET summer / 6 PM ET winter). Total crons back to 2 → fits Hobby. Accept the 1-hour winter drift (still after 5 PM close) rather than gate on the exact hour.
+- **Removed the `nowET().getHours() === 19` gate** (with a `// safety-removed:` marker) — one entry means nothing to dedupe, and the gate was the silent-skip. Kept 7 PM per the user's call.
+- **Every terminal path now `console.*`s** so Vercel runtime logs prove what happened: silent all-clear, sent (flagged/notified counts), no-recipients (loud — flagged but no one texted), Quo-unconfigured, query-failed, shop-line-unset. Counts only, no PII.
+- **health/route.ts** gets a `console.log` too (same lesson; its Sentry-info-only heartbeat wasn't findable).
+
+### Timing insight (surfaced to user, kept 7 PM)
+
+Data shows the team's overnight prep clusters ~8 PM. A 7 PM check is an early heads-up (may flag cars about to be handled); a ~9 PM check would fire only on genuine misses. Offered 9/10 PM; user chose to keep 7 PM.
+
+### Review
+
+`/scoped-review` — 2 agents. Code-reviewer: 0 findings; verified window math correct at 23:00 UTC in both seasons, gate removal safe, guards intact. Silent-failure-hunter: 1 High + 2 Medium, all PRE-EXISTING but spotlighted by this diff — failure/degraded paths were visible only via non-queryable Sentry warnings while happy paths got console logs. Fixed by adding `console.*` to every terminal path. No Criticals. tsc + lint clean; 16/16 prep-reminder tests pass.
+
+### Files touched
+
+- `src/app/api/cron/parking-prep-reminder/route.ts` (single-entry schedule, gate removed, per-path logging)
+- `src/app/api/cron/health/route.ts` (console.log heartbeat)
+- `vercel.json` (3 cron entries → 2)
+- `ARCHITECTURE.md` (cron section — DST/Hobby lesson), `PROGRESS.md` (this entry)
+
+### Commits
+
+- (this commit) `fix(parking): single daily cron + drop brittle hour gate; log every run`
+
+### What's next / action items
+
+- **Verify it fires tonight:** after merge to master (prod), check Vercel → Deployments → Runtime Logs for `[parking-prep-reminder] ran — ...` around 23:00 UTC. That line now proves it ran regardless of outcome.
+- **Confirm in Vercel:** `parking-prep-reminder` shows as a registered cron (Settings → Cron Jobs) and the plan allows 2 crons. A future 3rd cron would force Pro.
+- Revisit 7 PM vs ~9 PM timing after a week of real logs (does 7 PM nag before prep?).
+
+### Known issues
+
+- None from this change.
