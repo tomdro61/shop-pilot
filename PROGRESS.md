@@ -4068,10 +4068,23 @@ So a working cron would *also* have been silent on both nights. The 07-18 miss (
 
 ### What's next / action items
 
-- **Requires a production deploy to take effect** — Vercel env var changes are only picked up by new deployments. The reminder stays dead until `staging` merges to `master`.
+- ~~Requires a production deploy to take effect~~ — done; merged to master and verified below.
 - **After deploying, verify without waiting for a text:** trigger it manually with the real secret (`curl -H "Authorization: Bearer <CRON_SECRET>" .../api/cron/parking-prep-reminder`) — expect `{"ok":true,...}`, not 401. A 401 means the deploy didn't pick up the var.
 - **Then confirm the scheduled run:** Vercel → Settings → Cron Jobs → View Logs, ~23:00 UTC. Look for HTTP 200 and a `[parking-prep-reminder] ran — ...` line. Session 66's action item to confirm both crons are registered is still open.
+
+### Verified in production (2026-07-20, post-merge)
+
+Merged to master (`c77bc47`) and confirmed against the live deploy:
+
+- `/api/cron/health` with the real secret → 200; with `Bearer undefined` → 401 (public bypass closed)
+- `/api/cron/parking-prep-reminder` with the real secret → `{"ok":true,"flagged":0}` — **the handler executed in production for the first time since it shipped**
+- Both endpoints unauthenticated → 401
+
+`flagged: 0` is correct: no Broadway car was due between 5 PM 07-20 and 9 AM 07-21.
+
+**Still unproven — the SMS hop.** With zero cars flagged, execution returns before `sendSMS`. Next natural test is the 7 PM run on 07-21, when three checked-in cars with no lockbox fall inside the window (Sinan H. 9:00 PM, Ron K. 10:15 PM, Michele O. 1:00 AM Wed). If those are still unstaged at 7 PM and no text arrives, the fix is incomplete.
 
 ### Known issues
 
 - The 07-18-style miss window remains: a car booked after the 7 PM run for a same-night pickup isn't caught until the next evening (carried over from Session 65).
+- The SMS send path has never executed in production. See above.
