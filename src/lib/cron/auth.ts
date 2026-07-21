@@ -8,10 +8,10 @@ import { NextResponse } from "next/server";
  *
  * That unset case is why this must fail closed. Comparing against a template
  * literal alone yields the string "Bearer undefined", which both rejects every
- * real cron invocation (401, no application log, no text sent) and accepts any
- * public caller who sends that literal value. Both halves shipped: the parking
- * reminder silently 401'd every night for a week, and the endpoint was publicly
- * triggerable the whole time.
+ * real cron invocation — 401 before any handler code, so whatever the route was
+ * supposed to do silently doesn't happen — and authorizes any public caller who
+ * sends that literal value. Both halves shipped to production for a week; see
+ * PROGRESS.md Session 67.
  *
  *   const unauthorized = requireCronSecret(request);
  *   if (unauthorized) return unauthorized;

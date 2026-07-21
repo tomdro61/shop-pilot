@@ -12,8 +12,8 @@ import { findUnpreppedCarsForTonight } from "@/lib/parking/prep-reminder";
  * while the shop is closed (5 PM–9 AM) but isn't staged in a lockbox with the
  * code sent. Stays silent when everything's handled.
  *
- * Auth: `Authorization: Bearer ${CRON_SECRET}`, auto-injected by Vercel — same
- * as /api/cron/health.
+ * Auth: the shared CRON_SECRET check in `requireCronSecret` — see
+ * src/lib/cron/auth.ts for why it must fail closed on an unset secret.
  *
  * Schedule: a single vercel.json entry at 23:00 UTC — 7 PM ET in summer (EDT),
  * 6 PM ET in winter (EST). Vercel cron is UTC-only, so a fixed time drifts an
