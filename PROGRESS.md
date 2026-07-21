@@ -4022,3 +4022,56 @@ Data shows the team's overnight prep clusters ~8 PM. A 7 PM check is an early he
 ### Known issues
 
 - None from this change.
+
+---
+
+## Session 67 — 2026-07-20 — Parking reminder root cause: `CRON_SECRET` was never set in Vercel
+
+### Why
+
+Second consecutive report of "no text." Session 66's fix (single cron entry + drop the hour gate) was a real bug fix but did not change the outcome, which meant the actual cause was still unfound. Investigated against prod infra + prod data rather than re-reading the handler.
+
+### Root cause (confirmed against production)
+
+**`CRON_SECRET` did not exist in the Vercel project.** `vercel env ls production` listed 21 variables; `CRON_SECRET` was not among them.
+
+`requireCronSecret` compared the request header against `` `Bearer ${process.env.CRON_SECRET}` ``. With the var unset that template literal evaluates to the *string* `"Bearer undefined"`. Two silent consequences:
+
+1. **Vercel only attaches the `Authorization` header when `CRON_SECRET` exists** — Vercel does not generate one (Session 65's code comment claimed it did, which is why nobody ever created it). So every scheduled invocation arrived header-less, compared `null !== "Bearer undefined"`, and returned **401 before reaching a single line of handler code**. No `console.log`, no Sentry event, no SMS — for *both* cron routes, since `/api/cron/health` first shipped.
+2. **The endpoints were publicly triggerable** by anyone sending the literal `Bearer undefined`. Verified against prod: `curl -H "Authorization: Bearer undefined" .../api/cron/health` → `200 {"ok":true}`. That 200 is what proved the var was unset.
+
+This also explains Session 66's dangling loose end — it couldn't find the `cron_health_ok` heartbeat in Sentry and concluded Sentry wasn't queryable for crons. The heartbeat was never emitted; the health cron body had never executed either.
+
+Session 66's `console.*`-every-path work was correct and is what makes the next failure diagnosable — it just couldn't help while the 401 happened upstream of all of it.
+
+### Also confirmed: the last two nights were legitimately quiet
+
+Reconstructed both runs from prod data using `checked_out_at`:
+- **07-19 7 PM:** the four in-window Broadway cars (Canfield 5:30 PM, Clayton 5:47 PM, Jefferson 7:30 PM, Ahmed 9 PM) were all checked out with lockboxes by ~2:30 PM. Nothing to flag.
+- **07-20 7 PM:** no Broadway car due ≥ 5 PM today or < 9 AM tomorrow (the two 07-21 early pickups are cancelled). Nothing to flag.
+
+So a working cron would *also* have been silent on both nights. The 07-18 miss (three unstaged 3–7 AM cars) remains the one confirmed real miss. **Consequence: a quiet night is not proof the fix works** — verify via runtime logs or a manual authorized trigger, not by waiting for a text.
+
+### What shipped
+
+- **`CRON_SECRET` created** in Vercel Production, Preview, and Development (48-char hex).
+- **`requireCronSecret` fails closed** — an unset secret now returns 401 *and* `console.error`s the misconfiguration, so a dead cron is diagnosable from runtime logs instead of looking like a clean rejection. Invalid-token rejections `console.warn` separately. Matches Vercel's own reference implementation (`if (!cronSecret || authHeader !== ...)`).
+- **Corrected the false doc comment** in `auth.ts` and `ARCHITECTURE.md` that claimed Vercel auto-injects `CRON_SECRET`. That single wrong sentence is the whole reason the var was never created.
+- **`src/lib/cron/auth.test.ts`** — 5 cases, including explicit regression coverage that `Bearer undefined` is rejected when the secret is unset.
+
+### Files touched
+
+- `src/lib/cron/auth.ts` (fail closed + misconfiguration logging + corrected comment)
+- `src/lib/cron/auth.test.ts` (new)
+- `ARCHITECTURE.md` (corrected `CRON_SECRET` description; added the unset-secret lesson)
+- `PROGRESS.md` (this entry)
+
+### What's next / action items
+
+- **Requires a production deploy to take effect** — Vercel env var changes are only picked up by new deployments. The reminder stays dead until `staging` merges to `master`.
+- **After deploying, verify without waiting for a text:** trigger it manually with the real secret (`curl -H "Authorization: Bearer <CRON_SECRET>" .../api/cron/parking-prep-reminder`) — expect `{"ok":true,...}`, not 401. A 401 means the deploy didn't pick up the var.
+- **Then confirm the scheduled run:** Vercel → Settings → Cron Jobs → View Logs, ~23:00 UTC. Look for HTTP 200 and a `[parking-prep-reminder] ran — ...` line. Session 66's action item to confirm both crons are registered is still open.
+
+### Known issues
+
+- The 07-18-style miss window remains: a car booked after the 7 PM run for a same-night pickup isn't caught until the next evening (carried over from Session 65).
