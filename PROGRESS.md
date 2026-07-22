@@ -4088,3 +4088,26 @@ Merged to master (`c77bc47`) and confirmed against the live deploy:
 
 - The 07-18-style miss window remains: a car booked after the 7 PM run for a same-night pickup isn't caught until the next evening (carried over from Session 65).
 - The SMS send path has never executed in production. See above.
+
+## Session 68 — 2026-07-22 — Parking confirmation number: label it, don't hide it
+
+### Why
+
+Owner report: the confirmation number customers enter on the website parking forms "isn't visible" on the ShopPilot reservation details. Investigation showed the pipeline was fine (form → `/api/parking/submit` → `confirmation_number`; 3,892 of 3,994 prod rows populated) and the detail page *did* render it — as an unlabeled 11px gray meta line (`#127370540 · lot · Created …`) that reads as an internal record ID. Presentation bug, not a data bug.
+
+### What shipped
+
+- **Parking detail hero** — replaced the unlabeled meta line with the job-detail-style labeled metric chunks (design system §12.1): customer name as h1, then **Confirmation #** (bold mono, `—` when empty) | **Lot** | **Created** with vertical dividers.
+- **Reservation card footer** — now reads `Lot · Conf #127370540`; the confirmation segment is omitted when empty (previously rendered a dangling `· #`).
+
+### Files touched
+
+- `src/app/(dashboard)/parking/[id]/page.tsx`
+- `src/components/parking/parking-reservation-card.tsx`
+- `PROGRESS.md` (this entry)
+
+### Notes
+
+- 102 legacy reservations (~2.5%) have an empty confirmation number — detail page shows `—` for those.
+- Parking search already matches confirmation # — no change needed there.
+- UI-only, no server actions touched → `[skip-review]`.

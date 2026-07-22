@@ -175,8 +175,15 @@ export function ParkingReservationCard({
           {/* Footer: lot + confirmation # */}
           <div className="text-[11px] text-stone-500 dark:text-stone-400">
             {reservation.lot}
-            <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
-            <span className="font-mono tabular-nums">#{reservation.confirmation_number}</span>
+            {reservation.confirmation_number && (
+              <>
+                <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
+                Conf{" "}
+                <span className="font-mono tabular-nums">
+                  #{reservation.confirmation_number}
+                </span>
+              </>
+            )}
           </div>
         </div>
 

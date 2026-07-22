@@ -134,14 +134,7 @@ export default async function ParkingDetailPage({
         <div className="px-5 lg:px-6 py-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="font-mono tabular-nums text-[11px] tracking-wide text-stone-500 dark:text-stone-400">
-                #{reservation.confirmation_number}
-                <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
-                <span className="font-sans">{reservation.lot}</span>
-                <span className="mx-1.5 text-stone-300 dark:text-stone-700">·</span>
-                Created {formatDateLong(reservation.created_at) ?? "—"}
-              </div>
-              <h1 className="mt-1.5 text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50 truncate">
+              <h1 className="text-xl font-bold tracking-tight text-stone-900 dark:text-stone-50 truncate">
                 {reservation.customer_id ? (
                   <CustomerLink customerId={reservation.customer_id}>
                     {customerName}
@@ -150,6 +143,34 @@ export default async function ParkingDetailPage({
                   customerName
                 )}
               </h1>
+              <div className="mt-3 flex flex-wrap items-stretch gap-x-5 gap-y-2">
+                <div>
+                  <div className="font-mono tabular-nums text-base font-bold text-stone-900 dark:text-stone-50 leading-none">
+                    {reservation.confirmation_number || "—"}
+                  </div>
+                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                    Confirmation #
+                  </div>
+                </div>
+                <span aria-hidden className="self-stretch w-px bg-stone-300 dark:bg-stone-700" />
+                <div>
+                  <div className="text-base font-bold text-stone-900 dark:text-stone-50 leading-none">
+                    {reservation.lot}
+                  </div>
+                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                    Lot
+                  </div>
+                </div>
+                <span aria-hidden className="self-stretch w-px bg-stone-300 dark:bg-stone-700" />
+                <div>
+                  <div className="font-mono tabular-nums text-base font-bold text-stone-900 dark:text-stone-50 leading-none">
+                    {formatDateLong(reservation.created_at) ?? "—"}
+                  </div>
+                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                    Created
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {reservation.parking_type === "shuttle" && (
