@@ -338,7 +338,7 @@ When showing 2+ distinct pieces of metric data, render as **vertically stacked b
 DROP-OFFS  | PICKUPS
 ```
 
-Used on: SubHeaderCard, job detail header (RO Number / Opened / Total), customer detail Financial Snapshot, parking detail trip summary (when applied).
+Used on: SubHeaderCard, job detail header (RO Number / Opened / Total), customer detail Financial Snapshot, parking detail header (Confirmation # / Lot / Created).
 
 **Anti-pattern:** running text "3 drop-offs · 0 pickups · oldest 12 days" — reads as caption instead of scannable chunks.
 
