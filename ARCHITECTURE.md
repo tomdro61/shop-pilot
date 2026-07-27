@@ -40,13 +40,19 @@ This is the **current shape of the system** — what exists, where it lives, and
 - Saved-card + merchant-initiated charge flow
 - `PaymentMethodsSection` on customer profile uses Stripe Elements + SetupIntent. **Default PM lives in Stripe** (`invoice_settings.default_payment_method`), no local denormalization
 - `chargeCardOnFile(jobId)` action — creates Stripe invoice with `default_payment_method` + `auto_advance:false`, finalizes, inserts local invoices row, then `invoices.pay({off_session:true})`
-- Reuses existing `invoice.paid` webhook for receipt email/SMS — no new receipt code
+- Reuses the `invoice.paid` webhook for the **automatic** receipt email/SMS (fires only on Stripe-invoice payment; see **Receipts** below for the manual staff-triggered send that covers Terminal / Quick Pay / manually-paid jobs)
 - **SCA handling covers both** `authentication_required` (PaymentIntent.confirm path) and `invoice_payment_intent_requires_action` (the wrapping that `invoices.pay({off_session:true})` actually throws — runtime testing caught this; static review missed it)
 - Ambiguous failures (network/API errors, not declines) leave state intact for the webhook to reconcile rather than rolling back
 - Webhook is idempotent (status guard + atomic conditional flip)
 - 53 unit tests cover preflight guards, decline/SCA mapping, DB-insert rollback, totals parity, idempotency keys, `getPaymentMethod` degradation, `removePaymentMethod` partial-failure observability
 - **Required env**: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (live-mode pk_, must match the Stripe account of `STRIPE_SECRET_KEY` — sandbox-mismatch produces 400 on SetupIntent load)
 - AI tool deferred to v2; system-prompt redirects fleet-charge requests to the manager's UI button
+
+### Receipts — manual "Send Receipt"
+- Staff-triggered send of a completed, **paid** job's itemized receipt — distinct from the invoice-to-pay and estimate-to-approve flows. Button on the job detail page (`SendReceiptButton`), shown when `payment_status = 'paid'` and the customer has an email or phone.
+- `sendJobReceipt(jobId, { email, sms })` (`src/lib/actions/receipts.ts`) — `requireManager()`, gates paid + non-null shop settings, then emails the itemized receipt via the existing `paymentReceiptEmail` / `sendPaymentReceiptEmail` and/or texts a link (`receiptSMS`, shop line) to the public receipt page. Each channel is isolated (one throwing can't abort the other); per-channel status surfaces to the UI, which unchecks a succeeded channel before offering a retry so a partial failure never double-sends.
+- Public page `/receipt/[token]` (`getReceiptByToken`, admin client, **paid-only query gate**, enumerated columns so wholesale `cost` never rides along) renders the same itemized bill stamped PAID. `jobs.receipt_token` (DB-default `gen_random_uuid()`) keys the link; the route is exempted in `middleware.ts`.
+- Fills the gap where Terminal / Quick Pay / manually-paid jobs never triggered the automatic `invoice.paid` receipt.
 
 ## Messaging
 

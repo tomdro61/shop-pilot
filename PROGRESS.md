@@ -4111,3 +4111,37 @@ Owner report: the confirmation number customers enter on the website parking for
 - 102 legacy reservations (~2.5%) have an empty confirmation number — detail page shows `—` for those.
 - Parking search already matches confirmation # — no change needed there.
 - UI-only, no server actions touched → `[skip-review]`.
+
+## Session 69 — 2026-07-27 — Send Receipt: text/email a completed, paid job's itemized receipt
+
+### Why
+
+Owner report: a customer paid in person and asked to be texted/emailed "the bill." ShopPilot had no way to send a receipt for a completed, **paid** job — the Print button only opens the browser print dialog, and the automatic receipt email/SMS fires only on Stripe-invoice payment (the `invoice.paid` webhook), so Terminal / Quick Pay / manually-paid jobs never sent one. This is distinct from the invoice-to-pay and estimate-to-approve flows.
+
+### What shipped
+
+- **Send Receipt** button on the job detail page (shown when `payment_status = 'paid'` and the customer has an email or phone). Dialog with Email / Text checkboxes, pre-checked per contact info on file.
+- **Email** reuses the existing `paymentReceiptEmail` template + `sendPaymentReceiptEmail` (previously dead code — never wired to a button).
+- **Text** sends a link (`receiptSMS`, shop line) to a new public page `/receipt/[token]` rendering the same itemized bill stamped PAID.
+- **`jobs.receipt_token`** — uuid, DB-default `gen_random_uuid()`, unique. Default-generated so the send path never writes to `jobs` and two rapid sends can't mint divergent tokens (dead-link race). Backfilled all 907 existing jobs (all unique).
+- `sendJobReceipt` gates `requireManager()` + paid + non-null shop settings; each channel is isolated (one throw can't abort the other); per-channel status surfaces to the UI, which unchecks a succeeded channel before offering a retry (no double-send). Discriminated-union result.
+- `getReceiptByToken` reads via admin client with a **paid-only query gate** and enumerated columns (wholesale `cost` never rides along to the public page).
+- `/receipt` exempted in `middleware.ts` — without it every customer link redirected to `/login` (caught in review).
+
+### Files touched
+
+- `supabase/migrations/20260727170427_jobs_receipt_token.sql` (new)
+- `src/lib/actions/receipts.ts` (new — `sendJobReceipt`, `getReceiptByToken`)
+- `src/app/receipt/[token]/page.tsx`, `src/app/receipt/layout.tsx` (new — public page)
+- `src/components/dashboard/send-receipt-button.tsx` (new)
+- `src/lib/messaging/templates.ts` (`receiptSMS`)
+- `src/app/(dashboard)/jobs/[id]/page.tsx` (renders the button)
+- `src/middleware.ts` (public-route exemption)
+- `src/types/supabase.ts`, `ARCHITECTURE.md`, `DATABASE_SCHEMA.md`, `PROGRESS.md`
+
+### Notes
+
+- Migration applied to the ShopPilot DB via MCP (recorded version `20260727170427`); the migration file is idempotent (`IF NOT EXISTS`) so a later `supabase db push` is a safe no-op.
+- **Pre-existing migration drift (not this work):** `20260714000000_quick_pay_deferred_creation` is not recorded in `schema_migrations` (the DB tracker sits at `20260611`) even though Quick Pay works in prod — a plain `supabase db push` would try to re-apply it. Reconcile with `supabase migration repair` at some point.
+- Runtime verification of the public page deferred to the staging Vercel preview (local dev server not run this session).
+- 3-agent scoped review; one Critical (middleware `/login` redirect) fixed before push.

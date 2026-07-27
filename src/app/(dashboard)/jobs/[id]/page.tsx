@@ -18,6 +18,7 @@ import { DviSection } from "@/components/dashboard/dvi-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { JobCancelButton } from "@/components/dashboard/job-cancel-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
+import { SendReceiptButton } from "@/components/dashboard/send-receipt-button";
 import { JobDateEditor } from "@/components/dashboard/job-date-editor";
 import { JobScheduledTimeEditor } from "@/components/dashboard/job-scheduled-time-editor";
 import { JobTitleEditor } from "@/components/dashboard/job-title-editor";
@@ -101,6 +102,13 @@ export default async function JobDetailPage({
           <div className="flex flex-wrap items-center gap-1.5 min-w-0">
             {job.status === "complete" && customer?.phone && (
               <SendReadyTextButton jobId={id} />
+            )}
+            {job.payment_status === "paid" && (customer?.email || customer?.phone) && (
+              <SendReceiptButton
+                jobId={id}
+                customerEmail={customer?.email ?? null}
+                customerPhone={customer?.phone ?? null}
+              />
             )}
             <Link href={`/jobs/${id}/print`}>
               <Button variant="outline" size="sm">

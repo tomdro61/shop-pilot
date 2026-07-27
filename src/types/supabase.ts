@@ -860,6 +860,7 @@ export type Database = {
           paid_at: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           payment_status: Database["public"]["Enums"]["payment_status"]
+          receipt_token: string
           ro_number: number | null
           scheduled_at: string | null
           status: Database["public"]["Enums"]["job_status"]
@@ -888,6 +889,7 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           title?: string | null
           updated_at?: string
+          receipt_token?: string
           vehicle_id?: string | null
         }
         Update: {
@@ -910,6 +912,7 @@ export type Database = {
           stripe_payment_intent_id?: string | null
           title?: string | null
           updated_at?: string
+          receipt_token?: string
           vehicle_id?: string | null
         }
         Relationships: [

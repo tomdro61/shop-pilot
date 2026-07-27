@@ -68,6 +68,26 @@ export function paymentReceivedSMS({
   return `Hi ${firstName}, we received your payment of ${amount}${vehicle ? ` for your ${vehicle}` : ""}. Thank you for choosing Broadway Motors!\n\nIf you have a moment, a Google review would mean a lot to a local business like ours: https://g.page/r/CTjykJeAA929EBM/review`;
 }
 
+// Link to the customer-facing /receipt/[token] page for a completed, paid job —
+// the "here's your bill" text after work is done (distinct from the invoice-to-pay
+// and estimate-to-approve links).
+export function receiptSMS({
+  firstName,
+  year,
+  make,
+  model,
+  link,
+}: {
+  firstName: string;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  link: string;
+}) {
+  const vehicle = [year, make, model].filter(Boolean).join(" ");
+  return `Hi ${firstName}, here's your receipt from Broadway Motors${vehicle ? ` for your ${vehicle}` : ""}: ${link}`;
+}
+
 export function reservationConfirmationSMS({
   firstName,
   dropOffDate,
