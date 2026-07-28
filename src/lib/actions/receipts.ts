@@ -19,7 +19,14 @@ import { receiptSMS } from "@/lib/messaging/templates";
 // pricing that DATABASE_SCHEMA.md marks "never exposed to customers" — never
 // rides along into a public request. PGRST116 (no row) → null; any other error
 // throws so a real outage isn't masked as "receipt not found".
+const RECEIPT_TOKEN_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function getReceiptByToken(token: string) {
+  // A non-UUID token can't match the uuid column; querying it throws a Postgres
+  // cast error (not PGRST116) that would surface as a 500. Treat a malformed
+  // token as "not found" so a typo/bot gets the friendly page, not an error.
+  if (!RECEIPT_TOKEN_RE.test(token)) return null;
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase
@@ -34,6 +41,26 @@ export async function getReceiptByToken(token: string) {
   if (error) {
     if (error.code === "PGRST116") return null;
     throw new Error(`Failed to load receipt: ${error.message}`);
+  }
+  return data;
+}
+
+// Shop settings for the PUBLIC receipt page. getShopSettings() uses the anon
+// client, but shop_settings RLS only permits authenticated reads — an
+// unauthenticated /receipt visitor gets null there, which makes the page
+// (correctly) refuse to render a total. Read via the admin client instead,
+// scoped to this public codepath, so real settings (shop supplies, hazmat, tax)
+// are used and the receipt total matches what the customer paid.
+export async function getReceiptShopSettings() {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("shop_settings")
+    .select("*")
+    .limit(1)
+    .single();
+  if (error) {
+    console.error("Failed to load shop settings for receipt:", error.message);
+    return null;
   }
   return data;
 }

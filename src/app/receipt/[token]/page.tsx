@@ -1,5 +1,4 @@
-import { getReceiptByToken } from "@/lib/actions/receipts";
-import { getShopSettings } from "@/lib/actions/settings";
+import { getReceiptByToken, getReceiptShopSettings } from "@/lib/actions/receipts";
 import { calculateTotals } from "@/lib/utils/totals";
 import {
   formatCurrency,
@@ -58,7 +57,7 @@ export default async function CustomerReceiptPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const [job, settings] = await Promise.all([getReceiptByToken(token), getShopSettings()]);
+  const [job, settings] = await Promise.all([getReceiptByToken(token), getReceiptShopSettings()]);
 
   // getReceiptByToken gates payment_status = 'paid' in the query, so a bad token
   // and an unpaid job both arrive here as null — no unpaid-job details are ever
