@@ -38,7 +38,7 @@ const apbParkingSchema = z.object({
   first_name: z.string().min(1).max(100),
   last_name: z.string().min(1).max(100),
   email: z.string().email(),
-  phone: z.string().max(20).optional().default(""),
+  phone: z.string().max(40).optional().default(""), // matches APB checkout's phone cap (avoids a spurious 400 on a long entry)
   drop_off_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   pick_up_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   drop_off_time: z.string().max(20).optional().default(""),
