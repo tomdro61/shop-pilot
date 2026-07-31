@@ -26,6 +26,7 @@ export async function onReservationCreated({
   customerId,
   lot,
   parkingType,
+  sendCustomerSms = true,
 }: {
   phone: string;
   firstName: string;
@@ -38,6 +39,11 @@ export async function onReservationCreated({
   customerId: string | null;
   lot?: string;
   parkingType?: string;
+  // When false, create the Quo contact + run the valet notification but SKIP the
+  // customer confirmation SMS — for callers that already send their own booking
+  // confirmation (the APB push relies on APB's email). Default true keeps the
+  // existing form + Wix callers byte-for-byte unchanged.
+  sendCustomerSms?: boolean;
 }) {
   // 1. Create/update Quo contact (graceful failure — don't block SMS if this fails)
   const e164Phone = toE164(phone);
@@ -82,32 +88,36 @@ export async function onReservationCreated({
     return `${display}:${m} ${ampm}`;
   };
 
-  const body = reservationConfirmationSMS({
-    firstName,
-    dropOffDate: formatDate(dropOffDate),
-    dropOffTime: formatTime(dropOffTime),
-    pickUpDate: formatDate(pickUpDate),
-    pickUpTime: formatTime(pickUpTime),
-    lot,
-    parkingType,
-  });
+  // Customer confirmation SMS — gated so a caller (the APB push) can suppress it
+  // while still creating the Quo contact above and running the valet notify below.
+  if (sendCustomerSms) {
+    const body = reservationConfirmationSMS({
+      firstName,
+      dropOffDate: formatDate(dropOffDate),
+      dropOffTime: formatTime(dropOffTime),
+      pickUpDate: formatDate(pickUpDate),
+      pickUpTime: formatTime(pickUpTime),
+      lot,
+      parkingType,
+    });
 
-  try {
-    const line = getParkingLine(lot || "Broadway Motors");
-    const from = getPhoneNumber(line);
-    await sendSMS({ to: e164Phone, body, from });
+    try {
+      const line = getParkingLine(lot || "Broadway Motors");
+      const from = getPhoneNumber(line);
+      await sendSMS({ to: e164Phone, body, from });
 
-    if (customerId) {
-      const supabase = createAdminClient();
-      await logOutboundSms(supabase, {
-        customer_id: customerId,
-        body,
-        phone_line: line,
-        status: "sent",
-      });
+      if (customerId) {
+        const supabase = createAdminClient();
+        await logOutboundSms(supabase, {
+          customer_id: customerId,
+          body,
+          phone_line: line,
+          status: "sent",
+        });
+      }
+    } catch (err) {
+      console.error("[onReservationCreated] SMS send error:", err);
     }
-  } catch (err) {
-    console.error("[onReservationCreated] SMS send error:", err);
   }
 
   // 4. Internal notification for valet reservations
