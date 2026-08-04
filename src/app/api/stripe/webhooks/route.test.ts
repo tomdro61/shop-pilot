@@ -101,7 +101,21 @@ describe("invoice.paid — atomic flip predicate", () => {
     expect(mock.calls).not.toContainEqual({ method: "eq", args: ["status", "sent"] });
   });
 
-  it("still flips a row read as 'draft' (the case the old predicate dropped)", async () => {
+  it("scopes the flip to one row of the invoices table", async () => {
+    mockStripeEvent();
+    const mock = mockSupabase([orphanInvoice("draft"), { data: { id: INVOICE_ROW_ID }, error: null }]);
+
+    await POST(buildRequest());
+
+    // Without `.eq("id", …)` this becomes
+    // `UPDATE invoices SET status='paid' WHERE status <> 'paid'` — every unpaid
+    // invoice in the database marked paid, each firing the job flip, receipt
+    // email, customer SMS and owner notify below.
+    expect(mock.calls).toContainEqual({ method: "eq", args: ["id", INVOICE_ROW_ID] });
+    expect(mock.calls).toContainEqual({ method: "from", args: ["invoices"] });
+  });
+
+  it("writes the full paid payload, and proceeds past the flip", async () => {
     mockStripeEvent();
     const mock = mockSupabase([orphanInvoice("draft"), { data: { id: INVOICE_ROW_ID }, error: null }]);
 
@@ -111,6 +125,9 @@ describe("invoice.paid — atomic flip predicate", () => {
     expect(updateCalls(mock.calls)[0].args[0]).toMatchObject({
       status: "paid",
       payment_method: "stripe",
+      // paid_at feeds receipts and the tax export; dropping it leaves paid
+      // invoices with no paid date and no test would have noticed.
+      paid_at: expect.any(String),
     });
     // Proceeded past the flip — reached the orphan guard rather than bailing early.
     expect(Sentry.captureMessage).toHaveBeenCalledWith(

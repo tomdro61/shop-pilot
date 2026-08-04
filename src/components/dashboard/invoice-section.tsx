@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createInvoiceFromJob } from "@/lib/actions/invoices";
 import { ResendInvoiceButton } from "@/components/dashboard/resend-invoice-button";
+import { isFirstDelivery } from "@/lib/invoices/delivery";
 import { INVOICE_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { FileText, ExternalLink } from "lucide-react";
@@ -82,7 +83,32 @@ export function InvoiceSection({
     return null;
   }
 
+  // Settled outside Stripe (cash, check, Terminal, waived). `recordPayment`
+  // touches only `jobs`, so there is no invoice row to reflect it — this is the
+  // one signal that sees those payments. Hoisted above the !invoice branch so it
+  // suppresses the Create card too, not just Resend: billing a customer who
+  // already paid at the counter is the same incident either way.
+  const settled = paymentStatus === "paid" || paymentStatus === "waived";
+
   if (!invoice) {
+    if (settled) {
+      return (
+        <MiniStatusCard
+          accent="green"
+          icon={<FileText className="h-4 w-4" />}
+          title={
+            <>
+              <span>Invoice</span>
+              <span className="text-xs font-normal text-stone-500 dark:text-stone-400">
+                {paymentStatus === "waived" ? "Waived" : "Paid"}
+              </span>
+            </>
+          }
+          meta="Settled without a Stripe invoice — nothing to bill."
+        />
+      );
+    }
+
     if (isFleet && !hasCardOnFile) {
       return (
         <MiniStatusCard
@@ -200,17 +226,21 @@ export function InvoiceSection({
   }
 
   const status = invoice.status as InvoiceStatus;
-  // `?? "stone"` so an invoice status this map doesn't know about degrades to a
-  // neutral card instead of rendering `undefined` class names.
   const accent = STATUS_ACCENT[status] ?? "stone";
 
-  // Every condition here is also enforced server-side; this only keeps the shop
-  // from clicking something that will refuse. Settled-outside-Stripe is the case
-  // that matters: `invoice.status` alone cannot see a cash or Terminal payment.
-  const settled = paymentStatus === "paid" || paymentStatus === "waived";
+  // Mirrors the server's refusals so the shop doesn't click into an error. Gated
+  // on stripe_invoice_id rather than the hosted URL: createStripeInvoice persists
+  // `|| ""`, and the server recovers that case from the live Stripe object, so
+  // requiring a stored URL here would hide the button on exactly the rows the
+  // server can still send. Contact check mirrors the SendReceiptButton gate on
+  // the job page — without it the dialog opens with every control disabled.
   const canResend =
-    !!invoice.stripe_hosted_invoice_url && status !== "paid" && !settled && !isFleet;
-  const neverSent = status === "draft" && !invoice.last_sent_at;
+    !!invoice.stripe_invoice_id &&
+    status !== "paid" &&
+    !settled &&
+    !isFleet &&
+    (!!customerEmail || !!customerPhone);
+  const neverSent = isFirstDelivery(invoice);
 
   return (
     <MiniStatusCard
@@ -235,14 +265,18 @@ export function InvoiceSection({
         invoice.paid_at ? (
           <span>Paid {formatDate(invoice.paid_at)}</span>
         ) : invoice.last_sent_at ? (
-          // Null is "unknown" — invoices predating this column were never
-          // backfilled, and plenty of them really were sent. Render nothing
-          // rather than implying they weren't.
           <span>Last sent {formatDate(invoice.last_sent_at)}</span>
-        ) : null
+        ) : // Null is "unknown", not "never sent" — the column was added without a
+        // backfill and plenty of older invoices really were delivered. Render
+        // nothing rather than implying they weren't.
+        null
       }
+      // flex-wrap because MiniStatusCard's action slot is flex-none: it can't
+      // shrink, so a second button here steals width from the title instead of
+      // wrapping. At 360px two full-width buttons leave the title ~47px, which
+      // pushes the currency token outside the card.
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {/* Kept visible in every state — it's the only in-app route to the
               invoice in Stripe, which is the audit trail. */}
           {invoice.stripe_hosted_invoice_url ? (
@@ -252,8 +286,8 @@ export function InvoiceSection({
               rel="noopener noreferrer"
             >
               <Button variant="outline" size="sm">
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                View
+                <ExternalLink className="h-3.5 w-3.5 sm:mr-1.5" />
+                <span className="sr-only sm:not-sr-only">View</span>
               </Button>
             </a>
           ) : null}

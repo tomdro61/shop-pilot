@@ -13,6 +13,7 @@ import { sendCustomerSMS } from "@/lib/actions/messages";
 import { sendCustomerEmail } from "@/lib/actions/email";
 import { invoiceReminderSMS, invoiceSentSMS } from "@/lib/messaging/templates";
 import { invoiceReadyEmail } from "@/lib/resend/templates";
+import { isFirstDelivery } from "@/lib/invoices/delivery";
 
 export async function getOrCreateStripeCustomer(customerId: string) {
   const supabase = await createClient();
@@ -70,7 +71,7 @@ export async function createInvoiceFromJob(
   const { data: job, error: jobError } = await supabase
     .from("jobs")
     .select(
-      "*, customers(id, first_name, last_name, email, phone, stripe_customer_id), vehicles(year, make, model), job_line_items(*)"
+      "*, customers(id, first_name, last_name, email, phone, stripe_customer_id, customer_type), vehicles(year, make, model), job_line_items(*)"
     )
     .eq("id", jobId)
     .single();
@@ -81,6 +82,19 @@ export async function createInvoiceFromJob(
 
   if (job.status !== "complete") {
     return { error: "Job must be complete before creating an invoice" };
+  }
+
+  // Same guard, and for the same reason, as resendInvoiceForJob: recordPayment
+  // and both terminal paths update `jobs` only, so a job settled in cash keeps
+  // an unpaid invoice row and Stripe never learns about it. Without this,
+  // "Create & Send" bills and texts a live payment link to a customer who
+  // already paid at the counter. 'invoiced' is allowed — it means billed and
+  // still owed.
+  if (job.payment_status === "paid") {
+    return { error: "This job is already marked paid — no invoice created." };
+  }
+  if (job.payment_status === "waived") {
+    return { error: "Payment on this job was waived — no invoice created." };
   }
 
   // Check for existing invoice. The error MUST be checked — if this query
@@ -106,10 +120,18 @@ export async function createInvoiceFromJob(
     email: string | null;
     phone: string | null;
     stripe_customer_id: string | null;
+    customer_type: string | null;
   } | null;
 
   if (!customer) {
     return { error: "Job has no customer" };
+  }
+
+  // Fleet accounts are billed off-platform. This was a UI-only convention until
+  // now — InvoiceSection hid the Create card, but nothing stopped the action, so
+  // the AI tool `create_invoice_from_job` could still bill a fleet account.
+  if (customer.customer_type === "fleet") {
+    return { error: "Fleet accounts are billed off-platform — no invoice created." };
   }
 
   const lineItems = (job.job_line_items || []) as {
@@ -319,7 +341,17 @@ export async function resendInvoiceForJob({
     .eq("id", jobId)
     .single();
 
-  if (jobError || !job) return { ok: false, error: "Job not found" };
+  // A connection drop, statement timeout, or RLS denial is not "not found" —
+  // reporting it as such is unactionable on a job the operator is looking at,
+  // and would be the one path in this function with no telemetry.
+  if (jobError) {
+    Sentry.captureException(jobError, {
+      tags: { source: "resend-invoice", path: "job-lookup" },
+      extra: { jobId },
+    });
+    return { ok: false, error: "Couldn't load this job. Try again in a moment." };
+  }
+  if (!job) return { ok: false, error: "Job not found" };
 
   // See invariant 2 above. Deliberately NOT `!== "unpaid"` — 'invoiced' means
   // "billed, still owes", which is exactly who this feature exists to chase.
@@ -348,8 +380,10 @@ export async function resendInvoiceForJob({
     return { ok: false, error: "Fleet accounts are billed off-platform — no reminder sent." };
   }
 
-  // job_id is indexed but NOT unique, so this can legitimately return more than
-  // one row; .maybeSingle() would throw. Newest wins.
+  // job_id has no unique constraint, so a race or a manual fix can leave two
+  // rows — every creation path refuses when one already exists, so duplicates
+  // are an artifact rather than a normal state. Ordered and limited rather than
+  // .maybeSingle(), which returns an error (PGRST116) on multiple rows. Newest wins.
   const { data: invoiceRows, error: invoiceError } = await supabase
     .from("invoices")
     .select("id, status, stripe_invoice_id, stripe_hosted_invoice_url, last_sent_at")
@@ -503,10 +537,10 @@ export async function resendInvoiceForJob({
   const balance =
     stripeInvoice.amount_remaining != null ? stripeInvoice.amount_remaining / 100 : null;
 
-  // A draft that was never delivered gets first-send copy, not a reminder — the
-  // AI path creates invoices with no channels selected, so its first "resend" is
-  // genuinely the customer's first contact about this bill.
-  const neverSent = invoice.status === "draft" && !invoice.last_sent_at;
+  // An invoice created with no channels selected was never delivered, so its
+  // first "resend" is genuinely the customer's first contact about this bill and
+  // gets first-send copy. See isFirstDelivery for what this can and can't detect.
+  const neverSent = isFirstDelivery(invoice);
 
   const vehicle = job.vehicles as {
     year: number | null;
@@ -572,14 +606,28 @@ export async function resendInvoiceForJob({
     }
   }
 
+  // `ok` must mean "the customer received something". Returning ok:true for a
+  // send where every channel failed pushes the real check onto each caller, and
+  // `if (result.ok) toast.success("Sent")` compiles and lies.
   const anySent = result.sms?.sent === true || result.email?.sent === true;
-  if (!anySent) return { ok: true, ...result };
+  if (!anySent) {
+    const reasons = [result.sms, result.email]
+      .filter((r): r is { sent: false; error: string } => r?.sent === false)
+      .map((r) => r.error);
+    return {
+      ok: false,
+      error: reasons.length ? `Couldn't send: ${reasons.join("; ")}` : "Nothing was sent.",
+    };
+  }
 
   // Bookkeeping runs as two independent statements, and neither can fail the
   // call. The message is already gone; reporting failure here would invite a
   // retry that texts the customer twice — the exact outcome this feature exists
   // to prevent. Surfaced as a warning alongside sent: true instead.
-  let stampWarning: string | undefined;
+  // Accumulated, not a single slot: both writes usually fail for the same reason,
+  // and the last_sent_at half is the one that governs the duplicate-send throttle
+  // — it must not be overwritten by the status half.
+  const warnings: string[] = [];
 
   const { error: stampError } = await supabase
     .from("invoices")
@@ -592,7 +640,7 @@ export async function resendInvoiceForJob({
       tags: { source: "resend-invoice", path: "last-sent-stamp" },
       extra: { jobId, invoiceId: invoice.id },
     });
-    stampWarning = "Sent, but couldn't record the send time.";
+    warnings.push("couldn't record the send time");
   }
 
   if (invoice.status === "draft") {
@@ -607,14 +655,18 @@ export async function resendInvoiceForJob({
         tags: { source: "resend-invoice", path: "draft-to-sent" },
         extra: { jobId, invoiceId: invoice.id },
       });
-      stampWarning = "Sent, but couldn't update the invoice status.";
+      warnings.push("couldn't update the invoice status");
     }
   }
 
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/invoices");
 
-  return { ok: true, ...result, stampWarning };
+  return {
+    ok: true,
+    ...result,
+    stampWarning: warnings.length ? `Sent, but ${warnings.join(" and ")}.` : undefined,
+  };
 }
 
 export async function getInvoices(status?: string, search?: string, source?: string) {
@@ -666,6 +718,11 @@ export async function getInvoices(status?: string, search?: string, source?: str
   return invoices;
 }
 
+// `job_id` has no unique constraint, so a race or a manual fix can leave two
+// rows. `.maybeSingle()` returns an error in that case, and swallowing it here
+// used to hide the invoice card entirely — which showed "Ready to invoice →
+// Create" for a job that already had one, inviting a duplicate Stripe invoice.
+// Ordered + limited instead, matching resendInvoiceForJob: newest wins.
 export async function getInvoiceForJob(jobId: string) {
   const supabase = await createClient();
 
@@ -673,10 +730,17 @@ export async function getInvoiceForJob(jobId: string) {
     .from("invoices")
     .select("*")
     .eq("job_id", jobId)
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(1);
 
-  if (error) return null;
-  return data;
+  if (error) {
+    Sentry.captureException(error, {
+      tags: { source: "invoices", path: "get-invoice-for-job" },
+      extra: { jobId },
+    });
+    throw new Error(`Failed to load the invoice for this job: ${error.message}`);
+  }
+  return data?.[0] ?? null;
 }
 
 export async function getInvoicesForParkingReservation(reservationId: string) {

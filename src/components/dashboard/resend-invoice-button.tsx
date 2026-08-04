@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,9 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { resendInvoiceForJob } from "@/lib/actions/invoices";
+import { describeGap, wasSentRecently } from "@/lib/invoices/delivery";
+import { TONE_CLASSES } from "@/lib/ui/alert-tone";
+import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 
 interface ResendInvoiceButtonProps {
@@ -25,15 +29,6 @@ interface ResendInvoiceButtonProps {
   lastSentAt: string | null;
   /** Draft with no recorded send — this is a first delivery, not a reminder. */
   neverSent: boolean;
-}
-
-const RECENT_SEND_MS = 24 * 60 * 60 * 1000;
-
-function describeGap(from: string): string {
-  const hours = Math.floor((Date.now() - new Date(from).getTime()) / (60 * 60 * 1000));
-  if (hours < 1) return "less than an hour ago";
-  if (hours === 1) return "1 hour ago";
-  return `${hours} hours ago`;
 }
 
 export function ResendInvoiceButton({
@@ -54,13 +49,21 @@ export function ResendInvoiceButton({
   // Soft throttle: two people chasing the same non-payer shouldn't text them
   // twice in an afternoon. A warning with a second click, not a hard block —
   // sometimes the second nudge is the intended one.
-  const sentRecently =
-    !!lastSentAt && Date.now() - new Date(lastSentAt).getTime() < RECENT_SEND_MS;
+  const sentRecently = wasSentRecently(lastSentAt);
   const needsConfirm = sentRecently && !confirmedRecent;
 
+  // Resets ALL dialog state, not just the confirm. Without the channel reset, a
+  // partial failure leaves the succeeded channel unchecked (correct for an
+  // in-place retry) and it stays unchecked after close/reopen with nothing on
+  // screen explaining why — useState initializers don't re-run, since Radix
+  // unmounts only the content.
   function reset(nextOpen: boolean) {
     setOpen(nextOpen);
-    if (!nextOpen) setConfirmedRecent(false);
+    if (!nextOpen) {
+      setConfirmedRecent(false);
+      setSendEmail(!!customerEmail);
+      setSendText(!!customerPhone);
+    }
   }
 
   async function handleSend() {
@@ -85,33 +88,41 @@ export function ResendInvoiceButton({
       if (sms) (sms.sent ? ok : failed).push(sms.sent ? "text" : `text (${sms.error})`);
 
       // testMode = Quo/Resend unconfigured — nothing left the building, so don't
-      // claim it did.
+      // claim it did. Applies to the partial branch too: previously this was
+      // computed here and only appended on the all-succeeded path, so a partial
+      // send in test mode reported a delivery that never happened.
       let testMode = false;
       if (email?.sent) testMode ||= !!email.testMode;
       if (sms?.sent) testMode ||= !!sms.testMode;
       const suffix = testMode ? " (test mode — nothing actually sent)" : "";
-
-      if (ok.length === 0) {
-        toast.error(`Couldn't send: ${failed.join(", ")}`);
-        return;
-      }
 
       if (failed.length > 0) {
         // Partial — uncheck what succeeded so a retry only re-sends what didn't,
         // and keep the dialog open.
         if (email?.sent) setSendEmail(false);
         if (sms?.sent) setSendText(false);
-        toast.warning(`Sent via ${ok.join(" & ")}. Failed: ${failed.join(", ")}`);
-        return;
+        toast.warning(`Sent via ${ok.join(" & ")}${suffix}. Failed: ${failed.join(", ")}`);
+      } else {
+        toast.success(`Invoice sent via ${ok.join(" & ")}${suffix}`);
+        reset(false);
       }
 
-      toast.success(`Invoice sent via ${ok.join(" & ")}${suffix}`);
+      // Outside the branch: a failed last_sent_at write disables the throttle,
+      // and the partial path is exactly where a retry is being invited.
       if (result.stampWarning) toast.warning(result.stampWarning);
-      reset(false);
-    } catch {
-      // The action can still throw (network, serialization). Without this the
-      // button would stay disabled with no explanation.
-      toast.error("Couldn't send the invoice — please try again");
+    } catch (err) {
+      // The action can still throw (network drop, serialization, a 500 at the
+      // action boundary). Deliberately does NOT claim the send failed: if the
+      // connection dropped on the RESPONSE, the text already went out and
+      // last_sent_at was already stamped — but revalidatePath never reached the
+      // client, so the throttle won't warn on the retry this toast invites.
+      Sentry.captureException(err, {
+        tags: { source: "resend-invoice", path: "client-invoke" },
+        extra: { jobId },
+      });
+      toast.error(
+        "We couldn't confirm whether the invoice sent — check the customer's messages before resending"
+      );
     } finally {
       setLoading(false);
     }
@@ -136,9 +147,17 @@ export function ResendInvoiceButton({
         </DialogHeader>
 
         {sentRecently && lastSentAt && (
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          // role="status" because the text mutates in response to a click and
+          // the confirm step fires no toast — without it a screen-reader user
+          // gets no announcement at all when arming the send.
+          <p
+            role="status"
+            className={cn("rounded-md border px-3 py-2 text-xs", TONE_CLASSES.amber.chip)}
+          >
             Already sent {describeGap(lastSentAt)}.
-            {needsConfirm ? " Click again to send anyway." : " Sending again."}
+            {needsConfirm
+              ? " Click again to send anyway."
+              : " Press send to deliver it again."}
           </p>
         )}
 
@@ -182,7 +201,9 @@ export function ResendInvoiceButton({
             Cancel
           </Button>
           <Button onClick={handleSend} disabled={loading || (!sendEmail && !sendText)}>
-            {loading ? "Sending..." : needsConfirm ? "Send anyway" : `${verb} Invoice`}
+            {/* Stays "Send anyway" for the whole throttled interaction. Reverting
+                to the resting label after the confirm click reads as "done". */}
+            {loading ? "Sending..." : sentRecently ? "Send anyway" : `${verb} Invoice`}
           </Button>
         </DialogFooter>
       </DialogContent>

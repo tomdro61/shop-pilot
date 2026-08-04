@@ -18,6 +18,8 @@ vi.mock("@/lib/actions/email", () => ({ sendCustomerEmail: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
 
+import * as Sentry from "@sentry/nextjs";
+
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
@@ -169,16 +171,19 @@ describe("resendInvoiceForJob — settled outside Stripe", () => {
 });
 
 describe("resendInvoiceForJob — Stripe state", () => {
+  // These three assert the SPECIFIC refusal for the same reason the
+  // payment_status tests do: the status guards sit in sequence above a catch-all
+  // ("isn't in a payable state"), so deleting any one of them still refuses —
+  // just for the wrong reason. Asserting only `ok === false` let all three be
+  // removed with the suite green.
   it("refuses a paid invoice and writes NOTHING", async () => {
-    const mock = mockSupabase([
-      { data: buildJob(), error: null },
-      { data: [buildInvoiceRow()], error: null },
-    ]);
+    const mock = mockSupabase(happyQueue());
     mockStripeRetrieve(buildStripeInvoice({ status: "paid" }));
 
     const r = await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: true });
 
     expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/already paid/);
     expect(sendCustomerSMS).not.toHaveBeenCalled();
     // handleInvoicePaid owns the paid transition. Any update here would trip its
     // idempotency guard and the customer would never get a receipt.
@@ -186,15 +191,38 @@ describe("resendInvoiceForJob — Stripe state", () => {
   });
 
   it.each(["void", "uncollectible"])("refuses a %s invoice", async (status) => {
-    mockSupabase([
-      { data: buildJob(), error: null },
-      { data: [buildInvoiceRow()], error: null },
-    ]);
+    mockSupabase(happyQueue());
     mockStripeRetrieve(buildStripeInvoice({ status }));
 
     const r = await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: true });
     expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(new RegExp(`marked ${status}`));
     expect(sendCustomerSMS).not.toHaveBeenCalled();
+  });
+
+  it("refuses a status Stripe reports that we don't recognize", async () => {
+    mockSupabase(happyQueue());
+    mockStripeRetrieve(buildStripeInvoice({ status: "deleted" }));
+
+    const r = await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: true });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/payable state/);
+    expect(sendCustomerSMS).not.toHaveBeenCalled();
+  });
+
+  it("reports a lookup failure as a failure, not as 'no invoice'", async () => {
+    mockSupabase([
+      { data: buildJob(), error: null },
+      { data: null, error: { message: "statement timeout" } },
+    ]);
+    mockStripeRetrieve(buildStripeInvoice());
+
+    const r = await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: true });
+
+    expect(r.ok).toBe(false);
+    // "This job has no invoice" would be a lie the operator can't act on.
+    if (!r.ok) expect(r.error).toMatch(/Couldn't load/);
+    expect(Sentry.captureException).toHaveBeenCalled();
   });
 
   it("fails closed when Stripe is unreachable", async () => {
@@ -330,9 +358,107 @@ describe("resendInvoiceForJob — sending", () => {
       expect(r.email).toEqual({ sent: true, testMode: undefined });
     }
     const updates = mock.calls.filter((c) => c.method === "update");
-    expect(updates[0].args[0]).toHaveProperty("last_sent_at");
+    expect(updates[0].args[0]).toMatchObject({ last_sent_at: expect.any(String) });
     // Guarded so a webhook that flipped the row to paid mid-flight isn't clobbered.
     expect(mock.calls).toContainEqual({ method: "neq", args: ["status", "paid"] });
+    // Scoped to this row. Without it the stamp rewrites every non-paid invoice.
+    expect(mock.calls).toContainEqual({ method: "eq", args: ["id", INVOICE_ID] });
+  });
+
+  it("delivers the payment link — the entire point of the feature", async () => {
+    mockSupabase(happyQueue());
+    mockStripeRetrieve(buildStripeInvoice());
+
+    await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: true });
+
+    // Deleting `Pay here: ${link}` from both SMS templates previously passed the
+    // whole 405-test suite.
+    expect(vi.mocked(sendCustomerSMS).mock.calls[0][0].body).toContain(HOSTED_URL);
+    expect(vi.mocked(sendCustomerEmail).mock.calls[0][0].html).toContain(HOSTED_URL);
+  });
+
+  it("sends to the job's customer, on the shop line, linked to the job", async () => {
+    mockSupabase(happyQueue());
+    mockStripeRetrieve(buildStripeInvoice());
+
+    await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: true });
+
+    // The binding tests above prove the WRONG recipient is refused; this proves
+    // the RIGHT one is used. Swapping customerId for jobId used to survive.
+    expect(sendCustomerSMS).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: CUSTOMER_ID, jobId: JOB_ID, line: "shop" })
+    );
+    expect(sendCustomerEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: CUSTOMER_ID, jobId: JOB_ID })
+    );
+  });
+
+  it("prefers Stripe's live URL over a stale stored one", async () => {
+    mockSupabase(happyQueue(buildJob(), buildInvoiceRow({ stripe_hosted_invoice_url: "https://stale" })));
+    mockStripeRetrieve(buildStripeInvoice());
+
+    await resendInvoiceForJob({ jobId: JOB_ID, email: false, sms: true });
+
+    const body = vi.mocked(sendCustomerSMS).mock.calls[0][0].body;
+    expect(body).toContain(HOSTED_URL);
+    expect(body).not.toContain("https://stale");
+  });
+
+  it("refuses when neither Stripe nor the row has a payment link", async () => {
+    mockSupabase(happyQueue(buildJob(), buildInvoiceRow({ stripe_hosted_invoice_url: "" })));
+    mockStripeRetrieve(buildStripeInvoice({ hosted_invoice_url: null }));
+
+    const r = await resendInvoiceForJob({ jobId: JOB_ID, email: false, sms: true });
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/no payment link/);
+    expect(sendCustomerSMS).not.toHaveBeenCalled();
+  });
+
+  it("promotes a draft to sent after a first delivery", async () => {
+    const mock = mockSupabase(happyQueue(buildJob(), buildInvoiceRow({ status: "draft" })));
+    mockStripeRetrieve(buildStripeInvoice({ status: "draft" }));
+
+    await resendInvoiceForJob({ jobId: JOB_ID, email: false, sms: true });
+
+    const updates = mock.calls.filter((c) => c.method === "update");
+    expect(updates).toHaveLength(2);
+    expect(updates[1].args[0]).toEqual({ status: "sent" });
+    // Idempotency predicate on the status flip.
+    expect(mock.calls).toContainEqual({ method: "eq", args: ["status", "draft"] });
+  });
+
+  it("uses reminder copy for a draft that was already delivered once", async () => {
+    mockSupabase(
+      happyQueue(buildJob(), buildInvoiceRow({ status: "draft", last_sent_at: "2026-08-01T00:00:00Z" }))
+    );
+    mockStripeRetrieve(buildStripeInvoice({ status: "draft" }));
+
+    await resendInvoiceForJob({ jobId: JOB_ID, email: false, sms: true });
+
+    // Dropping the `!last_sent_at` half of isFirstDelivery used to survive, which
+    // would tell an already-contacted customer their invoice "is ready".
+    expect(vi.mocked(sendCustomerSMS).mock.calls[0][0].body).toContain("reminder");
+  });
+
+  it("uses the newest invoice row and flags the duplicate", async () => {
+    const newest = buildInvoiceRow({ stripe_invoice_id: "in_newest" });
+    const older = buildInvoiceRow({ id: "other", stripe_invoice_id: "in_older" });
+    mockSupabase([
+      { data: buildJob(), error: null },
+      { data: [newest, older], error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    const retrieve = mockStripeRetrieve(buildStripeInvoice({ id: "in_newest" }));
+
+    await resendInvoiceForJob({ jobId: JOB_ID, email: false, sms: true });
+
+    expect(retrieve).toHaveBeenCalledWith("in_newest");
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "resend_invoice_duplicate_rows",
+      expect.anything()
+    );
   });
 
   it("uses the live balance, not the stored amount", async () => {
@@ -390,7 +516,7 @@ describe("resendInvoiceForJob — sending", () => {
     }
   });
 
-  it("does not stamp anything when every channel fails", async () => {
+  it("reports failure — not success — when every channel fails, and stamps nothing", async () => {
     const mock = mockSupabase([
       { data: buildJob(), error: null },
       { data: [buildInvoiceRow()], error: null },
@@ -402,8 +528,10 @@ describe("resendInvoiceForJob — sending", () => {
 
     const r = await resendInvoiceForJob({ jobId: JOB_ID, email: false, sms: true });
 
-    expect(r.ok).toBe(true);
-    if (r.ok) expect(r.sms).toMatchObject({ sent: false });
+    // `ok` must mean the customer received something. A caller doing
+    // `if (result.ok) toast.success("Sent")` has to be right by construction.
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("No phone number on file");
     expect(mock.calls.filter((c) => c.method === "update")).toHaveLength(0);
   });
 });
