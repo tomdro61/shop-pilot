@@ -142,7 +142,7 @@ export const getJob = cache(async (id: string) => {
   const { data, error } = await supabase
     .from("jobs")
     .select(
-      "*, customers(id, first_name, last_name, phone, email), vehicles(id, year, make, model, vin, mileage), users(id, name), job_line_items(*)"
+      "*, customers(id, first_name, last_name, phone, email, address, customer_type), vehicles(id, year, make, model, vin, mileage), users(id, name), job_line_items(*)"
     )
     .eq("id", id)
     .single();

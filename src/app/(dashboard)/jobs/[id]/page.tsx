@@ -73,7 +73,11 @@ export default async function JobDetailPage({
   ]);
   if (!job) notFound();
 
-  const customer = job.customers as (Customer & { email: string | null; customer_type: string | null }) | null;
+  // No cast. The previous `as (Customer & { email; customer_type })` fabricated
+  // fields getJob never selected, so `customer_type` and `address` were always
+  // undefined at runtime — which silently made isFleet permanently false and the
+  // Address row permanently "—". Let the select's own inference type this.
+  const customer = job.customers;
   const vehicle = job.vehicles as Vehicle | null;
   const tech = job.users as Pick<UserType, "id" | "name"> | null;
   const lineItems = (job.job_line_items || []) as JobLineItem[];
