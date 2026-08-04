@@ -26,16 +26,24 @@ would have caught both immediately.
 **Context this skill needs:**
 - Dev server: `npm run dev` from `shop-pilot/`, runs on `http://localhost:3000`
   (Next.js auto-falls to 3001/3002 if 3000 is taken).
-- `.env.local` points to **staging Supabase**, so dev server can read real
-  data. There's a sent-status estimate in staging used as the canonical
-  approval-flow test fixture (see flow scenarios below — token TBD per
-  session, ask user if not known).
-- Stripe is in **test mode** locally — use card `4242 4242 4242 4242`
-  for any flow that touches payment.
-- Quo SMS is **not** wired in dev — SMS sends fall back to test mode and
-  log to console. Don't assert SMS receipt in scenarios.
-- Resend is in test mode locally. Email sends log to console rather than
-  delivering. Don't assert email receipt; assert the call was made.
+- ⚠️ **`.env.local` points at the PRODUCTION Supabase project.** There is no
+  separate staging database — one Postgres serves local, staging, and master.
+  Every row you see belongs to a real customer. Never create test data against
+  a real customer record; use a shop-owned one.
+- ⚠️ **`QUO_API_KEY` and `RESEND_API_KEY` in `.env.local` are LIVE.** Test mode
+  keys off *key presence*, not off `NODE_ENV` — so a send you trigger locally
+  reaches a real phone or inbox. **Comment both out and restart the dev server
+  (Next caches env at boot) before exercising ANY flow that sends.** Confirm you
+  see `[Quo Test Mode]` / `[Resend Test Mode]` in the console and the
+  `(test mode — nothing actually sent)` suffix on the toast before proceeding.
+- Note that `messages` rows are inserted **even in test mode**
+  (`actions/messages.ts`, `actions/email.ts`), so a real customer's timeline can
+  show a message that never sent. Use a shop-owned customer and delete the rows
+  afterward.
+- Stripe is in **test mode** locally (`sk_test`) — use card
+  `4242 4242 4242 4242`. Because test and live modes hold separate objects, any
+  flow that retrieves an existing Stripe object only works against one you
+  created locally, never one created by production.
 - Public broadwaymotorsma.com forms POST to shop-pilot endpoints — the
   cross-origin part can't be tested locally without curl+CORS headers.
 - Production: `https://shop-pilot-rosy.vercel.app`. Don't run /verify-flow
@@ -58,6 +66,7 @@ If still ambiguous, ask the user.
 | `quote-form` | `src/app/api/quote-requests/**`, `src/lib/actions/quote-requests.ts`, `src/components/dashboard/quote-request*` |
 | `quick-pay` | `src/app/(dashboard)/quick-pay/**`, `src/app/api/terminal/**`, `src/components/dashboard/terminal*` |
 | `job-cancel` | `src/components/dashboard/job-cancel-button.tsx`, `src/lib/actions/jobs.ts` (`cancelJob`), `src/lib/ai/handlers.ts` (`cancel_job` case), `src/lib/ai/tools.ts` |
+| `resend-invoice` | `src/lib/actions/invoices.ts` (`resendInvoiceForJob`), `src/components/dashboard/resend-invoice-button.tsx`, `src/components/dashboard/invoice-section.tsx` |
 
 ---
 
@@ -354,6 +363,50 @@ detail, and the `cancel_job` AI tool.
 - ❌ FAIL signal: AI says the tool isn't available or `update_job_status`
   rejects with "use the cancel_job tool" message. That's MP-2 back —
   re-check both `tools.ts` (definition) and `handlers.ts` (case branch).
+
+---
+
+### Flow: `resend-invoice`
+
+Re-delivers an existing Stripe hosted invoice link to a customer who hasn't
+paid. Every scenario below is a REFUSAL — this flow is almost entirely guards,
+and the guards are the point. **Comment out `QUO_API_KEY` / `RESEND_API_KEY`
+and restart before running any of this** (see Context, top of file).
+
+**Scenario 1 — Happy path**
+- Job `complete`, `payment_status = "unpaid"`, retail customer, with an invoice
+  created **locally** (Stripe test mode can't retrieve a production invoice)
+- Assert: Resend button visible on the invoice card
+- Send via both channels → success toast with `(test mode — nothing actually sent)`
+- Assert: card meta now shows "Last sent …"
+
+**Scenario 2 — Paid outside Stripe is the one that matters**
+- Same job, then Mark as Paid → Cash on the payment footer
+- Assert: Resend button GONE
+- ❌ FAIL signal: button still visible. `recordPayment` only touches `jobs`, so
+  the Stripe invoice stays `open` forever — this is the case where the shop
+  would text a live payment link to someone who already paid at the counter.
+- Also force `payment_status = "waived"` → assert button gone
+
+**Scenario 3 — Fleet**
+- Job whose customer is `customer_type = "fleet"` and which has an invoices row
+  (create one via Charge Card on File, which writes a fleet invoice row)
+- Assert: Resend button NOT visible; server refuses if called anyway
+
+**Scenario 4 — Customer reassignment (cross-customer disclosure)**
+- On an invoiced job, use the customer editor to reassign it to a different customer
+- Click Resend
+- Assert: error toast about the invoice belonging to a different customer
+- ❌ FAIL signal: it sends. The hosted invoice URL is an unauthenticated bearer
+  link showing the ORIGINAL customer's name, address, and line items.
+
+**Scenario 5 — Throttle**
+- Immediately resend on a job whose `last_sent_at` is within 24h
+- Assert: dialog warns "Last reminded …" and requires a second confirm
+
+**Scenario 6 — Partial failure**
+- Customer with a phone but no email; check both boxes
+- Assert: email checkbox is disabled (no address on file), send proceeds by text
 
 ---
 
