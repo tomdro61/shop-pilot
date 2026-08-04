@@ -54,6 +54,16 @@ This is the **current shape of the system** — what exists, where it lives, and
 - Public page `/receipt/[token]` (`getReceiptByToken`, admin client, **paid-only query gate**, enumerated columns so wholesale `cost` never rides along) renders the same itemized bill stamped PAID. `jobs.receipt_token` (DB-default `gen_random_uuid()`) keys the link; the route is exempted in `middleware.ts`.
 - Fills the gap where Terminal / Quick Pay / manually-paid jobs never triggered the automatic `invoice.paid` receipt.
 
+### Invoice reminders — "Resend Invoice"
+- Re-delivers an existing Stripe invoice's payment link by text and/or email to a customer who hasn't paid. `ResendInvoiceButton` on the job's invoice card; `resendInvoiceForJob({ jobId, email, sms })` in `src/lib/actions/invoices.ts`. Both channels are awaited and report per-channel status, unlike `createInvoiceFromJob`'s fire-and-forget sends.
+- **The action never writes `invoices.status = 'paid'`.** `handleInvoicePaid` owns that transition, and its side effects (`jobs.payment_status`, receipt email, customer SMS, owner notify) can't be replicated from a server action — a pre-emptive write trips the webhook's idempotency guard and none of them run.
+- **`jobs.payment_status` is checked before Stripe.** `recordPayment` and both Terminal paths update `jobs` only, so a cash/check/Terminal/waived settlement leaves the invoice row `sent` and the Stripe invoice `open` forever. No amount of asking Stripe reveals it. Refuses `paid`/`waived`; allows `invoiced`, which means billed and still owed. `createInvoiceFromJob` now carries the same guard — previously "Create & Send" would bill a customer who'd already paid at the counter.
+- Other refusals: fleet accounts (`chargeCardOnFile` writes them invoice rows, so this is reachable), card-on-file auto-charge invoices (`default_payment_method` set — **not** `collection_method`, which is `charge_automatically` for every emailless customer), void/uncollectible/non-payable Stripe states, and a **recipient binding** that compares the Stripe invoice's customer to the job's current one. That last one matters because `customer_id` is editable after invoicing and the hosted URL is an unauthenticated bearer link showing the billed customer's name, address and line items.
+- Balance comes from live `amount_remaining`, not `amount_due` (fixed at finalization) or the local `invoices.amount`. Fails closed on any Stripe error, distinguishing a deleted invoice from a transient outage.
+- `invoices.last_sent_at` backs a 24h soft throttle (warn + second click, not a hard block). Null means **unknown**, not "never sent" — no backfill. Written only by this action.
+- Reminder copy is distinct from first-send copy; a draft that was never delivered gets the original "your invoice is ready" wording. See `isFirstDelivery` in `src/lib/invoices/delivery.ts` for what that predicate can and can't detect.
+- Not yet on the AI tool surface — the chat can still reach the raw hosted URL via `get_invoice_for_job` + `send_sms`, bypassing every guard above. Tracked as follow-up.
+
 ## Messaging
 
 ### Quo SMS

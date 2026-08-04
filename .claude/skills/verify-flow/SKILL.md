@@ -94,7 +94,8 @@ steps for the user.
 
 Public-facing. The customer clicks an emailed/SMS'd approval link.
 
-**Test data prereq:** a sent estimate's `approval_token` from staging.
+**Test data prereq:** a sent estimate's `approval_token`. It comes from the
+same production database everything else does — prefer a shop-owned record.
 If unknown, ask the user to grab one with:
 ```sql
 select approval_token, estimate_number from estimates where status = 'sent' order by sent_at desc limit 1;
@@ -166,7 +167,7 @@ Public-facing. Customer views/approves a DVI report.
 Internal manager flow. Highest-friction surface in the May 2026 session.
 
 **Test data prereq:** any customer with a vehicle. Use a real one from
-the staging DB.
+the production database (there is no separate staging DB).
 
 **Scenario 1 — Create Estimate button actually submits (broken-submit regression)**
 - Navigate: `/customers/<id>` → click "New Estimate" (top action bar)
@@ -389,9 +390,14 @@ and restart before running any of this** (see Context, top of file).
 - Also force `payment_status = "waived"` → assert button gone
 
 **Scenario 3 — Fleet**
-- Job whose customer is `customer_type = "fleet"` and which has an invoices row
-  (create one via Charge Card on File, which writes a fleet invoice row)
+- Job whose customer is `customer_type = "fleet"` **with an UNPAID invoice row**.
+  A successful Charge Card on File pays the invoice, and a paid invoice already
+  hides the button — so that setup passes even with the fleet guard deleted.
+  Force an unpaid fleet invoice row instead (or fail the charge).
 - Assert: Resend button NOT visible; server refuses if called anyway
+- ❌ FAIL signal: button renders. Note `isFleet` was permanently false until
+  `getJob` started selecting `customer_type` — if this regresses, check that
+  select first.
 
 **Scenario 4 — Customer reassignment (cross-customer disclosure)**
 - On an invoiced job, use the customer editor to reassign it to a different customer
@@ -402,11 +408,27 @@ and restart before running any of this** (see Context, top of file).
 
 **Scenario 5 — Throttle**
 - Immediately resend on a job whose `last_sent_at` is within 24h
-- Assert: dialog warns "Last reminded …" and requires a second confirm
+- Assert: dialog warns "Already sent …" and the submit reads "Send anyway"
+- Assert: the FIRST click only arms the confirm — no toast, no send, and the
+  button still reads "Send anyway". The second click sends.
+- ❌ FAIL signal: the warning claims a send is in progress, or the label reverts
+  to "Resend Invoice" after the first click. Both read as "it sent", and a
+  manager will close the dialog believing the customer was contacted.
 
-**Scenario 6 — Partial failure**
-- Customer with a phone but no email; check both boxes
-- Assert: email checkbox is disabled (no address on file), send proceeds by text
+**Scenario 6 — Missing contact method**
+- Customer with a phone but no email
+- Assert: the email checkbox is disabled and unchecked; send proceeds by text
+- Customer with NEITHER phone nor email: assert the Resend button doesn't render
+  at all, rather than opening a dialog with every control disabled
+
+**Scenario 7 — Partial failure**
+- Genuinely exercise the partial path: both channels selected, one failing.
+  (Scenario 6 does NOT reach it — an unchecked channel is never attempted.)
+  Easiest is a valid phone plus an address the provider rejects, or stub one channel.
+- Assert: warning toast names what sent AND what failed, the succeeded channel is
+  unchecked, and the dialog stays open for the retry
+- Assert: in test mode the "(test mode — nothing actually sent)" suffix appears on
+  the PARTIAL toast too, not only on full success
 
 ---
 
@@ -432,7 +454,7 @@ End with:
   the URL, mark SKIP.
 - Don't run Quick Pay scenarios with live Stripe keys. If `.env.local` has
   `pk_live_*`, mark all `quick-pay` scenarios SKIP.
-- Don't auto-create real reservations or estimates that go to staging
+- Don't auto-create real reservations or estimates — they land in production
   unless the user explicitly asks. Reuse existing test rows.
 - Don't substitute this for `/scoped-review`. They cover different gaps:
   review reads the diff; this clicks the UI.

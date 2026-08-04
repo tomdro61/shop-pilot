@@ -4147,3 +4147,55 @@ Owner report: a customer paid in person and asked to be texted/emailed "the bill
 - 3-agent scoped review; one Critical (middleware `/login` redirect) fixed before push.
 - **Post-deploy hotfix (same session):** the public page shipped broken — `shop_settings` RLS only allows *authenticated* SELECT, so the anon `getShopSettings()` returned null and the page rendered "trouble loading this receipt" for every logged-out customer (emailed receipts were fine — they render in the authenticated staff request). Fix: `getReceiptShopSettings()` reads `shop_settings` via the admin client (service role) on the public path; settings stay server-side (only computed totals reach the browser). Also guarded non-UUID tokens (were 500ing on the Postgres uuid cast) to return the friendly not-found page. Caught by `/post-deploy-check` curling prod, not by static review.
 - **Pre-existing bug spotted (not fixed):** `/estimates/approve/[token]` has the same anon-can't-read-`shop_settings` issue but *silently* falls back to `DEFAULT_SETTINGS` in `calculateTotals` — so public estimate totals may omit shop supplies/hazmat/tax. Separate follow-up.
+
+---
+
+## Session 70 — 2026-08-04 — Resend Invoice, and the four routes to one hazard
+
+**Shipped:** a Resend button on the job's invoice card that re-delivers an existing Stripe payment link by text and/or email to a customer who hasn't paid.
+
+### The hazard that shaped the whole design
+
+`recordPayment` and both Terminal paths update **`jobs` only**. They never touch the `invoices` row and never void the Stripe invoice. So after a cash payment the local row stays `sent` and the Stripe invoice stays `open` — forever. A "re-send the payment link" feature that trusts either signal will text a live payment link to someone who already paid at the counter, and they can pay twice.
+
+`jobs.payment_status` is the only signal that sees those payments, so it is checked **before** Stripe on every path. Refuses `paid`/`waived`; allows `invoiced`, which means billed and still owed.
+
+The first plan missed this entirely. A pre-implementation `/harden-plan` review (96 agents) caught it along with a second Critical: the original design wrote `invoices.status = 'paid'` when it found Stripe already paid, which would have tripped `handleInvoicePaid`'s idempotency guard and silently killed the job's paid flip, the receipt email, the customer SMS, and the owner notification on genuinely collected payments. Both were designed out before any code was written.
+
+### Then the code review found the same shape again
+
+An 8-agent `/scoped-review` found that the hazard was fenced off on **one of four routes**:
+- `createInvoiceFromJob` had no `payment_status` and no fleet guard at all — the "Create & Send" card *two lines above* the new button would bill and text a customer who'd already paid. **Fixed.**
+- `getInvoiceForJob` used `.maybeSingle()` + `catch { return null }`, so duplicate invoice rows hid the Resend button and showed "Create" instead, feeding straight back into the above. **Fixed** (ordered + limited, error surfaced).
+- The AI chat can still reach the raw hosted URL via `get_invoice_for_job` + `send_sms`, bypassing every guard. **Outstanding** — see below.
+
+It also found `isFleet` had **never once been true**: `getJob` didn't select `customer_type`, and the job page cast it in, fabricating a field PostgREST never returned. Same cast fabricated `address`, so that row always rendered "—". Both fixed at the source by widening the select and deleting the cast.
+
+### Mutation testing changed what "tested" means here
+
+An agent ran 69 targeted mutants against the new code. 39 survived. Highlights, all now closed:
+- Deleting `.eq("id", invoice.id)` from **either** UPDATE left every test green. On the webhook that mutant is `UPDATE invoices SET status='paid' WHERE status <> 'paid'` — every unpaid invoice in the database marked paid, each firing the full side-effect cascade.
+- The Stripe `paid` and `void`/`uncollectible` guards **mutually masked**: deleting either alone kept the suite green, because execution fell through to a catch-all refusal. This is the same defect that had already been caught and fixed once in the `payment_status` tests — it simply existed in three more places.
+- Making `escapeHtml` the identity function passed all 405 tests.
+- Deleting `Pay here: ${link}` from both SMS templates passed all 405 tests. The link is the feature.
+
+Every guard's test now asserts the **specific** refusal, not merely that something was refused. Verified by re-running the mutants.
+
+### Also fixed
+
+- **HTML escaping across all email templates.** It had been applied to `invoiceReadyEmail` only. `parkingPaymentReceiptEmail` interpolates `parking_reservations.lot` — a public-form field with no length or character validation — and is fired by the Stripe webhook with no human in the loop. New `templates.test.ts` covers it.
+- **Webhook atomic flip** `.eq("status", invoice.status)` → `.neq("status", "paid")`. The old predicate was safe only while the webhook was the sole writer of that row; this feature adds a second. Same idempotency guarantee, no single-writer assumption. Shipped as its own commit with its own tests.
+- **Migration history reconciled.** `supabase db push` had been failing outright since 2026-07-31 — remote history held version `20260731185436` with no local file, and the CLI refuses to push anything in that state. Verified the two unstamped migrations' objects actually exist in the remote DB (`idx_jobs_stripe_payment_intent_id` has 309 index scans) before `migration repair --status applied`, rather than re-running them — `db push --include-all` would have re-executed `CREATE OR REPLACE FUNCTION record_quick_pay_job` and silently overwritten any dashboard hotfix. This closes the drift Session 69 flagged as "reconcile at some point."
+- **`verify-flow` SKILL.md was lying.** It claimed `.env.local` points at staging and that Quo/Resend are unwired in dev. Both false: one shared Postgres, and both messaging keys are live. Anyone following it to "safely" test a send would have texted a real customer.
+- **Pre-existing VIN test flake fixed.** `treats a cache row just under TTL as FRESH` used a 1ms margin against wall-clock `Date.now()`, so any elapsed execution time aged the row past TTL. Intermittent for a while; now deterministic via a frozen `Date`.
+
+### Outstanding
+
+- **AI tool surface** — a `resend_invoice` tool wired to the guarded action, plus a system-prompt rule against pasting `stripe_hosted_invoice_url` into `send_sms`/`send_email`. Right now the product's headline interface bypasses every guard this session added. Highest-value follow-up.
+- **Parking invoice parity** — `ParkingInvoiceSection`'s "Send Another" creates a *brand-new* Stripe invoice with a second live payment link, with no paid guard and no throttle. A customer can end up holding two payable links.
+- **`/reports/receivables`** — the screen built for chasing non-payers shows no "Last reminded" column.
+- **`ActionResult<T>` conformance** — `resendInvoiceForJob` returns a bespoke union. `SendJobReceiptResult` has the same shape and the same caller-side workaround; worth landing once for both.
+- **Not yet run against a running system.** `/verify-flow resend-invoice` is written but unexecuted — it requires commenting the live messaging keys out of `.env.local` first.
+
+### Files
+`src/lib/actions/invoices.ts`, `src/lib/actions/jobs.ts`, `src/lib/invoices/delivery.ts` (new), `src/components/dashboard/resend-invoice-button.tsx` (new), `src/components/dashboard/invoice-section.tsx`, `src/app/(dashboard)/jobs/[id]/page.tsx`, `src/app/api/stripe/webhooks/route.ts`, `src/lib/messaging/templates.ts`, `src/lib/resend/templates.ts`, `supabase/migrations/20260804000000_invoices_last_sent_at.sql`, `supabase/migrations/20260731185436_applied_out_of_band.sql`, `.claude/skills/verify-flow/SKILL.md`, `ARCHITECTURE.md`, `DATABASE_SCHEMA.md`. Tests: `resend-invoice.test.ts`, `route.test.ts`, `templates.test.ts`, `delivery.test.ts` (all new), `vin/decode.test.ts`.
