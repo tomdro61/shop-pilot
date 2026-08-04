@@ -115,11 +115,19 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   // would re-fire the receipt email, customer SMS, and internal-notify SMS.
   if (invoice.status === "paid") return;
 
-  // Atomic flip — `.eq("status", invoice.status)` makes the update conditional
-  // on the row still being in the pre-paid state we read. Two concurrent
-  // deliveries that both pass the guard above will both reach this point;
-  // only the first transitions the row, and the second updates zero rows
-  // (we bail out below).
+  // Atomic flip — `.neq("status", "paid")` makes the update conditional on the
+  // row not having been flipped to paid already. Two concurrent deliveries that
+  // both pass the guard above will both reach this point; only the first
+  // transitions the row, and the second updates zero rows (we bail out below).
+  //
+  // Deliberately NOT `.eq("status", invoice.status)`. Pinning the predicate to the
+  // exact status we read assumes this handler is the only writer of the row, so any
+  // other concurrent write — a draft→sent flip, say — makes this update match zero
+  // rows and silently skip everything below: the jobs.payment_status flip, the
+  // receipt email, the customer SMS, and the owner notification. Stripe has already
+  // received its 2xx by then, so it never retries and the payment is lost from the
+  // app's point of view. Matching on "not already paid" gives the same idempotency
+  // guarantee without depending on there being no other writer.
   const { data: updated, error: updateErr } = await supabase
     .from("invoices")
     .update({
@@ -128,7 +136,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       payment_method: "stripe",
     })
     .eq("id", invoice.id)
-    .eq("status", invoice.status)
+    .neq("status", "paid")
     .select("id")
     .maybeSingle();
 
