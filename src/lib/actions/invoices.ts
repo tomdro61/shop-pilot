@@ -1,12 +1,18 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
+import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { createStripeInvoice, createParkingStripeInvoice } from "@/lib/stripe/create-invoice";
 import { getShopSettings } from "@/lib/actions/settings";
 import { revalidatePath } from "next/cache";
-import { getParkingLine, getPhoneNumber } from "@/lib/quo/routing";
+import { getParkingLine } from "@/lib/quo/routing";
+import { sendCustomerSMS } from "@/lib/actions/messages";
+import { sendCustomerEmail } from "@/lib/actions/email";
+import { invoiceReminderSMS, invoiceSentSMS } from "@/lib/messaging/templates";
+import { invoiceReadyEmail } from "@/lib/resend/templates";
 
 export async function getOrCreateStripeCustomer(customerId: string) {
   const supabase = await createClient();
@@ -263,6 +269,352 @@ export async function createInvoiceFromJob(
     const message = err instanceof Error ? err.message : "Failed to create Stripe invoice";
     return { error: message };
   }
+}
+
+type ChannelResult = { sent: true; testMode?: boolean } | { sent: false; error: string };
+
+export type ResendInvoiceResult =
+  | { ok: false; error: string }
+  | { ok: true; email?: ChannelResult; sms?: ChannelResult; stampWarning?: string };
+
+interface ResendInvoiceParams {
+  jobId: string;
+  email: boolean;
+  sms: boolean;
+}
+
+// Re-delivers an existing Stripe invoice's payment link to a customer who hasn't
+// paid. Almost all of this function is refusals, and that is the point: the cost
+// of a reminder that doesn't send is a second click, while the cost of one that
+// shouldn't have sent is texting a live payment link to someone who already paid.
+//
+// Two invariants this must never break:
+//   1. It never writes invoices.status = 'paid'. handleInvoicePaid owns that
+//      transition and carries side effects (jobs.payment_status, receipt email,
+//      customer SMS, owner notify) that a server action cannot replicate. Writing
+//      it here trips the webhook's idempotency guard and those never run.
+//   2. jobs.payment_status is checked BEFORE Stripe. Cash, check, Terminal, and
+//      waived settlements update `jobs` only — they leave the local invoice row
+//      at 'sent' and the Stripe invoice 'open' forever, so no amount of asking
+//      Stripe will reveal them.
+export async function resendInvoiceForJob({
+  jobId,
+  email,
+  sms,
+}: ResendInvoiceParams): Promise<ResendInvoiceResult> {
+  const auth = await requireManager();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  if (!email && !sms) {
+    return { ok: false, error: "Select at least one way to send the reminder" };
+  }
+
+  const supabase = await createClient();
+
+  const { data: job, error: jobError } = await supabase
+    .from("jobs")
+    .select(
+      "id, title, payment_status, customers(id, first_name, email, phone, stripe_customer_id, customer_type), vehicles(year, make, model)"
+    )
+    .eq("id", jobId)
+    .single();
+
+  if (jobError || !job) return { ok: false, error: "Job not found" };
+
+  // See invariant 2 above. Deliberately NOT `!== "unpaid"` — 'invoiced' means
+  // "billed, still owes", which is exactly who this feature exists to chase.
+  if (job.payment_status === "paid") {
+    return { ok: false, error: "This job is already marked paid — no reminder sent." };
+  }
+  if (job.payment_status === "waived") {
+    return { ok: false, error: "Payment on this job was waived — no reminder sent." };
+  }
+
+  const customer = job.customers as {
+    id: string;
+    first_name: string;
+    email: string | null;
+    phone: string | null;
+    stripe_customer_id: string | null;
+    customer_type: string | null;
+  } | null;
+
+  if (!customer) return { ok: false, error: "This job has no customer on file." };
+
+  // Fleet accounts are billed off-platform, but chargeCardOnFile still writes
+  // them an invoices row — so reaching this point with a fleet customer is
+  // possible and must not produce a consumer-style "pay here" text.
+  if (customer.customer_type === "fleet") {
+    return { ok: false, error: "Fleet accounts are billed off-platform — no reminder sent." };
+  }
+
+  // job_id is indexed but NOT unique, so this can legitimately return more than
+  // one row; .maybeSingle() would throw. Newest wins.
+  const { data: invoiceRows, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id, status, stripe_invoice_id, stripe_hosted_invoice_url, last_sent_at")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(2);
+
+  if (invoiceError) {
+    Sentry.captureException(invoiceError, {
+      tags: { source: "resend-invoice", path: "invoice-lookup" },
+      extra: { jobId },
+    });
+    return { ok: false, error: "Couldn't load this job's invoice. Try again in a moment." };
+  }
+
+  const invoice = invoiceRows?.[0];
+  if (!invoice) return { ok: false, error: "This job has no invoice to resend." };
+
+  if (invoiceRows.length > 1) {
+    Sentry.captureMessage("resend_invoice_duplicate_rows", {
+      level: "warning",
+      tags: { source: "resend-invoice" },
+      extra: { jobId, usingInvoiceId: invoice.id },
+    });
+  }
+
+  // Both columns can be the empty string, not just null: createStripeInvoice
+  // returns `|| ""` while chargeCardOnFile writes `|| null`. Truthiness, never
+  // a null check.
+  if (!invoice.stripe_invoice_id) {
+    return {
+      ok: false,
+      error: "This invoice isn't linked to Stripe — create a new invoice for this job.",
+    };
+  }
+
+  const stripe = getStripe();
+  let stripeInvoice: Stripe.Invoice;
+  try {
+    stripeInvoice = await stripe.invoices.retrieve(invoice.stripe_invoice_id);
+  } catch (err) {
+    // Fail closed. Without confirming the balance we might nag someone who has
+    // already paid, which is worse than a reminder that didn't go out. The two
+    // branches are split because "this invoice is gone" needs a human while
+    // "Stripe blipped" just needs another click.
+    const missing =
+      err instanceof Stripe.errors.StripeInvalidRequestError && err.code === "resource_missing";
+    Sentry.captureException(err, {
+      level: missing ? "warning" : "error",
+      tags: { source: "resend-invoice", path: "stripe-retrieve" },
+      extra: { jobId, stripeInvoiceId: invoice.stripe_invoice_id },
+    });
+    return {
+      ok: false,
+      error: missing
+        ? "This invoice no longer exists in Stripe — create a new invoice for this job."
+        : "Couldn't reach Stripe to confirm the balance. Nothing was sent — try again in a moment.",
+    };
+  }
+
+  if (stripeInvoice.status === "paid") {
+    // Writes nothing — see invariant 1. Only flag it when the payment is old
+    // enough that normal webhook delivery lag can't explain the local row still
+    // being unpaid; a fresh payment here is just latency, not an incident.
+    const paidAtSeconds = stripeInvoice.status_transitions?.paid_at;
+    if (paidAtSeconds && Date.now() / 1000 - paidAtSeconds > 600) {
+      Sentry.captureMessage("resend_invoice_webhook_lag", {
+        level: "warning",
+        tags: { source: "resend-invoice" },
+        extra: { jobId, stripeInvoiceId: invoice.stripe_invoice_id, paidAtSeconds },
+      });
+    }
+    return {
+      ok: false,
+      error:
+        "Stripe shows this invoice as already paid — refresh in a moment. If it still shows unpaid, record the payment on the job.",
+    };
+  }
+
+  if (stripeInvoice.status === "void" || stripeInvoice.status === "uncollectible") {
+    return {
+      ok: false,
+      error: `This invoice was marked ${stripeInvoice.status} in Stripe — create a new invoice for this job.`,
+    };
+  }
+
+  // status is nullable in the SDK type; anything that isn't a payable state
+  // falls through to here rather than being assumed sendable.
+  if (stripeInvoice.status !== "open" && stripeInvoice.status !== "draft") {
+    return { ok: false, error: "This invoice isn't in a payable state in Stripe." };
+  }
+
+  // Bind recipient to invoice. A job's customer_id is editable after invoicing
+  // (EDITABLE_KEYS, with no invoice lock) and the hosted URL is an unauthenticated
+  // bearer link showing the billed customer's name, address, and line items — so
+  // sending it to whoever the job points at *now* can disclose someone else's data.
+  const invoiceCustomerId =
+    typeof stripeInvoice.customer === "string"
+      ? stripeInvoice.customer
+      : stripeInvoice.customer?.id ?? null;
+
+  if (!invoiceCustomerId || !customer.stripe_customer_id) {
+    // Not necessarily a mismatch: createInvoiceFromJob treats a failed write of
+    // stripe_customer_id as non-fatal, so a valid invoice can sit against a
+    // customer row with a null id. Don't tell the shop to void a good invoice.
+    Sentry.captureMessage("resend_invoice_customer_unverifiable", {
+      level: "warning",
+      tags: { source: "resend-invoice" },
+      extra: { jobId, invoiceCustomerId, localStripeCustomerId: customer.stripe_customer_id },
+    });
+    return {
+      ok: false,
+      error:
+        "Couldn't confirm this invoice belongs to the customer on file. Open it in Stripe and send from there.",
+    };
+  }
+
+  if (invoiceCustomerId !== customer.stripe_customer_id) {
+    Sentry.captureMessage("resend_invoice_customer_mismatch", {
+      level: "error",
+      tags: { source: "resend-invoice" },
+      extra: { jobId, invoiceCustomerId, localStripeCustomerId: customer.stripe_customer_id },
+    });
+    return {
+      ok: false,
+      error:
+        "This invoice was issued to a different customer — void it in Stripe and create a new invoice for this job.",
+    };
+  }
+
+  // An invoice set to auto-charge a saved card isn't something to send a payment
+  // link for. Deliberately not gated on collection_method, which is
+  // charge_automatically for every emailless customer — the core audience here.
+  if (stripeInvoice.default_payment_method) {
+    return {
+      ok: false,
+      error:
+        "This invoice auto-charges a card on file — retry the charge or collect on the Terminal instead of sending a payment link.",
+    };
+  }
+
+  // Prefer the live URL: it also recovers the case where the stored column was
+  // written as an empty string.
+  const hostedUrl = stripeInvoice.hosted_invoice_url || invoice.stripe_hosted_invoice_url;
+  if (!hostedUrl) {
+    return { ok: false, error: "This invoice has no payment link — open it in Stripe." };
+  }
+
+  // amount_remaining, not amount_due: amount_due is fixed at finalization and
+  // does not shrink after a partial payment or an account credit.
+  const balance =
+    stripeInvoice.amount_remaining != null ? stripeInvoice.amount_remaining / 100 : null;
+
+  // A draft that was never delivered gets first-send copy, not a reminder — the
+  // AI path creates invoices with no channels selected, so its first "resend" is
+  // genuinely the customer's first contact about this bill.
+  const neverSent = invoice.status === "draft" && !invoice.last_sent_at;
+
+  const vehicle = job.vehicles as {
+    year: number | null;
+    make: string | null;
+    model: string | null;
+  } | null;
+
+  const result: { email?: ChannelResult; sms?: ChannelResult } = {};
+
+  // Each channel is isolated so a Resend outage can't stop the text going out,
+  // and awaited so the caller learns what actually happened — unlike the
+  // fire-and-forget sends in createInvoiceFromJob, which can't report anything.
+  if (sms) {
+    try {
+      const body = neverSent
+        ? invoiceSentSMS({
+            firstName: customer.first_name,
+            year: vehicle?.year,
+            make: vehicle?.make,
+            model: vehicle?.model,
+            link: hostedUrl,
+          })
+        : invoiceReminderSMS({
+            firstName: customer.first_name,
+            year: vehicle?.year,
+            make: vehicle?.make,
+            model: vehicle?.model,
+            amount: balance,
+            link: hostedUrl,
+          });
+      const r = await sendCustomerSMS({ customerId: customer.id, body, jobId, line: "shop" });
+      result.sms =
+        "data" in r ? { sent: true, testMode: r.data?.testMode } : { sent: false, error: r.error };
+    } catch (e) {
+      result.sms = {
+        sent: false,
+        error: e instanceof Error ? e.message : "Couldn't send the text",
+      };
+    }
+  }
+
+  if (email) {
+    try {
+      const vehicleDesc =
+        [vehicle?.year, vehicle?.make, vehicle?.model].filter(Boolean).join(" ") || "Vehicle";
+      const { subject, html } = invoiceReadyEmail({
+        customerName: customer.first_name,
+        vehicleDesc,
+        jobTitle: job.title,
+        paymentUrl: hostedUrl,
+        amount: balance ?? 0,
+        reminder: !neverSent,
+      });
+      const r = await sendCustomerEmail({ customerId: customer.id, subject, html, jobId });
+      result.email = r.sent
+        ? { sent: true, testMode: r.testMode }
+        : { sent: false, error: r.error ?? "Couldn't send the email" };
+    } catch (e) {
+      result.email = {
+        sent: false,
+        error: e instanceof Error ? e.message : "Couldn't send the email",
+      };
+    }
+  }
+
+  const anySent = result.sms?.sent === true || result.email?.sent === true;
+  if (!anySent) return { ok: true, ...result };
+
+  // Bookkeeping runs as two independent statements, and neither can fail the
+  // call. The message is already gone; reporting failure here would invite a
+  // retry that texts the customer twice — the exact outcome this feature exists
+  // to prevent. Surfaced as a warning alongside sent: true instead.
+  let stampWarning: string | undefined;
+
+  const { error: stampError } = await supabase
+    .from("invoices")
+    .update({ last_sent_at: new Date().toISOString() })
+    .eq("id", invoice.id)
+    .neq("status", "paid"); // never fight handleInvoicePaid
+
+  if (stampError) {
+    Sentry.captureException(stampError, {
+      tags: { source: "resend-invoice", path: "last-sent-stamp" },
+      extra: { jobId, invoiceId: invoice.id },
+    });
+    stampWarning = "Sent, but couldn't record the send time.";
+  }
+
+  if (invoice.status === "draft") {
+    const { error: statusError } = await supabase
+      .from("invoices")
+      .update({ status: "sent" })
+      .eq("id", invoice.id)
+      .eq("status", "draft");
+
+    if (statusError) {
+      Sentry.captureException(statusError, {
+        tags: { source: "resend-invoice", path: "draft-to-sent" },
+        extra: { jobId, invoiceId: invoice.id },
+      });
+      stampWarning = "Sent, but couldn't update the invoice status.";
+    }
+  }
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/invoices");
+
+  return { ok: true, ...result, stampWarning };
 }
 
 export async function getInvoices(status?: string, search?: string, source?: string) {
