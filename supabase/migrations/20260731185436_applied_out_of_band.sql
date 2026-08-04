@@ -1,0 +1,21 @@
+-- Placeholder for a migration applied directly to the remote database on
+-- 2026-07-31 18:54:36 UTC, with no corresponding file in this repo.
+--
+-- Why this file exists: `supabase db push` refuses to run at all when the remote
+-- migration history contains a version with no local file ("Remote migration
+-- versions not found in local migrations directory"). That had silently broken
+-- every migration push until 2026-08-04. This file restores the invariant
+-- without rewriting history — `migration repair --status reverted` would have
+-- deleted the only surviving record that this ran.
+--
+-- What it was: almost certainly the APB parking partial unique index, which
+-- 20260730000000_parking_apb_confirmation_unique.sql declares. That index was
+-- verified present in the remote database, its local file was never stamped, and
+-- the timestamps line up (file dated 07-30, applied 07-31). It matches the
+-- documented pattern in 20260727170427_jobs_receipt_token.sql: apply via the
+-- Supabase MCP, which stamps its own version, then write the local file after.
+--
+-- Deliberately empty. The version is already in the remote history table, so
+-- push skips it; this body would only ever run against a fresh database, where
+-- 20260730000000 already creates the index idempotently. Do not add statements
+-- here — put them in a new, properly dated migration instead.
