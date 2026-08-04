@@ -373,6 +373,7 @@ export default async function JobDetailPage({
               invoice={invoice}
               customerEmail={customer?.email || null}
               customerPhone={customer?.phone || null}
+              paymentStatus={(job.payment_status || "unpaid") as PaymentStatus}
               isFleet={customer?.customer_type === "fleet"}
               hasCardOnFile={!!savedCard}
             />

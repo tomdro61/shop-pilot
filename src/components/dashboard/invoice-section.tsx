@@ -16,10 +16,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createInvoiceFromJob } from "@/lib/actions/invoices";
+import { ResendInvoiceButton } from "@/components/dashboard/resend-invoice-button";
 import { INVOICE_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { FileText, ExternalLink } from "lucide-react";
-import type { Invoice, InvoiceStatus, JobStatus } from "@/types";
+import type { Invoice, InvoiceStatus, JobStatus, PaymentStatus } from "@/types";
 
 interface InvoiceSectionProps {
   jobId: string;
@@ -27,6 +28,12 @@ interface InvoiceSectionProps {
   invoice: Invoice | null;
   customerEmail: string | null;
   customerPhone: string | null;
+  /**
+   * The job's payment state, which is the only signal that sees money collected
+   * outside Stripe — cash, check, Terminal and waived all update `jobs` and
+   * never touch the invoice row.
+   */
+  paymentStatus: PaymentStatus;
   isFleet?: boolean;
   hasCardOnFile?: boolean;
 }
@@ -43,6 +50,7 @@ export function InvoiceSection({
   invoice,
   customerEmail,
   customerPhone,
+  paymentStatus,
   isFleet = false,
   hasCardOnFile = false,
 }: InvoiceSectionProps) {
@@ -192,7 +200,17 @@ export function InvoiceSection({
   }
 
   const status = invoice.status as InvoiceStatus;
-  const accent = STATUS_ACCENT[status];
+  // `?? "stone"` so an invoice status this map doesn't know about degrades to a
+  // neutral card instead of rendering `undefined` class names.
+  const accent = STATUS_ACCENT[status] ?? "stone";
+
+  // Every condition here is also enforced server-side; this only keeps the shop
+  // from clicking something that will refuse. Settled-outside-Stripe is the case
+  // that matters: `invoice.status` alone cannot see a cash or Terminal payment.
+  const settled = paymentStatus === "paid" || paymentStatus === "waived";
+  const canResend =
+    !!invoice.stripe_hosted_invoice_url && status !== "paid" && !settled && !isFleet;
+  const neverSent = status === "draft" && !invoice.last_sent_at;
 
   return (
     <MiniStatusCard
@@ -204,7 +222,7 @@ export function InvoiceSection({
           <span
             className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${ACCENT_PILL[accent]}`}
           >
-            {INVOICE_STATUS_LABELS[status]}
+            {INVOICE_STATUS_LABELS[status] ?? status}
           </span>
           {invoice.amount != null && (
             <span className="font-mono tabular-nums text-sm text-stone-900 dark:text-stone-50 ml-1">
@@ -214,21 +232,41 @@ export function InvoiceSection({
         </>
       }
       meta={
-        invoice.paid_at ? <span>Paid {formatDate(invoice.paid_at)}</span> : null
+        invoice.paid_at ? (
+          <span>Paid {formatDate(invoice.paid_at)}</span>
+        ) : invoice.last_sent_at ? (
+          // Null is "unknown" — invoices predating this column were never
+          // backfilled, and plenty of them really were sent. Render nothing
+          // rather than implying they weren't.
+          <span>Last sent {formatDate(invoice.last_sent_at)}</span>
+        ) : null
       }
       actions={
-        invoice.stripe_hosted_invoice_url ? (
-          <a
-            href={invoice.stripe_hosted_invoice_url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="outline" size="sm">
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-              View
-            </Button>
-          </a>
-        ) : null
+        <div className="flex items-center gap-2">
+          {/* Kept visible in every state — it's the only in-app route to the
+              invoice in Stripe, which is the audit trail. */}
+          {invoice.stripe_hosted_invoice_url ? (
+            <a
+              href={invoice.stripe_hosted_invoice_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm">
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                View
+              </Button>
+            </a>
+          ) : null}
+          {canResend ? (
+            <ResendInvoiceButton
+              jobId={jobId}
+              customerEmail={customerEmail}
+              customerPhone={customerPhone}
+              lastSentAt={invoice.last_sent_at}
+              neverSent={neverSent}
+            />
+          ) : null}
+        </div>
       }
     />
   );
