@@ -238,6 +238,15 @@ describe("decodeVin", () => {
   });
 
   it("treats a cache row just under TTL as FRESH (no NHTSA call)", async () => {
+    // Date is frozen for this case. The margin is one millisecond, but
+    // `decoded_at` is stamped here while the TTL comparison runs after the mock
+    // setup and an await — so any elapsed wall-clock time (routine under full-
+    // suite load) aged the row past TTL and the test failed intermittently.
+    // Only Date is faked; timers stay real so the await still resolves.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const now = new Date("2026-08-04T12:00:00Z");
+    vi.setSystemTime(now);
+
     const justUnderTtlMs = 30 * 24 * 60 * 60 * 1000 - 1;
     const freshRow = {
       vin: VALID_VIN,
@@ -245,7 +254,7 @@ describe("decodeVin", () => {
       make: "HONDA",
       model: "Accord",
       trim: "EX V6",
-      decoded_at: new Date(Date.now() - justUnderTtlMs).toISOString(),
+      decoded_at: new Date(now.getTime() - justUnderTtlMs).toISOString(),
     };
     const mock = createSupabaseMock({ data: freshRow, error: null });
     vi.mocked(createAdminClient).mockReturnValue(
@@ -255,6 +264,7 @@ describe("decodeVin", () => {
 
     await decodeVin(VALID_VIN);
     expect(fetchSpy).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it("returns the parsed decode even when the cache upsert fails (best-effort write)", async () => {
