@@ -12,9 +12,15 @@ function formatMoneyDollars(dollars: number): string {
 }
 
 // Customer-supplied values reach these templates from public, unauthenticated
-// endpoints (the parking and quote-request forms both write customers.first_name),
-// so anything interpolated into markup has to be escaped or a crafted name can
-// inject arbitrary HTML into an email sent under the shop's name.
+// endpoints — the parking and quote-request forms both write
+// customers.first_name, and parking_reservations.lot has no length or character
+// validation at all — so anything interpolated into markup has to be escaped or
+// a crafted value injects arbitrary HTML into an email sent under the shop's
+// name. The parking receipt is the sharpest case: it is fired by the Stripe
+// webhook with no human in the loop.
+//
+// Applied to every interpolated free-text field in this file. The one deliberate
+// exception is genericEmail's `htmlBody`, whose callers pass markup on purpose.
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -73,7 +79,7 @@ function lineItemsTable(lineItems: LineItem[], totals: TotalsBreakdown): string 
       (li) => `
     <tr>
       <td style="padding:8px 0;border-bottom:1px solid #f5f5f4;color:#44403c;font-size:14px;">
-        ${li.description}
+        ${escapeHtml(li.description)}
         <span style="color:#a8a29e;font-size:12px;">(${li.type})</span>
       </td>
       <td style="padding:8px 0;border-bottom:1px solid #f5f5f4;color:#44403c;font-size:14px;text-align:center;">${li.quantity}</td>
@@ -153,7 +159,7 @@ export function estimateReadyEmail({
 }): { subject: string; html: string } {
   const content = `
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
-      Hi ${customerName},
+      Hi ${escapeHtml(customerName)},
     </p>
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
       Your estimate from Broadway Motors is ready for review.
@@ -162,11 +168,11 @@ export function estimateReadyEmail({
       <tr>
         <td>
           <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Vehicle</p>
-          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${vehicleDesc}</p>
+          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(vehicleDesc)}</p>
           ${
             jobTitle
               ? `<p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Service</p>
-          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${jobTitle}</p>`
+          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(jobTitle)}</p>`
               : ""
           }
         </td>
@@ -220,7 +226,7 @@ export function paymentReceiptEmail({
 
   const content = `
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
-      Hi ${customerName},
+      Hi ${escapeHtml(customerName)},
     </p>
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
       Thank you for your payment. Here's your receipt.
@@ -238,11 +244,11 @@ export function paymentReceiptEmail({
       <tr>
         <td>
           <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Vehicle</p>
-          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${vehicleDesc}</p>
+          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(vehicleDesc)}</p>
           ${
             jobTitle
               ? `<p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Service</p>
-          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${jobTitle}</p>`
+          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(jobTitle)}</p>`
               : ""
           }
         </td>
@@ -338,7 +344,7 @@ export function parkingPaymentReceiptEmail({
     .map(
       (li) => `
     <tr>
-      <td style="padding:8px 0;border-bottom:1px solid #f5f5f4;color:#44403c;font-size:14px;">${li.description}</td>
+      <td style="padding:8px 0;border-bottom:1px solid #f5f5f4;color:#44403c;font-size:14px;">${escapeHtml(li.description)}</td>
       <td style="padding:8px 0;border-bottom:1px solid #f5f5f4;color:#1c1917;font-size:14px;text-align:right;font-weight:500;">${formatMoneyDollars(li.amount)}</td>
     </tr>`
     )
@@ -346,7 +352,7 @@ export function parkingPaymentReceiptEmail({
 
   const content = `
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
-      Hi ${customerName},
+      Hi ${escapeHtml(customerName)},
     </p>
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
       Thank you for your payment. Here's your receipt.
@@ -364,7 +370,7 @@ export function parkingPaymentReceiptEmail({
       <tr>
         <td>
           <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Location</p>
-          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${lot}</p>
+          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(lot)}</p>
         </td>
       </tr>
     </table>
@@ -399,10 +405,10 @@ export function dviReportEmail({
 }): { subject: string; html: string } {
   const content = `
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
-      Hi ${customerName},
+      Hi ${escapeHtml(customerName)},
     </p>
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
-      Your vehicle inspection report${vehicleDesc ? ` for your <strong>${vehicleDesc}</strong>` : ""} is ready for review.
+      Your vehicle inspection report${vehicleDesc ? ` for your <strong>${escapeHtml(vehicleDesc)}</strong>` : ""} is ready for review.
     </p>
     <p style="margin:0 0 24px;color:#44403c;font-size:15px;line-height:1.6;">
       The report includes a color-coded overview of your vehicle's condition with photos from our technician.
@@ -435,7 +441,7 @@ export function genericEmail({
 
   const content = `
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
-      Hi ${customerName},
+      Hi ${escapeHtml(customerName)},
     </p>
     <p style="margin:0;color:#44403c;font-size:15px;line-height:1.6;">
       ${htmlBody}
