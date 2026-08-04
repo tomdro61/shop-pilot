@@ -711,6 +711,7 @@ export type Database = {
           created_at: string
           id: string
           job_id: string | null
+          last_sent_at: string | null
           paid_at: string | null
           parking_reservation_id: string | null
           payment_method: string | null
@@ -724,6 +725,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id?: string | null
+          last_sent_at?: string | null
           paid_at?: string | null
           parking_reservation_id?: string | null
           payment_method?: string | null
@@ -737,6 +739,7 @@ export type Database = {
           created_at?: string
           id?: string
           job_id?: string | null
+          last_sent_at?: string | null
           paid_at?: string | null
           parking_reservation_id?: string | null
           payment_method?: string | null

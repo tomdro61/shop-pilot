@@ -57,9 +57,14 @@ When a migration ships, update three things: the migration file, `src/types/supa
 - **`charge_sales_tax`** — boolean, NOT NULL default true (Session 58). Inherited from the job at creation (`createEstimateFromJob`); standalone estimates default true. The approval page + estimate email honor it so the customer-facing total matches the invoice.
 
 ## `invoices`
-`id, job_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at`
+`id, job_id, parking_reservation_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, last_sent_at, payment_method`
 
-- **`status`** — `draft | sent | paid`
+- **`status`** — `draft | sent | paid`. **`handleInvoicePaid` (the Stripe webhook) is the only writer of `'paid'`** — that transition also flips `jobs.payment_status`, emails the receipt, texts the customer, and notifies the owner, so a server action that pre-empts it silently disarms the webhook's idempotency guard and those side effects never run.
+- **`job_id` / `parking_reservation_id`** — exactly one is set (CHECK constraint). `job_id` is indexed but **not unique**, so a query for "the invoice for this job" can return more than one row.
+- **`stripe_invoice_id` / `stripe_hosted_invoice_url`** — nullable, and can also be the **empty string**: `createStripeInvoice` returns `|| ""` while `chargeCardOnFile` writes `|| null`. Check truthiness, never `!= null`.
+- **`last_sent_at`** — timestamptz, nullable (Session 70). When the payment link was last delivered to the customer; drives the resend-invoice 24h throttle. Written **only** by the resend action, which awaits both channels — `createInvoiceFromJob` fires its sends unawaited and cannot know whether anything landed. No backfill, so **null means "unknown", not "never sent"**.
+
+> Payments taken outside Stripe (cash, check, Terminal, `waived`) update **`jobs` only** — `recordPayment` and the terminal paths never touch this table and never void the Stripe invoice. So a fully-paid job can keep an `invoices` row at `sent` with the Stripe invoice `open` forever. Use `jobs.payment_status`, not this table, to answer "does the customer still owe us."
 
 ## `messages`
 `id, customer_id, job_id, channel, direction, body, status, sent_at, phone_line, related_appointment_id`

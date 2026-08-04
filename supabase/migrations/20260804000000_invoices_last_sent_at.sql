@@ -1,0 +1,26 @@
+-- Track when an invoice's payment link was last delivered to the customer.
+--
+-- Powers the resend-invoice throttle: the dialog warns when a reminder already
+-- went out within 24h, so a non-paying customer doesn't get nudged twice in an
+-- afternoon by two different people. The "Last sent" line on the invoice card is
+-- the secondary benefit, not the reason the column exists.
+--
+-- This cannot be derived from the messages table: outbound email rows store only
+-- the subject in `body`, rows carry no invoice_id, there is no message-type
+-- column (channel only distinguishes sms from email), and job_id is shared with
+-- every receipt, estimate, and status message for the same job. The log is also
+-- best-effort on write — sendCustomerEmail swallows its insert failure — so a
+-- successful send can leave no row at all.
+--
+-- Nullable with no backfill. A null here means "unknown", NOT "never sent":
+-- every invoice predating this column has one, including ones the shop really
+-- did deliver. The UI must render an em dash for null and must never claim
+-- "never sent".
+--
+-- Deliberately NOT written by createInvoiceFromJob. That path fires its SMS and
+-- email as unawaited promises with .catch(console.error), so it cannot know
+-- whether anything was delivered; stamping there would record sends that never
+-- happened. Only the resend action, which awaits both channels and reports
+-- per-channel status, may write this column.
+alter table invoices
+  add column if not exists last_sent_at timestamptz;
