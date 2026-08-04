@@ -34,6 +34,31 @@ export function invoiceSentSMS({
   return `Hi ${firstName}, your invoice from Broadway Motors${vehicle ? ` for your ${vehicle}` : ""} is ready. Pay here: ${link}`;
 }
 
+// Nudge for an invoice the customer already received and hasn't paid. Worded as
+// a reminder rather than reusing invoiceSentSMS, because a second "your invoice
+// is ready" reads as a broken system rather than a follow-up. Only for invoices
+// that were actually delivered — a draft that never went out gets the copy above.
+export function invoiceReminderSMS({
+  firstName,
+  year,
+  make,
+  model,
+  amount,
+  link,
+}: {
+  firstName: string;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  amount?: number | null;
+  link: string;
+}) {
+  const vehicle = [year, make, model].filter(Boolean).join(" ");
+  const balance =
+    amount != null ? ` has a balance of $${amount.toFixed(2)}` : " is still open";
+  return `Hi ${firstName}, reminder from Broadway Motors: your invoice${vehicle ? ` for your ${vehicle}` : ""}${balance}. Pay here: ${link}`;
+}
+
 export function vehicleReadySMS({
   firstName,
   year,

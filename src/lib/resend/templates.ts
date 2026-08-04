@@ -11,6 +11,19 @@ function formatMoneyDollars(dollars: number): string {
   return `$${dollars.toFixed(2)}`;
 }
 
+// Customer-supplied values reach these templates from public, unauthenticated
+// endpoints (the parking and quote-request forms both write customers.first_name),
+// so anything interpolated into markup has to be escaped or a crafted name can
+// inject arbitrary HTML into an email sent under the shop's name.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function baseLayout(content: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -250,6 +263,7 @@ export function invoiceReadyEmail({
   paymentUrl,
   amount,
   contextLabel = "Vehicle",
+  reminder = false,
 }: {
   customerName: string;
   vehicleDesc: string;
@@ -257,26 +271,33 @@ export function invoiceReadyEmail({
   paymentUrl: string;
   amount: number;
   contextLabel?: string;
+  // Same layout, follow-up wording. Set only for an invoice the customer has
+  // already received — a first send must never read as a reminder.
+  reminder?: boolean;
 }): { subject: string; html: string } {
   const content = `
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
-      Hi ${customerName},
+      Hi ${escapeHtml(customerName)},
     </p>
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
-      Your invoice from Broadway Motors is ready.
+      ${
+        reminder
+          ? "This is a reminder that your invoice is still open."
+          : "Your invoice from Broadway Motors is ready."
+      }
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafaf9;border-radius:6px;padding:16px;margin:0 0 20px;">
       <tr>
         <td>
-          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">${contextLabel}</p>
-          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${vehicleDesc}</p>
+          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">${escapeHtml(contextLabel)}</p>
+          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(vehicleDesc)}</p>
           ${
             jobTitle
               ? `<p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Service</p>
-          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${jobTitle}</p>`
+          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(jobTitle)}</p>`
               : ""
           }
-          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Amount Due</p>
+          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">${reminder ? "Balance Due" : "Amount Due"}</p>
           <p style="margin:0;color:#1c1917;font-size:20px;font-weight:700;">${formatMoneyDollars(amount)}</p>
         </td>
       </tr>
@@ -295,7 +316,9 @@ export function invoiceReadyEmail({
     </p>`;
 
   return {
-    subject: "Your invoice from Broadway Motors",
+    subject: reminder
+      ? "Your Broadway Motors invoice — balance due"
+      : "Your invoice from Broadway Motors",
     html: baseLayout(content),
   };
 }
