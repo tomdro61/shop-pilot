@@ -76,7 +76,20 @@ export async function createInvoiceFromJob(
     .eq("id", jobId)
     .single();
 
-  if (jobError || !job) {
+  // Same three-way split as resendInvoiceForJob. This path is reachable from the
+  // AI tool `create_invoice_from_job`, so collapsing a statement timeout into
+  // "Job not found" makes the assistant tell the manager their job was deleted.
+  if (jobError) {
+    if (jobError.code !== "PGRST116") {
+      Sentry.captureException(jobError, {
+        tags: { source: "create-invoice", path: "job-lookup" },
+        extra: { jobId },
+      });
+      return { error: "Couldn't load this job. Try again in a moment." };
+    }
+    return { error: "Job not found" };
+  }
+  if (!job) {
     return { error: "Job not found" };
   }
 
@@ -341,10 +354,13 @@ export async function resendInvoiceForJob({
     .eq("id", jobId)
     .single();
 
-  // A connection drop, statement timeout, or RLS denial is not "not found" —
-  // reporting it as such is unactionable on a job the operator is looking at,
-  // and would be the one path in this function with no telemetry.
+  // PGRST116 = no row matched, which .single() reports as an ERROR, not as
+  // { data: null, error: null }. Everything else (timeout, RLS, connection drop)
+  // is infrastructure failure: reporting that as "not found" is unactionable on
+  // a job the operator is looking at, and telling them to retry a deleted job
+  // never succeeds. Same split as getJob in jobs.ts.
   if (jobError) {
+    if (jobError.code === "PGRST116") return { ok: false, error: "Job not found" };
     Sentry.captureException(jobError, {
       tags: { source: "resend-invoice", path: "job-lookup" },
       extra: { jobId },
@@ -614,6 +630,15 @@ export async function resendInvoiceForJob({
     const reasons = [result.sms, result.email]
       .filter((r): r is { sent: false; error: string } => r?.sent === false)
       .map((r) => r.error);
+    // Every other refusal above is a business rule; this one means the messaging
+    // integration is down. Without a capture, expired Quo credentials show the
+    // shop red toasts while monitoring stays green — neither sender reports to
+    // Sentry on its own.
+    Sentry.captureMessage("resend_invoice_all_channels_failed", {
+      level: "error",
+      tags: { source: "resend-invoice", path: "delivery" },
+      extra: { jobId, invoiceId: invoice.id, reasons },
+    });
     return {
       ok: false,
       error: reasons.length ? `Couldn't send: ${reasons.join("; ")}` : "Nothing was sent.",

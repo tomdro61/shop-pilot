@@ -39,8 +39,11 @@ describe("wasSentRecently", () => {
     expect(wasSentRecently(hoursAgo(24), NOW)).toBe(false);
   });
 
-  it("does not throw the throttle open on an unparseable timestamp", () => {
-    expect(wasSentRecently("not-a-date", NOW)).toBe(false);
+  it("fails CLOSED on an unparseable timestamp rather than disabling the throttle", () => {
+    // Returning false here would mean "not sent recently" — no warning, no
+    // confirm, straight through. A value we can't read must not silently remove
+    // the only guard against double-texting a customer.
+    expect(wasSentRecently("not-a-date", NOW)).toBe(true);
   });
 });
 

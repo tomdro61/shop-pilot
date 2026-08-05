@@ -25,7 +25,7 @@ import { requireManager } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { sendCustomerSMS } from "@/lib/actions/messages";
 import { sendCustomerEmail } from "@/lib/actions/email";
-import { resendInvoiceForJob } from "./invoices";
+import { resendInvoiceForJob, getInvoiceForJob } from "./invoices";
 import { createSupabaseMock, type SupabaseMockResult } from "./__test-helpers__/supabase-mock";
 
 const JOB_ID = "11111111-1111-4111-9111-111111111111";
@@ -318,6 +318,7 @@ describe("resendInvoiceForJob — other refusals", () => {
 
     const r = await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: true });
     expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/auto-charges/);
     expect(sendCustomerSMS).not.toHaveBeenCalled();
   });
 
@@ -342,6 +343,25 @@ describe("resendInvoiceForJob — other refusals", () => {
     ]);
     const r = await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: true });
     expect(r.ok).toBe(false);
+    // Asserted explicitly: without the guard this throws a TypeError on the next
+    // property access, which would "pass" a bare ok===false check by accident.
+    if (!r.ok) expect(r.error).toMatch(/no invoice to resend/);
+    expect(sendCustomerSMS).not.toHaveBeenCalled();
+  });
+
+  it("asks for the newest invoice row and keeps duplicate detection on", async () => {
+    const mock = mockSupabase(happyQueue());
+    mockStripeRetrieve(buildStripeInvoice());
+
+    await resendInvoiceForJob({ jobId: JOB_ID, email: false, sms: true });
+
+    // The mock replays a queue and ignores .order()/.limit(), so "newest wins"
+    // and the duplicate probe can only be pinned on the call arguments.
+    expect(mock.calls).toContainEqual({
+      method: "order",
+      args: ["created_at", { ascending: false }],
+    });
+    expect(mock.calls).toContainEqual({ method: "limit", args: [2] });
   });
 });
 
@@ -426,6 +446,14 @@ describe("resendInvoiceForJob — sending", () => {
     expect(updates[1].args[0]).toEqual({ status: "sent" });
     // Idempotency predicate on the status flip.
     expect(mock.calls).toContainEqual({ method: "eq", args: ["status", "draft"] });
+    // Counted, not `toContainEqual`: the call log is flat, so a single id-scope
+    // emitted by the stamp would satisfy a containment check on behalf of the
+    // flip. Unscoped, the flip is `UPDATE invoices SET status='sent' WHERE
+    // status='draft'` — every draft invoice in the database.
+    const idScopes = mock.calls.filter(
+      (c) => c.method === "eq" && c.args[0] === "id" && c.args[1] === INVOICE_ID
+    );
+    expect(idScopes).toHaveLength(2);
   });
 
   it("uses reminder copy for a draft that was already delivered once", async () => {
@@ -480,6 +508,21 @@ describe("resendInvoiceForJob — sending", () => {
     const body = vi.mocked(sendCustomerSMS).mock.calls[0][0].body;
     expect(body).toContain("is ready");
     expect(body).not.toContain("reminder");
+    // The first-send template is a different one — its link needs its own
+    // assertion, and deleting it used to pass the whole suite.
+    expect(body).toContain(HOSTED_URL);
+  });
+
+  it("uses first-send subject line on the email side too", async () => {
+    mockSupabase(happyQueue(buildJob(), buildInvoiceRow({ status: "draft", last_sent_at: null })));
+    mockStripeRetrieve(buildStripeInvoice({ status: "draft" }));
+
+    await resendInvoiceForJob({ jobId: JOB_ID, email: true, sms: false });
+
+    // Every other first-send/reminder test runs SMS-only, so inverting the flag
+    // on the email branch went unnoticed.
+    const { subject } = vi.mocked(sendCustomerEmail).mock.calls[0][0];
+    expect(subject).not.toContain("balance due");
   });
 
   it("keeps one channel alive when the other throws", async () => {
@@ -533,5 +576,35 @@ describe("resendInvoiceForJob — sending", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain("No phone number on file");
     expect(mock.calls.filter((c) => c.method === "update")).toHaveLength(0);
+  });
+});
+
+describe("getInvoiceForJob", () => {
+  it("asks for the newest row, not the oldest", async () => {
+    const mock = mockSupabase([{ data: [buildInvoiceRow()], error: null }]);
+
+    await getInvoiceForJob(JOB_ID);
+
+    // Ascending would render a superseded invoice on the job card whenever
+    // duplicate rows exist — the case this function documents handling.
+    expect(mock.calls).toContainEqual({
+      method: "order",
+      args: ["created_at", { ascending: false }],
+    });
+  });
+
+  it("throws rather than returning null when the query fails", async () => {
+    mockSupabase([{ data: null, error: { message: "statement timeout" } }]);
+
+    // Returning null hides the invoice card and renders "Ready to invoice →
+    // Create" for a job that already has one, inviting a duplicate Stripe
+    // invoice. Failing loudly is the safe direction here.
+    await expect(getInvoiceForJob(JOB_ID)).rejects.toThrow(/statement timeout/);
+    expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  it("returns null for a job with no invoice", async () => {
+    mockSupabase([{ data: [], error: null }]);
+    await expect(getInvoiceForJob(JOB_ID)).resolves.toBeNull();
   });
 });

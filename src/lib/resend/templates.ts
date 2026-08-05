@@ -19,8 +19,11 @@ function formatMoneyDollars(dollars: number): string {
 // name. The parking receipt is the sharpest case: it is fired by the Stripe
 // webhook with no human in the loop.
 //
-// Applied to every interpolated free-text field in this file. The one deliberate
-// exception is genericEmail's `htmlBody`, whose callers pass markup on purpose.
+// Applied to every interpolated free-text field here, including staff-authored
+// ones like shop_settings.hazmat_label — not an XSS vector, but an unescaped "<"
+// silently mangles every email carrying a hazmat line. The one exception is
+// genericEmail's `htmlBody`: its caller passes AI-composed prose that the
+// template itself converts to markup, so escaping is applied there instead.
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -110,7 +113,7 @@ function lineItemsTable(lineItems: LineItem[], totals: TotalsBreakdown): string 
   if (totals.hazmatEnabled && totals.hazmat > 0) {
     summaryRows += `
     <tr>
-      <td style="padding:4px 0;color:#78716c;font-size:14px;">${totals.hazmatLabel}</td>
+      <td style="padding:4px 0;color:#78716c;font-size:14px;">${escapeHtml(totals.hazmatLabel)}</td>
       <td style="padding:4px 0;color:#44403c;font-size:14px;text-align:right;">${formatMoneyDollars(totals.hazmat)}</td>
     </tr>`;
   }

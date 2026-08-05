@@ -30,11 +30,23 @@ export function isFirstDelivery(invoice: DeliveryState): boolean {
   return invoice.status === "draft" && !invoice.last_sent_at;
 }
 
-/** True when a reminder went out inside the throttle window. Null = unknown, not "never". */
+/**
+ * True when a reminder went out inside the throttle window, i.e. whether to warn
+ * before sending again.
+ *
+ * Null means no send has been recorded — either genuinely never sent, or an
+ * invoice predating the column. Both are treated as "not recent": warning on
+ * every historical invoice would train the shop to click through the warning.
+ *
+ * An UNPARSEABLE value fails closed (returns true). A timestamp we can't read is
+ * a value we know nothing about, and the cost of being wrong is asymmetric: a
+ * spurious extra click, versus silently disabling the guard that stops two staff
+ * texting the same customer a payment link twice in an afternoon.
+ */
 export function wasSentRecently(lastSentAt: string | null, now: number = Date.now()): boolean {
   if (!lastSentAt) return false;
   const sentAt = new Date(lastSentAt).getTime();
-  if (Number.isNaN(sentAt)) return false;
+  if (Number.isNaN(sentAt)) return true;
   return now - sentAt < RECENT_SEND_MS;
 }
 
