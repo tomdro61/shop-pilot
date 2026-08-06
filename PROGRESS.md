@@ -4199,3 +4199,47 @@ Every guard's test now asserts the **specific** refusal, not merely that somethi
 
 ### Files
 `src/lib/actions/invoices.ts`, `src/lib/actions/jobs.ts`, `src/lib/invoices/delivery.ts` (new), `src/components/dashboard/resend-invoice-button.tsx` (new), `src/components/dashboard/invoice-section.tsx`, `src/app/(dashboard)/jobs/[id]/page.tsx`, `src/app/api/stripe/webhooks/route.ts`, `src/lib/messaging/templates.ts`, `src/lib/resend/templates.ts`, `supabase/migrations/20260804000000_invoices_last_sent_at.sql`, `supabase/migrations/20260731185436_applied_out_of_band.sql`, `.claude/skills/verify-flow/SKILL.md`, `ARCHITECTURE.md`, `DATABASE_SCHEMA.md`. Tests: `resend-invoice.test.ts`, `route.test.ts`, `templates.test.ts`, `delivery.test.ts` (all new), `vin/decode.test.ts`.
+
+---
+
+## Session 71 — 2026-08-05 — Resend Invoice shipped to production; split-tender designed
+
+Continuation of Session 70. That entry was written mid-session and stops before the final review round, the merge, and production verification.
+
+### Verification round found a regression in the previous round's fixes
+
+Three agents re-reviewed the fixes from Session 70. Two came back clean. The third found that the job-lookup "fix" had **introduced** a bug: it assumed PostgREST reports a missing row as `{ data: null, error: null }`, but `.single()` returns PGRST116 as an *error*. So a genuinely deleted job fired an error-level Sentry event and told the operator "try again in a moment" — which never succeeds — while the real not-found branch became unreachable. `jobs.ts:150-157` documents the correct pattern; it was read during the session and still got this wrong. Fixed in both `resendInvoiceForJob` and `createInvoiceFromJob`.
+
+Also from that round:
+- `wasSentRecently` failed **open** on an unparseable timestamp, silently disabling the resend throttle — in the module extracted specifically to make that throttle reliable. Now fails closed. Its test was named "does not throw the throttle open" while asserting the value that throws it open.
+- **`createInvoiceFromJob` had no test file at all**, including the two guards added in Session 70 to stop it billing an already-paid customer. Mutation testing found eight surviving mutants there — including removing `requireManager()` and removing the duplicate-invoice check. It is exposed to the AI as `create_invoice_from_job`, so those guards are the only thing between a mis-parsed chat request and a real Stripe invoice. Added `create-invoice.test.ts` (12 cases).
+- Mutation kill rate 43% → 68%. Each closed guard verified by re-applying the mutant and confirming a test fails.
+
+449 tests (from 432), typecheck clean, build clean.
+
+### Shipped
+
+`master` and `staging` both at `82cc901`. Deployed.
+
+The first `master` push was rejected: **PR #6 (the APB parking work) had been merged on GitHub on 2026-07-31**, four days earlier, and the local `master` had never been fetched since. Merged the two histories rather than forcing — clean, no conflicts, tests green after. Lesson: `git fetch` at session start, don't trust a stale local `master`.
+
+### Production verification
+
+Owner sent a real invoice reminder to a real customer; the payment went through. This is the first end-to-end confirmation — everything prior was static analysis and mutation testing.
+
+**Still unverified:** the cash-payment guard. Marking an invoiced job paid by cash should make the Resend button disappear. That only manifests in that specific situation, so it can't be tested on demand — check opportunistically at the counter.
+
+### Started, not built: split-tender payments
+
+Owner hit the split-payment gap again (customer wanted to pay part cash, part card; second occurrence after 2026-07-08). Wrote a design doc; **no code**. Four decisions pending: overpayment handling, whether to backfill historical payments, whether to lock line items once partially paid, and whether to capture card last-4 per tender. Roadmap §10.10 updated with what the research corrected. See "What's next".
+
+### Known issues / open items
+
+- **The AI chat bypasses every resend guard.** `get_invoice_for_job` returns the raw hosted URL and `send_sms` takes free text, with "payment reminder" named in the system prompt. Highest-value follow-up; ~1 hour.
+- Parking invoices: "Send Another" creates a brand-new Stripe invoice with a second live payment link — no paid guard, no throttle.
+- `/reports/receivables` has no "Last reminded" column, on the one screen built for chasing non-payers.
+- `resendInvoiceForJob` returns a bespoke union rather than `ActionResult<T>`; `SendJobReceiptResult` has the same defect.
+
+### What's next
+
+Split-tender payments, Phase 1 (cash + manually-recorded card: table, RPC, derived columns, real Balance Due in the footer). Needs the four decisions first.
