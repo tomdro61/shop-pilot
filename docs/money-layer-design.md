@@ -91,6 +91,21 @@ cap bites before the year filter runs. At ~8 completed jobs a day it crosses 1,0
 when it does, the DOR filing number starts dropping arbitrary jobs with no error. **This needs a SQL
 date filter now, independent of everything else in this document.**
 
+**`customer-insights.ts` is returning wrong numbers today.** `:57-62` fetches all-time completed
+jobs with `.limit(50000)` — clamped to 1000 — ordered `date_finished` **ascending**, then builds a
+first-visit map from the result. Completed jobs are already at 1,002, so the two newest are dropped
+and `newCustomers` / `repeatRate` are computed from an incomplete map. Small today, growing daily.
+
+**`trends.ts:145` carries a comment claiming `// Limit 10000 to override Supabase default 1000-row
+cap`.** That is false — `.limit()` is clamped by the cap, not the reverse. A wrong comment here is
+worse than none, because it tells the next reader the query is safe.
+
+**The appointments read fails in the worst direction.** `dashboard/page.tsx:145-152` has no date
+bound and is ordered `scheduled_at` **ascending**, so on truncation it keeps the oldest rows and
+drops the future — "Appointments Today" and "Upcoming Bookings" would render their empty states with
+no error. Measured 2026-08-10: 4 confirmed rows, 996 of headroom, so this is years away at current
+booking volume — but the failure direction makes it worth bounding cheaply rather than watching.
+
 `receivables.ts` has two further defects found while writing this, unrelated to volume:
 - `:48` and `:94` destructure `{ data }` and **discard `error` entirely** — a failed query renders
   **$0 outstanding**, indistinguishable from "everyone has paid." Direct violation of the
@@ -159,7 +174,9 @@ in the workflow was structurally blind to it:
 | `/verify-flow` | Clicking through renders a number; nothing says it's the *wrong* number |
 
 So:
-1. **`assertComplete()`** on every remaining row-fetch that feeds a figure. *(shipped 2026-08-10)*
+1. **`assertComplete()`** on every remaining row-fetch that feeds a figure.
+   *(Helper shipped 2026-08-10 and applied to **1 of 15** such queries — the dashboard revenue read.
+   The other 14 are listed in §3 and below; do not read this as done.)*
 2. **A volume test** — seed >1,000 jobs, assert every money figure still matches ground truth. This is
    the gate that would have caught it, and the only one that would have.
 3. **A daily drift cron** — recompute yesterday's revenue two independent ways (view vs JS) and

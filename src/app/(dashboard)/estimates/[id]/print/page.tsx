@@ -49,8 +49,36 @@ export default async function PrintEstimatePage({
 
   if (!estimate) notFound();
 
-  const customer = (estimate.customers as Customer | null) ?? null;
-  const vehicle = (estimate.vehicles as Vehicle | null) ?? null;
+  // getShopSettings returns null both for "no row configured" and for a failed
+  // read. calculateTotals would then fall back to DEFAULT_SETTINGS, which has
+  // supplies and hazmat disabled — and those lines render conditionally, so a
+  // customer would be handed an estimate silently missing its fees with
+  // nothing on the page to say so. Refuse to print instead.
+  if (!settings) {
+    throw new Error("Shop settings unavailable — refusing to print an estimate with default pricing.");
+  }
+
+  // Typed to exactly the columns getEstimate selects. Casting to the full row
+  // type would let a future edit read an unselected column, compile clean, and
+  // print a blank line — which is how `address` shipped broken.
+  const customer =
+    (estimate.customers as Pick<
+      Customer,
+      "id" | "first_name" | "last_name" | "email" | "phone" | "address"
+    > | null) ?? null;
+  const vehicle =
+    (estimate.vehicles as Pick<
+      Vehicle,
+      "id" | "year" | "make" | "model" | "vin" | "license_plate" | "color"
+    > | null) ?? null;
+
+  // estimates.customer_id is NOT NULL, so a null join is never an empty state —
+  // it means RLS blocked the row, the customer was deleted, or the select
+  // drifted. Printing a document with an empty Customer block is worse.
+  if (!customer) {
+    throw new Error(`Estimate ${id} has customer_id set but the customer row did not load.`);
+  }
+
   const lineItems = (estimate.estimate_line_items || []) as EstimateLineItem[];
 
   const grouped = new Map<string, EstimateLineItem[]>();
@@ -105,20 +133,18 @@ export default async function PrintEstimatePage({
           <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
             Customer
           </h3>
-          {customer && (
-            <div className="text-sm">
-              <p className="font-medium">{formatCustomerName(customer)}</p>
-              {customer.phone && <p>{formatPhone(customer.phone)}</p>}
-              {customer.email && <p>{customer.email}</p>}
-              {customer.address && <p>{customer.address}</p>}
-            </div>
-          )}
+          <div className="text-sm">
+            <p className="font-medium">{formatCustomerName(customer)}</p>
+            {customer.phone && <p>{formatPhone(customer.phone)}</p>}
+            {customer.email && <p>{customer.email}</p>}
+            {customer.address && <p>{customer.address}</p>}
+          </div>
         </div>
         <div>
           <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
             Vehicle
           </h3>
-          {vehicle && (
+          {vehicle ? (
             <div className="text-sm">
               <p className="font-medium">{formatVehicle(vehicle)}</p>
               {vehicle.vin && (
@@ -133,6 +159,8 @@ export default async function PrintEstimatePage({
                 </p>
               )}
             </div>
+          ) : (
+            <p className="text-sm text-stone-400">—</p>
           )}
         </div>
       </div>

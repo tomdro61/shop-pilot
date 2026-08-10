@@ -45,11 +45,10 @@ async function getDashboardData() {
   const monthEnd = month.to;
   const lastMonthStart = month.priorFrom!;
   const lastMonthEnd = month.priorTo!;
-  // Earliest date any dashboard figure looks back to. Nothing here is
-  // year-to-date — every stat slices today / this week / this month / last
-  // week / last month — so the range must not reach back to Jan 1. It used
-  // to, which pushed the completed-jobs query past PostgREST's 1000-row cap
-  // in Aug 2026 and silently understated every revenue KPI.
+  // Earliest date any dashboard figure looks back to. No stat here is
+  // year-to-date, so this must stay at last-month/last-week — widening it
+  // pushes the completed-jobs read toward the row cap, and a truncated read
+  // understates revenue rather than failing.
   const statsRangeStart = [lastWeekStart, lastMonthStart, monthStart].sort()[0];
 
   const [
@@ -170,9 +169,6 @@ async function getDashboardData() {
     throw new Error(`Failed to load parking specials: ${parkingSpecialsResult.error.message}`);
   if (manualIncomeRangeResult.error)
     throw new Error(`Failed to load manual income: ${manualIncomeRangeResult.error.message}`);
-  // Every revenue KPI is summed from these rows, so a truncated read is a
-  // wrong dollar figure. assertComplete turns that into an error instead.
-  assertComplete(completedJobsRangeResult, "completed jobs");
   if (completedTodayResult.error)
     throw new Error(`Failed to load completed-today jobs: ${completedTodayResult.error.message}`);
   if (pendingAppointmentsResult.error)
@@ -181,7 +177,10 @@ async function getDashboardData() {
     throw new Error(`Failed to load confirmed appointments: ${confirmedAppointmentsResult.error.message}`);
 
   const activeJobs = activeJobsResult.data || [];
-  const completedJobs = completedJobsRangeResult.data || [];
+  // Revenue is summed from these rows, so a truncated read is a wrong dollar
+  // figure rather than an obviously missing one. Assigning from the guard
+  // keeps it load-bearing — drop the call and this stops compiling.
+  const completedJobs = assertComplete(completedJobsRangeResult, "completed jobs");
   const monthCompleted = completedJobs.filter(
     (j) => j.date_finished !== null && j.date_finished >= monthStart && j.date_finished <= monthEnd
   );
