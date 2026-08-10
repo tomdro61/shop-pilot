@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { assertComplete } from "@/lib/supabase/assert-complete";
 import { getCurrentUser } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,8 +45,12 @@ async function getDashboardData() {
   const monthEnd = month.to;
   const lastMonthStart = month.priorFrom!;
   const lastMonthEnd = month.priorTo!;
-  const yearStart = `${nowET().getFullYear()}-01-01`;
-  const inspectionRangeStart = [yearStart, lastWeekStart, lastMonthStart, monthStart].sort()[0];
+  // Earliest date any dashboard figure looks back to. Nothing here is
+  // year-to-date — every stat slices today / this week / this month / last
+  // week / last month — so the range must not reach back to Jan 1. It used
+  // to, which pushed the completed-jobs query past PostgREST's 1000-row cap
+  // in Aug 2026 and silently understated every revenue KPI.
+  const statsRangeStart = [lastWeekStart, lastMonthStart, monthStart].sort()[0];
 
   const [
     activeJobsResult,
@@ -71,7 +76,7 @@ async function getDashboardData() {
     supabase
       .from("daily_inspection_counts")
       .select("date, state_count, tnc_count")
-      .gte("date", inspectionRangeStart)
+      .gte("date", statsRangeStart)
       .lte("date", monthEnd),
     supabase
       .from("quote_requests")
@@ -117,13 +122,13 @@ async function getDashboardData() {
     supabase
       .from("manual_income")
       .select("date, amount, shop_keep_pct")
-      .gte("date", inspectionRangeStart)
+      .gte("date", statsRangeStart)
       .lte("date", monthEnd),
     supabase
       .from("jobs")
-      .select("id, date_finished, job_line_items(total, category)")
+      .select("id, date_finished, job_line_items(total, category)", { count: "exact" })
       .eq("status", "complete")
-      .gte("date_finished", inspectionRangeStart)
+      .gte("date_finished", statsRangeStart)
       .lte("date_finished", monthEnd),
     supabase
       .from("jobs")
@@ -165,8 +170,9 @@ async function getDashboardData() {
     throw new Error(`Failed to load parking specials: ${parkingSpecialsResult.error.message}`);
   if (manualIncomeRangeResult.error)
     throw new Error(`Failed to load manual income: ${manualIncomeRangeResult.error.message}`);
-  if (completedJobsRangeResult.error)
-    throw new Error(`Failed to load completed jobs: ${completedJobsRangeResult.error.message}`);
+  // Every revenue KPI is summed from these rows, so a truncated read is a
+  // wrong dollar figure. assertComplete turns that into an error instead.
+  assertComplete(completedJobsRangeResult, "completed jobs");
   if (completedTodayResult.error)
     throw new Error(`Failed to load completed-today jobs: ${completedTodayResult.error.message}`);
   if (pendingAppointmentsResult.error)
