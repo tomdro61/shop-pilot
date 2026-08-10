@@ -192,7 +192,7 @@ export const getEstimate = cache(async (id: string) => {
     .select(
       `*,
        estimate_line_items(*),
-       customers(id, first_name, last_name, email, phone),
+       customers(id, first_name, last_name, email, phone, address),
        vehicles(id, year, make, model, vin, license_plate, color),
        jobs(id, title, ro_number, status)`
     )

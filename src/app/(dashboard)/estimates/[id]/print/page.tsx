@@ -1,88 +1,66 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { formatRONumber, formatCurrency, formatPhone, formatVehicle, formatCustomerName, formatDate } from "@/lib/utils/format";
+import { getEstimate } from "@/lib/actions/estimates";
 import { getShopSettings } from "@/lib/actions/settings";
 import { calculateTotals } from "@/lib/utils/totals";
+import {
+  formatCurrency,
+  formatPhone,
+  formatVehicle,
+  formatCustomerName,
+  formatDate,
+} from "@/lib/utils/format";
 import { PrintButton } from "@/components/dashboard/print-button";
+import type { Customer, EstimateLineItem, Vehicle } from "@/types";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const supabase = await createClient();
-  const { data: job } = await supabase
-    .from("jobs")
-    .select("ro_number, title, customers(first_name, last_name)")
-    .eq("id", id)
-    .single();
-
-  if (!job) return { title: "Not Found | ShopPilot" };
-  const customer = job.customers as { first_name: string; last_name: string } | null;
-  const ro = formatRONumber(job.ro_number);
-  return {
-    title: `${ro} - ${customer ? formatCustomerName(customer) : "Repair Order"} | ShopPilot`,
-  };
+function formatEstimateNumber(n: number | null | undefined) {
+  if (!n) return null;
+  return `EST-${String(n).padStart(4, "0")}`;
 }
 
-export default async function PrintRepairOrderPage({
+export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const estimate = await getEstimate(id);
+  if (!estimate) return { title: "Not Found | ShopPilot" };
 
-  const { data: job, error } = await supabase
-    .from("jobs")
-    .select(
-      "*, customers(id, first_name, last_name, phone, email, address), vehicles(id, year, make, model, vin, license_plate, mileage), job_line_items(*)"
-    )
-    .eq("id", id)
-    .single();
-
-  if (error || !job) notFound();
-
-  const customer = job.customers as {
-    id: string;
-    first_name: string;
-    last_name: string;
-    phone: string | null;
-    email: string | null;
-    address: string | null;
-  } | null;
-
-  const vehicle = job.vehicles as {
-    id: string;
-    year: number | null;
-    make: string | null;
-    model: string | null;
-    vin: string | null;
-    license_plate: string | null;
-    mileage: number | null;
-  } | null;
-
-  type LineItem = {
-    id: string;
-    type: string;
-    description: string;
-    quantity: number;
-    unit_cost: number;
-    total: number;
-    part_number: string | null;
-    category: string | null;
+  const customer = estimate.customers as Pick<
+    Customer,
+    "first_name" | "last_name"
+  > | null;
+  const num = formatEstimateNumber(estimate.estimate_number) ?? "Estimate";
+  return {
+    title: `${num} - ${customer ? formatCustomerName(customer) : "Estimate"} | ShopPilot`,
   };
+}
 
-  const lineItems = (job.job_line_items || []) as LineItem[];
+export default async function PrintEstimatePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const [estimate, settings] = await Promise.all([
+    getEstimate(id),
+    getShopSettings(),
+  ]);
 
-  // Group line items by category
-  const grouped = new Map<string, LineItem[]>();
+  if (!estimate) notFound();
+
+  const customer = (estimate.customers as Customer | null) ?? null;
+  const vehicle = (estimate.vehicles as Vehicle | null) ?? null;
+  const lineItems = (estimate.estimate_line_items || []) as EstimateLineItem[];
+
+  const grouped = new Map<string, EstimateLineItem[]>();
   for (const li of lineItems) {
     const cat = li.category || "General";
     if (!grouped.has(cat)) grouped.set(cat, []);
     grouped.get(cat)!.push(li);
   }
 
-  // Calculate totals
-  const settings = await getShopSettings();
-  const totals = calculateTotals(lineItems, settings, job.charge_sales_tax);
+  const totals = calculateTotals(lineItems, settings, estimate.charge_sales_tax);
 
   return (
     <div className="print-ro mx-auto max-w-3xl bg-white p-8 text-stone-900">
@@ -97,20 +75,25 @@ export default async function PrintRepairOrderPage({
         <p className="text-sm text-stone-600">(617) 996-8371</p>
       </div>
 
-      {/* RO Number + Dates */}
+      {/* Estimate Number + Dates */}
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <span className="text-2xl font-bold">{formatRONumber(job.ro_number)}</span>
+          <span className="text-2xl font-bold">
+            {formatEstimateNumber(estimate.estimate_number) ?? "Estimate"}
+          </span>
+          <p className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-stone-500">
+            Estimate
+          </p>
         </div>
         <div className="text-right text-sm">
           <p>
-            <span className="font-medium">Job Date:</span>{" "}
-            {formatDate(job.date_received)}
+            <span className="font-medium">Date:</span>{" "}
+            {formatDate(estimate.created_at)}
           </p>
-          {job.date_finished && (
+          {estimate.approved_at && (
             <p>
-              <span className="font-medium">Date Out:</span>{" "}
-              {formatDate(job.date_finished)}
+              <span className="font-medium">Approved:</span>{" "}
+              {formatDate(estimate.approved_at)}
             </p>
           )}
         </div>
@@ -149,26 +132,10 @@ export default async function PrintRepairOrderPage({
                   {vehicle.license_plate}
                 </p>
               )}
-              {(vehicle.mileage || job.mileage_in) && (
-                <p>
-                  <span className="text-stone-500">Mileage:</span>{" "}
-                  {(job.mileage_in || vehicle.mileage)?.toLocaleString()}
-                </p>
-              )}
             </div>
           )}
         </div>
       </div>
-
-      {/* Job Title */}
-      {job.title && (
-        <div className="mb-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-            Description
-          </h3>
-          <p className="text-sm font-medium">{job.title}</p>
-        </div>
-      )}
 
       {/* Line Items Table */}
       <div className="mb-6">
@@ -204,9 +171,7 @@ export default async function PrintRepairOrderPage({
                       </span>
                     )}
                   </td>
-                  <td className="py-1.5 text-center capitalize">
-                    {li.type}
-                  </td>
+                  <td className="py-1.5 text-center capitalize">{li.type}</td>
                   <td className="py-1.5 text-right tabular-nums">
                     {li.quantity}
                   </td>
@@ -214,7 +179,7 @@ export default async function PrintRepairOrderPage({
                     {formatCurrency(li.unit_cost)}
                   </td>
                   <td className="py-1.5 text-right tabular-nums">
-                    {formatCurrency(li.total)}
+                    {formatCurrency(li.total ?? li.quantity * li.unit_cost)}
                   </td>
                 </tr>
               ))}
@@ -228,50 +193,65 @@ export default async function PrintRepairOrderPage({
         <div className="w-64 text-sm">
           <div className="flex justify-between py-1">
             <span>Labor Subtotal</span>
-            <span className="tabular-nums">{formatCurrency(totals.laborTotal)}</span>
+            <span className="tabular-nums">
+              {formatCurrency(totals.laborTotal)}
+            </span>
           </div>
           <div className="flex justify-between py-1">
             <span>Parts Subtotal</span>
-            <span className="tabular-nums">{formatCurrency(totals.partsTotal)}</span>
+            <span className="tabular-nums">
+              {formatCurrency(totals.partsTotal)}
+            </span>
           </div>
           {totals.shopSuppliesEnabled && totals.shopSupplies > 0 && (
             <div className="flex justify-between py-1 text-stone-500">
               <span>Shop Supplies</span>
-              <span className="tabular-nums">{formatCurrency(totals.shopSupplies)}</span>
+              <span className="tabular-nums">
+                {formatCurrency(totals.shopSupplies)}
+              </span>
             </div>
           )}
           {totals.hazmatEnabled && totals.hazmat > 0 && (
             <div className="flex justify-between py-1 text-stone-500">
               <span>{totals.hazmatLabel}</span>
-              <span className="tabular-nums">{formatCurrency(totals.hazmat)}</span>
+              <span className="tabular-nums">
+                {formatCurrency(totals.hazmat)}
+              </span>
             </div>
           )}
           {totals.taxAmount > 0 && (
             <div className="flex justify-between py-1 text-stone-500">
               <span>Tax ({(totals.taxRate * 100).toFixed(2)}%)</span>
-              <span className="tabular-nums">{formatCurrency(totals.taxAmount)}</span>
+              <span className="tabular-nums">
+                {formatCurrency(totals.taxAmount)}
+              </span>
             </div>
           )}
           <div className="mt-1 flex justify-between border-t-2 border-stone-900 pt-2 text-base font-bold">
-            <span>Total</span>
-            <span className="tabular-nums">{formatCurrency(totals.grandTotal)}</span>
+            <span>Estimated Total</span>
+            <span className="tabular-nums">
+              {formatCurrency(totals.grandTotal)}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Notes */}
-      {job.notes && (
+      {estimate.notes && (
         <div className="mb-8">
           <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
             Notes
           </h3>
-          <p className="whitespace-pre-wrap text-sm">{job.notes}</p>
+          <p className="whitespace-pre-wrap text-sm">{estimate.notes}</p>
         </div>
       )}
 
       {/* Footer */}
       <div className="border-t border-stone-200 pt-4 text-center text-sm text-stone-500">
-        <p>Thank you for your business!</p>
+        <p>
+          This is an estimate, not a final bill. Additional work will be quoted
+          for your approval before it is performed.
+        </p>
       </div>
     </div>
   );

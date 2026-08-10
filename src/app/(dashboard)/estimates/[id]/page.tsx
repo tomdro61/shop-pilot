@@ -23,7 +23,7 @@ import {
   formatDateLong,
   getInitials,
 } from "@/lib/utils/format";
-import { ArrowLeft, FileText, User as UserIcon, Truck } from "lucide-react";
+import { ArrowLeft, FileText, Printer, User as UserIcon, Truck } from "lucide-react";
 import type {
   EstimateStatus,
   EstimateLineItem,
@@ -108,6 +108,12 @@ export default async function EstimateDetailPage({
           <Button variant="ghost" size="sm" className="-ml-3">
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
             {backLabel}
+          </Button>
+        </Link>
+        <Link href={`/estimates/${id}/print`}>
+          <Button variant="outline" size="sm">
+            <Printer className="mr-1.5 h-3.5 w-3.5" />
+            Print
           </Button>
         </Link>
       </div>
