@@ -625,7 +625,10 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
       .order("id", { ascending: true })
       .range(from, to);
     if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
-    return q as unknown as PromiseLike<{ data: TaxReportJobRow[] | null; error: { message: string } | null }>;
+    // `.returns<T>()` is postgrest-js's sanctioned override for a dynamically
+    // built select string, which defeats its literal-type inference. Preferred
+    // over a cast through `unknown` — the builder still type-checks the shape.
+    return q.returns<TaxReportJobRow[]>();
   }, "jobs for tax report");
 
   const [jobs, taxManualEntries, settings] = await Promise.all([

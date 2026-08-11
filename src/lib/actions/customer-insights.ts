@@ -164,10 +164,7 @@ export async function getCustomerInsightsData(
         .order("id", { ascending: true })
         .range(from, to);
       if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
-      return q as unknown as PromiseLike<{
-        data: PeriodJobRow[] | null;
-        error: { message: string } | null;
-      }>;
+      return q.returns<PeriodJobRow[]>();
     }, "completed jobs in period"),
     fetchFirstVisitRows(supabase),
     isFiltered ? Promise.resolve([]) : getManualIncomeForRange(startDate, endDate),

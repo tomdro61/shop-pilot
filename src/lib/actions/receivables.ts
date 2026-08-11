@@ -127,10 +127,7 @@ export async function getReceivablesData(customerType?: string): Promise<Receiva
       .order("id", { ascending: true })
       .range(from, to);
     if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
-    return q as unknown as PromiseLike<{
-      data: ReceivablesJobRow[] | null;
-      error: { message: string } | null;
-    }>;
+    return q.returns<ReceivablesJobRow[]>();
   }, "receivables");
 
   const jobs: ReceivableJob[] = [];
