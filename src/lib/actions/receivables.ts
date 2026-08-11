@@ -77,7 +77,7 @@ export async function getReceivablesSummary(): Promise<{ totalOutstanding: numbe
     (from, to) =>
       supabase
         .from("jobs")
-        .select("date_finished, job_line_items(total, category)")
+        .select("date_finished, job_line_items(total, category)", { count: "exact" })
         .eq("status", "complete")
         .neq("payment_status", "paid")
         .neq("payment_status", "waived")
@@ -120,7 +120,7 @@ export async function getReceivablesData(customerType?: string): Promise<Receiva
   const data = await fetchAllRows<ReceivablesJobRow>((from, to) => {
     let q = supabase
       .from("jobs")
-      .select(jobSelect)
+      .select(jobSelect, { count: "exact" })
       .eq("status", "complete")
       .neq("payment_status", "paid")
       .neq("payment_status", "waived")

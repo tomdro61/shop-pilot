@@ -613,7 +613,7 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
   const jobsPromise = fetchAllRows<TaxReportJobRow>((from, to) => {
     let q = supabase
       .from("jobs")
-      .select(jobSelect)
+      .select(jobSelect, { count: "exact" })
       .eq("payment_status", "paid")
       // `paid_at` when set, else `date_finished` — mirroring the fallback at
       // the bucketing step, so neither shape is dropped.

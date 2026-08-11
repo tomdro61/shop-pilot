@@ -69,7 +69,7 @@ async function fetchFirstVisitRows(supabase: SupabaseServerClient): Promise<Firs
     (from, to) =>
       supabase
         .from("jobs")
-        .select("customer_id, date_finished")
+        .select("customer_id, date_finished", { count: "exact" })
         .eq("status", "complete")
         .order("date_finished", { ascending: true })
         // Tiebreak so paging is deterministic — date_finished alone has ties.
@@ -93,7 +93,7 @@ export async function getCustomerKpis(
       (from, to) =>
         supabase
           .from("jobs")
-          .select("customer_id")
+          .select("customer_id", { count: "exact" })
           .eq("status", "complete")
           .gte("date_finished", startDate)
           .lte("date_finished", endDate)
@@ -157,7 +157,7 @@ export async function getCustomerInsightsData(
     fetchAllRows<PeriodJobRow>((from, to) => {
       let q = supabase
         .from("jobs")
-        .select(periodSelect)
+        .select(periodSelect, { count: "exact" })
         .eq("status", "complete")
         .gte("date_finished", startDate)
         .lte("date_finished", endDate)
