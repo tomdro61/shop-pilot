@@ -4243,3 +4243,84 @@ Owner hit the split-payment gap again (customer wanted to pay part cash, part ca
 ### What's next
 
 Split-tender payments, Phase 1 (cash + manually-recorded card: table, RPC, derived columns, real Balance Due in the footer). Needs the four decisions first.
+
+---
+
+## Session 72 — 2026-08-10 — The dashboard was understating revenue by 61%, and why nothing caught it
+
+### The incident
+
+The owner reported that "jobs completed today" and "today's revenue" didn't line up. They were right, and it wasn't a display quirk.
+
+`dashboard/page.tsx` fetched every completed job from Jan 1 through month end and summed line items in JS. **PostgREST caps every response at 1000 rows and reports no error when it truncates.** The shop crossed 1,002 completed jobs a few days earlier, so revenue silently started dropping jobs — and with no `ORDER BY`, which ones was arbitrary.
+
+Measured against live data at the time:
+
+```
+completed jobs Jan 1 – Aug 31   : 1,002
+rows the query actually returned: 1,000
+today's completed jobs          : 8 exist, 6 reached the revenue math
+Today's Revenue    shown $   885.00  |  actual $  2,261.00  |  missing $1,376.00
+This Month         shown $10,027.00  |  actual $ 11,403.00  |  missing $1,376.00
+```
+
+The cap cannot be beaten from the client — verified: `.limit(5000)` → 1000 rows, `.range(0,4999)` → 1000 rows, `.range(1000,1999)` → 2 rows. The data was there; the query couldn't ask for it in one go.
+
+**The Jan-1 reach-back was vestigial.** Nothing on that page is year-to-date — every stat slices today / this week / this month / last week / last month. `yearStart` existed only inside a `sort()[0]` where it always won. Narrowing to `lastMonthStart` took the query from 1,002 rows to 288.
+
+Also notable: the old window crossed 1000 rows around day ~200 of the year at current volume, i.e. **mid-to-late July every year, self-healing every January 1st**. That's why it shipped with no code change.
+
+### Why every existing gate was blind to it
+
+Worth recording, because it's the actual defect:
+
+| Gate | Why it missed this |
+|---|---|
+| Unit tests | Fixtures are small. Nothing has 1,000 rows |
+| `/scoped-review` | No diff to review — the code was months old |
+| Typecheck / lint | Types were correct. Truncation is a runtime property of data volume |
+| `/verify-flow` | Clicking through renders a number; nothing says it's the *wrong* number |
+
+The bug appeared with zero code changes because a row counter crossed a threshold.
+
+### Shipped (`e6b64ed`, master, production verified)
+
+- **`fix(dashboard)`** — narrowed the range, added `src/lib/supabase/assert-complete.ts` which passes `{ count: "exact" }` and throws when a row set comes back short.
+- **`feat(estimates)`** — `/estimates/[id]/print` plus a Print button on the estimate detail page, in every status including draft. Printing previously required approving the estimate and converting it to a job. `PrintButton` moved to `components/dashboard` so both print routes share it.
+- **`fix(review)`** — the review fixes below.
+
+Production confirmed by the owner: Today's Revenue now reads **$2,946** ($2,261 job revenue + $685 inspections from `daily_inspection_counts`). Sentry clean, no new production issues.
+
+### The review caught two Criticals in the fix itself
+
+- **`assertComplete` failed OPEN on the one mistake it exists to catch.** `count` is null exactly when a caller forgets `{ count: "exact" }`, and the `count !== null &&` clause made that a silent no-op while the call site still read as protected — worse than no guard, because a reviewer greps for `assertComplete` and counts the site covered. Now fails closed.
+- **Compile-time enforcement was investigated and is not available.** supabase-js erases the count option from the result type, so a counted and an uncounted select are literally the same type; a `count: number` parameter would reject every real caller. This was proven by probe, not reasoning. Runtime fail-closed is the only option.
+- The guard's return was discarded and rows re-read from the raw result, so deleting the guard wasn't a compile error. Now assigned.
+- A `head: true` result (data null, count N) read as "truncated to 0 rows". Rejected explicitly; one such query sits 14 lines away.
+- **`getShopSettings()` returns null for BOTH "not configured" and "read failed"**, and `calculateTotals` then falls back to defaults with supplies and hazmat disabled. Those fee lines render conditionally, so a transient failure would hand a customer an estimate quietly missing its fees, with only a `console.error` as evidence. The print page now refuses to render.
+- The print page cast a partial select to the full `Customer`/`Vehicle` row types — exactly how the `address` bug shipped. Now `Pick<>` of the real select.
+- My own design doc claimed `assertComplete` was applied to "every remaining row-fetch that feeds a figure." It's applied to **1 of 15**. Corrected — the stale-checkbox failure mode, in a doc four hours old.
+
+456 tests (from 449), typecheck and build clean.
+
+### Designs written, nothing built
+
+- **`docs/money-layer-design.md`** — the root cause behind the incident. `calculateTotals()` in JS is the only place that knows what a job is worth, so every consumer downloads raw rows to sum them. Three faces: queries that can truncate; five surfaces that each define "the job's total" differently (**A/R omits tax, supplies AND hazmat, so it disagrees with the job page today, no bug required**); and split-tender's forgeable `p_total`. Proposes a `job_totals` SQL view proven equivalent to `calculateTotals` by differential test.
+- **`docs/split-tender-design.md`** — v1, the 122-agent review that killed it (110 verified findings, 30 Critical, verdict *not bulletproof*), and **v3**, which reframes a split as a *transient checkout event* rather than a durable job state and therefore needs no new enum values. That reframe came from the owner, and it dissolved ~80% of the review's Criticals rather than fixing them. Parked behind the money layer.
+
+### Known issues / open items
+
+- **`getTaxReportData` has no date filter at all** — pulls every paid job in history and narrows the year in JS. **983 of 1000 rows used**, and it moved by one during the session. When it crosses, the DOR filing surface silently drops arbitrary jobs. One-line SQL date filter. Asked three times, never answered.
+- **`customer-insights.ts` is wrong today** — `:57-62` fetches all-time completed jobs ordered ascending with `.limit(50000)` (clamped to 1000), already past 1,002 rows, so `newCustomers` and `repeatRate` come from an incomplete first-visit map.
+- `trends.ts:145` comments `// Limit 10000 to override Supabase default 1000-row cap` — backwards; `.limit()` is clamped *by* the cap.
+- `receivables.ts:48` and `:94` destructure `{ data }` and **discard `error`** — a failed query renders **$0 outstanding**, on the screen built for chasing non-payers.
+- `dashboard/page.tsx:145-152` appointments read is unbounded and ordered ascending, so on truncation it drops the *future* first. Measured 4 rows, 996 headroom — years away, but the failure direction argues for a cheap bound.
+- **`broadway-motors/` is not a git repo.** `SHOPPILOT_ROADMAP.md`, which CLAUDE.md calls the single source of truth, is not version controlled.
+
+### Process lesson
+
+A `/harden-plan` brief told ~7 reviewer lenses they could probe the live database and run diagnostic scripts. Every agent shelled out to `node`, and in accept-edits mode each call became a separate approval prompt for the owner — dozens in minutes, plus stray `_diag*.cjs` files in the repo root. **Measure once yourself, hand agents the numbers as given facts, and keep fan-outs on read-only file tools.** Recorded in memory.
+
+### What's next
+
+The money layer (`docs/money-layer-design.md`) before split-tender — both need the grand total in the database, and building split-tender first means building against a JS-only total. Its §8 has four open decisions; the load-bearing one is freeze-totals-at-completion vs version-shop-settings. The tax report date filter should go in ahead of all of it.

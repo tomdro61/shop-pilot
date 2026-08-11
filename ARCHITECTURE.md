@@ -22,6 +22,7 @@ This is the **current shape of the system** — what exists, where it lives, and
 - Customer list: server-side pagination (50 per page) with URL params, handles 3,000+ imported contacts
 - **RO numbers** — auto-assigned sequential repair order numbers (RO-0001 format) via PostgreSQL `ro_number_seq`
 - **Printable Repair Order** at `/jobs/[id]/print` — shop header, customer/vehicle info, itemized line items, tax, totals
+- **Printable Estimate** at `/estimates/[id]/print` — same layout, available in every estimate status including draft (printing previously required approving and converting to a job). Both routes share `components/dashboard/print-button.tsx`
 - **Service categorization** — line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
 - **Estimates** — public approval page fully working (live mode). Estimates can be deleted and recreated to pick up updated job line items. Estimate line items carry categories and are grouped by service category on both internal and customer-facing views.
 
