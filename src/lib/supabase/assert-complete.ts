@@ -20,7 +20,7 @@
  * Prefer aggregating in SQL over fetching rows to sum them. This guards the
  * cases that still fetch rows.
  */
-type RowSetResult<T> =
+export type RowSetResult<T> =
   | { data: T[]; error: null; count: number | null }
   | { data: null; error: { message: string }; count: null };
 

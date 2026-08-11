@@ -10,6 +10,7 @@ import {
   getDateRange,
 } from "@/lib/utils/trend-buckets";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -38,6 +39,46 @@ export interface CustomerInsightsData {
 
 const WALK_IN_ID = "00000000-0000-0000-0000-000000000000";
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+type FirstVisitRow = { customer_id: string | null; date_finished: string | null };
+
+// Shape of `periodSelect` below. Declared once because the select string is
+// built dynamically (the fleet/retail filter adds an !inner join), which
+// defeats Supabase's row-type inference.
+type PeriodJobRow = {
+  id: string;
+  customer_id: string | null;
+  date_finished: string | null;
+  customers: { id: string; first_name: string; last_name: string } | null;
+  job_line_items: { total: number | null; category: string | null }[] | null;
+};
+
+/**
+ * Every completed job, oldest first. The first-visit map genuinely needs all of
+ * history — a customer is "new" only if their earliest job falls in the period —
+ * so this can't be narrowed by date and must page past the 1000-row cap.
+ *
+ * `.limit(50000)` used to stand in for this and did nothing: the cap clamps
+ * `.limit()`, it doesn't raise it. Completed jobs passed 1,002 in Aug 2026, so
+ * the map was being built from the OLDEST 1000 and every customer whose first
+ * visit was among the newest jobs went missing — undercounting newCustomers and
+ * overstating repeatRate.
+ */
+async function fetchFirstVisitRows(supabase: SupabaseServerClient): Promise<FirstVisitRow[]> {
+  return fetchAllRows<FirstVisitRow>(
+    (from, to) =>
+      supabase
+        .from("jobs")
+        .select("customer_id, date_finished")
+        .eq("status", "complete")
+        .order("date_finished", { ascending: true })
+        // Tiebreak so paging is deterministic — date_finished alone has ties.
+        .order("id", { ascending: true })
+        .range(from, to),
+    "completed jobs (first-visit map)"
+  );
+}
+
 /** Lightweight KPIs for the overview dashboard — avoids the full all-time jobs query. */
 export async function getCustomerKpis(
   startDate: string,
@@ -45,35 +86,36 @@ export async function getCustomerKpis(
 ): Promise<{ newCustomers: number; repeatRate: number }> {
   const supabase = await createClient();
 
-  // Period jobs: just customer_id + date_finished (no line items needed)
-  const [periodResult, firstVisitResult] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select("customer_id")
-      .eq("status", "complete")
-      .gte("date_finished", startDate)
-      .lte("date_finished", endDate)
-      .limit(10000),
-    supabase
-      .from("jobs")
-      .select("customer_id, date_finished")
-      .eq("status", "complete")
-      .order("date_finished", { ascending: true })
-      .limit(50000),
+  // Both reads page: a year-long period already spans the shop's whole job
+  // history, so neither is safely under one response.
+  const [periodRows, firstVisitRows] = await Promise.all([
+    fetchAllRows<{ customer_id: string | null }>(
+      (from, to) =>
+        supabase
+          .from("jobs")
+          .select("customer_id")
+          .eq("status", "complete")
+          .gte("date_finished", startDate)
+          .lte("date_finished", endDate)
+          .order("id", { ascending: true })
+          .range(from, to),
+      "completed jobs in period"
+    ),
+    fetchFirstVisitRows(supabase),
   ]);
 
   // Build first-visit map
   const firstJobDate = new Map<string, string>();
-  for (const job of (firstVisitResult.data || [])) {
-    if (!job.customer_id || job.customer_id === WALK_IN_ID) continue;
+  for (const job of firstVisitRows) {
+    if (!job.customer_id || !job.date_finished || job.customer_id === WALK_IN_ID) continue;
     if (!firstJobDate.has(job.customer_id)) {
-      firstJobDate.set(job.customer_id, job.date_finished!);
+      firstJobDate.set(job.customer_id, job.date_finished);
     }
   }
 
   // Unique customers in period
   const periodCustomers = new Set<string>();
-  for (const job of (periodResult.data || [])) {
+  for (const job of periodRows) {
     if (job.customer_id && job.customer_id !== WALK_IN_ID) {
       periodCustomers.add(job.customer_id);
     }
@@ -110,29 +152,26 @@ export async function getCustomerInsightsData(
   const periodSelect: string = isFiltered
     ? "id, customer_id, date_finished, customers!inner(id, first_name, last_name, customer_type), job_line_items(total, category)"
     : "id, customer_id, date_finished, customers(id, first_name, last_name), job_line_items(total, category)";
-  let periodQuery = supabase
-    .from("jobs")
-    .select(periodSelect)
-    .eq("status", "complete")
-    .gte("date_finished", startDate)
-    .lte("date_finished", endDate)
-    .limit(10000);
-  if (isFiltered) periodQuery = periodQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
-
   // All-time query is NOT filtered — needed to correctly identify new vs returning
-  const [periodResult, allTimeResult, manualEntries] = await Promise.all([
-    periodQuery,
-    supabase
-      .from("jobs")
-      .select("customer_id, date_finished")
-      .eq("status", "complete")
-      .order("date_finished", { ascending: true })
-      .limit(50000),
+  const [periodJobs, allTimeJobs, manualEntries] = await Promise.all([
+    fetchAllRows<PeriodJobRow>((from, to) => {
+      let q = supabase
+        .from("jobs")
+        .select(periodSelect)
+        .eq("status", "complete")
+        .gte("date_finished", startDate)
+        .lte("date_finished", endDate)
+        .order("id", { ascending: true })
+        .range(from, to);
+      if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+      return q as unknown as PromiseLike<{
+        data: PeriodJobRow[] | null;
+        error: { message: string } | null;
+      }>;
+    }, "completed jobs in period"),
+    fetchFirstVisitRows(supabase),
     isFiltered ? Promise.resolve([]) : getManualIncomeForRange(startDate, endDate),
   ]);
-
-  const periodJobs = (periodResult.data || []) as any[];
-  const allTimeJobs = allTimeResult.data || [];
 
   // Build first-visit map: customer_id → earliest date_finished
   const firstJobDate = new Map<string, string>();

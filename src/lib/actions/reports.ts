@@ -8,6 +8,7 @@ import { isInspectionCategory, calcInspectionRevenue, sumManualIncome, sumManual
 import { MA_SALES_TAX_RATE } from "@/lib/constants";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { getShopSettings } from "@/lib/actions/settings";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -576,6 +577,13 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+type TaxReportJobRow = {
+  paid_at: string | null;
+  date_finished: string | null;
+  charge_sales_tax: boolean | null;
+  job_line_items: { type: string; total: number | null; category: string | null }[] | null;
+};
+
 export async function getTaxReportData(year: number, customerType?: string): Promise<TaxReportData> {
   const supabase = await createClient();
   const isFiltered = !!(customerType && customerType !== "all");
@@ -583,28 +591,51 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
   const jobSelect: string = isFiltered
     ? "id, paid_at, date_finished, charge_sales_tax, customers!inner(customer_type), job_line_items(type, total, category)"
     : "id, paid_at, date_finished, charge_sales_tax, job_line_items(type, total, category)";
-  let jobQuery = supabase
-    .from("jobs")
-    .select(jobSelect)
-    .eq("payment_status", "paid");
-  if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+  // Bound the read to the requested year. Without it this asks for every paid
+  // job in the shop's history and narrows to `year` in JS below, which had it
+  // 17 rows from the 1000-row cap in Aug 2026 — on the surface used for DOR
+  // filings, where a truncated read understates a filed return.
+  //
+  // Deliberately one day wider on each side than the JS filter: rows are
+  // bucketed by ET and `paid_at` is a UTC instant, so a job paid 8pm Dec 31 ET
+  // carries a Jan 1 UTC timestamp. This must never exclude a row the JS filter
+  // would keep.
+  //
+  // The filter alone is NOT sufficient: as of 2026 every paid job in the
+  // database falls in the current filing year, so narrowing by year narrows
+  // nothing. Hence the paging below — a year of jobs will exceed one response
+  // within days, and this report must stay correct through it.
+  const paidFrom = `${year - 1}-12-31T00:00:00Z`;
+  const paidTo = `${year + 1}-01-02T00:00:00Z`;
+  const finishedFrom = `${year - 1}-12-31`;
+  const finishedTo = `${year + 1}-01-01`;
 
-  const [jobResult, taxManualEntries, settings] = await Promise.all([
-    jobQuery,
+  const jobsPromise = fetchAllRows<TaxReportJobRow>((from, to) => {
+    let q = supabase
+      .from("jobs")
+      .select(jobSelect)
+      .eq("payment_status", "paid")
+      // `paid_at` when set, else `date_finished` — mirroring the fallback at
+      // the bucketing step, so neither shape is dropped.
+      .or(
+        `and(paid_at.gte.${paidFrom},paid_at.lte.${paidTo}),` +
+          `and(paid_at.is.null,date_finished.gte.${finishedFrom},date_finished.lte.${finishedTo})`
+      )
+      // Stable sort is required for correct paging.
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+    return q as unknown as PromiseLike<{ data: TaxReportJobRow[] | null; error: { message: string } | null }>;
+  }, "jobs for tax report");
+
+  const [jobs, taxManualEntries, settings] = await Promise.all([
+    jobsPromise,
     isFiltered ? Promise.resolve([]) : getManualIncomeForRange(`${year}-01-01`, `${year}-12-31`),
     getShopSettings(),
   ]);
   // Read the live rate from settings (don't hard-code) so the report matches the
   // rate actually charged on invoices.
   const taxRate = settings?.tax_rate ?? MA_SALES_TAX_RATE;
-  // Don't let a failed query silently render a $0 tax report — on a surface used
-  // for DOR filings, "query failed" must not look like "a quiet year".
-  if ((jobResult as { error?: { message: string } }).error) {
-    throw new Error(
-      `Failed to load jobs for tax report: ${(jobResult as { error: { message: string } }).error.message}`
-    );
-  }
-  const jobs = ((jobResult as any).data || []) as any[];
 
   // Aggregate by month
   const monthBuckets: Record<number, { totalRevenue: number; partsTotal: number }> = {};
@@ -612,7 +643,7 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
     monthBuckets[m] = { totalRevenue: 0, partsTotal: 0 };
   }
 
-  (jobs || []).forEach((job) => {
+  jobs.forEach((job) => {
     // Use paid_at when available, fall back to date_finished (backfilled data)
     const dateStr = job.paid_at || job.date_finished;
     if (!dateStr) return;
@@ -626,7 +657,7 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
 
     const month = etMonth; // 1-12
 
-    const lineItems = (job.job_line_items as { type: string; total: number; category: string | null }[]) || [];
+    const lineItems = job.job_line_items ?? [];
     // A job with sales tax turned off bills its parts, but they are NOT taxable
     // (e.g. outsourced parts the shop didn't buy) — count them as revenue but
     // exclude from the taxable base so the MA DOR filing isn't overstated.
