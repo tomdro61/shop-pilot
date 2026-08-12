@@ -5,14 +5,37 @@ import { subDays, differenceInDays, parseISO } from "date-fns";
 import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
 import { isInspectionCategory, calcInspectionRevenue, sumManualIncome, sumManualIncomeProfit } from "@/lib/utils/revenue";
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { getShopSettings } from "@/lib/actions/settings";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import { assertComplete } from "@/lib/supabase/assert-complete";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
 }
+
+// Shapes of the dynamically-built selects in getReportData. Declared because a
+// select string chosen at runtime defeats Supabase's literal-type inference.
+type ReportJobLineItem = {
+  type: string;
+  total: number;
+  quantity: number;
+  unit_cost: number;
+  cost: number | null;
+  category: string | null;
+};
+type ReportCurrentJobRow = {
+  id: string;
+  assigned_tech: string | null;
+  users: { name: string } | null;
+  customers: { customer_type: string } | null;
+  job_line_items: ReportJobLineItem[] | null;
+};
+type ReportPriorJobRow = {
+  id: string;
+  job_line_items: ReportJobLineItem[] | null;
+};
+type EstimateCloseRow = { id: string; status: string; sent_at: string | null };
 
 export async function getReportData(params: {
   from: string;
@@ -30,33 +53,50 @@ export async function getReportData(params: {
   const currentSelect: string = isFiltered
     ? "id, assigned_tech, users!jobs_assigned_tech_fkey(name), customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
     : "id, assigned_tech, users!jobs_assigned_tech_fkey(name), customers(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)";
-  let currentPromise = supabase
-    .from("jobs")
-    .select(currentSelect)
-    .eq("status", "complete")
-    .gte("date_finished", start)
-    .lte("date_finished", end);
-  if (isFiltered) currentPromise = currentPromise.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+  // Paged, not a single read. The "All Time" preset resolves to 2000-01-01
+  // (date-range.ts) and "This Year" covers essentially every job in the
+  // database, so this query was already returning the first 1000 of 1,002
+  // completed jobs and understating revenue, gross profit, the tech
+  // leaderboard and category profitability with no error anywhere.
+  const currentJobsPromise = fetchAllRows<ReportCurrentJobRow>((from, to) => {
+    let q = supabase
+      .from("jobs")
+      .select(currentSelect, { count: "exact" })
+      .eq("status", "complete")
+      .gte("date_finished", start)
+      .lte("date_finished", end)
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+    return q.returns<ReportCurrentJobRow[]>();
+  }, "jobs for revenue report");
 
   // ONE query for prior period (count + revenue + gross profit)
   const priorSelect: string = isFiltered
     ? "id, customers!inner(customer_type), job_line_items(type, total, cost, quantity, category)"
     : "id, job_line_items(type, total, cost, quantity, category)";
-  let priorQuery = priorStart && priorEnd
-    ? supabase
-        .from("jobs")
-        .select(priorSelect)
-        .eq("status", "complete")
-        .gte("date_finished", priorStart)
-        .lte("date_finished", priorEnd)
-    : null;
-  if (priorQuery && isFiltered) priorQuery = priorQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
-  const priorPromise = priorQuery ?? Promise.resolve({ data: null });
+  const priorJobsPromise: Promise<ReportPriorJobRow[]> =
+    priorStart && priorEnd
+      ? fetchAllRows<ReportPriorJobRow>((from, to) => {
+          let q = supabase
+            .from("jobs")
+            .select(priorSelect, { count: "exact" })
+            .eq("status", "complete")
+            .gte("date_finished", priorStart)
+            .lte("date_finished", priorEnd)
+            .order("id", { ascending: true })
+            .range(from, to);
+          if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+          return q.returns<ReportPriorJobRow[]>();
+        }, "prior-period jobs for revenue report")
+      : Promise.resolve([]);
 
-  // Estimate close rate: estimates sent within this period
+  // Estimate close rate: estimates sent within this period. Bounded by sent_at,
+  // and guarded rather than paged — a period's sent estimates stay well under
+  // one response.
   const estimatesPromise = supabase
     .from("estimates")
-    .select("id, status, sent_at")
+    .select("id, status, sent_at", { count: "exact" })
     .in("status", ["sent", "approved"])
     .gte("sent_at", start)
     .lte("sent_at", end);
@@ -65,28 +105,29 @@ export async function getReportData(params: {
   const priorEstimatesPromise = priorStart && priorEnd
     ? supabase
         .from("estimates")
-        .select("id, status, sent_at")
+        .select("id, status, sent_at", { count: "exact" })
         .in("status", ["sent", "approved"])
         .gte("sent_at", priorStart)
         .lte("sent_at", priorEnd)
-    : Promise.resolve({ data: null });
+    : Promise.resolve({ data: [] as EstimateCloseRow[], error: null, count: 0 });
 
   const [
-    currentResult, priorResult, estimatesResult, priorEstimatesResult,
+    currentJobs, priorJobs, estimatesResult, priorEstimatesResult,
     inspectionTotals, manualEntries,
     priorInspectionTotals, priorManualEntries,
   ] = await Promise.all([
-    currentPromise, priorPromise, estimatesPromise, priorEstimatesPromise,
+    currentJobsPromise, priorJobsPromise, estimatesPromise, priorEstimatesPromise,
     getInspectionCountsRange(start, end),
     getManualIncomeForRange(start, end),
     priorStart && priorEnd ? getInspectionCountsRange(priorStart, priorEnd) : Promise.resolve({ state_count: 0, tnc_count: 0 }),
     priorStart && priorEnd ? getManualIncomeForRange(priorStart, priorEnd) : Promise.resolve([]),
   ]);
 
-  const currentJobs = (currentResult.data || []) as any[];
-  const priorJobs = (priorResult.data || []) as any[];
-  const estimates = estimatesResult.data || [];
-  const priorEstimates = priorEstimatesResult.data || [];
+  // These four used to be `(result.data || [])` with no error check, so a failed
+  // read rendered a shop that did no business — indistinguishable from a genuinely
+  // quiet period.
+  const estimates = assertComplete(estimatesResult, "estimates for close rate");
+  const priorEstimates = assertComplete(priorEstimatesResult, "prior-period estimates");
 
   // --- Aggregate everything from the single current-period result ---
 
@@ -638,7 +679,20 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
   ]);
   // Read the live rate from settings (don't hard-code) so the report matches the
   // rate actually charged on invoices.
-  const taxRate = settings?.tax_rate ?? MA_SALES_TAX_RATE;
+  //
+  // Do NOT fall back to the statutory rate here. `shop_settings.tax_rate` is NOT
+  // NULL, so `settings` is only null when getShopSettings' read FAILED (or no
+  // row exists) — meaning a fallback isn't a default, it's a guess printed on a
+  // DOR filing surface, and getShopSettings is React-cached so one blip applies
+  // it to the whole render. If the shop charges anything other than the
+  // statutory rate, every month and the YTD row would be wrong and captioned
+  // as intentional.
+  if (!settings) {
+    throw new Error(
+      "Failed to load shop settings — refusing to render a tax report with a guessed rate."
+    );
+  }
+  const taxRate = settings.tax_rate;
 
   // Aggregate by month
   const monthBuckets: Record<number, { totalRevenue: number; partsTotal: number }> = {};
