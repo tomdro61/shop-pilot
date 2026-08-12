@@ -1,5 +1,29 @@
 import { describe, it, expect } from "vitest";
-import { assertComplete } from "./assert-complete";
+import { assertComplete, assertCount } from "./assert-complete";
+
+describe("assertCount", () => {
+  it("returns the count from a head query", async () => {
+    await expect(assertCount(Promise.resolve({ count: 42, error: null }), "estimates")).resolves.toBe(42);
+  });
+
+  it("returns zero rather than treating it as missing", async () => {
+    await expect(assertCount(Promise.resolve({ count: 0, error: null }), "estimates")).resolves.toBe(0);
+  });
+
+  it("throws on a query error", async () => {
+    await expect(
+      assertCount(Promise.resolve({ count: null, error: { message: "boom" } }), "estimates")
+    ).rejects.toThrow("Failed to count estimates: boom");
+  });
+
+  // Same fail-closed rule as assertComplete: a null count means the caller
+  // forgot the count option, not that there are no rows.
+  it("throws when the count is null", async () => {
+    await expect(
+      assertCount(Promise.resolve({ count: null, error: null }), "estimates")
+    ).rejects.toThrow(/expected an exact count/);
+  });
+});
 
 type Row = { id: string };
 const rows = (n: number): Row[] => Array.from({ length: n }, (_, i) => ({ id: String(i) }));

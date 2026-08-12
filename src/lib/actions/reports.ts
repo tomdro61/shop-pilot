@@ -8,7 +8,7 @@ import { isInspectionCategory, calcInspectionRevenue, sumManualIncome, sumManual
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { getShopSettings } from "@/lib/actions/settings";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
-import { assertComplete } from "@/lib/supabase/assert-complete";
+import { assertComplete, assertCount } from "@/lib/supabase/assert-complete";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -16,7 +16,11 @@ function toDateStr(date: Date): string {
 
 // Shapes of the dynamically-built selects in getReportData. Declared because a
 // select string chosen at runtime defeats Supabase's literal-type inference.
-type ReportJobLineItem = {
+// One type per select — deliberately NOT shared. `priorSelect` omits
+// `unit_cost`, so a shared type would declare a field the query never fetches:
+// `undefined` at runtime with no type error, which is the exact trap this file
+// was just fixed to close.
+type CurrentJobLineItem = {
   type: string;
   total: number;
   quantity: number;
@@ -24,18 +28,19 @@ type ReportJobLineItem = {
   cost: number | null;
   category: string | null;
 };
+type PriorJobLineItem = Omit<CurrentJobLineItem, "unit_cost">;
+
 type ReportCurrentJobRow = {
   id: string;
   assigned_tech: string | null;
   users: { name: string } | null;
   customers: { customer_type: string } | null;
-  job_line_items: ReportJobLineItem[] | null;
+  job_line_items: CurrentJobLineItem[] | null;
 };
 type ReportPriorJobRow = {
   id: string;
-  job_line_items: ReportJobLineItem[] | null;
+  job_line_items: PriorJobLineItem[] | null;
 };
-type EstimateCloseRow = { id: string; status: string; sent_at: string | null };
 
 export async function getReportData(params: {
   from: string;
@@ -91,43 +96,39 @@ export async function getReportData(params: {
         }, "prior-period jobs for revenue report")
       : Promise.resolve([]);
 
-  // Estimate close rate: estimates sent within this period. Bounded by sent_at,
-  // and guarded rather than paged — a period's sent estimates stay well under
-  // one response.
-  const estimatesPromise = supabase
-    .from("estimates")
-    .select("id, status, sent_at", { count: "exact" })
-    .in("status", ["sent", "approved"])
-    .gte("sent_at", start)
-    .lte("sent_at", end);
-
-  // Prior period estimates
-  const priorEstimatesPromise = priorStart && priorEnd
-    ? supabase
-        .from("estimates")
-        .select("id, status, sent_at", { count: "exact" })
-        .in("status", ["sent", "approved"])
-        .gte("sent_at", priorStart)
-        .lte("sent_at", priorEnd)
-    : Promise.resolve({ data: [] as EstimateCloseRow[], error: null, count: 0 });
+  // Estimate close rate needs two numbers, not two row sets. Counting with
+  // `head: true` is immune to the row cap by construction — fetching the rows
+  // and guarding them would make the whole report un-openable once the shop
+  // passes 1000 sent estimates, on the same unbounded range ("All Time",
+  // "This Year") that forced the jobs reads above to page.
+  const countEstimates = (from: string, to: string, approvedOnly: boolean) => {
+    const q = supabase
+      .from("estimates")
+      .select("id", { count: "exact", head: true })
+      .gte("sent_at", from)
+      .lte("sent_at", to);
+    return approvedOnly ? q.eq("status", "approved") : q.in("status", ["sent", "approved"]);
+  };
 
   const [
-    currentJobs, priorJobs, estimatesResult, priorEstimatesResult,
+    currentJobs, priorJobs,
+    estimatesSent, estimatesApproved, priorEstimatesSent, priorEstimatesApproved,
     inspectionTotals, manualEntries,
     priorInspectionTotals, priorManualEntries,
   ] = await Promise.all([
-    currentJobsPromise, priorJobsPromise, estimatesPromise, priorEstimatesPromise,
-    getInspectionCountsRange(start, end),
-    getManualIncomeForRange(start, end),
-    priorStart && priorEnd ? getInspectionCountsRange(priorStart, priorEnd) : Promise.resolve({ state_count: 0, tnc_count: 0 }),
-    priorStart && priorEnd ? getManualIncomeForRange(priorStart, priorEnd) : Promise.resolve([]),
+    currentJobsPromise, priorJobsPromise,
+    assertCount(countEstimates(start, end, false), "estimates sent"),
+    assertCount(countEstimates(start, end, true), "estimates approved"),
+    priorStart && priorEnd ? assertCount(countEstimates(priorStart, priorEnd, false), "prior estimates sent") : Promise.resolve(0),
+    priorStart && priorEnd ? assertCount(countEstimates(priorStart, priorEnd, true), "prior estimates approved") : Promise.resolve(0),
+    // Only fetched when they'll actually be used — the customer-type filter
+    // discards both below, and a failed read shouldn't take down a report that
+    // was never going to show the value.
+    isFiltered ? Promise.resolve({ state_count: 0, tnc_count: 0 }) : getInspectionCountsRange(start, end),
+    isFiltered ? Promise.resolve([]) : getManualIncomeForRange(start, end),
+    priorStart && priorEnd && !isFiltered ? getInspectionCountsRange(priorStart, priorEnd) : Promise.resolve({ state_count: 0, tnc_count: 0 }),
+    priorStart && priorEnd && !isFiltered ? getManualIncomeForRange(priorStart, priorEnd) : Promise.resolve([]),
   ]);
-
-  // These four used to be `(result.data || [])` with no error check, so a failed
-  // read rendered a shop that did no business — indistinguishable from a genuinely
-  // quiet period.
-  const estimates = assertComplete(estimatesResult, "estimates for close rate");
-  const priorEstimates = assertComplete(priorEstimatesResult, "prior-period estimates");
 
   // --- Aggregate everything from the single current-period result ---
 
@@ -433,14 +434,8 @@ export async function getReportData(params: {
     if (grossProfitPrior !== null) grossProfitPrior += sumManualIncomeProfit(priorManualEntries);
   }
 
-  // Estimate close rate
-  const estimatesSent = estimates.length;
-  const estimatesApproved = estimates.filter((e) => e.status === "approved").length;
+  // Estimate close rate (counts come from head queries above)
   const estimateCloseRate = estimatesSent > 0 ? (estimatesApproved / estimatesSent) * 100 : 0;
-
-  // Prior estimate close rate
-  const priorEstimatesSent = priorEstimates.length;
-  const priorEstimatesApproved = priorEstimates.filter((e) => e.status === "approved").length;
   const priorEstimateCloseRate = priorEstimatesSent > 0 ? (priorEstimatesApproved / priorEstimatesSent) * 100 : 0;
 
   // Computed comparison values

@@ -24,6 +24,23 @@ export type RowSetResult<T> =
   | { data: T[]; error: null; count: number | null }
   | { data: null; error: { message: string }; count: null };
 
+/**
+ * For a `{ count: "exact", head: true }` query, which returns a count and no
+ * body. Immune to the row cap by construction — prefer it over fetching rows
+ * you only intend to count.
+ */
+export async function assertCount(
+  query: PromiseLike<{ count: number | null; error: { message: string } | null }>,
+  label: string
+): Promise<number> {
+  const { count, error } = await query;
+  if (error) throw new Error(`Failed to count ${label}: ${error.message}`);
+  if (count === null) {
+    throw new Error(`${label}: expected an exact count — pass { count: "exact", head: true }.`);
+  }
+  return count;
+}
+
 export function assertComplete<T>(result: RowSetResult<T>, label: string): T[] {
   if (result.error) throw new Error(`Failed to load ${label}: ${result.error.message}`);
 

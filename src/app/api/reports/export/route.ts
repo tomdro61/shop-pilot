@@ -236,10 +236,11 @@ export async function GET(req: NextRequest) {
   ];
   rows.push(toCSVRow(inspHeaders));
 
-  // Fetch daily inspection counts for the period
-  const inspTotals = await getInspectionCountsRange(resolved.from, resolved.to);
-
-  // We need daily breakdown — fetch directly
+  // The daily breakdown below is the only inspection data this route uses.
+  // A `getInspectionCountsRange` call used to sit here assigning an unread
+  // variable; once that function started throwing it became the one thing in
+  // this route that could fail loudly — while the two reads that actually
+  // produce the CSV still failed silently. Removed.
   const { data: dailyCounts } = await supabase
     .from("daily_inspection_counts")
     .select("date, state_count, tnc_count")

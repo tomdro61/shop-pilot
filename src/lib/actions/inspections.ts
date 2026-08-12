@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { assertComplete } from "@/lib/supabase/assert-complete";
 import type { DailyInspectionCount } from "@/types";
 
 export async function getInspectionCounts(
@@ -38,17 +39,22 @@ export async function getInspectionCountsRange(
   end: string
 ): Promise<{ state_count: number; tnc_count: number }> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("daily_inspection_counts")
-    .select("state_count, tnc_count")
-    .gte("date", start)
-    .lte("date", end);
-
   // `error` used to be discarded, so a failed read returned zeros and every
   // consumer showed "0 inspections" — identical to a week the shop genuinely
   // inspected nothing, and it understates gross profit by the whole inspection
   // margin on the revenue report.
-  if (error) throw new Error(`Failed to load inspection counts: ${error.message}`);
+  //
+  // Counted as well as error-checked: this table is one row per date, so the
+  // "All Time" range crosses the 1000-row cap after ~2.7 years of daily
+  // entries, and a truncated read arrives as a clean HTTP 200.
+  const data = assertComplete(
+    await supabase
+      .from("daily_inspection_counts")
+      .select("state_count, tnc_count", { count: "exact" })
+      .gte("date", start)
+      .lte("date", end),
+    "inspection counts"
+  );
 
   const totals = (data || []).reduce(
     (acc, row) => ({
