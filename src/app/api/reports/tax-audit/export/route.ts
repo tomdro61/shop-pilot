@@ -3,8 +3,39 @@ import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { isInspectionCategory } from "@/lib/utils/revenue";
-import { MA_SALES_TAX_RATE } from "@/lib/constants";
 import { getShopSettings } from "@/lib/actions/settings";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+
+// Shape of `jobSelect` below — declared once because the select string is built
+// dynamically (the customer-type filter adds an !inner join), which defeats
+// Supabase's row-type inference.
+type TaxAuditLineItem = {
+  type: "labor" | "part";
+  description: string;
+  quantity: number;
+  unit_cost: number;
+  total: number;
+  cost: number | null;
+  category: string | null;
+  part_number: string | null;
+};
+type TaxAuditCustomer = { first_name: string; last_name: string; customer_type: string | null };
+type TaxAuditVehicle = {
+  year: number | null;
+  make: string | null;
+  model: string | null;
+  license_plate: string | null;
+};
+type TaxAuditJobRow = {
+  ro_number: number | null;
+  paid_at: string | null;
+  date_finished: string | null;
+  payment_method: string | null;
+  charge_sales_tax: boolean;
+  customers: TaxAuditCustomer | null;
+  vehicles: TaxAuditVehicle | null;
+  job_line_items: TaxAuditLineItem[] | null;
+};
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -51,8 +82,20 @@ export async function GET(req: NextRequest) {
   // Live rate from settings, matching the on-screen Tax Summary. A job with sales
   // tax turned off contributes 0 taxable parts + 0 tax — its parts are still billed
   // in Subtotal/Total but are non-taxable (e.g. outsourced parts).
+  //
+  // No fallback to the statutory rate. `shop_settings.tax_rate` is NOT NULL, so
+  // `settings` is null ONLY when the read failed — a fallback here isn't a
+  // default, it's a guess stamped on a filing export and captioned as the rate
+  // applied. getTaxReportData refuses for the same reason.
   const settings = await getShopSettings();
-  const taxRate = settings?.tax_rate ?? MA_SALES_TAX_RATE;
+  if (!settings) {
+    console.error("[tax-audit] shop settings unavailable", { userId: auth.userId, year, month });
+    return NextResponse.json(
+      { error: "Shop settings unavailable — refusing to export a tax audit with a guessed rate." },
+      { status: 500 }
+    );
+  }
+  const taxRate = settings.tax_rate;
 
   const jobSelect = isFiltered
     ? `id, ro_number, paid_at, date_finished, payment_method, charge_sales_tax,
@@ -64,22 +107,47 @@ export async function GET(req: NextRequest) {
        vehicles(year, make, model, license_plate),
        job_line_items(type, description, quantity, unit_cost, total, cost, category, part_number)`;
 
-  let jobQuery = supabase
-    .from("jobs")
-    .select(jobSelect)
-    .eq("payment_status", "paid");
-  if (isFiltered) {
-    jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
-  }
+  // Bound to the requested year, and paged. This used to ask for every paid job
+  // in the shop's history and narrow to `year` in JS below — at 983 paid jobs it
+  // was ~17 rows from PostgREST's 1000-row cap, which truncates silently and
+  // would have understated a filed return. The filter is deliberately a day
+  // wider on each side than the JS bucketing (rows are bucketed by ET, `paid_at`
+  // is a UTC instant), and paging covers the case the filter can't: every paid
+  // job currently falls inside the current filing year, so narrowing by year
+  // narrows nothing.
+  const paidFrom = `${year - 1}-12-31T00:00:00Z`;
+  const paidTo = `${year + 1}-01-02T00:00:00Z`;
+  const finishedFrom = `${year - 1}-12-31`;
+  const finishedTo = `${year + 1}-01-01`;
 
-  // Manual income: same year-range as reports.ts:629, then bucketed by month below.
-  // getManualIncomeForRange throws on infra error — handle it explicitly so the operator
-  // sees a logged, contextual 500 instead of an opaque Next.js error.
-  let jobResult: Awaited<typeof jobQuery>;
+  const jobsPromise = fetchAllRows<TaxAuditJobRow>((from, to) => {
+    let q = supabase
+      .from("jobs")
+      .select(jobSelect, { count: "exact" })
+      .eq("payment_status", "paid")
+      // `paid_at` when set, else `date_finished` — mirroring the fallback at the
+      // bucketing step below, so neither shape is dropped.
+      .or(
+        `and(paid_at.gte.${paidFrom},paid_at.lte.${paidTo}),` +
+          `and(paid_at.is.null,date_finished.gte.${finishedFrom},date_finished.lte.${finishedTo})`
+      )
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (isFiltered) {
+      q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+    }
+    return q.returns<TaxAuditJobRow[]>();
+  }, "jobs for tax audit export");
+
+  // Manual income: same year-range as getTaxReportData, then bucketed by month
+  // below. Both reads throw on infra error (and fetchAllRows also throws on a
+  // truncated read) — handle it explicitly so the operator sees a logged,
+  // contextual 500 instead of an opaque Next.js error or, worse, a CSV.
+  let jobs: TaxAuditJobRow[];
   let manualEntries: Awaited<ReturnType<typeof getManualIncomeForRange>>;
   try {
-    [jobResult, manualEntries] = await Promise.all([
-      jobQuery,
+    [jobs, manualEntries] = await Promise.all([
+      jobsPromise,
       isFiltered ? Promise.resolve([]) : getManualIncomeForRange(`${year}-01-01`, `${year}-12-31`),
     ]);
   } catch (err) {
@@ -96,37 +164,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  if (jobResult.error) {
-    console.error("[tax-audit] job query failed", {
-      userId: auth.userId,
-      year,
-      month,
-      customerType,
-      error: jobResult.error,
-    });
-    return NextResponse.json({ error: jobResult.error.message }, { status: 500 });
-  }
-
-  type LineItem = {
-    type: "labor" | "part";
-    description: string;
-    quantity: number;
-    unit_cost: number;
-    total: number;
-    cost: number | null;
-    category: string | null;
-    part_number: string | null;
-  };
-  type Customer = { first_name: string; last_name: string; customer_type: string | null };
-  type Vehicle = { year: number | null; make: string | null; model: string | null; license_plate: string | null };
   type JobRow = {
     ro_number: number | null;
     paidDateET: string;
     monthNum: number;
     payment_method: string | null;
-    customer: Customer | null;
-    vehicle: Vehicle | null;
-    lineItems: LineItem[];
+    customer: TaxAuditCustomer | null;
+    vehicle: TaxAuditVehicle | null;
+    lineItems: TaxAuditLineItem[];
     labor: number;
     parts: number;
     taxableParts: number;
@@ -137,17 +182,7 @@ export async function GET(req: NextRequest) {
   };
 
   const filteredJobs: JobRow[] = [];
-  for (const j of jobResult.data ?? []) {
-    const job = j as {
-      ro_number: number | null;
-      paid_at: string | null;
-      date_finished: string | null;
-      payment_method: string | null;
-      charge_sales_tax: boolean;
-      customers: Customer | null;
-      vehicles: Vehicle | null;
-      job_line_items: LineItem[] | null;
-    };
+  for (const job of jobs) {
     const dateStr = job.paid_at || job.date_finished;
     if (!dateStr) continue;
 
