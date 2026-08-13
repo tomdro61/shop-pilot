@@ -1,12 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireManager } from "@/lib/auth";
 import { resolveDateRange } from "@/lib/utils/date-range";
-import { getInspectionCountsRange } from "@/lib/actions/inspections";
 import { isInspectionCategory } from "@/lib/utils/revenue";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import { assertComplete } from "@/lib/supabase/assert-complete";
 import {
   INSPECTION_RATE_STATE,
   INSPECTION_RATE_TNC,
+  INSPECTION_COST_STATE,
 } from "@/lib/constants";
+
+type ExportLineItem = {
+  type: string;
+  description: string;
+  quantity: number;
+  unit_cost: number;
+  total: number | null;
+  cost: number | null;
+  part_number: string | null;
+  category: string | null;
+};
+type ExportJobRow = {
+  id: string;
+  ro_number: number | null;
+  status: string;
+  date_received: string | null;
+  date_finished: string | null;
+  payment_status: string;
+  payment_method: string | null;
+  paid_at: string | null;
+  notes: string | null;
+  assigned_tech: string | null;
+  users: { name: string } | null;
+  customers: {
+    first_name: string;
+    last_name: string;
+    phone: string | null;
+    email: string | null;
+    customer_type: string | null;
+    fleet_account: string | null;
+  } | null;
+  vehicles: {
+    year: number | null;
+    make: string | null;
+    model: string | null;
+    vin: string | null;
+    license_plate: string | null;
+  } | null;
+  job_line_items: ExportLineItem[] | null;
+};
 
 function escapeCSV(value: string): string {
   if (
@@ -30,14 +73,15 @@ function toCSVRow(fields: (string | number | null | undefined)[]): string {
 }
 
 export async function GET(req: NextRequest) {
-  // Auth check
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Manager-only: this CSV carries wholesale cost and per-line profit plus
+  // customer phone and email. It previously checked only that SOME user was
+  // signed in, so any tech could export both.
+  const auth = await requireManager();
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.error === "Unauthorized" ? 401 : 403 });
   }
+
+  const supabase = await createClient();
 
   const { searchParams } = req.nextUrl;
   const range = searchParams.get("range") || undefined;
@@ -45,20 +89,62 @@ export async function GET(req: NextRequest) {
   const to = searchParams.get("to") || undefined;
   const resolved = resolveDateRange(range, from, to);
 
-  // Fetch completed jobs with customer, vehicle, tech, and line items
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select(
-      `id, ro_number, status, date_received, date_finished, payment_status, payment_method, paid_at, notes,
-       assigned_tech, users!jobs_assigned_tech_fkey(name),
-       customers(first_name, last_name, phone, email, customer_type, fleet_account),
-       vehicles(year, make, model, vin, license_plate),
-       job_line_items(type, description, quantity, unit_cost, total, cost, part_number, category)`
-    )
-    .eq("status", "complete")
-    .gte("date_finished", resolved.from)
-    .lte("date_finished", resolved.to)
-    .order("date_finished", { ascending: true });
+  // Both reads below used to discard `error` and fall back to `[]`, so any
+  // failure produced a well-formed CSV reading GRAND TOTAL REVENUE: 0.00 —
+  // which opens in Excel and looks authoritative. They are also the reason the
+  // "All Time" preset (2000-01-01) silently truncated at 1000 jobs.
+  //
+  // `.order("date_finished")` alone is NOT a stable sort — many jobs share a
+  // completion date — so paging on it would duplicate and drop rows. The `id`
+  // tiebreaker is what makes the paging deterministic; keep both.
+  let jobs: ExportJobRow[];
+  let dailyCounts: { date: string; state_count: number; tnc_count: number }[];
+  try {
+    [jobs, dailyCounts] = await Promise.all([
+      fetchAllRows<ExportJobRow>(
+        (pageFrom, pageTo) =>
+          supabase
+            .from("jobs")
+            .select(
+              `id, ro_number, status, date_received, date_finished, payment_status, payment_method, paid_at, notes,
+               assigned_tech, users!jobs_assigned_tech_fkey(name),
+               customers(first_name, last_name, phone, email, customer_type, fleet_account),
+               vehicles(year, make, model, vin, license_plate),
+               job_line_items(type, description, quantity, unit_cost, total, cost, part_number, category)`,
+              { count: "exact" }
+            )
+            .eq("status", "complete")
+            .gte("date_finished", resolved.from)
+            .lte("date_finished", resolved.to)
+            .order("date_finished", { ascending: true })
+            .order("id", { ascending: true })
+            .range(pageFrom, pageTo)
+            .returns<ExportJobRow[]>(),
+        "jobs for revenue export"
+      ),
+      supabase
+        .from("daily_inspection_counts")
+        .select("date, state_count, tnc_count", { count: "exact" })
+        .gte("date", resolved.from)
+        .lte("date", resolved.to)
+        .order("date", { ascending: true })
+        .then((r) => assertComplete(r, "inspection counts for export")),
+    ]);
+  } catch (err) {
+    console.error("[reports-export] data fetch failed", {
+      userId: auth.userId,
+      range,
+      from: resolved.from,
+      to: resolved.to,
+      error: err instanceof Error ? err.message : err,
+    });
+    // Deliberately NOT a CSV response and no Content-Disposition — a browser
+    // must never save a failure as a .csv the operator then files.
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to build export" },
+      { status: 500 }
+    );
+  }
 
   // Build CSV — one row per line item
   const jobHeaders = [
@@ -93,34 +179,14 @@ export async function GET(req: NextRequest) {
   const rows: string[] = [toCSVRow(jobHeaders)];
   let grandTotal = 0;
 
-  (jobs || []).forEach((job) => {
-    const customer = job.customers as {
-      first_name: string;
-      last_name: string;
-      phone: string | null;
-      email: string | null;
-      customer_type: string | null;
-      fleet_account: string | null;
-    } | null;
-    const vehicle = job.vehicles as {
-      year: number | null;
-      make: string | null;
-      model: string | null;
-      vin: string | null;
-      license_plate: string | null;
-    } | null;
-    const tech = job.users as { name: string } | null;
-    const lineItems =
-      (job.job_line_items as {
-        type: string;
-        description: string;
-        quantity: number;
-        unit_cost: number;
-        total: number;
-        cost: number | null;
-        part_number: string | null;
-        category: string | null;
-      }[]) || [];
+  jobs.forEach((job) => {
+    // No casts — the row is typed by ExportJobRow above. The casts that used to
+    // sit here re-declared `total` as non-null, which is false at the DB layer
+    // and is exactly how a shape mismatch stays invisible.
+    const customer = job.customers;
+    const vehicle = job.vehicles;
+    const tech = job.users;
+    const lineItems = job.job_line_items ?? [];
 
     const roStr = job.ro_number ? `RO-${String(job.ro_number).padStart(4, "0")}` : "";
     const customerName = customer
@@ -236,25 +302,13 @@ export async function GET(req: NextRequest) {
   ];
   rows.push(toCSVRow(inspHeaders));
 
-  // The daily breakdown below is the only inspection data this route uses.
-  // A `getInspectionCountsRange` call used to sit here assigning an unread
-  // variable; once that function started throwing it became the one thing in
-  // this route that could fail loudly — while the two reads that actually
-  // produce the CSV still failed silently. Removed.
-  const { data: dailyCounts } = await supabase
-    .from("daily_inspection_counts")
-    .select("date, state_count, tnc_count")
-    .gte("date", resolved.from)
-    .lte("date", resolved.to)
-    .order("date", { ascending: true });
-
   let inspTotalRevenue = 0;
   let inspTotalProfit = 0;
 
-  (dailyCounts || []).forEach((day) => {
+  dailyCounts.forEach((day) => {
     const stateRev = day.state_count * INSPECTION_RATE_STATE;
     const tncRev = day.tnc_count * INSPECTION_RATE_TNC;
-    const stateCost = day.state_count * 11.5;
+    const stateCost = day.state_count * INSPECTION_COST_STATE;
     const dayRevenue = stateRev + tncRev;
     const dayProfit = dayRevenue - stateCost;
     inspTotalRevenue += dayRevenue;

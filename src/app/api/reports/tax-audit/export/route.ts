@@ -75,7 +75,14 @@ export async function GET(req: NextRequest) {
   if (Number.isNaN(year) || (month !== null && (Number.isNaN(month) || month < 1 || month > 12))) {
     return NextResponse.json({ error: "Invalid year or month" }, { status: 400 });
   }
+  const CUSTOMER_TYPES = ["retail", "fleet", "parking"] as const;
   const isFiltered = !!(customerType && customerType !== "all");
+  // customers.customer_type is a Postgres enum, so an unrecognised value comes
+  // back as a 22P02 from PostgREST and would surface as a 500 with raw Postgres
+  // text — a URL typo reported as a server fault. Validate it like year/month.
+  if (isFiltered && !CUSTOMER_TYPES.includes(customerType as (typeof CUSTOMER_TYPES)[number])) {
+    return NextResponse.json({ error: "Invalid customerType" }, { status: 400 });
+  }
 
   const supabase = await createClient();
 
@@ -83,10 +90,12 @@ export async function GET(req: NextRequest) {
   // tax turned off contributes 0 taxable parts + 0 tax — its parts are still billed
   // in Subtotal/Total but are non-taxable (e.g. outsourced parts).
   //
-  // No fallback to the statutory rate. `shop_settings.tax_rate` is NOT NULL, so
-  // `settings` is null ONLY when the read failed — a fallback here isn't a
-  // default, it's a guess stamped on a filing export and captioned as the rate
-  // applied. getTaxReportData refuses for the same reason.
+  // No fallback to the statutory rate. getShopSettings returns null for a
+  // failed read AND for a missing/RLS-hidden row (it uses .single(), which
+  // reports zero rows as a PGRST116 error) — so null never means "the shop
+  // configured nothing, use the default". A fallback here isn't a default,
+  // it's a guess stamped on a filing export and captioned as the rate applied.
+  // getTaxReportData refuses for the same reason.
   const settings = await getShopSettings();
   if (!settings) {
     console.error("[tax-audit] shop settings unavailable", { userId: auth.userId, year, month });
@@ -268,6 +277,11 @@ export async function GET(req: NextRequest) {
   rows.push(`Note: jobs with sales tax turned off (e.g. outsourced parts) show 0 in Parts (Taxable) and 0 tax; those parts stay in Subtotal/Total as non-taxable revenue`);
   if (isFiltered) {
     rows.push(`Filter: customer_type='${customerType}' (jobs with no linked customer are excluded)`);
+    // Manual income isn't attributable to a customer type, so it isn't read at
+    // all under a filter. Say so — otherwise Total Revenue below is short by
+    // the year's manual income under a caption that appears to list every
+    // exclusion.
+    rows.push(`Note: manual income is excluded under a customer-type filter — Total Revenue below is job revenue only`);
   }
   rows.push("");
 
