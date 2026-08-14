@@ -41,6 +41,29 @@ type ReportPriorJobRow = {
   id: string;
   job_line_items: PriorJobLineItem[] | null;
 };
+type FleetARJobRow = {
+  id: string;
+  date_finished: string | null;
+  payment_status: string;
+  customers: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    customer_type: string;
+    fleet_account: string | null;
+  } | null;
+  job_line_items: { total: number | null }[] | null;
+};
+type DailySummaryJobRow = {
+  id: string;
+  status: string;
+  payment_status: string;
+  payment_method: string | null;
+  assigned_tech: string | null;
+  users: { name: string } | null;
+  customers: { first_name: string; last_name: string } | null;
+  job_line_items: { total: number | null; category: string | null }[] | null;
+};
 
 export async function getReportData(params: {
   from: string;
@@ -477,21 +500,30 @@ export async function getFleetARSummary() {
   const supabase = await createClient();
 
   // Get all fleet customer jobs that aren't fully paid
-  const { data } = await supabase
+  const query = supabase
     .from("jobs")
-    .select("id, date_finished, payment_status, customers!inner(id, first_name, last_name, customer_type, fleet_account), job_line_items(total)")
+    .select("id, date_finished, payment_status, customers!inner(id, first_name, last_name, customer_type, fleet_account), job_line_items(total)", { count: "exact" })
     .eq("customers.customer_type", "fleet")
     .eq("status", "complete")
     .neq("payment_status", "paid")
-    .neq("payment_status", "waived");
+    .neq("payment_status", "waived")
+    .order("id", { ascending: true })
+    .returns<FleetARJobRow[]>();
+
+  // `error` used to be discarded and the result read as `data?.forEach`, so a
+  // failed query returned [] — and this is exposed to the AI as `get_ar_summary`,
+  // which would then tell the owner "no outstanding fleet receivables, all
+  // accounts are current". Unpaid fleet jobs also accumulate, so the read needs
+  // the truncation guard as well as the error check.
+  const data = assertComplete(await query, "fleet A/R jobs");
 
   const now = new Date();
   const accounts: Record<string, { current: number; days31to60: number; days60plus: number; total: number }> = {};
 
-  data?.forEach((job) => {
-    const customer = job.customers as { fleet_account: string | null; first_name: string; last_name: string } | null;
+  data.forEach((job) => {
+    const customer = job.customers;
     const accountName = customer?.fleet_account || `${customer?.first_name} ${customer?.last_name}`;
-    const jobTotal = (job.job_line_items as { total: number }[])?.reduce((s, li) => s + (li.total || 0), 0) || 0;
+    const jobTotal = (job.job_line_items ?? []).reduce((s, li) => s + (li.total || 0), 0);
 
     if (!accounts[accountName]) {
       accounts[accountName] = { current: 0, days31to60: 0, days60plus: 0, total: 0 };
@@ -516,30 +548,27 @@ export async function getFleetARSummary() {
     .sort((a, b) => b.total - a.total);
 }
 
-export async function getStaleJobsCount() {
-  const supabase = await createClient();
-  const twoDaysAgo = toDateStr(subDays(new Date(), 2));
-
-  const { count } = await supabase
-    .from("jobs")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["not_started", "in_progress", "waiting_for_parts"])
-    .lt("date_received", twoDaysAgo);
-
-  return count || 0;
-}
-
 export async function getDailySummary() {
   const supabase = await createClient();
   const today = todayET();
 
-  // Jobs received or worked on today
-  const { data: todayJobs } = await supabase
-    .from("jobs")
-    .select("id, status, payment_status, payment_method, assigned_tech, users!jobs_assigned_tech_fkey(name), customers(first_name, last_name), job_line_items(total, category)")
-    .or(`date_received.eq.${today},date_finished.eq.${today}`);
-
-  const jobs = todayJobs || [];
+  // Jobs received or worked on today. `error` used to be discarded and the
+  // result collapsed with `|| []`, so a failed read reported 0 jobs, $0 revenue
+  // and no tech activity — indistinguishable from a closed day, on the read the
+  // AI answers "how did we do today?" with, and the one most likely to be used
+  // against the cash drawer.
+  const jobs = assertComplete(
+    await supabase
+      .from("jobs")
+      .select(
+        "id, status, payment_status, payment_method, assigned_tech, users!jobs_assigned_tech_fkey(name), customers(first_name, last_name), job_line_items(total, category)",
+        { count: "exact" }
+      )
+      .or(`date_received.eq.${today},date_finished.eq.${today}`)
+      .order("id", { ascending: true })
+      .returns<DailySummaryJobRow[]>(),
+    "today's jobs"
+  );
 
   // Revenue by payment method
   const revenueByMethod: Record<string, number> = {};
@@ -547,10 +576,10 @@ export async function getDailySummary() {
 
   jobs.forEach((job) => {
     if (job.payment_status === "paid" || job.status === "complete") {
-      const jobTotal = ((job.job_line_items as { total: number; category: string | null }[]) || [])
+      const jobTotal = (job.job_line_items ?? [])
         .filter((li) => !isInspectionCategory(li.category))
         .reduce((s, li) => s + (li.total || 0), 0);
-      const method = (job.payment_method as string) || "unrecorded";
+      const method = job.payment_method || "unrecorded";
       revenueByMethod[method] = (revenueByMethod[method] || 0) + jobTotal;
       totalRevenue += jobTotal;
     }

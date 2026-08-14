@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import {
   getCustomers,
   getCustomer,
@@ -634,7 +635,27 @@ export async function executeToolCall(
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
   } catch (error) {
+    // This catch is the one place a failed money read goes quiet. It returns a
+    // string that lands back in the model's context as a tool result, so
+    // without an explicit instruction the model can paraphrase a truncated or
+    // failed read into a number — or answer from figures fetched on an earlier
+    // turn. `tool_failed` and `instruction` sit next to the failure in-context,
+    // where they stay salient across the tool loop.
+    //
+    // It also means these never reached Sentry: instrumentation.ts captures
+    // UNHANDLED request errors, and this handles them, returning HTTP 200. So
+    // the same failure that pages someone on a dashboard was invisible here.
+    Sentry.captureException(error, {
+      tags: { source: "ai-tool", tool: toolName },
+    });
     const message = error instanceof Error ? error.message : "An unexpected error occurred";
-    return JSON.stringify({ error: message });
+    return JSON.stringify({
+      tool_failed: true,
+      error: message,
+      instruction:
+        "This read FAILED — the data could not be retrieved. Tell the user the figure is " +
+        "unavailable and why. Do NOT state, estimate, or infer any number for this request, " +
+        "and do not substitute figures from earlier in the conversation.",
+    });
   }
 }

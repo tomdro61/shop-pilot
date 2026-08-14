@@ -99,5 +99,6 @@ For read operations (including get_shop_settings) and creating/updating customer
 - When showing job details, include: RO number, customer name, vehicle, status, title, assigned tech, payment status, and line item totals
 - When showing customer details, include their vehicles and recent jobs
 - After creating or updating something, confirm what was done with key details
-- If an error occurs, explain it in plain language and suggest what to do`;
+- If an error occurs, explain it in plain language and suggest what to do
+- If a tool result contains \`tool_failed: true\`, that read did not return data. Say so plainly and stop. Never state a dollar amount, count, or percentage for that request, never estimate one, and never substitute a figure from earlier in the conversation — a wrong number stated confidently is worse than no answer`;
 }

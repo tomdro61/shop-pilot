@@ -159,6 +159,21 @@ These are the recurring failure modes from `REVIEW-FINDINGS.md`. Treat them as h
 - NEVER fire-and-forget Promises with only `.catch(console.error)` — surface delivery status to the caller
 - Hooks that wrap async work MUST handle thrown exceptions (try/catch around `await`) — the `{ error }` shape isn't enough
 
+**Reads that produce a number (the 1000-row cap):**
+
+Supabase caps every response at `api.max_rows` (1000) and reports **no error** when it truncates. `.limit(5000)` and `.range(0, 4999)` are both clamped — an explicit limit cannot raise the ceiling. In August 2026 the shop crossed 1,002 completed jobs and six separate money surfaces began silently understating: the dashboard showed $885 for a $2,261 day, the revenue report lost $2,747, the CSV export lost $7,221, and the DOR tax-audit export dropped $28.44 of collected sales tax. None of them errored. The bug shipped with **zero code changes** — a row counter crossed a threshold.
+
+So, for any query whose result is summed, counted, or averaged into a figure a human will act on:
+
+- **Aggregate in SQL when you can.** A `count`/`sum` returns one row and cannot truncate. `assertCount()` wraps a `{ count: "exact", head: true }` query — use it instead of fetching rows to call `.length` on them.
+- **Otherwise page it** with `fetchAllRows()` from `src/lib/supabase/fetch-all-rows.ts`, or guard a single read with `assertComplete()` from `src/lib/supabase/assert-complete.ts`. Both require `{ count: "exact" }` and **fail closed** when it's missing — a guard that silently no-ops is worse than no guard, because a reviewer greps for it and counts the site as covered.
+- **Paging requires a stable, unique sort.** `.order("date_finished")` is not one — many jobs share a date, so pages duplicate and drop rows. Add `.order("id")` as a tiebreaker.
+- **Never `const { data } = await supabase...`** on these paths. `receivables.ts` discarded `error` and rendered **$0 outstanding** — indistinguishable from "everyone has paid", on the screen built for chasing non-payers.
+- **A figure that can't be trusted must fail, not render.** Prefer an error boundary over a plausible wrong number. This applies double to CSV exports: a `$0.00` CSV opens in Excel, looks authoritative, and gets emailed to an accountant.
+- **`{ count: "exact" }` counts top-level rows only.** An embedded resource (`job_line_items(...)`) that hits the cap returns HTTP 200 with nothing to detect. Not currently reachable at this shop's scale, but don't claim coverage you don't have.
+
+Why this needs a rule rather than reviewer judgment: **every existing gate was structurally blind to it.** Unit tests use small fixtures. `/scoped-review` had no diff to review — the code was months old. Typecheck passed; truncation is a runtime property of data volume. `/verify-flow` renders a number and can't tell you it's the wrong one.
+
 **Caching:**
 - `unstable_cache` invalidation requires `revalidateTag` matching the cache's tag array — `revalidatePath` does NOT bust `unstable_cache` entries
 - Don't add `unstable_cache` for low-traffic internal-tool data — the staleness/invalidation cost outweighs the perf gain
