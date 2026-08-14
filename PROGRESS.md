@@ -4324,3 +4324,72 @@ A `/harden-plan` brief told ~7 reviewer lenses they could probe the live databas
 ### What's next
 
 The money layer (`docs/money-layer-design.md`) before split-tender — both need the grand total in the database, and building split-tender first means building against a JS-only total. Its §8 has four open decisions; the load-bearing one is freeze-totals-at-completion vs version-shop-settings. The tax report date filter should go in ahead of all of it.
+
+---
+
+## Session 73 — 2026-08-11 → 08-14 — Finishing the row-cap sweep: seven money surfaces, ~$11k of silently missing revenue
+
+Continuation of Session 72. That session found the dashboard understating revenue because a query silently truncated at PostgREST's 1000-row cap. This session followed the same bug through every other surface that sums rows in JS, and then wrote the rule down so it stops recurring.
+
+### The full tally
+
+Every figure below was measured against production, not estimated. All were silently wrong — no error, no log, nothing to distinguish them from a correct render.
+
+| Surface | Was | Should have been | Missing |
+|---|---|---|---|
+| Dashboard "Today's Revenue" (Session 72) | $885.00 | $2,261.00 | **$1,376.00** |
+| `/reports/revenue` — All Time | $259,701.50 | $262,448.50 | **$2,747.00** |
+| Revenue CSV export — All Time | $259,701.50 | $266,922.50 | **$7,221.00** |
+| Tax-audit CSV export — 2026 sales tax | $8,443.77 | $8,472.21 | **$28.44** |
+| Customer insights — repeat rate | 44.4% | 38.9% | overstated 5.5 pts |
+
+The tax-audit figure is the smallest and the most serious: it feeds a **DOR filing**.
+
+### What was actually wrong, and the shape of the fix
+
+Seven reads summed row sets in JS with nothing guarding the cap. Three patterns emerged:
+
+1. **Ranges that reached further back than any figure needed.** The dashboard pulled from Jan 1 for stats that never look past last month. Narrowing took it from 1,002 rows to 288.
+2. **No date filter at all.** `getTaxReportData` and the tax-audit export asked for *every paid job in history* and narrowed the year in JS afterward, so the cap bit before the filter ran. **The filter alone was not enough** — every paid job currently falls inside the current filing year, so narrowing by year narrows nothing. Both needed paging too.
+3. **`.limit(10000)` / `.limit(50000)` used as protection.** Three places. The cap *clamps* `.limit()`; it does not raise it. `trends.ts:145` still carries a comment asserting the opposite.
+
+Two new helpers, both fail-closed:
+- **`fetchAllRows`** — pages past the cap. Requires `{ count: "exact" }` and a stable unique sort, and compares what it paged against the count so a server-side `max_rows` below `pageSize` throws instead of returning a short set as complete.
+- **`assertComplete` / `assertCount`** — single-read guard, and the head-count variant that's cap-immune by construction.
+
+### The review caught more in my fixes than in the original code
+
+Worth recording, because it happened three rounds running:
+
+- **`assertComplete` originally failed OPEN** on the one mistake it existed to catch — `count` is null exactly when a caller forgets `{ count: "exact" }`, and the guard skipped silently while the call site still read as protected.
+- **Compile-time enforcement was investigated and proven impossible.** supabase-js erases the count option from the result type, so a counted and an uncounted select are literally the same type; a `count: number` parameter would reject every real caller. Runtime fail-closed is the only option. This was settled by a type probe, not by reasoning.
+- **`fetchAllRows` reintroduced the same bug class** by inferring "end of data" from a short page — which is exactly what a clamped page looks like.
+- **The estimate close-rate reads** fetched rows and guarded them on the same unbounded range that forced the jobs reads to page. At 1000 sent estimates the guard would have fired and made `/reports` **permanently un-openable**. Now counted with `head: true`.
+- **I made the revenue CSV export worse before making it better.** Deleting a dead `getInspectionCountsRange` call removed the only thing in that route that could throw. Correct diagnosis, backwards action — it equalised down. Fixed by repairing the reads it was compared against.
+- **A test helper's `cap` parameter was dead** — every test passed the default, so nothing ever exercised a clamping server, the one behavior the helper exists for.
+
+### Also found while in there
+
+- **`/api/reports/export` had no role gate.** It checked only that *some* user was signed in, so any tech could export wholesale cost, per-line profit, and customer phone/email — all withheld from techs everywhere else. Now `requireManager()`.
+- **`getShopSettings` returns null for both "not configured" and "read failed."** `shop_settings.tax_rate` is NOT NULL, so `settings?.tax_rate ?? MA_SALES_TAX_RATE` could only reach the fallback when the read *failed* — a guess printed on a DOR filing surface and captioned "Tax rate applied", memoized by React `cache()` for the whole render. Both tax surfaces now refuse. (The shop's configured rate happens to equal the statutory rate, so this had not yet caused harm.)
+- **The AI's blanket catch was the one place these failures stayed quiet.** It returned HTTP 200, so `instrumentation.ts` never captured them, and the error string landed back in the model's context where it could be paraphrased into a number. Now Sentry-captured and tagged `tool_failed: true` with an explicit instruction not to state any figure.
+- **`getFleetARSummary` / `getDailySummary`** discarded `error` and are AI-exposed: on failure the assistant said *"no outstanding fleet receivables"* and *"$0 revenue today."*
+- **`getStaleJobsCount`** deleted — `count || 0` reported "no stale jobs" on a failed count, and it had no callers.
+
+### The rule is now in CLAUDE.md
+
+The convention (aggregate in SQL; else page or guard; always `{ count: "exact" }`; stable unique sort; never discard `error`; fail rather than render) is documented under Anti-patterns with the measured cost of each instance — **and with why no existing gate caught it**: small fixtures, no diff to review (the code was months old), correct types, and `/verify-flow` renders a number without telling you it's the wrong one. That table is the durable output of this session.
+
+### Known issues / open items
+
+- **`/reports` overview blast radius** — `getReportData` now throws, and shares a `Promise.all` with three unrelated widgets, so one failed read blanks all four. Correct instinct, wider blast than needed. `Promise.allSettled` would degrade one card. Undecided.
+- **`trends.ts:145`** still comments `// Limit 10000 to override Supabase default 1000-row cap` — backwards, and the query is unaudited.
+- **`getInspectionCounts`** (single-day variant) still discards `error` → a failed read renders as a day with no inspections.
+- **`getShopSettings`** should throw on a real error and reserve null for a genuinely absent row; three separate comments now apologise for the conflation instead.
+- **Offset paging is theoretically skip-prone** if a row is inserted mid-read; keyset paging would be immune. Low probability, non-zero on a filing surface.
+- **Neither export route has a test.** One asserting "a failed read produces a non-200 and never a `text/csv` body" would lock this in.
+- **`broadway-motors/` is not a git repo** — `SHOPPILOT_ROADMAP.md` has no version control.
+
+### What's next
+
+**Split-tender v3** (`docs/split-tender-design.md`). Owner-requested 2026-07-08 and again 08-05, deferred through this whole sweep. The earlier "money layer must come first" recommendation was retracted for v3 specifically: it recomputes the total server-side per tender and needs no stored total, so it isn't blocked. The money layer (`docs/money-layer-design.md`) remains the right architecture but got *less* urgent as these symptoms were fixed.
