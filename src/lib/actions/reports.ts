@@ -588,8 +588,7 @@ export async function getDailySummary() {
   // Tech activity
   const techActivity: Record<string, number> = {};
   jobs.forEach((job) => {
-    const user = job.users as { name: string } | null;
-    const name = user?.name || "Unassigned";
+    const name = job.users?.name || "Unassigned";
     techActivity[name] = (techActivity[name] || 0) + 1;
   });
 
@@ -601,7 +600,7 @@ export async function getDailySummary() {
     techActivity,
     jobs: jobs.map((j) => {
       // Derive category from highest-revenue line item category
-      const liItems = (j.job_line_items as { total: number; category: string | null }[]) || [];
+      const liItems = j.job_line_items ?? [];
       const catTotals: Record<string, number> = {};
       liItems.forEach((li) => {
         const cat = li.category || "Uncategorized";
@@ -613,7 +612,7 @@ export async function getDailySummary() {
         status: j.status,
         category,
         payment_status: j.payment_status,
-        customer: j.customers as { first_name: string; last_name: string } | null,
+        customer: j.customers,
       };
     }),
   };
