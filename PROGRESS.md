@@ -4393,3 +4393,43 @@ The convention (aggregate in SQL; else page or guard; always `{ count: "exact" }
 ### What's next
 
 **Split-tender v3** (`docs/split-tender-design.md`). Owner-requested 2026-07-08 and again 08-05, deferred through this whole sweep. The earlier "money layer must come first" recommendation was retracted for v3 specifically: it recomputes the total server-side per tender and needs no stored total, so it isn't blocked. The money layer (`docs/money-layer-design.md`) remains the right architecture but got *less* urgent as these symptoms were fixed.
+
+## Session 74 — 2026-08-18 → 08-24 — A receipt plan that didn't survive its own review
+
+No code shipped. The session produced a plan, an adversarial review that invalidated most of it, and a rewrite. Recording it because the plan lives outside the repo and the findings outlived it.
+
+**Carried over from Session 73:** commit `0ec67a4` (drop three redundant casts in `getDailySummary`) landed after the Session 73 entry was written and was never logged.
+
+### Question answered: parking-lead invoices are not revenue
+
+Invoices created from a parking reservation write one `invoices` row with `job_id: null` (`invoices.ts:834`). No revenue surface reads `invoices` — the dashboard, `/reports/revenue`, both CSV exports, the tax report, the daily summary and receivables all read `jobs` + `job_line_items` (+ inspections + manual income). Paying one changes nothing; the webhook's parking branch only sends receipts.
+
+This matches ACCOUNTING.md scoping parking out of the shop's books — but the Stripe payout to Mercury is shared, so Wave's cash income includes parking money that ShopPilot's accrual revenue never shows. Section C of the bridge worksheet won't reconcile unless parking is backed out of B.
+
+### The receipt feature: planned, hardened, not built
+
+**Problem:** the shop prints a full job sheet for every receipt, because the existing digital receipt (`/receipt/[token]` + `sendJobReceipt`) is unreachable for walk-ins and Quick Pay. Both point at the shared Walk-In sentinel (`00000000-…`), whose phone/email are permanently NULL, so the Send Receipt button is hidden (`jobs/[id]/page.tsx:110`).
+
+**Plan:** `C:\Users\tomjd\.claude\plans\playful-pondering-codd.md` (v2).
+
+`/harden-plan` returned 87 findings, 84 surviving adversarial verification, 5 Critical. The v1 plan's central change was **inert**: relaxing `sendJobReceipt` to `requireStaff()` does nothing, because RLS — not the auth gate — blocks techs at four layers. `record_quick_pay_job` inserts jobs with `status='complete'` and no `assigned_tech`, matching neither tech SELECT policy on `jobs`, so every tech send would have returned "Job not found" while a permanent `// safety-removed:` marker sat in the codebase justifying nothing. `/api/quick-pay/route.ts:17-19` already documents this exact constraint; v1 reintroduced the pattern that comment exists to prevent.
+
+Two more that mattered:
+
+- v1's `to?: string` on `sendCustomerEmail` would have turned an **ungated `"use server"` export** into an arbitrary-recipient HTML mailer from the shop's Resend-verified domain. Filed as C-19.
+- v1's verification steps assumed test mode. `.env.local` holds live Quo and Resend keys, and dev/preview/production share one Supabase project — step 4 would have texted a real customer from the shop line, and step 5 would have written to the live sentinel row it was testing.
+
+The gate also caught its own amendments: the proposed tech scope check (`customer_id === WALK_IN_CUSTOMER_ID`) is true for every walk-in job ever created, so it scoped nothing — a tech could have POSTed any historical walk-in job id and had that stranger's itemized receipt delivered to a number they typed, permanently, since `/receipt/[token]` is unauthenticated and non-expiring.
+
+**Decisions locked (don't relitigate):** techs get receipt-send via an API route with `requireStaff()` + `createAdminClient()` + a scope check bound to the payment intent with a freshness window — not an in-place auth swap. Write-back of a typed contact to `customers` is cut from v1; a typed destination is used for that send only. Nothing ever writes contact data to the sentinel.
+
+**Checked against production:** `shop_settings.shop_supplies_enabled=false`, `hazmat_enabled=false`, so Quick Pay receipts don't currently overstate the charged amount. Enabling either would silently break that, since `charge_sales_tax=false` suppresses tax but not fees — Phase 1 pins it with a regression test.
+
+### What's next
+
+**Phase 1 of the receipt plan** — four customer-facing strings that are wrong for every sentinel job: the receipt heading renders the literal word "Vehicle", the name line renders "Walk-In Customer", the SMS opens "Hi Walk-In," and so does the email. Latent only because the button is hidden, which is exactly what Phase 2 removes. Touches no auth, no RLS, no API surface; ships alone.
+
+### Known issues
+
+- **C-19** — three email server actions are ungated and reachable by action id.
+- **H-50** — customer-detail jobs query is unbounded and feeds money figures. Measured 2026-08-24: sentinel 399 jobs, 1,147 total. Correct today; silently wrong the moment one customer crosses 1000.
