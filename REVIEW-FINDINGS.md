@@ -324,6 +324,27 @@ if (buffer.byteLength > MAX_BYTES) return { error: "File too large (max 5 MB)" }
 
 ---
 
+## C-19 — Three email server actions have no auth gate and are reachable by action id
+
+`src/lib/actions/email.ts` opens with `"use server"`, so every export is an independently invokable server action with its own action id, reachable by POSTing to any route in the app. Three of them have **no auth check at all** — the file never imports `@/lib/auth`:
+
+- `sendCustomerEmail` (email.ts:19)
+- `sendPaymentReceiptEmail` (email.ts:137)
+- `sendEstimateEmail` (email.ts:64)
+
+Both `subject` and `html` are caller-supplied. The only thing currently containing the blast radius is that the recipient is forced to `customers.email` for a customer the caller's RLS lets them read — an accident of implementation, not a gate.
+
+**Why it is filed now:** the receipt-sending plan (Session 74) proposed adding a `to?: string` override to `sendCustomerEmail`. That single parameter would have removed the last constraint and produced an arbitrary-recipient, arbitrary-HTML mailer sending from the shop's Resend-verified domain — bypassing every gate the rest of that plan was careful to preserve. The plan was rewritten; the underlying hole predates it and is still open.
+
+**Fix:**
+1. Extract the delivery body into a plain module (e.g. `src/lib/email/deliver.ts`) with **no** `"use server"` directive — a module without the directive gets no action id and no HTTP endpoint. Any recipient override lives there, never on an exported action.
+2. Add `requireStaff()` to the top of the three actions that remain actions. `requireStaff`, not `requireManager` — all six existing callsites run inside authenticated staff requests, and the receipt flow needs the tech path to work.
+
+Do NOT rely on the `customers` RLS SELECT policy as the gate. It blocks anon today by side effect; any future change that reads the customer via `createAdminClient()`, or an implementation that early-returns on an override before the lookup, silently converts this into an internet-reachable relay.
+
+**Source:** `/harden-plan` (SEC-2, REG-2, FIRS-2 — three independent lenses), 2026-08-24.
+
+
 # HIGH
 
 ## H-1 — `updateJobFields` accepts `customer_id`/`vehicle_id` without validation
@@ -996,6 +1017,26 @@ On error, `commit` toasts but leaves `editing=true` and `draft` unchanged. Combi
 **Fix:** Expose a `discard()` and a "retry" affordance after error. Optionally: on validation error keep draft; on unexpected error revert to `initial`.
 
 ---
+
+## H-50 — Customer-detail jobs query is unbounded and feeds three money figures
+
+`src/app/(dashboard)/customers/[id]/page.tsx` fetches a customer's jobs with no paging and no completeness guard, then sums them into `lifetimeSpend`, `avgRO`, and `outstandingSpend` (page.tsx:185-194). This is the exact class the Session 72/73 sweep was about — a read whose result is summed into a figure a human acts on, with nothing to detect PostgREST's 1000-row cap. It was missed by that sweep.
+
+**Measured 2026-08-24:**
+
+| | Count |
+|---|---|
+| Jobs on the Walk-In sentinel (`00000000-…`) | 399 |
+| Jobs, all customers | 1,147 |
+
+**Not currently wrong.** No single customer has crossed 1000 rows, so every figure on the page renders correctly today. It becomes a silent understatement the moment one does — no error, no log, nothing distinguishing it from a correct render, exactly as CLAUDE.md describes.
+
+The sentinel is the likeliest first crossing: every Quick Pay and every walk-in job attaches to that one row, and it gains one per counter sale with no offsetting removal. At 399 it is roughly 40% of the way there. (Whether it crosses first is not guaranteed — a large fleet account could get there too — but nothing else in the schema accumulates against a single `customer_id` the way it does.)
+
+**Fix:** page it with `fetchAllRows()` (`src/lib/supabase/fetch-all-rows.ts`) with `.order("id")` as a stable tiebreaker, or aggregate in SQL so the figures come back as one row and cannot truncate. Do not use `.limit(5000)` — the cap clamps an explicit limit rather than raising it.
+
+**Source:** surfaced incidentally by `/harden-plan` while verifying an unrelated claim about the sentinel, 2026-08-24. Pre-existing; created by sentinel jobs accumulating since April 2026 and untouched by the receipt work.
+
 
 # MEDIUM
 
