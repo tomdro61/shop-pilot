@@ -390,11 +390,21 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   // Receipt email (fire-and-forget)
   if (customer.email) {
     try {
-      const { data: settingsRow } = await supabase
+      const { data: settingsRow, error: settingsErr } = await supabase
         .from("shop_settings")
         .select("*")
         .limit(1)
         .single();
+
+      // No receipt beats a receipt with the wrong total. calculateTotals falls
+      // back to DEFAULT_SETTINGS when settingsRow is null — no shop supplies, no
+      // hazmat, statutory tax rate — so a failed read would email a figure that
+      // is not what the customer was charged, with no human in the loop to catch
+      // it. Throwing hands off to the catch below: the email is skipped, Sentry
+      // gets the event, and the confirmation SMS still goes out.
+      if (settingsErr) {
+        throw new Error(`shop_settings read failed: ${settingsErr.message}`);
+      }
 
       const lineItems = (jobData.job_line_items || []) as {
         type: "labor" | "part";
@@ -416,7 +426,9 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         customerName: customer.id === WALK_IN_CUSTOMER_ID ? null : customer.first_name,
         jobTitle: jobData.title,
         vehicleDesc,
-        amount: totals.grandTotal,
+        // What Stripe actually collected, not a recomputation of it — matching
+        // the parking branch above. `totals` still drives the itemisation.
+        amount: (stripeInvoice.amount_paid || 0) / 100,
         paymentMethod: jobData.payment_method || "stripe",
         lineItems,
         totals,

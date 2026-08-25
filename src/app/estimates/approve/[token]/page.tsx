@@ -8,6 +8,7 @@ import { EstimateApprovalButtons } from "@/components/dashboard/estimate-approva
 import {
   ESTIMATE_STATUS_LABELS,
   ESTIMATE_STATUS_COLORS,
+  WALK_IN_CUSTOMER_ID,
 } from "@/lib/constants";
 import { formatCurrency, formatVehicle, formatCustomerName } from "@/lib/utils/format";
 import { CheckCircle, XCircle } from "lucide-react";
@@ -54,6 +55,7 @@ export default async function EstimateApprovalPage({
   // jobs) so standalone estimates with job_id NULL still render.
   const customer = (estimate.customers as Customer | null) ?? null;
   const vehicle = (estimate.vehicles as Vehicle | null) ?? null;
+  const showCustomer = !!customer && customer.id !== WALK_IN_CUSTOMER_ID;
 
   const totals = calculateTotals(lineItems, settings, estimate.charge_sales_tax);
 
@@ -76,10 +78,10 @@ export default async function EstimateApprovalPage({
       </div>
 
       {/* Customer & Vehicle */}
-      {(customer || vehicle) && (
+      {(showCustomer || vehicle) && (
         <Card>
           <CardContent className="pt-6">
-            {customer && (
+            {showCustomer && customer && (
               <p className="font-medium">{formatCustomerName(customer)}</p>
             )}
             {vehicle && (
