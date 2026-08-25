@@ -201,6 +201,9 @@ export function estimateReadyEmail({
   };
 }
 
+// Null customerName / vehicleDesc omit their blocks — never substitute a
+// placeholder. A receipt reading "Hi Walk-In," above "VEHICLE / Vehicle" went to
+// a real paying customer.
 export function paymentReceiptEmail({
   customerName,
   jobTitle,
@@ -210,9 +213,9 @@ export function paymentReceiptEmail({
   lineItems,
   totals,
 }: {
-  customerName: string;
+  customerName: string | null;
   jobTitle: string | null;
-  vehicleDesc: string;
+  vehicleDesc: string | null;
   amount: number;
   paymentMethod: string;
   lineItems: LineItem[];
@@ -227,10 +230,23 @@ export function paymentReceiptEmail({
           ? "ACH Transfer"
           : paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1);
 
+  const vehicleBlock = vehicleDesc
+    ? `<p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Vehicle</p>
+          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(vehicleDesc)}</p>`
+    : "";
+  const serviceBlock = jobTitle
+    ? `<p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Service</p>
+          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(jobTitle)}</p>`
+    : "";
+
   const content = `
-    <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
+    ${
+      customerName
+        ? `<p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
       Hi ${escapeHtml(customerName)},
-    </p>
+    </p>`
+        : ""
+    }
     <p style="margin:0 0 16px;color:#44403c;font-size:15px;line-height:1.6;">
       Thank you for your payment. Here's your receipt.
     </p>
@@ -243,20 +259,18 @@ export function paymentReceiptEmail({
         </td>
       </tr>
     </table>
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafaf9;border-radius:6px;padding:16px;margin:0 0 20px;">
+    ${
+      vehicleBlock || serviceBlock
+        ? `<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafaf9;border-radius:6px;padding:16px;margin:0 0 20px;">
       <tr>
         <td>
-          <p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Vehicle</p>
-          <p style="margin:0 0 12px;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(vehicleDesc)}</p>
-          ${
-            jobTitle
-              ? `<p style="margin:0 0 4px;color:#78716c;font-size:12px;text-transform:uppercase;font-weight:600;">Service</p>
-          <p style="margin:0;color:#1c1917;font-size:15px;font-weight:500;">${escapeHtml(jobTitle)}</p>`
-              : ""
-          }
+          ${vehicleBlock}
+          ${serviceBlock}
         </td>
       </tr>
-    </table>
+    </table>`
+        : ""
+    }
     ${lineItemsTable(lineItems, totals)}`;
 
   return {

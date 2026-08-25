@@ -8,6 +8,7 @@ import {
 } from "@/lib/resend/templates";
 import { getShopSettings } from "@/lib/actions/settings";
 import { calculateTotals } from "@/lib/utils/totals";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 
 interface SendCustomerEmailParams {
   customerId: string;
@@ -145,7 +146,7 @@ export async function sendPaymentReceiptEmail({
     supabase
       .from("jobs")
       .select(
-        "id, title, customer_id, vehicle_id, payment_method, charge_sales_tax, customers(id, first_name, last_name, email), vehicles(id, year, make, model), job_line_items(type, description, quantity, unit_cost)"
+        "id, title, customer_id, vehicle_id, payment_method, charge_sales_tax, customers(id, first_name, last_name, email), vehicles(id, year, make, model, license_plate, vin), job_line_items(type, description, quantity, unit_cost)"
       )
       .eq("id", jobId)
       .single(),
@@ -169,11 +170,19 @@ export async function sendPaymentReceiptEmail({
     year: number | null;
     make: string | null;
     model: string | null;
+    license_plate: string | null;
+    vin: string | null;
   } | null;
 
+  // null means "no vehicle on this job" — never "there is one but we couldn't name
+  // it". year/make/model are all nullable and the vehicle form maps "" to null, so
+  // a plate-only record is reachable.
   const vehicleDesc = vehicle
-    ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")
-    : "Vehicle";
+    ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") ||
+      vehicle.license_plate ||
+      vehicle.vin ||
+      "Vehicle on file"
+    : null;
 
   const lineItems = (job.job_line_items || []) as {
     type: "labor" | "part";
@@ -185,7 +194,7 @@ export async function sendPaymentReceiptEmail({
   const totals = calculateTotals(lineItems, settings, job.charge_sales_tax);
 
   const { subject, html } = paymentReceiptEmail({
-    customerName: customer.first_name,
+    customerName: job.customer_id === WALK_IN_CUSTOMER_ID ? null : customer.first_name,
     jobTitle: job.title,
     vehicleDesc,
     amount: totals.grandTotal,

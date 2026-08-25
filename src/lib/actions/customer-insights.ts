@@ -11,6 +11,7 @@ import {
 } from "@/lib/utils/trend-buckets";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -36,8 +37,6 @@ export interface CustomerInsightsData {
     lastVisit: string;
   }>;
 }
-
-const WALK_IN_ID = "00000000-0000-0000-0000-000000000000";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 type FirstVisitRow = { customer_id: string | null; date_finished: string | null };
@@ -107,7 +106,7 @@ export async function getCustomerKpis(
   // Build first-visit map
   const firstJobDate = new Map<string, string>();
   for (const job of firstVisitRows) {
-    if (!job.customer_id || !job.date_finished || job.customer_id === WALK_IN_ID) continue;
+    if (!job.customer_id || !job.date_finished || job.customer_id === WALK_IN_CUSTOMER_ID) continue;
     if (!firstJobDate.has(job.customer_id)) {
       firstJobDate.set(job.customer_id, job.date_finished);
     }
@@ -116,7 +115,7 @@ export async function getCustomerKpis(
   // Unique customers in period
   const periodCustomers = new Set<string>();
   for (const job of periodRows) {
-    if (job.customer_id && job.customer_id !== WALK_IN_ID) {
+    if (job.customer_id && job.customer_id !== WALK_IN_CUSTOMER_ID) {
       periodCustomers.add(job.customer_id);
     }
   }
@@ -173,7 +172,7 @@ export async function getCustomerInsightsData(
   // Build first-visit map: customer_id → earliest date_finished
   const firstJobDate = new Map<string, string>();
   for (const job of allTimeJobs) {
-    if (!job.customer_id || !job.date_finished || job.customer_id === WALK_IN_ID) continue;
+    if (!job.customer_id || !job.date_finished || job.customer_id === WALK_IN_CUSTOMER_ID) continue;
     if (!firstJobDate.has(job.customer_id)) {
       firstJobDate.set(job.customer_id, job.date_finished);
     }
@@ -201,7 +200,7 @@ export async function getCustomerInsightsData(
   type LineItem = { total: number; category: string | null };
 
   for (const job of periodJobs) {
-    if (!job.customer_id || !job.date_finished || job.customer_id === WALK_IN_ID) continue;
+    if (!job.customer_id || !job.date_finished || job.customer_id === WALK_IN_CUSTOMER_ID) continue;
 
     const customer = job.customers as { id: string; first_name: string; last_name: string } | null;
     if (!customer) continue;

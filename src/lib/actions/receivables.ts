@@ -5,6 +5,7 @@ import { todayET } from "@/lib/utils";
 import { isInspectionCategory } from "@/lib/utils/revenue";
 import { differenceInDays, parseISO } from "date-fns";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -37,8 +38,6 @@ export interface FleetAccountAging {
   days60plus: number;
   total: number;
 }
-
-const WALK_IN_ID = "00000000-0000-0000-0000-000000000000";
 
 // Shape of `jobSelect` below — declared once because the select string is built
 // dynamically (the customer-type filter adds an !inner join), which defeats
@@ -141,7 +140,7 @@ export async function getReceivablesData(customerType?: string): Promise<Receiva
   type LineItem = { total: number; category: string | null };
 
   for (const job of (data || [])) {
-    if (!job.customer_id || job.customer_id === WALK_IN_ID) continue;
+    if (!job.customer_id || job.customer_id === WALK_IN_CUSTOMER_ID) continue;
 
     const customer = job.customers as {
       id: string;

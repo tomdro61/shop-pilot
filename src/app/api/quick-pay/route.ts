@@ -3,8 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireStaff } from "@/lib/auth";
 import { todayET } from "@/lib/utils";
-
-const WALK_IN_CUSTOMER_ID = "00000000-0000-0000-0000-000000000000";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 
 // DEPRECATED — superseded by /api/quick-pay/charge, which defers job creation
 // until the terminal payment succeeds (this route creates the job up front, which

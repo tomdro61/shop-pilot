@@ -131,6 +131,13 @@ export const DEFAULT_JOB_CATEGORIES = [
 /** @deprecated Use shop_settings.tax_rate from database instead. Kept as fallback in DEFAULT_SETTINGS. */
 export const MA_SALES_TAX_RATE = 0.0625; // 6.25%
 
+// Shared sentinel `customers` row for anonymous counter sales (migration
+// 20260408000000_walk_in_customer). Because it is shared: never write
+// per-transaction contact details to it — the next walk-in's receipt would go to
+// this one's phone — and never render its name to a customer; "Walk-In Customer"
+// is not a person.
+export const WALK_IN_CUSTOMER_ID = "00000000-0000-0000-0000-000000000000";
+
 // Estimate Status
 export const ESTIMATE_STATUS_LABELS: Record<EstimateStatus, string> = {
   draft: "Draft",

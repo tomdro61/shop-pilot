@@ -3,6 +3,7 @@ import {
   appointmentAckSMS,
   appointmentConfirmedSMS,
   appointmentReminderSMS,
+  receiptSMS,
 } from "./templates";
 
 describe("appointmentAckSMS", () => {
@@ -57,6 +58,33 @@ describe("appointmentReminderSMS", () => {
       })
     ).toBe(
       "Reminder: appointment tomorrow at 9:30am (Wed, Jun 3). Reply C to confirm or R to reschedule. — Broadway Motors"
+    );
+  });
+});
+
+describe("receiptSMS", () => {
+  const link = "https://shop-pilot-rosy.vercel.app/receipt/abc";
+
+  it("greets a real customer by name", () => {
+    expect(receiptSMS({ firstName: "Maria", year: 2019, make: "Honda", model: "Civic", link })).toBe(
+      `Hi Maria, here's your receipt from Broadway Motors for your 2019 Honda Civic: ${link}`
+    );
+  });
+
+  // Quick Pay and walk-in jobs hang off the shared WALK_IN_CUSTOMER_ID row, whose
+  // first_name is literally "Walk-In". Callers pass null for those; the message must
+  // not greet a paying customer as "Hi Walk-In,".
+  it("drops the greeting entirely for a counter sale", () => {
+    const msg = receiptSMS({ firstName: null, link });
+    expect(msg).toBe(`Here's your receipt from Broadway Motors: ${link}`);
+    expect(msg).not.toContain("Walk-In");
+    expect(msg).not.toContain("Hi ,");
+    expect(msg).not.toContain("null");
+  });
+
+  it("omits the vehicle clause when the job has no vehicle", () => {
+    expect(receiptSMS({ firstName: "Maria", link })).toBe(
+      `Hi Maria, here's your receipt from Broadway Motors: ${link}`
     );
   });
 });

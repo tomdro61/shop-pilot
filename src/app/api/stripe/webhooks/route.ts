@@ -13,6 +13,7 @@ import {
 } from "@/lib/messaging/templates";
 import { paymentReceiptEmail, parkingPaymentReceiptEmail } from "@/lib/resend/templates";
 import { calculateTotals } from "@/lib/utils/totals";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 import type Stripe from "stripe";
 
 export async function POST(request: Request) {
@@ -339,7 +340,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   const { data: jobData, error: jobFetchErr } = await supabase
     .from("jobs")
     .select(
-      "id, title, payment_method, charge_sales_tax, customers(id, first_name, last_name, email, phone), vehicles(year, make, model), job_line_items(type, description, quantity, unit_cost)"
+      "id, title, payment_method, charge_sales_tax, customers(id, first_name, last_name, email, phone), vehicles(year, make, model, license_plate, vin), job_line_items(type, description, quantity, unit_cost)"
     )
     .eq("id", invoice.job_id)
     .single();
@@ -369,6 +370,8 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
     year: number | null;
     make: string | null;
     model: string | null;
+    license_plate: string | null;
+    vin: string | null;
   } | null;
 
   if (!customer) {
@@ -401,12 +404,16 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       }[];
 
       const totals = calculateTotals(lineItems, settingsRow, jobData.charge_sales_tax);
+      // null means "no vehicle on this job", never "have one, couldn't name it".
       const vehicleDesc = vehicle
-        ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")
-        : "Vehicle";
+        ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") ||
+          vehicle.license_plate ||
+          vehicle.vin ||
+          "Vehicle on file"
+        : null;
 
       const { subject, html } = paymentReceiptEmail({
-        customerName: customer.first_name,
+        customerName: customer.id === WALK_IN_CUSTOMER_ID ? null : customer.first_name,
         jobTitle: jobData.title,
         vehicleDesc,
         amount: totals.grandTotal,

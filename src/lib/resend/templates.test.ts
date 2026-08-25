@@ -12,6 +12,7 @@
  * entire suite.
  */
 import { describe, it, expect } from "vitest";
+import { calculateTotals } from "@/lib/utils/totals";
 import {
   invoiceReadyEmail,
   estimateReadyEmail,
@@ -139,5 +140,54 @@ describe("invoiceReadyEmail reminder variant", () => {
     expect(first.subject).not.toContain("balance due");
     expect(first.html).toContain("is ready");
     expect(first.html).toContain("Amount Due");
+  });
+});
+
+describe("paymentReceiptEmail — counter sale has no customer and no vehicle", () => {
+  const lineItems = [{ type: "labor" as const, description: "Quick Pay", quantity: 1, unit_cost: 100 }];
+  const totals = calculateTotals(lineItems, undefined, false);
+  const base = {
+    amount: totals.grandTotal,
+    paymentMethod: "terminal",
+    lineItems,
+    totals,
+  };
+
+  it("omits the greeting rather than addressing anyone", () => {
+    const { html } = paymentReceiptEmail({
+      ...base, customerName: null, jobTitle: null, vehicleDesc: null,
+    });
+    expect(html).not.toContain("Walk-In");
+    expect(html).not.toContain("Hi ,");
+    expect(html).not.toContain("undefined");
+    expect(html).not.toContain("null");
+    // The thank-you line stands on its own without a salutation.
+    expect(html).toContain("Thank you for your payment.");
+  });
+
+  it("omits the Vehicle label entirely when there is no vehicle", () => {
+    const { html } = paymentReceiptEmail({
+      ...base, customerName: null, jobTitle: null, vehicleDesc: null,
+    });
+    expect(html).not.toContain(">Vehicle</p>");
+    expect(html).not.toContain("Vehicle");
+  });
+
+  it("still renders the Service block when a walk-in job has a title", () => {
+    const { html } = paymentReceiptEmail({
+      ...base, customerName: null, jobTitle: "Wiper replacement", vehicleDesc: null,
+    });
+    expect(html).toContain("Wiper replacement");
+    expect(html).toContain("Service");
+    expect(html).not.toContain("Vehicle");
+  });
+
+  it("is unchanged for a real customer with a vehicle", () => {
+    const { html } = paymentReceiptEmail({
+      ...base, customerName: "Maria", jobTitle: "Brake job", vehicleDesc: "2019 Honda Civic",
+    });
+    expect(html).toContain("Hi Maria,");
+    expect(html).toContain("2019 Honda Civic");
+    expect(html).toContain("Brake job");
   });
 });

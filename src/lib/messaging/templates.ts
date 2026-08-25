@@ -96,6 +96,7 @@ export function paymentReceivedSMS({
 // Link to the customer-facing /receipt/[token] page for a completed, paid job —
 // the "here's your bill" text after work is done (distinct from the invoice-to-pay
 // and estimate-to-approve links).
+// null firstName drops the greeting — see WALK_IN_CUSTOMER_ID.
 export function receiptSMS({
   firstName,
   year,
@@ -103,14 +104,15 @@ export function receiptSMS({
   model,
   link,
 }: {
-  firstName: string;
+  firstName: string | null;
   year?: number | null;
   make?: string | null;
   model?: string | null;
   link: string;
 }) {
   const vehicle = [year, make, model].filter(Boolean).join(" ");
-  return `Hi ${firstName}, here's your receipt from Broadway Motors${vehicle ? ` for your ${vehicle}` : ""}: ${link}`;
+  const greeting = firstName ? `Hi ${firstName}, here's` : "Here's";
+  return `${greeting} your receipt from Broadway Motors${vehicle ? ` for your ${vehicle}` : ""}: ${link}`;
 }
 
 export function reservationConfirmationSMS({

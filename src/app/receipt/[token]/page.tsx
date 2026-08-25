@@ -8,6 +8,7 @@ import {
   formatDate,
 } from "@/lib/utils/format";
 import { AlertCircle, CheckCircle2, Phone } from "lucide-react";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 
 export const metadata = {
   title: "Receipt — Broadway Motors",
@@ -87,6 +88,14 @@ export default async function CustomerReceiptPage({
   const lineItems = (job.job_line_items || []) as LineItem[];
   const totals = calculateTotals(lineItems, settings, job.charge_sales_tax);
 
+  const isWalkIn = job.customer_id === WALK_IN_CUSTOMER_ID;
+
+  // formatVehicle joins year/make/model, so a plate-only vehicle yields "" — fall
+  // through instead of rendering an empty heading. "Counter Sale" is only true of
+  // the sentinel; a real customer's vehicle-less job must not claim to be one.
+  const vehicleName = vehicle ? formatVehicle(vehicle) : "";
+  const heading = vehicleName || job.title || (isWalkIn ? "Counter Sale" : "Service");
+
   const grouped = new Map<string, LineItem[]>();
   for (const li of lineItems) {
     const cat = li.category || "General";
@@ -122,12 +131,12 @@ export default async function CustomerReceiptPage({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
-              {vehicle ? formatVehicle(vehicle) : "Vehicle"}
+              {heading}
             </h2>
-            {job.title && (
+            {job.title && job.title !== heading && (
               <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-300">{job.title}</p>
             )}
-            {customer && (
+            {customer && !isWalkIn && (
               <p className="mt-1.5 text-sm text-stone-500 dark:text-stone-400">
                 {formatCustomerName(customer)}
               </p>

@@ -7,6 +7,7 @@ import { getShopSettings } from "@/lib/actions/settings";
 import { sendPaymentReceiptEmail } from "@/lib/actions/email";
 import { sendCustomerSMS } from "@/lib/actions/messages";
 import { receiptSMS } from "@/lib/messaging/templates";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 
 // Public read for the customer-facing /receipt/[token] page. Admin client to
 // bypass RLS for an unauthenticated visitor — same pattern as
@@ -32,7 +33,7 @@ export async function getReceiptByToken(token: string) {
   const { data, error } = await supabase
     .from("jobs")
     .select(
-      "id, title, ro_number, payment_method, paid_at, charge_sales_tax, date_finished, customers(first_name, last_name), vehicles(year, make, model), job_line_items(id, type, description, quantity, unit_cost, total, part_number, category)"
+      "id, title, ro_number, payment_method, paid_at, charge_sales_tax, date_finished, customer_id, customers(first_name, last_name), vehicles(year, make, model), job_line_items(id, type, description, quantity, unit_cost, total, part_number, category)"
     )
     .eq("receipt_token", token)
     .eq("payment_status", "paid")
@@ -105,6 +106,17 @@ export async function sendJobReceipt({
     // Every job carries a DB-default token; a null here means the migration
     // hasn't been applied. Fail loudly rather than text a broken link.
     return { ok: false, error: "Receipt link is unavailable for this job." };
+  }
+  if (job.customer_id === WALK_IN_CUSTOMER_ID) {
+    // This function delivers to whatever is stored on the customer row, and the
+    // sentinel is shared by every counter sale. Writing one walk-in's phone onto
+    // it to "make the receipt work" would send the next walk-in's receipt to that
+    // person, so refuse rather than let the stored-contact path serve a shared row
+    // at all. Counter sales need a destination supplied per transaction.
+    return {
+      ok: false,
+      error: "This is a counter sale with no customer on file — attach a real customer to send a receipt.",
+    };
   }
 
   // Refuse to send if shop settings can't load — the receipt email recomputes
