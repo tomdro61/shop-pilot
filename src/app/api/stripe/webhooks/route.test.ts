@@ -30,6 +30,7 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/resend/client";
 import * as Sentry from "@sentry/nextjs";
 import { POST } from "./route";
 import {
@@ -177,5 +178,81 @@ describe("invoice.paid — idempotency", () => {
         tags: { source: "stripe-webhook", path: "invoice-status-flip" },
       })
     );
+  });
+});
+
+/**
+ * The receipt email headlines what Stripe collected, but its itemised table is
+ * recomputed at webhook time from current job_line_items and shop_settings.
+ * Nothing locks line items once a job is invoiced and an invoice can sit unpaid
+ * for 30 days, so those two can drift apart. These pin that a drift refuses to
+ * send rather than emailing a receipt whose parts contradict its own total.
+ */
+describe("invoice.paid — receipt total must match what Stripe collected", () => {
+  const JOB_ID = "44444444-4444-4444-9444-444444444444";
+  const CUSTOMER_ID = "55555555-5555-4555-9555-555555555555";
+
+  /** Queue for the job branch: lookup, flip, job update, job fetch, settings. */
+  function queueForJobBranch(unitCost: number): SupabaseMockResult[] {
+    return [
+      {
+        data: { id: INVOICE_ROW_ID, job_id: JOB_ID, parking_reservation_id: null, status: "sent" },
+        error: null,
+      },
+      { data: { id: INVOICE_ROW_ID }, error: null }, // atomic flip
+      { data: null, error: null }, // jobs update -> paid
+      {
+        data: {
+          id: JOB_ID,
+          title: "Brake job",
+          payment_method: "stripe",
+          charge_sales_tax: false,
+          customers: {
+            id: CUSTOMER_ID,
+            first_name: "Maria",
+            last_name: "Silva",
+            email: "maria@example.com",
+            phone: null,
+          },
+          vehicles: null,
+          job_line_items: [
+            { type: "labor", description: "Labor", quantity: 1, unit_cost: unitCost },
+          ],
+        },
+        error: null,
+      },
+      { data: { tax_rate: 0.0625, shop_supplies_enabled: false, hazmat_enabled: false }, error: null },
+    ];
+  }
+
+  it("sends when the recomputed total equals amount_paid", async () => {
+    mockStripeEvent({ amount_paid: 10000 });
+    mockSupabase(queueForJobBranch(100));
+    vi.mocked(sendEmail).mockResolvedValue({ success: true, testMode: false });
+
+    await POST(buildRequest());
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses to email a receipt whose itemisation disagrees with the charge", async () => {
+    // Line items were edited to $150 after a $100 invoice was sent and paid.
+    mockStripeEvent({ amount_paid: 10000 });
+    mockSupabase(queueForJobBranch(150));
+
+    await POST(buildRequest());
+
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  it("still sends a genuinely comped $0 invoice — 0 is a real amount, not a missing one", async () => {
+    mockStripeEvent({ amount_paid: 0 });
+    mockSupabase(queueForJobBranch(0));
+    vi.mocked(sendEmail).mockResolvedValue({ success: true, testMode: false });
+
+    await POST(buildRequest());
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
   });
 });

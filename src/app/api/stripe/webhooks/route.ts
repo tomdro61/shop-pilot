@@ -76,6 +76,43 @@ export async function POST(request: Request) {
   return NextResponse.json({ received: true });
 }
 
+// Both the delivered and the suppressed path record the attempt, so a customer
+// timeline can distinguish "no receipt was owed" from "one was owed and did not
+// go". The insert's own error used to be discarded outright.
+async function logReceiptEmail(
+  supabase: ReturnType<typeof createAdminClient>,
+  {
+    customerId,
+    jobId,
+    body,
+    sent,
+    stripeInvoiceId,
+  }: {
+    customerId: string;
+    jobId: string | null;
+    body: string;
+    sent: boolean;
+    stripeInvoiceId: string | undefined;
+  }
+) {
+  const { error } = await supabase.from("messages").insert({
+    customer_id: customerId,
+    job_id: jobId,
+    channel: "email" as const,
+    direction: "out" as const,
+    body,
+    status: sent ? "sent" : "failed",
+  });
+
+  if (error) {
+    console.error("Failed to log receipt email:", error.message);
+    Sentry.captureException(error, {
+      tags: { source: "stripe-webhook", path: "receipt-email-log" },
+      extra: { stripeInvoiceId, customerId, jobId },
+    });
+  }
+}
+
 async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   const supabase = createAdminClient();
 
@@ -400,16 +437,10 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       // back to DEFAULT_SETTINGS when settingsRow is null — no shop supplies, no
       // hazmat, statutory tax rate — so a failed read would email a figure that
       // is not what the customer was charged, with no human in the loop to catch
-      // it. Throwing hands off to the catch below: the email is skipped, Sentry
-      // gets the event, and the confirmation SMS still goes out.
+      // it. Throwing hands off to the catch below, which skips the email; the
+      // two SMS blocks further down are separate try blocks and still run.
       if (settingsErr) {
         throw new Error(`shop_settings read failed: ${settingsErr.message}`);
-      }
-      // Same rule applied to the figure itself: a receipt headlining "$0.00"
-      // looks authoritative and is unarguably wrong. The SMS path below already
-      // skips on a falsy amount_paid; the email must not be laxer.
-      if (!stripeInvoice.amount_paid) {
-        throw new Error("invoice.paid carried no amount_paid — receipt not sent");
       }
 
       const lineItems = (jobData.job_line_items || []) as {
@@ -420,6 +451,22 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       }[];
 
       const totals = calculateTotals(lineItems, settingsRow, jobData.charge_sales_tax);
+
+      // The headline figure is what Stripe collected; the itemisation below is
+      // recomputed here from current job_line_items and settings. Those two can
+      // drift — nothing locks line items once a job is invoiced, and an invoice
+      // can sit unpaid for 30 days — and a receipt whose parts contradict its
+      // own total is worse than no receipt. Refuse rather than render, same rule
+      // as the settings read. A genuinely comped $0 invoice passes: both sides
+      // compute to 0 and agree.
+      const paidCents = stripeInvoice.amount_paid;
+      const computedCents = Math.round(totals.grandTotal * 100);
+      if (typeof paidCents !== "number" || computedCents !== paidCents) {
+        throw new Error(
+          `receipt total mismatch — computed ${computedCents}c, Stripe collected ${paidCents}c`
+        );
+      }
+
       // null means "no vehicle on this job", never "have one, couldn't name it".
       const vehicleDesc = vehicle
         ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") ||
@@ -433,8 +480,9 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         jobTitle: jobData.title,
         vehicleDesc,
         // What Stripe actually collected, not a recomputation of it — matching
-        // the parking branch above. `totals` still drives the itemisation.
-        amount: stripeInvoice.amount_paid / 100,
+        // the parking branch above. The guard makes this equal to
+        // totals.grandTotal, so headline and itemisation cannot disagree.
+        amount: paidCents / 100,
         paymentMethod: jobData.payment_method || "stripe",
         lineItems,
         totals,
@@ -442,20 +490,44 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
 
       const result = await sendEmail({ to: customer.email, subject, html });
 
-      await supabase.from("messages").insert({
-        customer_id: customer.id,
-        job_id: invoice.job_id,
-        channel: "email" as const,
-        direction: "out" as const,
+      await logReceiptEmail(supabase, {
+        customerId: customer.id,
+        jobId: invoice.job_id,
         body: subject,
-        status: result.success ? "sent" : "failed",
+        sent: result.success,
+        stripeInvoiceId: stripeInvoice.id,
       });
+
+      // sendEmail RETURNS { success: false } on a Resend error rather than
+      // throwing, so the catch below never sees the most likely way a receipt
+      // fails — a bounce, a rate limit, a 5xx. Without this the only trace is a
+      // messages row nobody queries.
+      if (!result.success) {
+        Sentry.captureException(new Error(`receipt email not delivered: ${result.error}`), {
+          level: "error",
+          tags: { source: "stripe-webhook", path: "receipt-email-delivery" },
+          extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId: invoice.job_id },
+        });
+      }
     } catch (err) {
+      // A receipt suppressed on a payment that cleared is not a warning — the
+      // money moved and the customer has nothing. Error level so it clears
+      // alerting thresholds.
       console.error("Failed to send receipt email:", err);
       Sentry.captureException(err, {
-        level: "warning",
+        level: "error",
         tags: { source: "stripe-webhook", path: "receipt-email" },
         extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId: invoice.job_id },
+      });
+      // Record the attempt. Without a row the customer timeline is
+      // indistinguishable from "this customer has no email on file", so nobody
+      // can tell a receipt was owed and never went.
+      await logReceiptEmail(supabase, {
+        customerId: customer.id,
+        jobId: invoice.job_id,
+        body: "Payment receipt — not sent",
+        sent: false,
+        stripeInvoiceId: stripeInvoice.id,
       });
     }
   }

@@ -2,14 +2,9 @@ import { getEstimateByToken } from "@/lib/actions/estimates";
 import { getShopSettings } from "@/lib/actions/settings";
 import { calculateTotals } from "@/lib/utils/totals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { EstimateApprovalButtons } from "@/components/dashboard/estimate-approval-buttons";
-import {
-  ESTIMATE_STATUS_LABELS,
-  ESTIMATE_STATUS_COLORS,
-  WALK_IN_CUSTOMER_ID,
-} from "@/lib/constants";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 import { formatCurrency, formatVehicle, formatCustomerName } from "@/lib/utils/format";
 import { CheckCircle, XCircle } from "lucide-react";
 import type { EstimateStatus, EstimateLineItem, Customer, Vehicle } from "@/types";
@@ -43,7 +38,6 @@ export default async function EstimateApprovalPage({
   }
 
   const status = estimate.status as EstimateStatus;
-  const statusColors = ESTIMATE_STATUS_COLORS[status];
   const lineItems = (estimate.estimate_line_items || []) as EstimateLineItem[];
 
   const job = estimate.jobs as {

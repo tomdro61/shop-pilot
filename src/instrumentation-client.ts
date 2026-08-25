@@ -22,7 +22,6 @@ Sentry.init({
     /^moz-extension:\/\//i,
     /^safari-(web-)?extension:\/\//i,
     /^chrome:\/\//i,
-    /extensions\//i,
     /^app:\/\/\/scripts\//i,
   ],
   ignoreErrors: [
