@@ -405,6 +405,12 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       if (settingsErr) {
         throw new Error(`shop_settings read failed: ${settingsErr.message}`);
       }
+      // Same rule applied to the figure itself: a receipt headlining "$0.00"
+      // looks authoritative and is unarguably wrong. The SMS path below already
+      // skips on a falsy amount_paid; the email must not be laxer.
+      if (!stripeInvoice.amount_paid) {
+        throw new Error("invoice.paid carried no amount_paid — receipt not sent");
+      }
 
       const lineItems = (jobData.job_line_items || []) as {
         type: "labor" | "part";
@@ -428,7 +434,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         vehicleDesc,
         // What Stripe actually collected, not a recomputation of it — matching
         // the parking branch above. `totals` still drives the itemisation.
-        amount: (stripeInvoice.amount_paid || 0) / 100,
+        amount: stripeInvoice.amount_paid / 100,
         paymentMethod: jobData.payment_method || "stripe",
         lineItems,
         totals,
