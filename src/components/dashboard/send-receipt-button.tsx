@@ -22,9 +22,20 @@ interface SendReceiptButtonProps {
   jobId: string;
   customerEmail: string | null;
   customerPhone: string | null;
+  /** Job hangs off the shared walk-in row — see WALK_IN_CUSTOMER_ID. */
+  isWalkIn?: boolean;
 }
 
-export function SendReceiptButton({ jobId, customerEmail, customerPhone }: SendReceiptButtonProps) {
+export function SendReceiptButton({
+  jobId,
+  customerEmail: storedEmail,
+  customerPhone: storedPhone,
+  isWalkIn = false,
+}: SendReceiptButtonProps) {
+  // The walk-in row is shared by every counter sale, so anything stored on it
+  // belongs to whoever was here last. Never deliver to it — always ask.
+  const customerEmail = isWalkIn ? null : storedEmail;
+  const customerPhone = isWalkIn ? null : storedPhone;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sendEmail, setSendEmail] = useState(!!customerEmail);

@@ -128,17 +128,26 @@ export async function sendJobReceiptWith(
           totals,
         });
 
-        const r = await sendEmail({ to, subject, html });
-        result.email = r.success
-          ? { sent: true, testMode: r.testMode }
-          : { sent: false, error: r.error ?? "Couldn't send the email" };
+        let testMode = false;
+        try {
+          const r = await sendEmail({ to, subject, html });
+          testMode = r.testMode;
+          result.email = r.success
+            ? { sent: true, testMode: r.testMode }
+            : { sent: false, error: r.error ?? "Couldn't send the email" };
+        } catch (e) {
+          result.email = { sent: false, error: e instanceof Error ? e.message : "Couldn't send the email" };
+        }
 
+        // Logged OUTSIDE the send's try. Inside, a Supabase blip would flip a
+        // delivered email to { sent: false } and invite a retry that double-sends.
         await logMessage(supabase, {
           customerId: customer.id,
           jobId,
           channel: "email",
           body: subject,
-          sent: r.success,
+          sent: result.email.sent,
+          testMode,
         });
       } catch (e) {
         result.email = { sent: false, error: e instanceof Error ? e.message : "Couldn't send the email" };
@@ -154,42 +163,49 @@ export async function sendJobReceiptWith(
     } else if (!to) {
       result.sms = { sent: false, error: "That doesn't look like a valid phone number" };
     } else {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const body = receiptSMS({
+        firstName: isWalkIn ? null : customer.first_name,
+        year: vehicle?.year,
+        make: vehicle?.make,
+        model: vehicle?.model,
+        link: `${appUrl}/receipt/${job.receipt_token}`,
+      });
+
+      let testMode = false;
       try {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        const body = receiptSMS({
-          firstName: isWalkIn ? null : customer.first_name,
-          year: vehicle?.year,
-          make: vehicle?.make,
-          model: vehicle?.model,
-          link: `${appUrl}/receipt/${job.receipt_token}`,
-        });
-
         const r = await sendSMS({ to, body, from: getPhoneNumber("shop") });
-        result.sms = { sent: true, testMode: r.testMode };
-
-        await logOutboundSms(supabase, {
-          customer_id: customer.id,
-          job_id: jobId,
-          body,
-          status: "sent",
-          phone_line: "shop",
-        });
+        testMode = r.testMode;
+        // sendSMS throws on an HTTP failure today, so success is always true —
+        // but read it anyway. If it is ever changed to mirror sendEmail and
+        // return { success: false }, ignoring it would turn every failed text
+        // into a green "Receipt sent".
+        result.sms = r.success
+          ? { sent: true, testMode: r.testMode }
+          : { sent: false, error: "Couldn't send the text" };
       } catch (e) {
         result.sms = { sent: false, error: e instanceof Error ? e.message : "Couldn't send the text" };
-        await logOutboundSms(supabase, {
-          customer_id: customer.id,
-          job_id: jobId,
-          body: "Receipt text — not sent",
-          status: "failed",
-          phone_line: "shop",
-        });
       }
+
+      // Outside the try, for the same reason as the email channel above.
+      await logMessage(supabase, {
+        customerId: customer.id,
+        jobId,
+        channel: "sms",
+        body: result.sms.sent ? body : "Receipt text — not sent",
+        sent: result.sms.sent,
+        testMode,
+        phoneLine: "shop",
+      });
     }
   }
 
   return { ok: true, ...result };
 }
 
+// One logging path for both channels, so a failure to log is handled to the same
+// standard either way. Never throws: the caller has already decided whether the
+// send itself succeeded, and a logging problem must not overturn that.
 async function logMessage(
   supabase: SupabaseClient<Database>,
   {
@@ -198,14 +214,23 @@ async function logMessage(
     channel,
     body,
     sent,
+    testMode,
+    phoneLine,
   }: {
     customerId: string;
     jobId: string;
     channel: "email" | "sms";
     body: string;
     sent: boolean;
+    testMode: boolean;
+    phoneLine?: string;
   }
 ) {
+  // Nothing left the building in test mode (Quo/Resend unconfigured), so writing
+  // a row would put a delivery on the customer's timeline that never happened —
+  // and the timeline is what gets consulted to answer "did we send this?".
+  if (testMode) return;
+
   const { error } = await supabase.from("messages").insert({
     customer_id: customerId,
     job_id: jobId,
@@ -213,6 +238,7 @@ async function logMessage(
     direction: "out" as const,
     body,
     status: sent ? "sent" : "failed",
+    ...(phoneLine ? { phone_line: phoneLine } : {}),
   });
 
   if (error) {

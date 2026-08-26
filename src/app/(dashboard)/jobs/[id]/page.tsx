@@ -19,6 +19,7 @@ import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { JobCancelButton } from "@/components/dashboard/job-cancel-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { SendReceiptButton } from "@/components/dashboard/send-receipt-button";
+import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 import { JobDateEditor } from "@/components/dashboard/job-date-editor";
 import { JobScheduledTimeEditor } from "@/components/dashboard/job-scheduled-time-editor";
 import { JobTitleEditor } from "@/components/dashboard/job-title-editor";
@@ -112,6 +113,7 @@ export default async function JobDetailPage({
                 jobId={id}
                 customerEmail={customer?.email ?? null}
                 customerPhone={customer?.phone ?? null}
+                isWalkIn={job.customer_id === WALK_IN_CUSTOMER_ID}
               />
             )}
             <Link href={`/jobs/${id}/print`}>

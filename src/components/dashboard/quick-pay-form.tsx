@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, CheckCircle2, XCircle, AlertTriangle, Delete, Search, X } from "lucide-react";
@@ -203,39 +204,80 @@ function QuickPayReceipt({ jobId, paymentIntentId }: { jobId: string; paymentInt
       });
       const data = await res.json();
 
-      // The operator may have hit "New Payment" while this was in flight; don't
-      // toast over a fresh screen or set state on an unmounted component.
-      if (!mounted.current) return;
-
       if (!res.ok || !data.ok) {
+        // Failures are surfaced even after unmount — sonner outlives it, and the
+        // alternative is a receipt that silently never went with the job id
+        // already gone. Only setState is guarded.
         toast.error(data.error || "Couldn't send the receipt");
-        setStatus("idle");
+        if (mounted.current) setStatus("idle");
         return;
       }
 
+      const ok: string[] = [];
       const failed: string[] = [];
-      if (data.sms && !data.sms.sent) failed.push(`text (${data.sms.error})`);
-      if (data.email && !data.email.sent) failed.push(`email (${data.email.error})`);
+      if (data.sms) (data.sms.sent ? ok : failed).push(data.sms.sent ? "text" : `text (${data.sms.error})`);
+      if (data.email)
+        (data.email.sent ? ok : failed).push(data.email.sent ? "email" : `email (${data.email.error})`);
+
+      let testMode = false;
+      if (data.sms?.sent) testMode ||= !!data.sms.testMode;
+      if (data.email?.sent) testMode ||= !!data.email.testMode;
+      const suffix = testMode ? " (test mode — nothing actually sent)" : "";
 
       if (failed.length > 0) {
-        toast.error(`Couldn't send: ${failed.join(", ")}`);
-        setStatus("idle");
+        // Name what DID go, and clear it, so the retry this invites re-sends only
+        // the failed channel. Otherwise the customer gets a second identical text.
+        if (mounted.current) {
+          if (data.sms?.sent) setPhone("");
+          if (data.email?.sent) setEmail("");
+          setStatus("idle");
+        }
+        toast.warning(
+          ok.length > 0
+            ? `Sent via ${ok.join(" & ")}${suffix}. Failed: ${failed.join(", ")}`
+            : `Couldn't send: ${failed.join(", ")}`
+        );
         return;
       }
 
-      const testMode = data.sms?.testMode || data.email?.testMode;
-      toast.success(`Receipt sent${testMode ? " (test mode — nothing actually sent)" : ""}`);
-      setStatus("sent");
-    } catch {
       if (!mounted.current) return;
-      toast.error("Couldn't send the receipt");
-      setStatus("idle");
+      toast.success(`Receipt sent via ${ok.join(" & ")}${suffix}`);
+      setStatus("sent");
+    } catch (err) {
+      // Deliberately does NOT claim it failed. The fetch can reject after the
+      // server did the work — connection dropped on the response, or res.json()
+      // throwing on a non-JSON body — in which case the receipt already went and
+      // a confident "failed" invites a retry that double-sends.
+      Sentry.captureException(err, {
+        tags: { source: "quick-pay-receipt", path: "client-invoke" },
+        extra: { jobId },
+      });
+      toast.error("We couldn't confirm whether the receipt sent — check with the customer before resending");
+      if (mounted.current) setStatus("idle");
     }
   }
 
   if (status === "sent") {
+    // Not an absorbing state. At a counter the number is read aloud and typed, so
+    // a transposed digit is the common case and "I didn't get it" the common
+    // follow-up — and once New Payment clears completedJobId there is no way back
+    // to this receipt at all, which for a tech means no way to correct it.
     return (
-      <p className="text-sm text-emerald-600 dark:text-emerald-400">Receipt sent</p>
+      <div className="w-full space-y-2 text-center">
+        <p className="text-sm text-emerald-600 dark:text-emerald-400">Receipt sent</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-stone-500 dark:text-stone-400"
+          onClick={() => {
+            setPhone("");
+            setEmail("");
+            setStatus("idle");
+          }}
+        >
+          Send to a different number
+        </Button>
+      </div>
     );
   }
 

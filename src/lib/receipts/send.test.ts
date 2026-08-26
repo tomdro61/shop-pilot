@@ -161,6 +161,58 @@ describe("sendJobReceiptWith — typed destinations are never stored", () => {
   });
 });
 
+describe("sendJobReceiptWith — logging never overturns a send", () => {
+  it("still reports the text as sent when the messages insert fails", async () => {
+    // The text has already left Quo. A Supabase blip must not flip this to
+    // sent:false — the operator would be told it failed and would resend,
+    // texting the customer twice.
+    const mock = mockClient([
+      { data: buildJob(), error: null },
+      { data: null, error: { message: "insert failed" } },
+    ]);
+
+    const result = await sendJobReceiptWith(mock.client as never, {
+      jobId: JOB_ID,
+      sms: true,
+      email: false,
+      smsTo: "6175550134",
+    });
+
+    expect(result).toMatchObject({ ok: true, sms: { sent: true } });
+  });
+
+  it("still reports the email as sent when the messages insert fails", async () => {
+    const mock = mockClient([
+      { data: buildJob(), error: null },
+      { data: null, error: { message: "insert failed" } },
+    ]);
+
+    const result = await sendJobReceiptWith(mock.client as never, {
+      jobId: JOB_ID,
+      sms: false,
+      email: true,
+      emailTo: "a@b.com",
+    });
+
+    expect(result).toMatchObject({ ok: true, email: { sent: true } });
+  });
+
+  it("writes no timeline row in test mode — nothing actually left the building", async () => {
+    vi.mocked(sendSMS).mockResolvedValue({ success: true, testMode: true });
+    const mock = mockClient([{ data: buildJob(), error: null }]);
+
+    const result = await sendJobReceiptWith(mock.client as never, {
+      jobId: JOB_ID,
+      sms: true,
+      email: false,
+      smsTo: "6175550134",
+    });
+
+    expect(result).toMatchObject({ ok: true, sms: { sent: true, testMode: true } });
+    expect(tableWrites(mock.calls, "messages")).toEqual([]);
+  });
+});
+
 describe("sendJobReceiptWith — falls back to what is on file", () => {
   it("uses the stored phone when no override is given", async () => {
     const job = buildJob({

@@ -75,6 +75,26 @@ export async function POST(request: Request) {
     }
   }
 
-  const result = await sendJobReceiptWith(supabase, { jobId, email, sms, emailTo, smsTo });
-  return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+  try {
+    const result = await sendJobReceiptWith(supabase, {
+      jobId,
+      email,
+      sms,
+      // Straight off request.json() — coerce to a known shape so a non-string
+      // can't reach .trim() and turn into an unhandled 500 whose body isn't JSON
+      // (the client parses this response, and a Next error page would throw there).
+      emailTo: typeof emailTo === "string" ? emailTo : null,
+      smsTo: typeof smsTo === "string" ? smsTo : null,
+    });
+    return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { source: "receipts-send", path: "send" },
+      extra: { jobId },
+    });
+    return NextResponse.json(
+      { ok: false, error: "Couldn't send the receipt — please try again." },
+      { status: 500 }
+    );
+  }
 }
