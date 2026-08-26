@@ -2,13 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/resend/client";
-import {
-  estimateReadyEmail,
-  paymentReceiptEmail,
-} from "@/lib/resend/templates";
+import { estimateReadyEmail } from "@/lib/resend/templates";
 import { getShopSettings } from "@/lib/actions/settings";
 import { calculateTotals } from "@/lib/utils/totals";
-import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
 
 interface SendCustomerEmailParams {
   customerId: string;
@@ -132,81 +128,5 @@ export async function sendEstimateEmail({
     subject,
     html,
     jobId: job?.id,
-  });
-}
-
-export async function sendPaymentReceiptEmail({
-  jobId,
-}: {
-  jobId: string;
-}): Promise<{ sent: boolean; testMode?: boolean; error?: string }> {
-  const supabase = await createClient();
-
-  const [{ data: job, error: fetchError }, settings] = await Promise.all([
-    supabase
-      .from("jobs")
-      .select(
-        "id, title, customer_id, vehicle_id, payment_method, charge_sales_tax, customers(id, first_name, last_name, email), vehicles(id, year, make, model, license_plate, vin), job_line_items(type, description, quantity, unit_cost)"
-      )
-      .eq("id", jobId)
-      .single(),
-    getShopSettings(),
-  ]);
-
-  if (fetchError || !job) return { sent: false, error: "Job not found" };
-
-  const customer = job.customers as {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string | null;
-  } | null;
-
-  if (!customer) return { sent: false, error: "Customer not found" };
-  if (!customer.email) return { sent: false, error: "No email address on file" };
-
-  const vehicle = job.vehicles as {
-    id: string;
-    year: number | null;
-    make: string | null;
-    model: string | null;
-    license_plate: string | null;
-    vin: string | null;
-  } | null;
-
-  // null means "no vehicle on this job" — never "there is one but we couldn't name
-  // it". year/make/model are all nullable and the vehicle form maps "" to null, so
-  // a plate-only record is reachable.
-  const vehicleDesc = vehicle
-    ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") ||
-      vehicle.license_plate ||
-      vehicle.vin ||
-      "Vehicle on file"
-    : null;
-
-  const lineItems = (job.job_line_items || []) as {
-    type: "labor" | "part";
-    description: string;
-    quantity: number;
-    unit_cost: number;
-  }[];
-
-  const totals = calculateTotals(lineItems, settings, job.charge_sales_tax);
-
-  const { subject, html } = paymentReceiptEmail({
-    customerName: job.customer_id === WALK_IN_CUSTOMER_ID ? null : customer.first_name,
-    jobTitle: job.title,
-    vehicleDesc,
-    amount: totals.grandTotal,
-    paymentMethod: job.payment_method || "stripe",
-    lineItems,
-    totals,
-  });
-
-  return sendCustomerEmail({
-    customerId: customer.id,
-    subject,
-    html,
-    jobId: job.id,
   });
 }

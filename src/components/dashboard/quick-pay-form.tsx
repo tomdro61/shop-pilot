@@ -165,6 +165,123 @@ function QuickPayPresetPicker({
   );
 }
 
+/**
+ * Counter receipt. The customer standing here has no record — the job hangs off
+ * the shared walk-in row — so the destination is typed per transaction and never
+ * stored. Posts to the API route rather than the server action because a tech
+ * has no RLS read on a completed job.
+ */
+function QuickPayReceipt({ jobId, paymentIntentId }: { jobId: string; paymentIntentId: string }) {
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const canSend = !!phone.trim() || !!email.trim();
+
+  async function handleSend() {
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/receipts/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobId,
+          paymentIntentId,
+          sms: !!phone.trim(),
+          email: !!email.trim(),
+          smsTo: phone.trim() || null,
+          emailTo: email.trim() || null,
+        }),
+      });
+      const data = await res.json();
+
+      // The operator may have hit "New Payment" while this was in flight; don't
+      // toast over a fresh screen or set state on an unmounted component.
+      if (!mounted.current) return;
+
+      if (!res.ok || !data.ok) {
+        toast.error(data.error || "Couldn't send the receipt");
+        setStatus("idle");
+        return;
+      }
+
+      const failed: string[] = [];
+      if (data.sms && !data.sms.sent) failed.push(`text (${data.sms.error})`);
+      if (data.email && !data.email.sent) failed.push(`email (${data.email.error})`);
+
+      if (failed.length > 0) {
+        toast.error(`Couldn't send: ${failed.join(", ")}`);
+        setStatus("idle");
+        return;
+      }
+
+      const testMode = data.sms?.testMode || data.email?.testMode;
+      toast.success(`Receipt sent${testMode ? " (test mode — nothing actually sent)" : ""}`);
+      setStatus("sent");
+    } catch {
+      if (!mounted.current) return;
+      toast.error("Couldn't send the receipt");
+      setStatus("idle");
+    }
+  }
+
+  if (status === "sent") {
+    return (
+      <p className="text-sm text-emerald-600 dark:text-emerald-400">Receipt sent</p>
+    );
+  }
+
+  return (
+    <div className="w-full space-y-2">
+      <p className="text-xs font-medium text-stone-500 dark:text-stone-400 text-center">
+        Send a receipt
+      </p>
+      <Input
+        type="tel"
+        inputMode="tel"
+        placeholder="Phone number"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        className="bg-card"
+      />
+      <Input
+        type="email"
+        inputMode="email"
+        placeholder="Email (optional)"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="bg-card"
+      />
+      <Button
+        className="w-full"
+        variant="outline"
+        onClick={handleSend}
+        disabled={status === "sending" || !canSend}
+      >
+        {status === "sending" ? (
+          <>
+            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            Sending...
+          </>
+        ) : (
+          "Send Receipt"
+        )}
+      </Button>
+      <p className="text-[11px] text-stone-400 dark:text-stone-500 text-center">
+        Not saved to any customer record.
+      </p>
+    </div>
+  );
+}
+
 const NUM_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"];
 
 export function QuickPayForm({
@@ -488,6 +605,18 @@ export function QuickPayForm({
             <>
               <CheckCircle2 className="h-12 w-12 text-emerald-500 dark:text-emerald-400" />
               <p className="text-lg font-medium text-emerald-600 dark:text-emerald-400">Payment Complete</p>
+
+              {completedJobId && paymentIntentId ? (
+                <QuickPayReceipt jobId={completedJobId} paymentIntentId={paymentIntentId} />
+              ) : (
+                // Reachable: the card cleared but the job record hasn't landed
+                // yet (see the finalize loop above). There is no job to attach a
+                // receipt to until the webhook catches up.
+                <p className="text-xs text-stone-500 dark:text-stone-400 text-center">
+                  Receipt available once the payment finishes recording.
+                </p>
+              )}
+
               <div className="flex gap-2">
                 {canViewJob && completedJobId && (
                   <Link href={`/jobs/${completedJobId}`}>

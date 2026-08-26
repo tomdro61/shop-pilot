@@ -107,7 +107,7 @@ export default async function JobDetailPage({
             {job.status === "complete" && customer?.phone && (
               <SendReadyTextButton jobId={id} />
             )}
-            {job.payment_status === "paid" && (customer?.email || customer?.phone) && (
+            {job.payment_status === "paid" && (
               <SendReceiptButton
                 jobId={id}
                 customerEmail={customer?.email ?? null}
