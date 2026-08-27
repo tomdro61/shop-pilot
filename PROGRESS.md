@@ -4433,3 +4433,97 @@ The gate also caught its own amendments: the proposed tech scope check (`custome
 
 - **C-19** — three email server actions are ungated and reachable by action id.
 - **H-50** — customer-detail jobs query is unbounded and feeds money figures. Measured 2026-08-24: sentinel 399 jobs, 1,147 total. Correct today; silently wrong the moment one customer crosses 1000.
+
+## Session 75 — 2026-08-25 → 08-27 — Receipts you can actually send, and what review found in them
+
+Shipped to production (`562e940`). The Session 74 plan built, reviewed three
+times, tested against the live terminal, merged.
+
+### What the shop can do now
+
+Take a payment from someone with no record, type their phone or email, send them
+an itemized receipt. Two surfaces: the Quick Pay success screen, and the job page
+(Send Receipt now shows on **any** paid job, not only ones with contact on file).
+Nothing is ever written to `customers`.
+
+That last point is the whole design. Walk-in and Quick Pay jobs all hang off one
+shared sentinel row, so a stored number would text the next walk-in's receipt to
+the previous one. The owner caught this twice while the plan was being written —
+both times the plan proposed saving the number — and it was cut from v1 entirely.
+A typed destination is used for that send and discarded.
+
+### Shape
+
+- `src/lib/receipts/send.ts` — the sender. Takes its Supabase client as an
+  argument. Deliberately **not** `"use server"`: it accepts an arbitrary
+  destination and mails from the shop's verified domain, so an action id for it
+  would be an open relay.
+- `POST /api/receipts/send` — `requireStaff()` + admin client, because RLS gives a
+  tech no read on a completed job. Since RLS isn't scoping, a tech must also pass
+  the `paymentIntentId` of the payment they just took, matched and within 30
+  minutes. Managers keep the unrestricted server action.
+- `sendPaymentReceiptEmail` deleted — one caller, replaced, and it was one of the
+  ungated `"use server"` exports filed as C-19. Two remain.
+
+### Four strings that were going to customers
+
+The receipt headed with the literal word "Vehicle", named the customer
+"Walk-In Customer", and both the text and email opened "Hi Walk-In,". Confirmed
+live on production data before the fix (RO 1450, a real counter sale). Templates
+now take nullable name/vehicle and **omit** the block rather than substituting a
+word; the page heads with vehicle -> job title -> "Counter Sale".
+
+### Three money-path fixes in the Stripe webhook
+
+Found by review, all pre-existing:
+
+- The `shop_settings` read discarded its error. PostgREST returns rather than
+  throws, so the enclosing try never fired and `calculateTotals` silently
+  substituted DEFAULT_SETTINGS — emailing a total that need not be what the card
+  was charged, on the one receipt path with no human in the loop.
+- The headline figure now comes from `stripeInvoice.amount_paid` rather than a
+  recomputation, matching what the parking branch already did — **and** refuses to
+  send when the recomputed itemisation disagrees with it. Validated against 25
+  real paid invoices: 25/25 match, so the guard suppresses nothing today.
+- `sendEmail` returns `{ success: false }` instead of throwing, so a Resend bounce
+  produced no Sentry event at all. Now captured.
+
+### What review caught in my own work
+
+Worth recording because the pattern repeated: the first pass of each change was
+wrong in a way typechecking and tests could not see.
+
+- `heading` never consulted `isWalkIn`, so **any** vehicle-less job — a fleet job,
+  a diagnostic booked before the car arrives — would have been headed
+  "Counter Sale" with the customer's real name under it.
+- `vehicleDesc` collapsed "no vehicle" and "vehicle exists but unnamed" into null,
+  so a real customer with a plate-only car lost the whole block.
+- Sourcing the headline from `amount_paid` introduced `(amount_paid || 0) / 100`,
+  which renders **"$0.00"** rather than declining to send.
+- The `messages` insert sat inside the try whose catch writes the channel result,
+  so a Supabase blip after the text had left Quo flipped it to failed — and Quick
+  Pay's partial-failure branch then invited a retry that **double-texts the
+  customer**. Two small things composing into a real counter-side bug.
+
+### Verified against the running system, not just tests
+
+- Real $1 terminal charge -> text delivered in 19 seconds, correct greeting.
+- Sentinel row after the send: `phone` null, `email` null, `updated_at` still
+  2026-04-08 — the migration date. Untouched.
+- Production after merge: the exact receipt URL that rendered "Walk-In Customer"
+  and ">Vehicle<" now renders "Counter Sale" and neither.
+- `POST /api/receipts/send` returns 401 unauthenticated on production.
+- Sentry: no new production issues since the deploy.
+
+### Known issues
+
+- **C-19** — `sendCustomerEmail` and `sendEstimateEmail` are still ungated
+  `"use server"` exports, reachable by action id. This session closed one of three.
+- **H-50** — customer-detail jobs query is unbounded and feeds `lifetimeSpend` /
+  `avgRO` / `outstandingSpend`. Measured 08-24: sentinel 399 jobs, 1,147 total.
+  Correct today; silently wrong when one customer crosses 1000.
+- The **email channel** and the **tech path** have never run for real — only SMS
+  as a manager. Both fail visibly (a red toast, a refusal), not silently.
+- `NEXT_PUBLIC_APP_URL` is the production domain in every environment, so a
+  receipt texted from a preview deploy links to production. Correct behaviour, but
+  it means a staging send does not exercise staging's rendering.
