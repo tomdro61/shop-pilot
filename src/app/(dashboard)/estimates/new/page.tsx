@@ -4,6 +4,7 @@ import { EstimateForm } from "@/components/forms/estimate-form";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/page-shell";
 import { createClient } from "@/lib/supabase/server";
+import { getQuoteRequest } from "@/lib/actions/quote-requests";
 
 export const metadata = {
   title: "New Estimate | ShopPilot",
@@ -12,9 +13,43 @@ export const metadata = {
 export default async function NewEstimatePage({
   searchParams,
 }: {
-  searchParams: Promise<{ customerId?: string; vehicleId?: string }>;
+  searchParams: Promise<{ customerId?: string; vehicleId?: string; fromQuote?: string }>;
 }) {
-  const { customerId, vehicleId } = await searchParams;
+  const { customerId, vehicleId, fromQuote } = await searchParams;
+
+  // Carry the customer's own words across from the quote request. The estimate
+  // has no vehicle_id to inherit — quote_requests stores the vehicle as loose
+  // columns (year/make/model/plate/VIN), not a vehicles FK — so the notes are
+  // the only place that context survives the hand-off.
+  let quoteNotes: string | undefined;
+  if (fromQuote) {
+    const qr = await getQuoteRequest(fromQuote);
+    if (!qr) {
+      // getQuoteRequest collapses a failed read into null, so this covers both
+      // "deleted" and "the query broke". Either way the vehicle and the
+      // customer's message are gone and the manager gets a blank notes box —
+      // log it rather than let the context vanish silently.
+      console.error("[NewEstimatePage] quote request could not be loaded", { fromQuote });
+    }
+    if (qr) {
+      const vehicle = [qr.vehicle_year, qr.vehicle_make, qr.vehicle_model]
+        .filter(Boolean)
+        .join(" ");
+      const plateOrVin = qr.license_plate
+        ? `Plate ${qr.license_plate}`
+        : qr.vehicle_vin
+          ? `VIN ${qr.vehicle_vin}`
+          : null;
+      quoteNotes = [
+        vehicle || null,
+        plateOrVin,
+        qr.services.length > 0 ? `Requested: ${qr.services.join(", ")}` : null,
+        qr.message ? `Customer said: ${qr.message}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
+  }
 
   // Pre-load the customer record when arriving from a customer page so the
   // picker renders selected without an extra client-side round-trip.
@@ -39,6 +74,13 @@ export default async function NewEstimatePage({
       backHref = `/customers/${customerId}`;
       backLabel = `${data.first_name} ${data.last_name}`;
     }
+  }
+
+  // Arriving from Quote Requests — back belongs there, not on the customer
+  // record the quote happens to be linked to.
+  if (fromQuote) {
+    backHref = "/quote-requests";
+    backLabel = "Quote Requests";
   }
 
   return (
@@ -67,6 +109,8 @@ export default async function NewEstimatePage({
       </div>
 
       <EstimateForm
+        defaultNotes={quoteNotes}
+        fromQuoteId={fromQuote}
         defaultCustomerId={customerId}
         defaultVehicleId={vehicleId}
         initialCustomer={initialCustomer}

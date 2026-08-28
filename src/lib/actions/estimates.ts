@@ -16,6 +16,9 @@ import type {
   EstimateLineItemFormData,
 } from "@/lib/validators/estimate";
 import crypto from "crypto";
+import * as Sentry from "@sentry/nextjs";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
 
 export async function createEstimateFromJob(jobId: string) {
   const auth = await requireManager();
@@ -398,35 +401,258 @@ export async function resendEstimate(id: string) {
   return { data: { success: true } };
 }
 
+type ApprovedLineItem = {
+  type: Database["public"]["Enums"]["line_item_type"];
+  description: string;
+  quantity: number;
+  unit_cost: number;
+  cost: number | null;
+  part_number: string | null;
+  category: string | null;
+};
+
+// An estimate approved against a job that already exists used to strand its
+// pricing: nothing copied estimate_line_items onto the job, and
+// convertEstimateToJob refuses outright once job_id is set. So a manager who
+// created the job first and priced the estimate second ended up with an empty
+// job. Copy on approval instead.
+//
+// Only ever copies INTO an empty job. Never deletes, so it cannot overwrite
+// items the manager priced on the job directly, and there is no partial-write
+// path that could leave a job with nothing on it (Supabase JS has no
+// transaction to make delete-then-insert atomic).
+async function syncApprovedEstimateToJob(
+  supabase: SupabaseClient<Database>,
+  jobId: string,
+  lineItems: ApprovedLineItem[],
+  estimateId: string,
+  // Both approval paths share this helper but have different clients (service
+  // role vs the manager's RLS session) and different remediation, so Sentry
+  // needs to tell them apart.
+  source: "approve-estimate" | "mark-estimate-approved"
+): Promise<{ warning?: string }> {
+  if (lineItems.length === 0) return {};
+
+  const { data: job, error: jobError } = await supabase
+    .from("jobs")
+    .select("id, payment_status, status")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (jobError) {
+    Sentry.captureException(jobError, {
+      level: "warning",
+      tags: { source, path: "job-lookup" },
+      extra: { estimateId, jobId },
+    });
+    return { warning: "couldn't load the linked job, so its line items weren't updated" };
+  }
+  if (!job) {
+    Sentry.captureMessage("[syncApprovedEstimateToJob] estimate.job_id points at a missing job", {
+      level: "warning",
+      tags: { source, path: "job-missing" },
+      extra: { estimateId, jobId },
+    });
+    return { warning: "the linked job no longer exists, so nothing was copied" };
+  }
+
+  // Invoices are built from job_line_items (invoices.ts), so appending to a
+  // billed job would desync it from what the customer was actually charged.
+  // "waived" counts as settled here for the same reason the rest of the app
+  // treats it that way (invoices.ts and charge-card-on-file.ts both refuse a
+  // waived job exactly like a paid one): the shop has decided not to charge,
+  // and a stale approval link shouldn't put priced work back on it. Same for a
+  // cancelled job, which is off the board entirely.
+  const settled =
+    job.payment_status === "invoiced" ||
+    job.payment_status === "paid" ||
+    job.payment_status === "waived";
+
+  if (settled || job.status === "cancelled") {
+    // Rare enough to be worth a breadcrumb: on the public path the warning
+    // below is discarded, so without this the skip leaves no trace anywhere.
+    Sentry.captureMessage("[syncApprovedEstimateToJob] skipped a settled or cancelled job", {
+      level: "info",
+      tags: { source, path: "skip-settled" },
+      extra: { estimateId, jobId, paymentStatus: job.payment_status, jobStatus: job.status },
+    });
+    return {
+      warning: job.status === "cancelled"
+        ? "the linked job is cancelled, so its line items were left alone"
+        : "the linked job is already settled, so its line items were left alone",
+    };
+  }
+
+  // Checked separately from payment_status: createInvoiceFromJob never flips
+  // payment_status, so a job with a live invoice usually still reads unpaid.
+  // Error MUST be checked — a failed query here would look like "no invoice"
+  // and let us add items to a job that has already been billed.
+  const { data: existingInvoice, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("job_id", jobId)
+    .maybeSingle();
+
+  if (invoiceError) {
+    Sentry.captureException(invoiceError, {
+      level: "warning",
+      tags: { source, path: "invoice-check" },
+      extra: { estimateId, jobId },
+    });
+    return { warning: "couldn't check the linked job for an invoice, so its line items weren't updated" };
+  }
+  if (existingInvoice) {
+    return { warning: "the linked job already has an invoice, so its line items were left alone" };
+  }
+
+  const { data: existingItems, error: existingError } = await supabase
+    .from("job_line_items")
+    .select("id")
+    .eq("job_id", jobId)
+    .limit(1);
+
+  if (existingError) {
+    Sentry.captureException(existingError, {
+      level: "warning",
+      tags: { source, path: "existing-items" },
+      extra: { estimateId, jobId },
+    });
+    return { warning: "couldn't read the linked job's line items, so they weren't updated" };
+  }
+  // Fail closed. Every other guard here refuses on doubt, and this one protects
+  // billing data: a null probe must never read as "the job is empty".
+  if (!existingItems) {
+    Sentry.captureMessage("[syncApprovedEstimateToJob] line-item probe returned null", {
+      level: "warning",
+      tags: { source, path: "existing-items" },
+      extra: { estimateId, jobId },
+    });
+    return { warning: "couldn't confirm the linked job was empty, so it was left alone" };
+  }
+
+  // Silent, not a warning: a job carrying its own items is the normal case —
+  // both createEstimateFromJob and convertEstimateToJob leave job and estimate
+  // in sync. Only an empty job, the case this exists for, gets written.
+  if (existingItems.length > 0) {
+    return {};
+  }
+
+  const { error: insertError } = await supabase.from("job_line_items").insert(
+    lineItems.map((li) => ({
+      job_id: jobId,
+      type: li.type,
+      description: li.description,
+      quantity: li.quantity,
+      unit_cost: li.unit_cost,
+      cost: li.type === "part" ? (li.cost ?? null) : null,
+      part_number: li.part_number,
+      category: li.category,
+    }))
+  );
+
+  if (insertError) {
+    Sentry.captureException(insertError, {
+      level: "warning",
+      tags: { source, path: "copy-line-items" },
+      extra: { estimateId, jobId, count: lineItems.length },
+    });
+    return { warning: "couldn't copy the approved line items onto the linked job" };
+  }
+
+  return {};
+}
+
 // Public customer-facing approval via emailed/SMS link. We deliberately do
 // NOT create a Stripe customer or invoice here: pricing can change once
 // the work begins (additional parts, etc.), so invoices are generated from
-// the completed-job InvoiceSection — see createInvoiceFromJob.
+// the completed-job InvoiceSection — see createInvoiceFromJob. It does copy
+// the approved line items onto a linked empty job (syncApprovedEstimateToJob).
 export async function approveEstimate(token: string) {
   const supabase = createAdminClient();
 
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
-    .select("id, status, customer_id, job_id")
+    .select("id, status, customer_id, job_id, estimate_line_items(*)")
     .eq("approval_token", token)
     .single();
 
   if (fetchError || !estimate) return { error: "Estimate not found" };
-  if (estimate.status !== "sent") return { error: "This estimate cannot be approved" };
 
-  const { error } = await supabase
+  // Already approved is a success, not a failure. The approval page doesn't
+  // poll, so a customer whose tab was open while the manager marked it approved
+  // arrives here with a live button — and so does anyone who double-clicks.
+  // Telling them "cannot be approved" about an approved estimate is wrong; the
+  // sync has already run on whichever path got here first.
+  if (estimate.status === "approved") return { data: { success: true } };
+  if (estimate.status !== "sent") {
+    return { error: "This estimate is no longer available to approve. Please call the shop." };
+  }
+
+  // Atomic flip: scoping by status makes this the race gate. A double-clicked
+  // approval link runs this twice; without the predicate both calls pass the
+  // read-time check above and both go on to copy line items onto the job.
+  const { error, count } = await supabase
     .from("estimates")
-    .update({
-      status: "approved",
-      approved_at: new Date().toISOString(),
-      approval_method: "link",
-    })
-    .eq("id", estimate.id);
+    .update(
+      {
+        status: "approved",
+        approved_at: new Date().toISOString(),
+        approval_method: "link",
+      },
+      { count: "exact" }
+    )
+    .eq("id", estimate.id)
+    .eq("status", "sent");
 
   if (error) return { error: error.message };
 
+  // !== 1, not === 0: the supabase-js type allows count: null, and treating
+  // null as success would report an approval we can't prove landed. The cost of
+  // the strict check: a null count on the winning update skips the copy below,
+  // because the re-read only confirms status — it doesn't retry the sync.
+  if (count !== 1) {
+    // Losing the race doesn't mean the customer failed. The manager marking it
+    // approved at the same moment is the documented reason this gate exists —
+    // and this string is rendered straight into a toast on the public page, so
+    // telling them "cannot be approved" about an estimate that IS approved is
+    // the wrong answer.
+    const { data: fresh, error: freshError } = await supabase
+      .from("estimates")
+      .select("status")
+      .eq("id", estimate.id)
+      .maybeSingle();
+
+    if (freshError) {
+      Sentry.captureException(freshError, {
+        level: "warning",
+        tags: { source: "approve-estimate", path: "race-reread" },
+        extra: { estimateId: estimate.id },
+      });
+    }
+
+    if (fresh?.status === "approved") return { data: { success: true } };
+    return { error: "This estimate is no longer available to approve. Please call the shop." };
+  }
+
+  // The customer's approval has landed either way — a copy failure here is
+  // logged for the shop, not surfaced to the customer, whose action succeeded.
+  if (estimate.job_id) {
+    await syncApprovedEstimateToJob(
+      supabase,
+      estimate.job_id,
+      (estimate.estimate_line_items ?? []) as ApprovedLineItem[],
+      estimate.id,
+      "approve-estimate"
+    );
+  }
+
   revalidatePath(`/estimates/${estimate.id}`);
-  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.job_id) {
+    revalidatePath(`/jobs/${estimate.job_id}`);
+    // The Shop Floor list totals job_line_items per job (getJobs), so it goes
+    // stale too when the copy lands.
+    revalidatePath("/jobs");
+  }
   if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
   revalidatePath("/dashboard");
   return { data: { success: true } };
@@ -445,7 +671,7 @@ export async function markEstimateApproved(id: string) {
 
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
-    .select("id, status, customer_id, job_id")
+    .select("id, status, customer_id, job_id, estimate_line_items(*)")
     .eq("id", id)
     .single();
 
@@ -469,23 +695,48 @@ export async function markEstimateApproved(id: string) {
     return { error: "Your user profile is missing. Contact support." };
   }
 
-  const { error } = await supabase
+  // Race gate, same shape as the public path but pinned to the status we read
+  // — a draft can be sent, or a sent estimate approved by link, between that
+  // read and this update.
+  const { error, count } = await supabase
     .from("estimates")
-    .update({
-      status: "approved",
-      approved_at: new Date().toISOString(),
-      approval_method: null,
-      approved_by_user_id: profile.id,
-    })
-    .eq("id", id);
+    .update(
+      {
+        status: "approved",
+        approved_at: new Date().toISOString(),
+        approval_method: null,
+        approved_by_user_id: profile.id,
+      },
+      { count: "exact" }
+    )
+    .eq("id", id)
+    .eq("status", estimate.status);
 
   if (error) return { error: error.message };
+  if (count !== 1) {
+    return { error: "This estimate was just approved somewhere else. Refresh to see it." };
+  }
+
+  let syncWarning: string | undefined;
+  if (estimate.job_id) {
+    const sync = await syncApprovedEstimateToJob(
+      supabase,
+      estimate.job_id,
+      (estimate.estimate_line_items ?? []) as ApprovedLineItem[],
+      estimate.id,
+      "mark-estimate-approved"
+    );
+    syncWarning = sync.warning;
+  }
 
   revalidatePath(`/estimates/${id}`);
-  if (estimate.job_id) revalidatePath(`/jobs/${estimate.job_id}`);
+  if (estimate.job_id) {
+    revalidatePath(`/jobs/${estimate.job_id}`);
+    revalidatePath("/jobs");
+  }
   if (estimate.customer_id) revalidatePath(`/customers/${estimate.customer_id}`);
   revalidatePath("/dashboard");
-  return { success: true };
+  return { success: true, syncWarning };
 }
 
 // Manager-side bypass for the decline path: the customer ghosted on a sent

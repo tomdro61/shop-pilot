@@ -63,12 +63,18 @@ export async function updateQuoteRequestStatus(id: string, status: QuoteRequestS
 
   const supabase = await createClient();
 
-  const { error } = await supabase
+  // count, not just error: PostgREST reports error: null when an UPDATE matches
+  // zero rows, so a deleted or bogus id would otherwise read as a successful
+  // flip and leave the lead sitting on the New list.
+  const { error, count } = await supabase
     .from("quote_requests")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({ status, updated_at: new Date().toISOString() }, { count: "exact" })
     .eq("id", id);
 
   if (error) return { error: error.message };
+  if (count !== 1) {
+    return { error: "That quote request no longer exists — it may have been deleted." };
+  }
 
   revalidatePath("/quote-requests");
   revalidatePath("/dashboard");

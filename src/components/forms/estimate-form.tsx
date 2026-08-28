@@ -20,10 +20,13 @@ import {
 import { TONE_CLASSES } from "@/lib/ui/alert-tone";
 import { estimateSchema, type EstimateFormData } from "@/lib/validators/estimate";
 import { createEstimate } from "@/lib/actions/estimates";
+import { updateQuoteRequestStatus } from "@/lib/actions/quote-requests";
 
 interface EstimateFormProps {
   defaultCustomerId?: string;
   defaultVehicleId?: string;
+  defaultNotes?: string;
+  fromQuoteId?: string;
   // Pre-loaded customer object so the picker renders selected without a
   // round-trip when arriving from /customers/[id]?
   initialCustomer?: {
@@ -37,6 +40,8 @@ interface EstimateFormProps {
 export function EstimateForm({
   defaultCustomerId,
   defaultVehicleId,
+  defaultNotes,
+  fromQuoteId,
   initialCustomer,
 }: EstimateFormProps) {
   const router = useRouter();
@@ -46,7 +51,7 @@ export function EstimateForm({
     defaultValues: {
       customer_id: defaultCustomerId || "",
       vehicle_id: defaultVehicleId || undefined,
-      notes: "",
+      notes: defaultNotes || "",
     },
   });
 
@@ -63,7 +68,27 @@ export function EstimateForm({
     }
 
     if ("data" in result && result.data) {
-      toast.success("Estimate created");
+      // Checked, not fire-and-forget: a quote that silently fails to flip sits
+      // on the New list forever and gets worked a second time. The estimate row
+      // already exists, so a failure here must still fall through to the redirect.
+      let quoteFlipFailed = false;
+      if (fromQuoteId) {
+        try {
+          const flip = await updateQuoteRequestStatus(fromQuoteId, "converted");
+          quoteFlipFailed = Boolean(flip.error);
+        } catch (err) {
+          console.error("[EstimateForm] quote status flip threw", { fromQuoteId, err });
+          quoteFlipFailed = true;
+        }
+      }
+
+      if (quoteFlipFailed) {
+        toast.warning(
+          "Estimate created, but the quote request still shows as new — update it by hand."
+        );
+      } else {
+        toast.success("Estimate created");
+      }
       router.push(`/estimates/${result.data.id}`);
     }
   }

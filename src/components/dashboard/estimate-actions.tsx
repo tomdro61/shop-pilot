@@ -119,7 +119,13 @@ export function EstimateActions({
       toast.error(result.error);
       return;
     }
-    toast.success("Estimate marked approved");
+    if (result.syncWarning) {
+      // The estimate is approved either way; this branch only means the linked
+      // job wasn't updated. The warning text carries the reason.
+      toast.warning(`Estimate approved — ${result.syncWarning}.`);
+    } else {
+      toast.success("Estimate marked approved");
+    }
     router.refresh();
   }
 

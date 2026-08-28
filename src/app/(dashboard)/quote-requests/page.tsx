@@ -63,7 +63,7 @@ export default async function QuoteRequestsPage({
             Quote Requests
           </h1>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Incoming service inquiries — convert to jobs.
+            Incoming service inquiries — price one up as an estimate.
           </p>
         </div>
       </div>

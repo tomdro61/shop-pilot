@@ -4527,3 +4527,106 @@ wrong in a way typechecking and tests could not see.
 - `NEXT_PUBLIC_APP_URL` is the production domain in every environment, so a
   receipt texted from a preview deploy links to production. Correct behaviour, but
   it means a staging send does not exercise staging's rendering.
+
+## Session 76 — 2026-08-27 → 08-28 — Quote requests become estimates, and approval finally reaches the job
+
+Pushed to `staging`, not yet merged. Reported by the owner from a real job his
+brother worked.
+
+### The bug, as it happened
+
+A quote request came in. He hit **Convert to Job**, which created the job
+immediately, and left the line items blank — he didn't know yet whether the
+customer would go ahead. He priced the work on an estimate instead. The customer
+approved it. The line items never reached the job.
+
+Nothing was lost; there was simply no route. Line items only ever moved
+estimate → job at the moment `convertEstimateToJob` *created* the job, and that
+function refuses outright once `job_id` is set. An estimate approved against a
+job that already existed had nowhere to put its pricing.
+
+### What changed
+
+**The Quotes page creates an estimate, not a job.** A quote is by definition work
+the customer hasn't committed to. `/estimates/new?fromQuote=` prefills the
+customer and carries the vehicle, requested services, and the customer's own
+message into the notes — `quote_requests` has no `vehicles` FK, only loose
+columns, so the notes are the only place that context survives. Creating the
+estimate flips the lead to `converted`.
+
+**Approval copies line items onto a linked job.** Both paths — the customer's
+tokenized link and the manager's "mark approved" — now run
+`syncApprovedEstimateToJob`.
+
+The important design choice: it is **insert-only, into an empty job**. Replacing
+was the obvious reading of "the estimate is what the customer agreed to," but a
+true replace means delete-then-insert, Supabase JS has no transaction, and a
+failure between the two leaves a job with *no* line items — worse than the bug
+being fixed, on data invoices are generated from. Insert-only into an empty job
+covers every case that has actually hurt (the job is empty because nobody filled
+it in) and has no destructive path at all.
+
+It refuses a job that is settled (`paid`/`invoiced`/`waived`), `cancelled`, has
+an invoice row, or already carries its own line items. `waived` counts as settled
+here for the same reason it does in `invoices.ts` and `charge-card-on-file.ts`:
+the shop decided not to charge, and a stale approval link shouldn't put priced
+work back on the board.
+
+The status flip is now a compare-and-set (`.eq("status", …)` + exact count).
+It wasn't before — harmless when approval only flipped a flag, not once
+line-item writes hang off it.
+
+### What review cost, and what it was worth
+
+Five reviewers on the diff, then three more verifying the fixes. They found two
+customer-facing regressions this session introduced:
+
+- The new CAS told a **customer their approval failed** when it had succeeded —
+  the manager marking it approved concurrently made the customer's write match
+  zero rows, and that error string renders straight into a toast on the public
+  page. The first fix only covered the sub-millisecond race; the verification
+  pass found the wide one (the approval page doesn't poll, so a tab left open
+  hits an earlier gate). An already-approved estimate now returns success, which
+  also makes a double-click idempotent.
+- Copying onto **waived jobs**, described above.
+
+Plus: a guard that failed *open* on a null probe, a missing `revalidatePath("/jobs")`
+(the Shop Floor totals `job_line_items`), `updateQuoteRequestStatus` reporting
+success on a zero-row update, an unhandled throw that could produce duplicate
+estimates, and six comments that were factually wrong — including one "improved"
+into a false absolute about `payment_status: "invoiced"`, which three AI tools
+can in fact write.
+
+### Mutation testing earned its place
+
+The first test pass looked thorough and caught **5 of 12** mutations. The
+copy-failure test was vacuous — deleting the entire Sentry block left it green —
+and the atomicity test passed with the compare-and-set destroyed. Worse, one
+*rewritten* test passed for the wrong reason: its "scopes the probe to this job"
+assertion was satisfied by the invoice probe's identical `job_id` filter.
+
+Final: **29/29** on `estimates.ts`, 3/3 on the new `quote-requests.ts` guard.
+The single worst survivor found along the way — dropping `.eq("id", …)` from the
+UPDATE, which on the service-role client becomes "approve every sent estimate in
+the shop" — passed the entire original suite.
+
+Suite 496 → 538. New file: `src/lib/actions/quote-requests.test.ts`.
+
+### Known issues
+
+- **Nobody has clicked this.** Every bit of confidence is static analysis plus
+  unit tests against a mocked Supabase. `/verify-flow` couldn't run — Playwright
+  has no session and the dashboard is behind auth. This is the gate CLAUDE.md is
+  most emphatic about, and it is the one that didn't run.
+- The **already-broken job is still broken**. That estimate is already
+  `approved`, and nothing re-triggers on an approved estimate, so its line items
+  need typing in by hand. The fix is forward-only.
+- `/jobs/new?fromQuote=` is now **unlinked but alive** — `JobForm.fromQuoteId`
+  and the page's `fromQuote` branch still exist, reachable only by hand-typed
+  URL, and that branch still flips the quote status unchecked. Left deliberately
+  in case a direct-to-job shortcut is wanted; delete it otherwise.
+- `getQuoteRequest` still collapses a failed read to `null`. The new page logs
+  when that happens rather than silently rendering an empty notes box, but the
+  shared function's contract is unchanged.
+- Four low-rated mutations still survive: `revalidatePath` on the estimate detail
+  page, the probe's `.limit(1)`, and a `?? null` no fixture exercises.

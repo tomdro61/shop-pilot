@@ -22,7 +22,7 @@ import {
   Mail,
   Car,
   ExternalLink,
-  Wrench,
+  FileText,
   Trash2,
   ImageOff,
 } from "lucide-react";
@@ -253,9 +253,10 @@ function QuoteRequestCard({
     }
   }
 
-  const convertUrl = qr.customer_id
-    ? `/jobs/new?customerId=${qr.customer_id}&fromQuote=${qr.id}`
-    : `/jobs/new?fromQuote=${qr.id}`;
+  // Quote -> estimate, not job: the customer hasn't committed to the work yet.
+  const estimateUrl = qr.customer_id
+    ? `/estimates/new?customerId=${qr.customer_id}&fromQuote=${qr.id}`
+    : `/estimates/new?fromQuote=${qr.id}`;
 
   return (
     <div
@@ -396,10 +397,10 @@ function QuoteRequestCard({
         {/* Actions */}
         <div className="flex items-center gap-3 pt-1">
           {status !== "converted" && (
-            <Link href={convertUrl}>
+            <Link href={estimateUrl}>
               <Button size="sm">
-                <Wrench className="mr-1.5 h-3.5 w-3.5" />
-                Convert to Job
+                <FileText className="mr-1.5 h-3.5 w-3.5" />
+                Create Estimate
               </Button>
             </Link>
           )}
