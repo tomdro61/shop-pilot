@@ -4630,3 +4630,26 @@ Suite 496 → 538. New file: `src/lib/actions/quote-requests.test.ts`.
   shared function's contract is unchanged.
 - Four low-rated mutations still survive: `revalidatePath` on the estimate detail
   page, the probe's `.limit(1)`, and a `?? null` no fixture exercises.
+
+### Addendum — APB promo on the pickup text
+
+`pickupReadySMS` now closes with: "Next time, book direct at
+https://www.airportparkingboston.com and save 10% with code APBSAVE10."
+355 chars, 3 SMS segments (was 2). Nothing in the send path measures length, so
+segment cost is invisible until the Quo bill.
+
+First tests for this template — it had none. Two are worth keeping: the box code
+must precede the marketing so it survives a truncated lock-screen preview, and
+the copy must stay plain GSM-7, since one curly quote or em dash forces UCS-2 and
+drops segments from 153 chars to 70.
+
+Two things deliberately left alone, both flagged to the owner:
+
+- The lockbox flow does not check `lot` — `lock-boxes.ts:42` does not even select
+  it — so an APB customer checked out via lockbox would be told to book direct at
+  the lot they just used. Only shop convention (APB is self-park, keys stay with
+  the customer) prevents it.
+- Pre-existing: `lock-boxes.ts:72` hardcodes `getPhoneNumber("parking")`, while
+  `getParkingLine(lot)` in `routing.ts` routes non-Broadway lots to the `apb`
+  line. The confirmation and invoice paths use the router; this one does not, so
+  an APB lockbox checkout already texts from the wrong number.

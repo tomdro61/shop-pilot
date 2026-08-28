@@ -4,6 +4,7 @@ import {
   appointmentConfirmedSMS,
   appointmentReminderSMS,
   receiptSMS,
+  pickupReadySMS,
 } from "./templates";
 
 describe("appointmentAckSMS", () => {
@@ -86,5 +87,37 @@ describe("receiptSMS", () => {
     expect(receiptSMS({ firstName: "Maria", link })).toBe(
       `Hi Maria, here's your receipt from Broadway Motors: ${link}`
     );
+  });
+});
+
+describe("pickupReadySMS", () => {
+  const msg = pickupReadySMS({ firstName: "Sarah", boxNumber: 7, boxCode: "4821" });
+
+  it("leads with the box number and code, before any marketing", () => {
+    // The code is the only part of this message the customer actually needs,
+    // so it has to survive a truncated preview on a lock screen.
+    expect(msg.startsWith("Hi Sarah, your vehicle is ready for pickup!")).toBe(true);
+    expect(msg).toContain("lock box #7, code: 4821.");
+    expect(msg.indexOf("code: 4821")).toBeLessThan(msg.indexOf("APBSAVE10"));
+  });
+
+  it("carries the APB direct-booking offer", () => {
+    expect(msg).toContain(
+      "Next time, book direct at https://www.airportparkingboston.com and save 10% with code APBSAVE10."
+    );
+    // A stray second % renders to the customer as "10%%".
+    expect(msg).not.toContain("%%");
+  });
+
+  it("keeps the review ask", () => {
+    expect(msg).toContain("https://g.page/r/CTjykJeAA929EBM/review");
+  });
+
+  it("stays plain GSM-7 so segments bill at 153 chars, not 70", () => {
+    // Nothing in the send path measures length. One curly quote or em dash in
+    // this copy would silently force UCS-2 and roughly double the segment
+    // count. firstName is customer data and can still do it — this guards ours.
+    const ourCopy = msg.replace("Sarah", "");
+    expect(/^[\x20-\x7E\n]*$/.test(ourCopy)).toBe(true);
   });
 });
