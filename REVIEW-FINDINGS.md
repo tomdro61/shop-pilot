@@ -1538,3 +1538,90 @@ These were checked and confirmed correct — no need to revisit:
 - **Test coverage gaps:** 8
 
 **Total findings:** 118
+
+---
+
+## August 2026 — invoice voiding (`3051cf7`), caught in review, fixed pre-ship
+
+Four defects that static reasoning by the author missed and multi-agent review
+caught. Logged because each is a *class* of mistake likely to recur, not a
+one-off slip.
+
+## VI-1 — `uncollectible` treated as a terminal Stripe status (CRITICAL, fixed)
+
+`voidInvoiceForJob` skipped the Stripe void call when the invoice read `void`
+**or** `uncollectible`, then deleted the local row either way. Marking an invoice
+uncollectible is a bookkeeping write-off: it stays finalized and **payable**, and
+Stripe supports `uncollectible → paid`. "Mark as uncollectible" sits next to
+"Void" in the same dashboard menu.
+
+Failure: mark an invoice uncollectible in Stripe, press Void in ShopPilot, get a
+success toast. The customer still holds a working payment link. When they pay it,
+`handleInvoicePaid` finds no local row and exits with a warning — no
+`payment_status` flip, no receipt, no owner notify. The shop is paid and doesn't
+know.
+
+Origin of the mistake: the pairing was copied from `resendInvoiceForJob`, where
+`void || uncollectible` correctly means *not sendable*. Same two words, different
+question. **Copying a status check between functions carries the semantics of the
+question it was written for.**
+
+## VI-2 — The invoice lookup's `job_id` predicate had no test (CRITICAL, fixed)
+
+Eleven tests, every refusal covered, and deleting `.eq("job_id", jobId)` from the
+lookup passed all of them. Without it the action loads whatever invoice sorts
+newest across the entire table, voids it in Stripe, and deletes it — Void on job
+A destroying customer B's live invoice. The *delete* predicate was asserted; the
+*lookup* predicate never was. `resend-invoice.test.ts` has the same hole. Now a
+CLAUDE.md rule (assert the inputs to a decision, not just its outcome).
+
+## VI-3 — The void gate ignored `jobs.payment_status` (HIGH, fixed)
+
+The button gated on the *invoice* row's status. A job invoiced through Stripe and
+then paid in cash has `jobs.payment_status = 'paid'` while the invoice row still
+reads `sent`, so Void was offered. Using it deleted the only in-app link to the
+Stripe invoice, on a job `createInvoiceFromJob` then refuses to re-bill —
+irrecoverable from inside the app. Every other mutating invoice action checks
+that field; this one didn't. `canResend` in the same component already had the
+`!settled` clause, four lines away.
+
+## VI-4 — Voiding made a job permanently un-cancellable (HIGH, fixed)
+
+`cancelJob` (`jobs.ts:422`) and `deleteJob` (`jobs.ts:460`) both refuse while
+`payment_status` reads `invoiced`, with the message *"This job has an open invoice
+— void it in Stripe before cancelling."* Nothing in the codebase ever moved that
+field back; the only writes of `unpaid` are at job creation. So voiding left the
+job stuck forever, with the app instructing the exact action just performed —
+structurally the same dead end the feature was built to remove. Both the action
+and the webhook now reset it, scoped `.eq("payment_status", "invoiced")` so a cash
+settlement isn't overwritten.
+
+**The pattern across VI-3 and VI-4:** both are cross-file consequences. The bug
+lived in `jobs.ts` while the change lived in `invoices.ts`. Reviewing the diff in
+isolation cannot surface them; only asking "what else reads the state this
+touches?" does.
+
+## VI-5 — Webhook returned 200 on its own failures (MEDIUM, fixed)
+
+`handleInvoiceVoided` swallowed lookup and delete errors and the route still
+returned 200, so Stripe never redelivered. The failure it backstops is a Supabase
+write failing — and when the DB is unhealthy, the action's delete and the
+webhook's delete fail for the same reason. One attempt each is not a recovery
+path. The quick-pay branch 90 lines up in the same file already returned 500
+deliberately, with a comment explaining why. Now returns 500; the handler is
+idempotent so redelivery is free.
+
+## Process notes from this session
+
+- **Mutation testing found what review reasoning did not, twice.** The
+  estimate→job suite caught 5/12 on its first pass; the void suite passed 9/9 of
+  the author's own mutations while 19 others survived. Both are now 100%.
+- **Three comments were factually wrong**, all of them universal claims
+  ("nothing ever…", "every other path…", "only X…"). Now a CLAUDE.md rule.
+- **Two agent claims were wrong and were rejected on verification**: a reported
+  TS2339 that typecheck disproved, and a 37KB file that did not exist (it was
+  another agent's throwaway, since deleted). Agent findings are leads, not facts.
+- **Two of the author's own worries were refuted with evidence**: the
+  draft-invoice gap is unreachable (all creation paths finalize before inserting
+  the local row), and the paid-race is safe because `voidInvoice()` is the
+  atomicity boundary, not the preceding `retrieve()`.

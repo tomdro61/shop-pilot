@@ -193,11 +193,50 @@ Why this needs a rule rather than reviewer judgment: **every existing gate was s
 - Default to writing NO comments
 - Never write JSDoc that names a specific consumer ("first shipped on the X page", "used by Y") — it rots
 - Never restate what well-named code already does — only document non-obvious WHY
+- **A comment containing "never", "only", "always", "every", or "nothing" is a
+  claim about the whole codebase. Run the grep that proves it, or rewrite it as
+  the local fact you actually verified.** Three comments shipped to review in the
+  August 2026 session were false, and all three were universal claims: "*only*
+  the estimate → job direction carries line items" (createEstimateFromJob does
+  the reverse), "*nothing* in the app ever writes `payment_status: invoiced`"
+  (three AI tools do), "*every other path* in this file assumes at most one
+  invoice row per job" (three of four handle multiples, and the comment
+  contradicted another one sixteen lines below it). Every comment that survived
+  review was narrow and local — a fact about one function that had been read.
+  A confidently wrong comment is worse than no comment: the next reader trusts
+  it and deletes the guard it misdescribes.
 
 **Types:**
 - No `any`. No casts through `unknown` to "fix" type errors — fix the real type
 - Discriminated unions over optional-fields-on-both-arms (`{ ok: true; data } | { ok: false; error }`, not `{ data?, error? }`)
 - Action return types: use a shared `ActionResult<T>` (or equivalent) so the hook layer can rely on the shape
+
+**Tests on money paths — assert the inputs to a decision, not just its outcome:**
+
+The recurring gap is not missing tests, it's tests that pin what a guard
+*decided* while leaving *what it decided on* unpinned. In August 2026 a suite of
+eleven tests covered every refusal in `voidInvoiceForJob` and still passed when
+`.eq("job_id", jobId)` was deleted from its invoice lookup — which would make the
+action load whatever invoice sorts newest across the entire table, void it in
+Stripe, and delete it. Clicking Void on job A would destroy customer B's live
+invoice. The delete predicate was asserted; the lookup predicate never was.
+`resend-invoice.test.ts` has the same hole, so treat it as a house pattern.
+
+For any action that reads a row and then mutates money state, assert:
+- the **lookup predicate** (`{ method: "eq", args: ["job_id", JOB_ID] }`)
+- the **selected columns**, when a later branch depends on one of them — dropping
+  a column from `.select()` is invisible to the mock and silently skips the branch
+- the **argument passed to the third-party call** (`retrieve` called with *this*
+  invoice's id, not a hardcoded one)
+- the **ordering/limit args** when "newest wins" is load-bearing
+
+**Mutation-test money-path server actions before declaring them done.** Write the
+guards, then delete each one and confirm a test goes red. It has paid for itself
+every time it has been run here: the estimate→job sync suite caught 5 of 12
+mutations on its first pass, and the void-invoice suite passed 9/9 of the author's
+own mutations while 19 others survived. Reading a test file cannot tell you it is
+vacuous; deleting the code it covers can. Back up the source, mutate, run the
+single test file, restore, and verify the restore by hash.
 
 **Dead code:**
 - When deleting a route or feature, also delete the components, server actions, types, and form branches that supported it
