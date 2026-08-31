@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createInvoiceFromJob } from "@/lib/actions/invoices";
 import { ResendInvoiceButton } from "@/components/dashboard/resend-invoice-button";
+import { VoidInvoiceButton } from "@/components/dashboard/void-invoice-button";
 import { isFirstDelivery } from "@/lib/invoices/delivery";
 import { INVOICE_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
@@ -291,6 +292,11 @@ export function InvoiceSection({
               </Button>
             </a>
           ) : null}
+          {/* Mirrors the server's refusals so the shop doesn't click into an
+              error. !settled matters as much as the row status: on a job paid in
+              cash after invoicing, voiding would delete the only in-app link to
+              the Stripe invoice, on a job that can no longer be re-billed. */}
+          {status !== "paid" && !settled ? <VoidInvoiceButton jobId={jobId} /> : null}
           {canResend ? (
             <ResendInvoiceButton
               jobId={jobId}

@@ -47,6 +47,15 @@ export async function POST(request: Request) {
     await handleInvoicePaid(stripeInvoice);
   }
 
+  if (event.type === "invoice.voided") {
+    const stripeInvoice = event.data.object as Stripe.Invoice;
+    const reconciled = await handleInvoiceVoided(stripeInvoice);
+    if (!reconciled) {
+      // Non-2xx so Stripe redelivers. Idempotent, so a retry is free.
+      return NextResponse.json({ error: "void reconcile failed" }, { status: 500 });
+    }
+  }
+
   if (event.type === "payment_intent.succeeded") {
     const pi = event.data.object as Stripe.PaymentIntent;
     if (pi.metadata?.quick_pay === "true") {
@@ -111,6 +120,132 @@ async function logReceiptEmail(
       extra: { stripeInvoiceId, customerId, jobId },
     });
   }
+}
+
+// A void done in the Stripe dashboard used to be invisible here: the local row
+// stayed, and createInvoiceFromJob then refused to bill the job again because
+// "an invoice already exists". Deleting the row on this event is what makes the
+// dashboard and the app agree, and it's the backstop for voidInvoiceForJob
+// failing between the Stripe void and its own delete.
+//
+// Returns false when the caller should hand Stripe a non-2xx so it redelivers.
+// The failure being backstopped is a Supabase write failing, and when the DB is
+// unhealthy the action's delete and this one fail for the same reason — one
+// attempt each is not a recovery path. Re-running is free: a missing row is a
+// no-op below.
+async function handleInvoiceVoided(stripeInvoice: Stripe.Invoice): Promise<boolean> {
+  const supabase = createAdminClient();
+
+  const { data: invoice, error } = await supabase
+    .from("invoices")
+    .select("id, job_id, parking_reservation_id, status")
+    .eq("stripe_invoice_id", stripeInvoice.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[stripe webhook] handleInvoiceVoided: failed to look up invoice", {
+      stripeInvoiceId: stripeInvoice.id,
+      error,
+    });
+    Sentry.captureException(error, {
+      tags: { source: "stripe-webhook", path: "void-invoice-lookup" },
+      extra: { stripeInvoiceId: stripeInvoice.id },
+    });
+    return false;
+  }
+
+  // No row is a normal outcome. It happens when voidInvoiceForJob won the race
+  // to delete it, when chargeCardOnFile voided an invoice it never managed to
+  // record locally, or on a redelivery. Returning here is what makes all three
+  // converge.
+  if (!invoice) return true;
+
+  // Stripe won't void a paid invoice, so a local row reading paid against a
+  // voided Stripe invoice means the two have diverged. Deleting would orphan
+  // the payment from the job — refuse and let a human look. A retry can't fix
+  // this, so report success to Stripe.
+  if (invoice.status === "paid") {
+    Sentry.captureMessage("stripe_webhook_void_on_paid_invoice", {
+      level: "error",
+      tags: { source: "stripe-webhook", path: "void-on-paid" },
+      extra: {
+        stripeInvoiceId: stripeInvoice.id,
+        invoiceId: invoice.id,
+        jobId: invoice.job_id,
+        parkingReservationId: invoice.parking_reservation_id,
+      },
+    });
+    return true;
+  }
+
+  // Parking invoices are kept. Deleting exists to unblock re-billing a job, and
+  // that block is job-scoped — a reservation can carry several invoices with no
+  // constraint between them, so removing one would erase billing history to no
+  // purpose.
+  if (!invoice.job_id) {
+    Sentry.captureMessage("stripe_webhook_void_parking_invoice", {
+      level: "info",
+      tags: { source: "stripe-webhook", path: "void-parking" },
+      extra: {
+        stripeInvoiceId: stripeInvoice.id,
+        invoiceId: invoice.id,
+        parkingReservationId: invoice.parking_reservation_id,
+      },
+    });
+    return true;
+  }
+
+  // .neq guards the gap between the read above and this write: handleInvoicePaid
+  // can flip the row to paid in between. .select() so that no-op is visible —
+  // silently matching nothing is how the divergence alarm above gets skipped.
+  const { data: deleted, error: deleteError } = await supabase
+    .from("invoices")
+    .delete()
+    .eq("id", invoice.id)
+    .neq("status", "paid")
+    .select("id");
+
+  if (deleteError) {
+    console.error("[stripe webhook] handleInvoiceVoided: failed to delete invoice", {
+      stripeInvoiceId: stripeInvoice.id,
+      error: deleteError,
+    });
+    Sentry.captureException(deleteError, {
+      tags: { source: "stripe-webhook", path: "void-invoice-delete" },
+      extra: { stripeInvoiceId: stripeInvoice.id, invoiceId: invoice.id },
+    });
+    return false;
+  }
+
+  if (!deleted || deleted.length === 0) {
+    // The row turned paid between the read and the delete — the same divergence
+    // the guard above shouts about, reached through the race instead.
+    Sentry.captureMessage("stripe_webhook_void_delete_matched_nothing", {
+      level: "error",
+      tags: { source: "stripe-webhook", path: "void-delete-noop" },
+      extra: { stripeInvoiceId: stripeInvoice.id, invoiceId: invoice.id, jobId: invoice.job_id },
+    });
+    return true;
+  }
+
+  // cancelJob and deleteJob refuse while payment_status reads 'invoiced',
+  // telling the manager to void the invoice first. Nothing else moves it back,
+  // so a dashboard void would leave the job permanently un-cancellable.
+  const { error: statusError } = await supabase
+    .from("jobs")
+    .update({ payment_status: "unpaid" })
+    .eq("id", invoice.job_id)
+    .eq("payment_status", "invoiced");
+
+  if (statusError) {
+    Sentry.captureException(statusError, {
+      level: "warning",
+      tags: { source: "stripe-webhook", path: "void-reset-payment-status" },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+    });
+  }
+
+  return true;
 }
 
 async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {

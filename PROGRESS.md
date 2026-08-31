@@ -4653,3 +4653,67 @@ Two things deliberately left alone, both flagged to the owner:
   `getParkingLine(lot)` in `routing.ts` routes non-Broadway lots to the `apb`
   line. The confirmation and invoice paths use the router; this one does not, so
   an APB lockbox checkout already texts from the wrong number.
+
+### Addendum — voiding an invoice, so a wrong bill isn't permanent
+
+Reported live: a job was invoiced, then the customer changed and a line item was
+added. The manager voided the invoice in Stripe — which is exactly what
+`resendInvoiceForJob` tells them to do on a customer mismatch — and then
+`createInvoiceFromJob` refused with "An invoice already exists for this job".
+The local row survived the void because the webhook only handled `invoice.paid`.
+The app instructed a step it then blocked. RO-1487 was cleared by hand with a
+one-row delete after confirming the Stripe invoice was voided.
+
+**The fix.** `voidInvoiceForJob` + an `invoice.voided` webhook branch + a Void
+button on the job's invoice card.
+
+Stripe is the system of record. Voiding **deletes** the local row rather than
+marking it voided, because `createInvoiceFromJob`, `chargeCardOnFile` and
+`syncApprovedEstimateToJob` all refuse when ANY invoices row exists for the job,
+without looking at its status — a surviving row would block re-billing forever.
+That also avoided putting the duplicate-charge guard in play, which the
+enum-plus-status alternative would have required.
+
+Stripe settles before the local row is deleted, never the reverse:
+`handleInvoicePaid` finds our row by `stripe_invoice_id`, so deleting it while a
+payable invoice still stands means a later payment can never be reconciled onto
+the job.
+
+**What review caught, on top of nine of my own mutations:**
+
+- `uncollectible` is a write-off, not a closure — the invoice stays payable. I'd
+  treated it as terminal and skipped the void while still deleting the row, so a
+  customer would have kept a working payment link with nothing tracking it.
+- The invoice lookup's `.eq("job_id", jobId)` had no test at all. Without it the
+  action loads whatever invoice sorts newest across the whole table and voids a
+  different customer's live bill.
+- The button ignored `jobs.payment_status`, so a job invoiced then paid in cash
+  offered Void — which would delete the only in-app link to the Stripe invoice
+  on a job `createInvoiceFromJob` then refuses to re-bill.
+- `cancelJob`/`deleteJob` refuse while `payment_status` reads `invoiced`, saying
+  "void it in Stripe first". Nothing ever moved that field back, so voiding made
+  the job permanently un-cancellable — the same dead end this feature exists to
+  remove. Both paths now reset it, scoped to `invoiced`.
+- The webhook returned 200 on its own failures, so Stripe never redelivered. The
+  failure being backstopped is a DB write failing, and when the DB is unhealthy
+  both deletes fail the same way. Now returns 500; the handler is idempotent.
+- Parking invoices were in the webhook's blast radius. The re-billing block is
+  job-scoped and a reservation can carry several invoices, so deleting one would
+  erase history to no purpose. Parking rows are kept and logged.
+- The confirm dialog read **"Delete"** under the heading "Void this invoice?".
+  `DeleteConfirmDialog` gained `confirmLabel`/`confirmingLabel`.
+
+**Verification.** 33/33 mutations caught across two rounds. Tests 11 → 35 (26 on
+the action, 9 on the webhook handler, which had none). Suite 553 → 577.
+
+**Known gaps.**
+
+- `invoice.voided` must be enabled on the Stripe webhook endpoint or the
+  dashboard-void reconciliation never fires. A webhook event that isn't
+  subscribed produces no error and no log — a dead backstop and a healthy quiet
+  one look identical from inside the app.
+- Sentry events carry no `environment` tag: `environment:production` matches
+  nothing across 90 days while unfiltered queries return plenty. Any post-deploy
+  check filtering on it reports a false all-clear.
+- Three comments in the first draft of this work were factually wrong and were
+  caught by review, not by me — the third such set in this session.

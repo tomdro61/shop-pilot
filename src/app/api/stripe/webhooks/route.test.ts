@@ -256,3 +256,170 @@ describe("invoice.paid — receipt total must match what Stripe collected", () =
     expect(sendEmail).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * invoice.voided is the backstop that makes voidInvoiceForJob's "Voided in
+ * Stripe, but ShopPilot still shows the old invoice" message recoverable rather
+ * than terminal, and the only thing that reconciles a void done in the Stripe
+ * dashboard. An untested backstop is a claim, not a mechanism.
+ */
+function mockVoidedEvent(invoice: Partial<Stripe.Invoice> = {}) {
+  vi.mocked(getStripe).mockReturnValue({
+    webhooks: {
+      constructEvent: () => ({
+        type: "invoice.voided",
+        data: { object: { id: STRIPE_INVOICE_ID, ...invoice } },
+      }),
+    },
+  } as unknown as ReturnType<typeof getStripe>);
+}
+
+const JOB_ROW_ID = "44444444-4444-4444-9444-444444444444";
+
+/** A job-linked row, the only kind the handler deletes. */
+const jobInvoice = (status: string) => ({
+  data: {
+    id: INVOICE_ROW_ID,
+    job_id: JOB_ROW_ID,
+    parking_reservation_id: null,
+    status,
+  },
+  error: null,
+});
+
+const deleteCalls = (calls: RecordedCall[]) => calls.filter((c) => c.method === "delete");
+
+describe("invoice.voided — reconciling a void", () => {
+  it("deletes the local row so the job can be invoiced again", async () => {
+    mockVoidedEvent();
+    const mock = mockSupabase([
+      jobInvoice("sent"),
+      { data: [{ id: INVOICE_ROW_ID }], error: null },
+      { error: null },
+    ]);
+
+    const res = (await POST(buildRequest())) as unknown as { init?: { status?: number } };
+
+    expect(deleteCalls(mock.calls)).toHaveLength(1);
+    expect(mock.calls).toContainEqual({ method: "eq", args: ["id", INVOICE_ROW_ID] });
+    expect(res.init?.status).toBeUndefined();
+  });
+
+  it("guards the delete against a row that turned paid since the read", async () => {
+    // handleInvoicePaid can flip the row between the lookup and this write.
+    mockVoidedEvent();
+    const mock = mockSupabase([
+      jobInvoice("sent"),
+      { data: [{ id: INVOICE_ROW_ID }], error: null },
+      { error: null },
+    ]);
+
+    await POST(buildRequest());
+
+    expect(mock.calls).toContainEqual({ method: "neq", args: ["status", "paid"] });
+  });
+
+  it("returns the job to unpaid so cancel and delete stop refusing", async () => {
+    mockVoidedEvent();
+    const mock = mockSupabase([
+      jobInvoice("sent"),
+      { data: [{ id: INVOICE_ROW_ID }], error: null },
+      { error: null },
+    ]);
+
+    await POST(buildRequest());
+
+    const update = mock.calls.find((c) => c.method === "update");
+    expect(update?.args[0]).toEqual({ payment_status: "unpaid" });
+    expect(mock.calls).toContainEqual({ method: "eq", args: ["payment_status", "invoiced"] });
+  });
+
+  it("treats a missing row as the normal end state, silently", async () => {
+    // The action already deleted it, or chargeCardOnFile voided an invoice it
+    // never recorded, or this is a redelivery. Alerting here would make every
+    // successful void look like a failure.
+    mockVoidedEvent();
+    const mock = mockSupabase([{ data: null, error: null }]);
+
+    const res = (await POST(buildRequest())) as unknown as { init?: { status?: number } };
+
+    expect(deleteCalls(mock.calls)).toHaveLength(0);
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+    expect(res.init?.status).toBeUndefined();
+  });
+
+  it("refuses to delete a row that reads paid, and escalates instead", async () => {
+    // Stripe won't void a paid invoice, so this means the two have diverged.
+    // Deleting would orphan the payment from the job.
+    mockVoidedEvent();
+    const mock = mockSupabase([jobInvoice("paid")]);
+
+    await POST(buildRequest());
+
+    expect(deleteCalls(mock.calls)).toHaveLength(0);
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "stripe_webhook_void_on_paid_invoice",
+      expect.objectContaining({ level: "error" })
+    );
+  });
+
+  it("keeps parking invoices, which have no re-billing block to clear", async () => {
+    mockVoidedEvent();
+    const mock = mockSupabase([
+      {
+        data: {
+          id: INVOICE_ROW_ID,
+          job_id: null,
+          parking_reservation_id: "res-1",
+          status: "sent",
+        },
+        error: null,
+      },
+    ]);
+
+    await POST(buildRequest());
+
+    expect(deleteCalls(mock.calls)).toHaveLength(0);
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "stripe_webhook_void_parking_invoice",
+      expect.anything()
+    );
+  });
+
+  it("asks Stripe to redeliver when the lookup fails", async () => {
+    // The failure being backstopped is a DB write failing; if the DB is
+    // unhealthy both this and the action fail the same way. One attempt each is
+    // not a recovery path, and re-running is free.
+    mockVoidedEvent();
+    mockSupabase([{ data: null, error: { message: "statement timeout" } }]);
+
+    const res = (await POST(buildRequest())) as unknown as { init?: { status?: number } };
+
+    expect(res.init?.status).toBe(500);
+  });
+
+  it("asks Stripe to redeliver when the delete fails", async () => {
+    mockVoidedEvent();
+    mockSupabase([jobInvoice("sent"), { data: null, error: { message: "delete failed" } }]);
+
+    const res = (await POST(buildRequest())) as unknown as { init?: { status?: number } };
+
+    expect(res.init?.status).toBe(500);
+  });
+
+  it("escalates when the delete matched nothing rather than reporting quietly", async () => {
+    // The row turned paid between the read and the delete — the divergence the
+    // paid guard shouts about, reached through the race instead.
+    mockVoidedEvent();
+    mockSupabase([jobInvoice("sent"), { data: [], error: null }]);
+
+    const res = (await POST(buildRequest())) as unknown as { init?: { status?: number } };
+
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "stripe_webhook_void_delete_matched_nothing",
+      expect.objectContaining({ level: "error" })
+    );
+    // A retry can't fix a paid row, so this one is not redelivered.
+    expect(res.init?.status).toBeUndefined();
+  });
+});

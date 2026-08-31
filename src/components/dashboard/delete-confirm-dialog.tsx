@@ -20,6 +20,10 @@ interface DeleteConfirmDialogProps {
   description: string;
   onConfirm: () => Promise<{ error?: string; success?: boolean }>;
   trigger?: React.ReactNode;
+  // Every other caller really is deleting. Voiding an invoice is not, and the
+  // confirm button is the one place that distinction has to be right.
+  confirmLabel?: string;
+  confirmingLabel?: string;
 }
 
 export function DeleteConfirmDialog({
@@ -27,6 +31,8 @@ export function DeleteConfirmDialog({
   description,
   onConfirm,
   trigger,
+  confirmLabel = "Delete",
+  confirmingLabel = "Deleting...",
 }: DeleteConfirmDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -61,7 +67,7 @@ export function DeleteConfirmDialog({
             variant="ghost"
             className="bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900"
           >
-            {loading ? "Deleting..." : "Delete"}
+            {loading ? confirmingLabel : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

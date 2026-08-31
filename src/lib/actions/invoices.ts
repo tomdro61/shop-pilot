@@ -694,6 +694,227 @@ export async function resendInvoiceForJob({
   };
 }
 
+// Voiding is how a job gets re-invoiced after the bill turns out to be wrong —
+// a changed customer, a line item added after sending.
+//
+// The local row is deleted rather than marked voided: createInvoiceFromJob,
+// chargeCardOnFile and syncApprovedEstimateToJob all refuse when ANY invoices
+// row exists for the job, without looking at its status, so a surviving row
+// would permanently block re-billing. The voided invoice stays in Stripe, which
+// is where the audit trail belongs.
+//
+// Stripe is settled before the local row is deleted, never the other way round.
+// handleInvoicePaid finds our row by stripe_invoice_id, so deleting it while a
+// payable invoice still stands in Stripe means a later payment can never be
+// reconciled onto the job.
+export async function voidInvoiceForJob(
+  jobId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const auth = await requireManager();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const supabase = await createClient();
+
+  // The job's own payment state, which is independent of the invoice row: a job
+  // invoiced through Stripe and then settled in cash reads paid here while the
+  // invoice row still reads sent. Every other mutating invoice action checks
+  // this, and voiding a settled job would delete the only in-app link to the
+  // Stripe invoice on a job createInvoiceFromJob then refuses to re-bill.
+  const { data: job, error: jobError } = await supabase
+    .from("jobs")
+    .select("id, payment_status")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (jobError) {
+    Sentry.captureException(jobError, {
+      tags: { source: "void-invoice", path: "job-lookup" },
+      extra: { jobId },
+    });
+    return { ok: false, error: "Couldn't load this job. Try again in a moment." };
+  }
+  if (!job) return { ok: false, error: "Job not found" };
+
+  if (job.payment_status === "paid" || job.payment_status === "waived") {
+    return {
+      ok: false,
+      error:
+        "This job is already settled — voiding would delete the record of the bill. Void it in Stripe directly if the payment link is still live.",
+    };
+  }
+
+  // Ordered + limited, same as resendInvoiceForJob: job_id has no unique
+  // constraint, so duplicates are an artifact rather than a normal state.
+  const { data: invoiceRows, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id, status, stripe_invoice_id")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(2);
+
+  if (invoiceError) {
+    Sentry.captureException(invoiceError, {
+      tags: { source: "void-invoice", path: "invoice-lookup" },
+      extra: { jobId },
+    });
+    return { ok: false, error: "Couldn't load this job's invoice. Try again in a moment." };
+  }
+
+  const invoice = invoiceRows?.[0];
+  if (!invoice) return { ok: false, error: "This job has no invoice to void." };
+
+  // Refuse rather than clean up the newest and report success: deleting one of
+  // two rows leaves the job just as blocked, and the other row's Stripe invoice
+  // live and payable, behind a message saying it worked.
+  if (invoiceRows.length > 1) {
+    Sentry.captureMessage("void_invoice_duplicate_rows", {
+      level: "warning",
+      tags: { source: "void-invoice" },
+      extra: { jobId, newestInvoiceId: invoice.id },
+    });
+    return {
+      ok: false,
+      error:
+        "This job has more than one invoice on file. Void them in Stripe and contact support — clearing only one would leave the job blocked.",
+    };
+  }
+
+  if (invoice.status === "paid") {
+    return {
+      ok: false,
+      error: "This invoice is already paid — refund it in Stripe rather than voiding it.",
+    };
+  }
+
+  // No Stripe id means we can't confirm the invoice's state, and the row may
+  // still point at something payable we lost the pointer to. Refuse rather than
+  // guess; voiding in Stripe fires invoice.voided, which clears the row here.
+  if (!invoice.stripe_invoice_id) {
+    Sentry.captureMessage("void_invoice_missing_stripe_id", {
+      level: "warning",
+      tags: { source: "void-invoice", path: "no-stripe-id" },
+      extra: { jobId, invoiceId: invoice.id },
+    });
+    return {
+      ok: false,
+      error:
+        "This invoice isn't linked to Stripe, so it can't be voided safely. Void it in the Stripe dashboard and it'll clear from here.",
+    };
+  }
+
+  const stripe = getStripe();
+
+  // Read Stripe before voiding rather than voiding and interpreting the error.
+  // The local row only turns paid when handleInvoicePaid runs, so it lags Stripe
+  // by however long webhook delivery takes — asking Stripe directly is the only
+  // way to see a payment that hasn't been delivered yet. If it gets paid between
+  // this read and the void, Stripe rejects the void and the row stays.
+  let stripeInvoice: Stripe.Invoice | null = null;
+  try {
+    stripeInvoice = await stripe.invoices.retrieve(invoice.stripe_invoice_id);
+  } catch (err) {
+    // resource_missing is the ONLY Stripe error that may fall through to the
+    // delete. Anything else means we don't know the invoice's state, and
+    // deleting on doubt is how a live invoice ends up untracked.
+    const missing =
+      err instanceof Stripe.errors.StripeInvalidRequestError &&
+      err.code === "resource_missing";
+    if (!missing) {
+      Sentry.captureException(err, {
+        tags: { source: "void-invoice", path: "stripe-retrieve" },
+        extra: { jobId, stripeInvoiceId: invoice.stripe_invoice_id },
+      });
+      return {
+        ok: false,
+        error: "Couldn't reach Stripe to void this invoice. Try again in a moment.",
+      };
+    }
+    // The Stripe invoice is gone. Nothing to void — but a key/mode mismatch
+    // reports resource_missing too, so record which id vanished.
+    Sentry.captureMessage("void_invoice_stripe_absent", {
+      level: "warning",
+      tags: { source: "void-invoice", path: "stripe-absent" },
+      extra: { jobId, invoiceId: invoice.id, stripeInvoiceId: invoice.stripe_invoice_id },
+    });
+  }
+
+  if (stripeInvoice?.status === "paid") {
+    return {
+      ok: false,
+      error: "Stripe shows this invoice as paid — refresh the job, then record the payment.",
+    };
+  }
+
+  // Only an already-void invoice needs no void call. An uncollectible one is a
+  // write-off, not a closure — it stays payable — so it goes through the void
+  // like any other; if Stripe refuses, the catch below keeps the row.
+  if (stripeInvoice && stripeInvoice.status !== "void") {
+    try {
+      await stripe.invoices.voidInvoice(invoice.stripe_invoice_id);
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { source: "void-invoice", path: "stripe-void" },
+        extra: {
+          jobId,
+          stripeInvoiceId: invoice.stripe_invoice_id,
+          stripeStatus: stripeInvoice.status,
+        },
+      });
+      return {
+        ok: false,
+        error:
+          "Stripe wouldn't void this invoice. Open it in Stripe and void it there, then try again.",
+      };
+    }
+  }
+
+  // .select() so a delete that matched nothing is visible: reporting success
+  // would send the manager to create a replacement the surviving row blocks.
+  const { data: deleted, error: deleteError } = await supabase
+    .from("invoices")
+    .delete()
+    .eq("id", invoice.id)
+    .select("id");
+
+  if (deleteError || !deleted || deleted.length === 0) {
+    Sentry.captureException(deleteError ?? new Error("void delete matched no rows"), {
+      tags: { source: "void-invoice", path: "delete-local-row" },
+      extra: { jobId, invoiceId: invoice.id, matched: deleted?.length ?? 0 },
+    });
+    return {
+      ok: false,
+      error:
+        "Voided in Stripe, but ShopPilot still shows the old invoice. Refresh in a moment — if it's still there, contact support.",
+    };
+  }
+
+  // cancelJob and deleteJob both refuse while payment_status reads 'invoiced',
+  // telling the manager to void the invoice first — which they just did. Nothing
+  // else in the app ever moves it back, so without this the job is permanently
+  // un-cancellable. Scoped to 'invoiced' so a cash settlement isn't overwritten.
+  const { error: statusError } = await supabase
+    .from("jobs")
+    .update({ payment_status: "unpaid" })
+    .eq("id", jobId)
+    .eq("payment_status", "invoiced");
+
+  if (statusError) {
+    Sentry.captureException(statusError, {
+      level: "warning",
+      tags: { source: "void-invoice", path: "reset-payment-status" },
+      extra: { jobId },
+    });
+    // Not fatal: the invoice is gone and the job can be re-billed. Only cancel
+    // and delete stay blocked, and those say what to do.
+  }
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/jobs");
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
 export async function getInvoices(status?: string, search?: string, source?: string) {
   const supabase = await createClient();
 
