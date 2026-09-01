@@ -4717,3 +4717,82 @@ the action, 9 on the webhook handler, which had none). Suite 553 → 577.
   check filtering on it reports a false all-clear.
 - Three comments in the first draft of this work were factually wrong and were
   caught by review, not by me — the third such set in this session.
+
+---
+
+## Session 77 — 2026-09-01 — The Trends page was understating August by $34,518
+
+**The report.** "The trend page in reports is fucked up. It's showing 31K in
+August." It was showing $31,424.75. August was actually $65,942.75.
+
+**Cause.** `getTrendData`, `getCategoryTrendData` and `getTechTrendData` each
+fetched a full calendar year of completed jobs in one
+`.select(...).limit(10000)`, above a comment claiming that overrode the row cap.
+It does not — `api.max_rows` (1000) clamps `.limit()` and reports no error. With
+1,194 completed jobs in 2026 and no `.order()`, the reads kept an arbitrary
+1000. Shipped with zero code changes; a row counter crossed a threshold. This is
+the same incident class as August's six money surfaces — `reports.ts` and
+`receivables.ts` were converted to `fetchAllRows` in that pass and these three
+were missed.
+
+Only line-item revenue truncated. Inspections come from `daily_inspection_counts`
+(197 rows, one per date), which is why the shortfall was pure job revenue:
+
+| month | rendered | actual | gap |
+|---|---|---|---|
+| June | $82,733.33 | $85,954.83 | −$3,221 |
+| July | $69,392.13 | $71,800.13 | −$2,408 |
+| August | $31,424.75 | $65,942.75 | −$34,518 |
+
+**Fix.** All four reads page via `fetchAllRows` (`{ count: "exact" }` + stable
+`.order("id")`) or fail closed via `assertComplete`. The estimates read is paged
+rather than merely guarded — guarding an unpaged read trades a silent
+understatement for a hard failure of the entire page, which `reports.ts:122`
+had already explicitly declined to do.
+
+**What review caught that I had introduced.** Two self-inflicted type
+regressions, both on queries with *literal* select strings where supabase-js was
+already inferring correctly — `.returns<T>()` threw away good inferred types for
+hand-written wrong ones, and it only checks array-vs-array so nothing flagged it.
+`InspectionCountRow` widened two NOT NULL columns (and added 8 impossible `?? 0`
+guards); `TrendEstimateRow` erased the `estimate_status` enum on the one
+comparison that decides whether the close rate is ever non-zero. Row types now
+derive from `Pick<Tables<...>>`. Mutation-tested: a `"Approved"` typo and a
+deleted `|| 0` on the nullable `total` both now fail to compile.
+
+Four added comments made false or misleading claims — including "inspection
+revenue would vanish from the chart" (it plots flat zero; the real harm is
+`finalize()` folding it into `revenue` and `grossProfit`) and "the loss landed on
+the newest months" (a one-time observation stated as a property, contradicting
+"arbitrary" in the same sentence). Fourth session running where wrong comments
+were caught by review rather than by me.
+
+**Two agent findings that measurement disproved.** A claimed 416-past-the-end bug
+in `fetchAllRows` — this deployment returns 206 + `[]`. And "1,000 estimates near
+or already crossed" — actual is 91 in 2026, 11x headroom.
+
+**Verification.** tsc, lint, 577/577 tests, build. Paged reads return 1194/1194
+rows with no duplicates across pages; July reconciles to $71,800.13, matching the
+revenue report. Deploy confirmed serving commit 3f1b10e on master.
+
+**Known gaps.**
+
+- Nobody rendered the page. `/reports/*` is auth-gated and the session had no
+  credentials, so verification stopped at the data layer. Confirm August reads
+  ~$65,942.75 in the browser.
+- Still no test touching these three files, and the shared Supabase mock lacks
+  `range`/`returns`, so one can't be written without extending it. Two guards
+  (`.order("id")` and the select string) are killable only by argument
+  assertions — an output assertion cannot see either.
+- `getInspectionCounts` (`inspections.ts:12-17`) discards `error`, so the page's
+  catch is dead code, a failed read renders 0/0, and the next Save upserts those
+  zeros over the real counts — destroying data that feeds every revenue surface.
+  Pre-existing, unfixed, and the most dangerous thing found this session.
+- `estimates.sent_at` is `timestamptz` compared against a date string, so
+  `.lte("sent_at", endDate)` drops the last day — at day granularity that means
+  today's close rate reads 0% every day. Shop-wide (`reports.ts:131` too).
+  Reported by review, not independently confirmed.
+- `manual-income.ts` has no cap guard (6 rows today) and `.limit(500)` feeds a
+  rendered total on the Income report.
+- The reports index fetches a full year via `getTrendData("month", ...)` to
+  render six months. The clamp used to mask that; it's real now.
