@@ -16,6 +16,18 @@ import {
   getDateRange,
 } from "@/lib/utils/trend-buckets";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import { assertComplete } from "@/lib/supabase/assert-complete";
+import type { Tables } from "@/types/supabase";
+
+type TrendLineItem = Pick<
+  Tables<"job_line_items">,
+  "type" | "total" | "quantity" | "unit_cost" | "cost" | "category"
+>;
+type TrendJobRow = Pick<Tables<"jobs">, "id" | "date_finished"> & {
+  job_line_items: TrendLineItem[] | null;
+};
+type TrendEstimateRow = Pick<Tables<"estimates">, "id" | "status" | "sent_at">;
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -133,48 +145,57 @@ export async function getTrendData(
   const jobSelect: string = isFiltered
     ? "id, date_finished, customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
     : "id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)";
-  let jobQuery = supabase
-    .from("jobs")
-    .select(jobSelect)
-    .eq("status", "complete")
-    .gte("date_finished", startDate)
-    .lte("date_finished", endDate)
-    .limit(10000);
-  if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+  // Paged, not a single read. The "month" granularity spans a whole calendar
+  // year of completed jobs, and `.limit()` is clamped by api.max_rows (1000)
+  // rather than raising it, with no error — so once the year passed 1000
+  // completed jobs this silently kept 1000 and dropped the rest, understating
+  // every bucket it dropped a job from.
+  const jobsPromise = fetchAllRows<TrendJobRow>((from, to) => {
+    let q = supabase
+      .from("jobs")
+      .select(jobSelect, { count: "exact" })
+      .eq("status", "complete")
+      .gte("date_finished", startDate)
+      .lte("date_finished", endDate)
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+    return q.returns<TrendJobRow[]>();
+  }, "jobs for trends");
 
-  // Limit 10000 to override Supabase default 1000-row cap
-  const [jobsResult, estimatesResult, inspectionsResult, manualEntries] = await Promise.all([
-    jobQuery,
-    supabase
-      .from("estimates")
-      .select("id, status, sent_at")
-      .in("status", ["sent", "approved"])
-      .gte("sent_at", startDate)
-      .lte("sent_at", endDate)
-      .limit(10000),
-    isFiltered ? Promise.resolve({ data: [] }) : supabase
-      .from("daily_inspection_counts")
-      .select("date, state_count, tnc_count")
-      .gte("date", startDate)
-      .lte("date", endDate)
-      .limit(10000),
+  const [jobs, estimates, inspectionsResult, manualEntries] = await Promise.all([
+    jobsPromise,
+    fetchAllRows<TrendEstimateRow>((from, to) =>
+      supabase
+        .from("estimates")
+        .select("id, status, sent_at", { count: "exact" })
+        .in("status", ["sent", "approved"])
+        .gte("sent_at", startDate)
+        .lte("sent_at", endDate)
+        .order("id", { ascending: true })
+        .range(from, to)
+        .returns<TrendEstimateRow[]>(),
+      "estimates for trends"
+    ),
+    isFiltered
+      ? Promise.resolve(null)
+      : supabase
+          .from("daily_inspection_counts")
+          .select("date, state_count, tnc_count", { count: "exact" })
+          .gte("date", startDate)
+          .lte("date", endDate),
     isFiltered ? Promise.resolve([]) : getManualIncomeForRange(startDate, endDate),
   ]);
 
-  const jobs = (jobsResult.data || []) as any[];
-  const estimates = estimatesResult.data || [];
-  const inspections = (inspectionsResult as any).data || [];
+  // daily_inspection_counts is one row per date, so a calendar year is at most
+  // 366 — but `error` used to be discarded here, and a failed read then read as
+  // zero. finalize() folds these counts into `revenue` and `grossProfit`, so
+  // that silently understated both headline figures rather than failing.
+  const inspections = inspectionsResult
+    ? assertComplete(inspectionsResult, "inspection counts for trends")
+    : [];
 
   const bucketMap = buildTrendBuckets(granularity, startDate, endDate, resolvedYear);
-
-  type LineItem = {
-    type: string;
-    total: number;
-    quantity: number;
-    unit_cost: number;
-    cost: number | null;
-    category: string | null;
-  };
 
   for (const job of jobs) {
     if (!job.date_finished) continue;
@@ -182,7 +203,7 @@ export async function getTrendData(
     const bucket = bucketMap.get(bKey);
     if (!bucket) continue;
 
-    const lineItems = ((job.job_line_items as LineItem[]) || []).filter(
+    const lineItems = (job.job_line_items ?? []).filter(
       (li) => !isInspectionCategory(li.category)
     );
 
@@ -215,16 +236,13 @@ export async function getTrendData(
     }
   }
 
-  if (!isFiltered) {
-    for (const row of inspections) {
-      if (!row.date) continue;
-      const bKey = getBucketKey(row.date, granularity);
-      const bucket = bucketMap.get(bKey);
-      if (!bucket) continue;
+  for (const row of inspections) {
+    const bKey = getBucketKey(row.date, granularity);
+    const bucket = bucketMap.get(bKey);
+    if (!bucket) continue;
 
-      bucket.inspectionStateCount += row.state_count || 0;
-      bucket.inspectionTncCount += row.tnc_count || 0;
-    }
+    bucket.inspectionStateCount += row.state_count;
+    bucket.inspectionTncCount += row.tnc_count;
   }
 
   for (const entry of (isFiltered ? [] : manualEntries)) {

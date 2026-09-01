@@ -10,6 +10,17 @@ import {
   getDateRange,
 } from "@/lib/utils/trend-buckets";
 import type { CategoryTrendData, CategoryMetrics } from "@/lib/actions/category-trends";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import type { Tables } from "@/types/supabase";
+
+type TechLineItem = Pick<
+  Tables<"job_line_items">,
+  "type" | "total" | "quantity" | "unit_cost" | "cost" | "category"
+>;
+type TechJobRow = Pick<Tables<"jobs">, "id" | "date_finished" | "assigned_tech"> & {
+  users: { name: string } | null;
+  job_line_items: TechLineItem[] | null;
+};
 
 // ── Raw accumulator (same shape as category-trends) ──────────
 
@@ -51,16 +62,23 @@ export async function getTechTrendData(
   const jobSelect: string = isFiltered
     ? "id, date_finished, assigned_tech, users!jobs_assigned_tech_fkey(name), customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
     : "id, date_finished, assigned_tech, users!jobs_assigned_tech_fkey(name), job_line_items(type, total, quantity, unit_cost, cost, category)";
-  let jobQuery = supabase
-    .from("jobs")
-    .select(jobSelect)
-    .eq("status", "complete")
-    .gte("date_finished", startDate)
-    .lte("date_finished", endDate)
-    .limit(10000);
-  if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
-
-  const { data: jobs } = await jobQuery as { data: any[] | null };
+  // Paged, not a single read. The "month" granularity spans a whole calendar
+  // year of completed jobs, and `.limit()` is clamped by api.max_rows (1000)
+  // rather than raising it, with no error — so once the year passed 1000
+  // completed jobs this silently kept 1000 and dropped the rest, understating
+  // every bucket it dropped a job from.
+  const jobs = await fetchAllRows<TechJobRow>((from, to) => {
+    let q = supabase
+      .from("jobs")
+      .select(jobSelect, { count: "exact" })
+      .eq("status", "complete")
+      .gte("date_finished", startDate)
+      .lte("date_finished", endDate)
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+    return q.returns<TechJobRow[]>();
+  }, "jobs for tech trends");
 
   const bucketKeys = buildBucketKeys(granularity, startDate, endDate, resolvedYear);
   const rawBuckets = new Map<string, { key: string; label: string; techs: Record<string, RawAccum> }>();
@@ -70,25 +88,15 @@ export async function getTechTrendData(
 
   const techTotals: Record<string, number> = {};
 
-  type LineItem = {
-    type: string;
-    total: number;
-    quantity: number;
-    unit_cost: number;
-    cost: number | null;
-    category: string | null;
-  };
-
-  for (const job of (jobs || [])) {
+  for (const job of jobs) {
     if (!job.date_finished) continue;
     const bKey = getBucketKey(job.date_finished, granularity);
     const bucket = rawBuckets.get(bKey);
     if (!bucket) continue;
 
-    const user = job.users as { name: string } | null;
-    const techName = user?.name || "Unassigned";
+    const techName = job.users?.name || "Unassigned";
 
-    const lineItems = ((job.job_line_items as LineItem[]) || []).filter(
+    const lineItems = (job.job_line_items ?? []).filter(
       (li) => !isInspectionCategory(li.category)
     );
 

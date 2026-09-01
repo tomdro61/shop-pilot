@@ -15,6 +15,17 @@ import {
   getDateRange,
 } from "@/lib/utils/trend-buckets";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import { assertComplete } from "@/lib/supabase/assert-complete";
+import type { Tables } from "@/types/supabase";
+
+type CategoryLineItem = Pick<
+  Tables<"job_line_items">,
+  "type" | "total" | "quantity" | "unit_cost" | "cost" | "category"
+>;
+type CategoryJobRow = Pick<Tables<"jobs">, "id" | "date_finished"> & {
+  job_line_items: CategoryLineItem[] | null;
+};
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -99,28 +110,44 @@ export async function getCategoryTrendData(
   const jobSelect: string = isFiltered
     ? "id, date_finished, customers!inner(customer_type), job_line_items(type, total, quantity, unit_cost, cost, category)"
     : "id, date_finished, job_line_items(type, total, quantity, unit_cost, cost, category)";
-  let jobQuery = supabase
-    .from("jobs")
-    .select(jobSelect)
-    .eq("status", "complete")
-    .gte("date_finished", startDate)
-    .lte("date_finished", endDate)
-    .limit(10000);
-  if (isFiltered) jobQuery = jobQuery.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+  // Paged, not a single read. The "month" granularity spans a whole calendar
+  // year of completed jobs, and `.limit()` is clamped by api.max_rows (1000)
+  // rather than raising it, with no error — so once the year passed 1000
+  // completed jobs this silently kept 1000 and dropped the rest, understating
+  // every bucket it dropped a job from.
+  const jobsPromise = fetchAllRows<CategoryJobRow>((from, to) => {
+    let q = supabase
+      .from("jobs")
+      .select(jobSelect, { count: "exact" })
+      .eq("status", "complete")
+      .gte("date_finished", startDate)
+      .lte("date_finished", endDate)
+      .order("id", { ascending: true })
+      .range(from, to);
+    if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+    return q.returns<CategoryJobRow[]>();
+  }, "jobs for service-mix trends");
 
-  const [jobsResult, inspectionsResult, manualEntries] = await Promise.all([
-    jobQuery,
-    isFiltered ? Promise.resolve({ data: [] }) : supabase
-      .from("daily_inspection_counts")
-      .select("date, state_count, tnc_count")
-      .gte("date", startDate)
-      .lte("date", endDate)
-      .limit(10000),
+  const [jobs, inspectionsResult, manualEntries] = await Promise.all([
+    jobsPromise,
+    isFiltered
+      ? Promise.resolve(null)
+      : supabase
+          .from("daily_inspection_counts")
+          .select("date, state_count, tnc_count", { count: "exact" })
+          .gte("date", startDate)
+          .lte("date", endDate),
     isFiltered ? Promise.resolve([]) : getManualIncomeForRange(startDate, endDate),
   ]);
 
-  const jobs = (jobsResult.data || []) as any[];
-  const inspections = (inspectionsResult as any).data || [];
+  // daily_inspection_counts is one row per date, so a calendar year is at most
+  // 366 — but `error` used to be discarded here, and a failed read then read as
+  // zero. The "State Inspection" and "TNC Inspection" categories are built
+  // solely from these rows, so they vanished from the chart entirely rather
+  // than plotting zero.
+  const inspections = inspectionsResult
+    ? assertComplete(inspectionsResult, "inspection counts for service-mix trends")
+    : [];
 
   // Initialize buckets — each bucket has a Record<string, RawCategoryAccum>
   const bucketKeys = buildBucketKeys(granularity, startDate, endDate, resolvedYear);
@@ -132,15 +159,6 @@ export async function getCategoryTrendData(
   // Track total revenue per category for ordering
   const categoryTotals: Record<string, number> = {};
 
-  type LineItem = {
-    type: string;
-    total: number;
-    quantity: number;
-    unit_cost: number;
-    cost: number | null;
-    category: string | null;
-  };
-
   // Aggregate jobs — line-item-level category attribution for revenue/cost
   for (const job of jobs) {
     if (!job.date_finished) continue;
@@ -148,7 +166,7 @@ export async function getCategoryTrendData(
     const bucket = rawBuckets.get(bKey);
     if (!bucket) continue;
 
-    const lineItems = ((job.job_line_items as LineItem[]) || []).filter(
+    const lineItems = (job.job_line_items ?? []).filter(
       (li) => !isInspectionCategory(li.category)
     );
 
@@ -180,8 +198,7 @@ export async function getCategoryTrendData(
   }
 
   // Aggregate inspections as categories (skip when filtering by customer type)
-  for (const row of (isFiltered ? [] : inspections)) {
-    if (!row.date) continue;
+  for (const row of inspections) {
     const bKey = getBucketKey(row.date, granularity);
     const bucket = rawBuckets.get(bKey);
     if (!bucket) continue;
