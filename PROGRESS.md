@@ -4796,3 +4796,63 @@ revenue report. Deploy confirmed serving commit 3f1b10e on master.
   rendered total on the Income report.
 - The reports index fetches a full year via `getTrendData("month", ...)` to
   render six months. The clamp used to mask that; it's real now.
+
+---
+
+## Session 78 — 2026-09-02 → 09-03 — A failed read that overwrote the data it failed to read
+
+**Found while reviewing Session 77, fixed on request.** `getInspectionCounts`
+discarded `error` and returned `data as DailyInspectionCount | null`.
+`maybeSingle()` yields `data: null` for both "no row for this date" and "the
+read failed", so the two were one value. The page's `catch` toasted "Failed to
+load counts" but the action never threw — dead code. A failed read rendered an
+editable 0/0, indistinguishable from a date with no inspections, and Save
+upserted those zeros over the real counts. One blip plus one click destroyed a
+day of inspection revenue, which five surfaces read.
+
+**Fix.** The action throws on error, so `null` means only "no row yet". That
+alone was insufficient — the form still rendered 0/0 with Save enabled — so the
+page gained a `loadFailed` state (error panel, Save disabled). Tracing the flow
+found two more routes to the same wrong write: a stale response landing after a
+newer one, and the frame between `setDate` and the effect that raises
+`loading`, where the counters still held the previous date's numbers with Save
+enabled. `requestRef` closes the first; `loadedDate` makes the second
+unrepresentable rather than brief.
+
+**Verified.** The three paths are distinct against the live DB: no row → 200
+`[]`; row → counts; failure → 400. `maybeSingle()` semantics read from the
+installed SDK source (`PostgrestBuilder.ts:162-180`), not assumed — on a GET it
+requests `application/json` and maps `length === 0 → null`, so a new day is
+correctly null and not an error. Tests 585 → 590. Mutation battery 7/8.
+
+**What review caught in the first draft of this fix.** A test comment claimed
+dropping `.eq("date", date)` "loads whatever row comes first" — false; `>1` row
+synthesises PGRST116 and throws. A docblock claimed the damage hit "every
+report" — it is five surfaces, and three of `reports.ts`'s four exports never
+touch inspections. Fifth session running where a wrong comment came from review
+rather than from me, and both were universal claims.
+
+`.maybeSingle()` was also a mutation nothing could catch: the shared mock
+recorded no terminal method, so swapping it for `.single()` passed all tests
+while turning every not-yet-entered day into a PGRST116 error — blocking count
+entry entirely. The mock now records `single`/`maybeSingle`; three previously
+surviving mutations (that swap, a wrong upsert table, a deleted
+`revalidatePath`) now each fail a test.
+
+**Known gaps.**
+
+- **The overwrite is still reachable through a stale tab.** A device that
+  legitimately loaded 0/0 before anyone entered counts will overwrite them on a
+  later Save and report success. No error exists anywhere afterward, which makes
+  it harder to find than the bug this session fixed. Needs optimistic
+  concurrency on `updated_at` (the narrowed select would have to re-add that
+  column). Deferred by the owner to a separate change.
+- Nobody rendered the page. `/inspections` is auth-gated and the session had no
+  credentials; verification stopped at the data layer and the test suite.
+- The error panel was matched to the house pattern in
+  `(dashboard)/dashboard/error.tsx` and checked against DESIGN_SYSTEM, but the
+  front-end design skill was not invoked first as CLAUDE.md asks.
+- `getInspectionCountsRange`'s pre-existing comment carries the same
+  "every consumer" universal claim; it has two, both inside `getReportData`.
+- Pre-existing in this page: `rounded-lg shadow-sm` on the section container and
+  `border-stone-100` on `CounterRow` are both deprecated tokens.
