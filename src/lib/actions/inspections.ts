@@ -3,20 +3,39 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { assertComplete } from "@/lib/supabase/assert-complete";
-import type { DailyInspectionCount } from "@/types";
+import type { Tables } from "@/types/supabase";
 
+export type InspectionCounts = Pick<
+  Tables<"daily_inspection_counts">,
+  "state_count" | "tnc_count"
+>;
+
+/**
+ * Three outcomes the caller can tell apart: the counts, null for a date with
+ * no row yet, or a throw. Null-for-no-row holds while the SELECT policy stays
+ * `USING (true)` — an RLS-filtered read is also null with no error, which
+ * would put a date that has counts back on the same screen as one that has
+ * none.
+ */
 export async function getInspectionCounts(
   date: string
-): Promise<DailyInspectionCount | null> {
+): Promise<InspectionCounts | null> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("daily_inspection_counts")
-    .select("*")
+    .select("state_count, tnc_count")
     .eq("date", date)
     .maybeSingle();
-  return data as DailyInspectionCount | null;
+
+  if (error) {
+    throw new Error(`Failed to load inspection counts for ${date}: ${error.message}`);
+  }
+  return data;
 }
 
+// No requireManager() here: the "Managers can manage inspection counts" RLS
+// policy (20260311100000_fix_rls_security.sql) gates writes on is_manager(),
+// and the anon-key client this action uses is subject to it.
 export async function upsertInspectionCounts(
   date: string,
   state_count: number,
@@ -30,7 +49,12 @@ export async function upsertInspectionCounts(
       { onConflict: "date" }
     );
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(
+      `Failed to save inspection counts for ${date} (${state_count}/${tnc_count}): ${error.message}`,
+      { cause: error }
+    );
+  }
   revalidatePath("/inspections");
 }
 

@@ -68,15 +68,6 @@ export type QuoteRequestStatus = "new" | "contacted" | "converted" | "closed";
 export type ShopSettingsUpdate = Database["public"]["Tables"]["shop_settings"]["Update"];
 export type ShopSuppliesMethod = "percent_of_labor" | "percent_of_parts" | "percent_of_total" | "flat";
 
-export interface DailyInspectionCount {
-  id: string;
-  date: string;
-  state_count: number;
-  tnc_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
 // DVI types
 export type DviTemplate = Database["public"]["Tables"]["dvi_templates"]["Row"];
 export type DviTemplateCategory = Database["public"]["Tables"]["dvi_template_categories"]["Row"];

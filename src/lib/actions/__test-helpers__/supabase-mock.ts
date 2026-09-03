@@ -67,8 +67,14 @@ export function createSupabaseMock(
   builder.order = chain("order");
   builder.limit = chain("limit");
   builder.abortSignal = chain("abortSignal");
-  builder.single = vi.fn(() => Promise.resolve(nextResult()));
-  builder.maybeSingle = vi.fn(() => Promise.resolve(nextResult()));
+  builder.single = vi.fn(() => {
+    calls.push({ method: "single", args: [] });
+    return Promise.resolve(nextResult());
+  });
+  builder.maybeSingle = vi.fn(() => {
+    calls.push({ method: "maybeSingle", args: [] });
+    return Promise.resolve(nextResult());
+  });
   // Thenable so `await query` (without .single()) resolves to next result.
   builder.then = (
     resolve: (value: SupabaseMockResult) => unknown,

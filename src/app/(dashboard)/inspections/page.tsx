@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
+import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SECTION_LABEL } from "@/components/ui/section-card";
-import { Save } from "lucide-react";
+import { ACCENT_ICON_TINT } from "@/components/ui/mini-status-card";
+import { Save, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC } from "@/lib/constants";
 import {
@@ -25,17 +27,34 @@ export default function InspectionsPage() {
   const [tncCount, setTncCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadedDate, setLoadedDate] = useState<string | null>(null);
+
+  // Which load is current. Switching dates fast can land an older response
+  // after a newer one; without this the counters would show one date's numbers
+  // while `date` names another, and Save would write them to the wrong day.
+  const requestRef = useRef(0);
 
   const loadCounts = useCallback(async (d: string) => {
+    const token = ++requestRef.current;
     setLoading(true);
+    setLoadFailed(false);
     try {
       const data = await getInspectionCounts(d);
+      if (token !== requestRef.current) return;
       setStateCount(data?.state_count ?? 0);
       setTncCount(data?.tnc_count ?? 0);
-    } catch {
-      toast.error("Failed to load counts");
+      setLoadedDate(d);
+    } catch (err) {
+      if (token !== requestRef.current) {
+        Sentry.captureException(err, { tags: { source: "inspections", path: "stale-load" } });
+        return;
+      }
+      Sentry.captureException(err, { tags: { source: "inspections", path: "load" }, extra: { date: d } });
+      setLoadFailed(true);
+      toast.error("Couldn't load counts for this date");
     } finally {
-      setLoading(false);
+      if (token === requestRef.current) setLoading(false);
     }
   }, []);
 
@@ -44,12 +63,19 @@ export default function InspectionsPage() {
   }, [date, loadCounts]);
 
   async function handleSave() {
+    // Pin the date for the whole save: the toast has to name the day the user
+    // was on, not whatever the picker shows by the time the write settles.
+    const d = date;
     setSaving(true);
     try {
-      await upsertInspectionCounts(date, stateCount, tncCount);
-      toast.success("Inspection counts saved");
-    } catch {
-      toast.error("Failed to save counts");
+      await upsertInspectionCounts(d, stateCount, tncCount);
+      toast.success(`Inspection counts saved for ${d}`);
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { source: "inspections", path: "save" },
+        extra: { date: d, stateCount, tncCount },
+      });
+      toast.error(`Couldn't save counts for ${d} — your entries are still on screen`);
     } finally {
       setSaving(false);
     }
@@ -80,14 +106,34 @@ export default function InspectionsPage() {
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
+          disabled={saving}
           className="w-[180px] h-9"
         />
       </div>
 
       <section className="bg-card border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm overflow-hidden">
-        {loading ? (
+        {loading || (loadedDate !== date && !loadFailed) ? (
           <div className="px-4 py-10 text-center text-sm text-stone-500 dark:text-stone-400">
             Loading…
+          </div>
+        ) : loadFailed ? (
+          // Editing stays closed here: Save would upsert zeros over this
+          // date's real counts.
+          <div className="px-4 py-8 flex flex-col items-center text-center gap-3">
+            <span className={`w-10 h-10 rounded-md grid place-items-center border ${ACCENT_ICON_TINT.red}`}>
+              <AlertCircle aria-hidden className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-stone-900 dark:text-stone-50">
+                Couldn&rsquo;t load counts for this date
+              </p>
+              <p className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
+                Editing is disabled so saving can&rsquo;t overwrite the real counts.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => loadCounts(date)}>
+              Try again
+            </Button>
           </div>
         ) : (
           <>
@@ -124,7 +170,7 @@ export default function InspectionsPage() {
 
       <Button
         onClick={handleSave}
-        disabled={saving || loading}
+        disabled={saving || loading || loadFailed || loadedDate !== date}
         className="w-full sm:w-auto"
       >
         <Save className="mr-1.5 h-3.5 w-3.5" />
