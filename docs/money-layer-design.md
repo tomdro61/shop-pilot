@@ -246,6 +246,22 @@ Layer 3 guardrails 1–2 days. **~1–1.5 weeks**, and it makes split-tender sma
 | 2 | What happens when a completed job is edited after its total is frozen? | **Recompute while unpaid; refuse once paid.** Matches how `setJobChargeSalesTax` already gates (`jobs.ts:275-297`). Keeps "fix a typo before billing" working and makes collected money immutable |
 | 3 | Fix `getTaxReportData` ahead of this project? | **Already done** — the Session 73 row-cap sweep (2026-08-11→14, after this doc was written) moved it to `fetchAllRows` with a SQL date filter. Verified at HEAD. No action |
 | 4 | Year-to-date revenue on the dashboard? | **Deferred**, not blocking. Cheap to add once Layer 2 exists |
+| 5 | Backfill the ~1,002 already-complete jobs? (review blocking issue A10) | **No — forward-only.** Jobs completed before the cutover keep computing live, exactly as today. Only jobs completed after it get a frozen snapshot. Settled 2026-09-01 |
+
+### Decision 5 — what forward-only settles, and what it accepts
+
+Answers blocking issue **A10** outright (no one-time irreversible backfill, no reconciliation against
+`invoices.amount`) and collapses **A1** — the missing precedence rule — into the natural reading:
+
+```sql
+case when j.totals_frozen_at is not null then <snapshot> else <live compute> end
+```
+
+Pre-cutover jobs take the `else` branch and behave exactly as they do now, so there is no regression
+surface on historical data and no window where a report silently returns null or 0.
+
+**Accepted:** history before the cutover stays exposed to settings drift — raise a fee and prior
+revenue moves, as it does today. Immutability starts at the cutover rather than being retrofitted.
 
 ## 8b. Original open decisions (superseded by the table above)
 
