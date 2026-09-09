@@ -1038,6 +1038,65 @@ The sentinel is the likeliest first crossing: every Quick Pay and every walk-in 
 **Source:** surfaced incidentally by `/harden-plan` while verifying an unrelated claim about the sentinel, 2026-08-24. Pre-existing; created by sentinel jobs accumulating since April 2026 and untouched by the receipt work.
 
 
+## H-51 — `/inspections` is a public route: the `/inspect` prefix match catches it
+
+`src/middleware.ts:56` lists public routes with `startsWith`:
+
+```ts
+pathname.startsWith("/inspect") ||
+```
+
+That is meant for the public DVI page `/inspect/[token]` (`src/app/inspect`). It also matches **`/inspections`** — the internal daily inspection-counts page — so middleware never redirects an unauthenticated visitor there.
+
+Confirmed live in production, 2026-09-03:
+
+| route | status |
+|---|---|
+| `/inspections` | **200** — no auth |
+| `/dvi` | 307 → `/login` |
+| `/reports` | 307 → `/login` |
+| `/settings` | 307 → `/login` |
+| `/jobs` | 307 → `/login` |
+
+It is the only collision. `/login`, `/estimates/approve`, `/receipt` and `/monitoring` were each checked against the route tree; none of them prefix-match an unintended route. `/dvi/inspect` and `/dvi/[jobId]/inspect` do not start with `/inspect`, so they are unaffected.
+
+**Blast radius is bounded by RLS, not by the route gate.** Tested against production with the anon key:
+
+- Read `daily_inspection_counts` → `[]`, HTTP 200. The SELECT policy is `TO authenticated`, so anon matches no policy and gets zero rows. **No data leaks.**
+- Write → HTTP 401, `new row violates row-level security policy for table "daily_inspection_counts"`. **Nothing can be destroyed.**
+
+So a logged-out visitor gets the internal page shell rendering an editable 0/0 form with Save enabled, which fails only on submit. Confusing, not dangerous — today.
+
+**Why it is worth fixing anyway.** The anon read returns `null` with no error, which is indistinguishable from "this date has no row yet" (see the JSDoc on `getInspectionCounts`). That is exactly the phantom-0/0 state the Session 78 fix exists to prevent; it is harmless here only because the write is separately gated. The write policy on this same table was tightened from "any authenticated user" to `is_manager()` in `20260311100000_fix_rls_security.sql`. If the SELECT policy is ever tightened the same way, this page starts showing authenticated non-manager staff a 0/0 form over real data, and the bug returns for users who *can* write.
+
+**Fix:** exact-match plus a trailing slash, so the token route stays public and the internal page does not.
+
+```ts
+pathname === "/inspect" || pathname.startsWith("/inspect/") ||
+```
+
+Then re-probe: `/inspections` must become 307 → `/login`, and `/inspect/<token>` must stay 200.
+
+**Source:** found while verifying the Session 78 production deploy, 2026-09-03. Pre-existing — the prefix predates both the inspections page and the DVI token route being distinct paths.
+
+
+## H-52 — Inspection counts: a stale tab still overwrites real counts with zeros, and reports success
+
+Session 78 closed three routes to a wrong write on `/inspections` (failed read rendering an editable 0/0, an out-of-order response, and the pre-paint frame where the counters belonged to the previous date). This one is not closed.
+
+`src/app/(dashboard)/inspections/page.tsx` reads once, in a `useEffect` keyed on `date`. There is no re-read on focus, visibility or interval, and `revalidatePath("/inspections")` in the action does nothing for a client component's `useState`. `upsertInspectionCounts` is unconditional last-write-wins on `onConflict: "date"`.
+
+**Scenario.** The shop iPad opens `/inspections` at 8am. No row exists for today, so it legitimately loads 0/0 — `loadFailed` is false, Save is enabled, and every part of that state is *correct*. The iPad stays on the screen. At noon the co-owner enters 26/11 from their phone. At 5pm someone bumps Save on the iPad → `upsert(today, 0, 0)` → the real counts are destroyed and the toast reads **"Inspection counts saved for 2026-09-03"**.
+
+Harder to find than the bug Session 78 fixed: there is no error anywhere, server-side or client-side, and the UI reports success.
+
+**Fix (preferred):** optimistic concurrency on `updated_at`. Select it at load, hold it in state, and make the write `.update(...).eq("date", d).eq("updated_at", loadedUpdatedAt)` with an insert fallback for the no-row case; a zero-row update result means someone else wrote — surface a conflict, not a success. Note Session 78 narrowed the select to `state_count, tnc_count`, so `updated_at` has to be added back.
+
+**Cheaper stopgap:** re-read on `visibilitychange`/focus and refuse Save while the loaded snapshot is older than some threshold. Closes the realistic iPad case; not airtight if the tab never blurs.
+
+**Source:** `/scoped-review` silent-failure pass on the Session 78 fix, 2026-09-03. Pre-existing; deferred by the owner to a separate change rather than expanding that commit.
+
+
 # MEDIUM
 
 ## M-1 — `customer-list.tsx` desktop row only first cell is clickable (regression)
