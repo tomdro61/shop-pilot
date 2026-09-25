@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { createStripeInvoice, createParkingStripeInvoice } from "@/lib/stripe/create-invoice";
-import { syncStripeCustomer } from "@/lib/stripe/customer-sync";
+import { createStripeCustomer, syncStripeCustomer } from "@/lib/stripe/customer-sync";
 import { getShopSettings } from "@/lib/actions/settings";
 import { revalidatePath } from "next/cache";
 import { getParkingLine } from "@/lib/quo/routing";
@@ -17,6 +17,9 @@ import { invoiceReadyEmail } from "@/lib/resend/templates";
 import { isFirstDelivery } from "@/lib/invoices/delivery";
 
 export async function getOrCreateStripeCustomer(customerId: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
   const supabase = await createClient();
 
   const { data: customer, error } = await supabase
@@ -36,30 +39,30 @@ export async function getOrCreateStripeCustomer(customerId: string) {
     if (!synced.ok) {
       return { error: synced.error };
     }
-    if (synced.stripeCustomerId) {
+    if (synced.status === "synced") {
       return { data: synced.stripeCustomerId };
     }
   }
 
-  // Create new Stripe customer
-  const stripeCustomer = await stripe.customers.create({
-    name: `${customer.first_name} ${customer.last_name}`,
-    email: customer.email || undefined,
-    phone: customer.phone || undefined,
-    metadata: { supabase_customer_id: customer.id },
-  });
+  const created = await createStripeCustomer(stripe, customer);
+  if (!created.ok) {
+    return { error: created.error };
+  }
 
-  // Store the Stripe customer ID
   const { error: updateError } = await supabase
     .from("customers")
-    .update({ stripe_customer_id: stripeCustomer.id })
+    .update({ stripe_customer_id: created.stripeCustomerId })
     .eq("id", customerId);
 
   if (updateError) {
+    Sentry.captureException(updateError, {
+      tags: { source: "stripe-customer-create", path: "save-stripe-customer-id" },
+      extra: { customerId, stripeCustomerId: created.stripeCustomerId },
+    });
     return { error: "Failed to save Stripe customer ID" };
   }
 
-  return { data: stripeCustomer.id };
+  return { data: created.stripeCustomerId };
 }
 
 export async function createInvoiceFromJob(
@@ -174,40 +177,38 @@ export async function createInvoiceFromJob(
   });
   const derivedCategory = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
-  // Get or create Stripe customer (with stale ID verification and contact sync)
   const stripe = getStripe();
-  let stripeCustomerId = customer.stripe_customer_id;
+  let stripeCustomerId: string | null = null;
 
-  if (stripeCustomerId) {
-    const synced = await syncStripeCustomer(stripe, stripeCustomerId, customer);
+  if (customer.stripe_customer_id) {
+    const synced = await syncStripeCustomer(stripe, customer.stripe_customer_id, customer);
     if (!synced.ok) {
       return { error: synced.error };
     }
-    stripeCustomerId = synced.stripeCustomerId;
+    if (synced.status === "synced") {
+      stripeCustomerId = synced.stripeCustomerId;
+    }
   }
 
   if (!stripeCustomerId) {
-    const stripeCustomer = await stripe.customers.create({
-      name: `${customer.first_name} ${customer.last_name}`,
-      email: customer.email || undefined,
-      phone: customer.phone || undefined,
-      metadata: { supabase_customer_id: customer.id },
-    });
-    stripeCustomerId = stripeCustomer.id;
+    const created = await createStripeCustomer(stripe, customer);
+    if (!created.ok) {
+      return { error: created.error };
+    }
+    stripeCustomerId = created.stripeCustomerId;
 
     const { error: customerUpdateError } = await supabase
       .from("customers")
       .update({ stripe_customer_id: stripeCustomerId })
       .eq("id", customer.id);
     if (customerUpdateError) {
-      // Non-fatal: the Stripe customer exists; we just failed to record its
-      // ID locally. Future invoice creation will create a duplicate Stripe
-      // customer until this is reconciled. Log loudly for manual fix.
-      console.error(
-        "[createInvoiceFromJob] failed to save stripe_customer_id locally:",
-        customerUpdateError,
-        { customerId: customer.id, stripeCustomerId }
-      );
+      // Non-fatal: the Stripe customer exists; only the local pointer failed.
+      // The next invoice for this customer will create a duplicate until the
+      // pointer is reconciled by hand.
+      Sentry.captureException(customerUpdateError, {
+        tags: { source: "create-invoice", path: "save-stripe-customer-id" },
+        extra: { customerId: customer.id, stripeCustomerId },
+      });
     }
   }
 

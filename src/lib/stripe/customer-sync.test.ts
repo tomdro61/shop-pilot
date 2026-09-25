@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
 
 import * as Sentry from "@sentry/nextjs";
 import type Stripe from "stripe";
-import { syncStripeCustomer } from "./customer-sync";
+import { createStripeCustomer, syncStripeCustomer } from "./customer-sync";
 
 const STRIPE_CUSTOMER_ID = "cus_test123";
 const LOCAL = {
@@ -35,9 +35,10 @@ describe("syncStripeCustomer — existing customer", () => {
       phone: "+15551234567",
     });
     const result = await syncStripeCustomer(stripe, STRIPE_CUSTOMER_ID, LOCAL);
-    expect(result).toEqual({ ok: true, stripeCustomerId: STRIPE_CUSTOMER_ID });
+    expect(result).toEqual({ ok: true, status: "synced", stripeCustomerId: STRIPE_CUSTOMER_ID });
     expect(retrieve).toHaveBeenCalledWith(STRIPE_CUSTOMER_ID);
     expect(update).not.toHaveBeenCalled();
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 
   it("pushes an email that was added locally after the Stripe customer was created", async () => {
@@ -47,7 +48,7 @@ describe("syncStripeCustomer — existing customer", () => {
       phone: "+15551234567",
     });
     const result = await syncStripeCustomer(stripe, STRIPE_CUSTOMER_ID, LOCAL);
-    expect(result).toEqual({ ok: true, stripeCustomerId: STRIPE_CUSTOMER_ID });
+    expect(result).toEqual({ ok: true, status: "synced", stripeCustomerId: STRIPE_CUSTOMER_ID });
     expect(update).toHaveBeenCalledTimes(1);
     expect(update).toHaveBeenCalledWith(STRIPE_CUSTOMER_ID, { email: "mike@example.com" });
   });
@@ -65,14 +66,31 @@ describe("syncStripeCustomer — existing customer", () => {
     });
   });
 
-  it("clears a Stripe value the local record no longer has", async () => {
+  it("replaces a stale Stripe email with the local one", async () => {
     const { stripe, update } = buildStripe({
       name: "Mike Rivera",
       email: "old@example.com",
       phone: "+15551234567",
     });
-    await syncStripeCustomer(stripe, STRIPE_CUSTOMER_ID, { ...LOCAL, email: null });
-    expect(update).toHaveBeenCalledWith(STRIPE_CUSTOMER_ID, { email: "" });
+    await syncStripeCustomer(stripe, STRIPE_CUSTOMER_ID, LOCAL);
+    expect(update).toHaveBeenCalledWith(STRIPE_CUSTOMER_ID, { email: "mike@example.com" });
+  });
+
+  it("leaves a Stripe value alone when the local record has none", async () => {
+    // An email typed into the Stripe Dashboard as a workaround must survive
+    // the next invoice.
+    const { stripe, update } = buildStripe({
+      name: "Mike Rivera",
+      email: "dashboard@example.com",
+      phone: "+15551234567",
+    });
+    const result = await syncStripeCustomer(stripe, STRIPE_CUSTOMER_ID, {
+      ...LOCAL,
+      email: null,
+      phone: null,
+    });
+    expect(result).toEqual({ ok: true, status: "synced", stripeCustomerId: STRIPE_CUSTOMER_ID });
+    expect(update).not.toHaveBeenCalled();
   });
 
   it("fails closed when the Stripe update rejects, and reports it", async () => {
@@ -89,31 +107,100 @@ describe("syncStripeCustomer — existing customer", () => {
       expect.any(Error),
       expect.objectContaining({
         tags: { source: "stripe-customer-sync" },
-        extra: expect.objectContaining({ customerId: LOCAL.id, fields: ["email"] }),
+        extra: expect.objectContaining({
+          customerId: LOCAL.id,
+          stripeCustomerId: STRIPE_CUSTOMER_ID,
+          step: "update",
+          fields: ["email"],
+        }),
       })
     );
   });
 });
 
 describe("syncStripeCustomer — missing customer", () => {
-  it("reports a deleted Stripe customer as missing without writing to it", async () => {
+  it("reports a deleted Stripe customer as missing, without writing, and logs it", async () => {
     const { stripe, update } = buildStripe({ deleted: true });
     const result = await syncStripeCustomer(stripe, STRIPE_CUSTOMER_ID, LOCAL);
-    expect(result).toEqual({ ok: true, stripeCustomerId: null });
+    expect(result).toEqual({ ok: true, status: "missing" });
     expect(update).not.toHaveBeenCalled();
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "Stripe customer missing",
+      expect.objectContaining({
+        tags: { source: "stripe-customer-sync" },
+        extra: expect.objectContaining({ stripeCustomerId: STRIPE_CUSTOMER_ID, reason: "deleted" }),
+      })
+    );
   });
 
-  it("reports a 404 as missing", async () => {
+  it("reports a 404 as missing and logs it, since a key/mode mismatch looks the same", async () => {
     const err = Object.assign(new Error("No such customer"), { code: "resource_missing" });
     const { stripe } = buildStripe(err);
     const result = await syncStripeCustomer(stripe, STRIPE_CUSTOMER_ID, LOCAL);
-    expect(result).toEqual({ ok: true, stripeCustomerId: null });
+    expect(result).toEqual({ ok: true, status: "missing" });
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "Stripe customer missing",
+      expect.objectContaining({
+        extra: expect.objectContaining({ reason: "resource_missing" }),
+      })
+    );
   });
 
   it("surfaces any other retrieve failure instead of treating it as missing", async () => {
     const err = Object.assign(new Error("Stripe is down"), { code: "api_error" });
     const { stripe } = buildStripe(err);
     const result = await syncStripeCustomer(stripe, STRIPE_CUSTOMER_ID, LOCAL);
-    expect(result).toEqual({ ok: false, error: "Stripe is down" });
+    expect(result).toEqual({
+      ok: false,
+      error: "Couldn't verify the customer in Stripe: Stripe is down",
+    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      err,
+      expect.objectContaining({
+        tags: { source: "stripe-customer-sync" },
+        extra: expect.objectContaining({ step: "retrieve" }),
+      })
+    );
+  });
+});
+
+describe("createStripeCustomer", () => {
+  it("creates from the local record and links it back by id", async () => {
+    const create = vi.fn().mockResolvedValue({ id: "cus_fresh" });
+    const stripe = { customers: { create } } as unknown as Stripe;
+    const result = await createStripeCustomer(stripe, LOCAL);
+    expect(result).toEqual({ ok: true, stripeCustomerId: "cus_fresh" });
+    expect(create).toHaveBeenCalledWith({
+      name: "Mike Rivera",
+      email: "mike@example.com",
+      phone: "+15551234567",
+      metadata: { supabase_customer_id: LOCAL.id },
+    });
+  });
+
+  it("omits empty contact fields rather than sending empty strings", async () => {
+    const create = vi.fn().mockResolvedValue({ id: "cus_fresh" });
+    const stripe = { customers: { create } } as unknown as Stripe;
+    await createStripeCustomer(stripe, { ...LOCAL, email: null, phone: null });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ email: undefined, phone: undefined })
+    );
+  });
+
+  it("returns an error instead of throwing when Stripe rejects the create", async () => {
+    const create = vi.fn().mockRejectedValue(new Error("Invalid API key"));
+    const stripe = { customers: { create } } as unknown as Stripe;
+    const result = await createStripeCustomer(stripe, LOCAL);
+    expect(result).toEqual({
+      ok: false,
+      error: "Couldn't create the customer in Stripe: Invalid API key",
+    });
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        tags: { source: "stripe-customer-create" },
+        extra: { customerId: LOCAL.id },
+      })
+    );
   });
 });

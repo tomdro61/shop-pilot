@@ -4873,21 +4873,34 @@ so the code asked for `send_invoice`, and Stripe refused because *its* copy of
 the customer had none. First customer to hit all three conditions at once.
 
 **Fix.** `syncStripeCustomer()` in `src/lib/stripe/customer-sync.ts` retrieves
-the Stripe customer, patches only the name/email/phone fields that differ from
-the local record (local is the source of truth, including clearing a value),
-and reports deleted/404 as "missing" so the caller creates a fresh one. Both
-`createInvoiceFromJob` and `getOrCreateStripeCustomer` (parking invoices, card
-on file) call it before touching Stripe. A failed patch fails closed with a
-clear message rather than letting Stripe reject the invoice later. The
-deleted/`resource_missing` handling moved into the helper unchanged;
-`getOrCreateStripeCustomer` gains that verification for the first time.
+the Stripe customer, pushes any name/email/phone value the local record has
+that Stripe lacks or has wrong, and reports deleted/404 as `status: "missing"`
+so the caller creates a fresh one. A field the local record has no value for is
+left alone rather than cleared — an email typed into the Stripe Dashboard as a
+workaround must survive the next invoice. Both `createInvoiceFromJob` and
+`getOrCreateStripeCustomer` (parking invoices, card on file) call it before
+touching Stripe. A failed patch fails closed with a clear message rather than
+letting Stripe reject the invoice later. `createStripeCustomer()` wraps the
+create call that both paths previously left uncaught; a 404 now falls through
+to it, and a throw there would have left the parking-invoice dialog spinning.
+
+**What review changed in the first draft.** Four reviewers, no Criticals.
+"Missing" was encoded as `stripeCustomerId: null` on the success arm — now a
+discriminant. Clearing Stripe values with `""` was silently destructive —
+dropped. Retrieve failures and the missing path skipped Sentry — a burst of
+404s means a key/mode mismatch, not a wave of deletions, and now says so.
+`getOrCreateStripeCustomer` wrote to Stripe with no `requireManager()` of its
+own and no direct tests — both added. The orphan-Stripe-customer path logged to
+`console.error`, which pages nobody — now Sentry.
 
 **Verified.** Local `.env.local` holds a test-mode Stripe key, so the live
 customer `cus_V62JNAyONDTpbX` could not be read directly; the diagnosis rests
-on the code path and the Supabase timeline. Tests 590 → 602. Mutation battery
-13/13 killed across the helper and both call sites (field diffs, dropped
-update, wrong id, swallowed update error, 404 narrowing, deleted check, and the
-action ignoring a sync failure or a null id).
+on the code path and the Supabase timeline. Tests 590 → 616. Mutation battery
+25/25 killed across the helper and both call sites. One mutant survived the
+first pass: dropping `.eq("id", customerId)` from the save-ID update passed,
+because the select two calls earlier makes the same `.eq` and the assertion
+could not tell them apart. The test now pins the `.eq` that follows the
+`.update` — the lookup-predicate hole CLAUDE.md describes, found again.
 
 **Immediate workaround for RO-1701** until this deploys: add the email to the
 customer in the Stripe Dashboard, then click Create again.

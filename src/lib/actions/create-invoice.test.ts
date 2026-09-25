@@ -340,8 +340,26 @@ describe("createInvoiceFromJob — Stripe customer contact sync", () => {
 
     const r = await createInvoiceFromJob(JOB_ID);
 
-    expect(r.error).toBe("Stripe is down");
+    expect(r.error).toBe("Couldn't verify the customer in Stripe: Stripe is down");
     expect(customers.create).not.toHaveBeenCalled();
+    expect(createStripeInvoice).not.toHaveBeenCalled();
+  });
+
+  it("returns an error, not a throw, when re-creating the Stripe customer fails", async () => {
+    // A 404 now falls through to create. Before this a throw here escaped the
+    // action and left the invoice dialog spinning with no message.
+    mockStripeCustomers({
+      retrieve: vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error("No such customer"), { code: "resource_missing" })),
+      update: vi.fn(),
+      create: vi.fn().mockRejectedValue(new Error("Invalid API key")),
+    });
+    mockSupabase(healthyQueue());
+
+    const r = await createInvoiceFromJob(JOB_ID);
+
+    expect(r.error).toBe("Couldn't create the customer in Stripe: Invalid API key");
     expect(createStripeInvoice).not.toHaveBeenCalled();
   });
 });
