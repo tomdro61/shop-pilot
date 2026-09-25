@@ -25,6 +25,7 @@ This is the **current shape of the system** — what exists, where it lives, and
 - **Printable Estimate** at `/estimates/[id]/print` — same layout, available in every estimate status including draft (printing previously required approving and converting to a job). Both routes share `components/dashboard/print-button.tsx`
 - **Service categorization** — line-item categories are the single source of truth. Job-level `category` column exists in DB but is no longer set or displayed. "Add Service" flow on line items lets you pick a category, then add labor/parts under it.
 - **Estimates** — public approval page fully working (live mode). Estimates can be deleted and recreated to pick up updated job line items. Estimate line items carry categories and are grouped by service category on both internal and customer-facing views.
+- **Stripe customers** — created lazily on the first invoice or card-on-file, then kept current: `syncStripeCustomer()` (`lib/stripe/customer-sync.ts`) patches name/email/phone from the local record before every invoice, parking invoice, or SetupIntent, and routes a deleted/404 Stripe customer to re-creation. Local record is the source of truth.
 
 ## Payments
 

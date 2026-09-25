@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 import { createStripeInvoice, createParkingStripeInvoice } from "@/lib/stripe/create-invoice";
+import { syncStripeCustomer } from "@/lib/stripe/customer-sync";
 import { getShopSettings } from "@/lib/actions/settings";
 import { revalidatePath } from "next/cache";
 import { getParkingLine } from "@/lib/quo/routing";
@@ -28,13 +29,19 @@ export async function getOrCreateStripeCustomer(customerId: string) {
     return { error: "Customer not found" };
   }
 
-  // Return existing Stripe customer if we have one
+  const stripe = getStripe();
+
   if (customer.stripe_customer_id) {
-    return { data: customer.stripe_customer_id };
+    const synced = await syncStripeCustomer(stripe, customer.stripe_customer_id, customer);
+    if (!synced.ok) {
+      return { error: synced.error };
+    }
+    if (synced.stripeCustomerId) {
+      return { data: synced.stripeCustomerId };
+    }
   }
 
   // Create new Stripe customer
-  const stripe = getStripe();
   const stripeCustomer = await stripe.customers.create({
     name: `${customer.first_name} ${customer.last_name}`,
     email: customer.email || undefined,
@@ -167,27 +174,16 @@ export async function createInvoiceFromJob(
   });
   const derivedCategory = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
-  // Get or create Stripe customer (with stale ID verification)
+  // Get or create Stripe customer (with stale ID verification and contact sync)
   const stripe = getStripe();
   let stripeCustomerId = customer.stripe_customer_id;
 
   if (stripeCustomerId) {
-    try {
-      const existing = await stripe.customers.retrieve(stripeCustomerId);
-      if ((existing as { deleted?: boolean }).deleted) {
-        stripeCustomerId = null;
-      }
-    } catch (err) {
-      // Stripe sets code "resource_missing" specifically for 404. Other errors
-      // (rate limit, network, auth) must surface — silently treating them as
-      // missing creates duplicate Stripe customers.
-      if ((err as { code?: string } | null)?.code === "resource_missing") {
-        stripeCustomerId = null;
-      } else {
-        const message = err instanceof Error ? err.message : "Failed to verify Stripe customer";
-        return { error: message };
-      }
+    const synced = await syncStripeCustomer(stripe, stripeCustomerId, customer);
+    if (!synced.ok) {
+      return { error: synced.error };
     }
+    stripeCustomerId = synced.stripeCustomerId;
   }
 
   if (!stripeCustomerId) {

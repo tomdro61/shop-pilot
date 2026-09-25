@@ -4856,3 +4856,47 @@ surviving mutations (that swap, a wrong upsert table, a deleted
   "every consumer" universal claim; it has two, both inside `getReportData`.
 - Pre-existing in this page: `rounded-lg shadow-sm` on the section container and
   `border-stone-100` on `CounterRow` are both deprecated tokens.
+
+## Session 79 — 2026-09-25 — Stripe never learned the customer's email
+
+**Reported by the owner.** Creating an invoice for RO-1701 failed with Stripe's
+"Missing email. In order to create invoices that are sent to the customer, the
+customer must have a valid email." The ShopPilot customer record had an email.
+
+**Cause.** A Stripe customer is created lazily on the first invoice or
+card-on-file, as a one-time snapshot of the local name/email/phone. Editing a
+customer writes to Supabase only; nothing pushed changes to Stripe. Every later
+invoice only checked that the Stripe customer still existed. EZY Rent's first
+invoice (RO-1301, 2026-08-18 16:51) was created with no email, the email was
+added at 17:21, and RO-1701 was the next invoice. The local record had an email
+so the code asked for `send_invoice`, and Stripe refused because *its* copy of
+the customer had none. First customer to hit all three conditions at once.
+
+**Fix.** `syncStripeCustomer()` in `src/lib/stripe/customer-sync.ts` retrieves
+the Stripe customer, patches only the name/email/phone fields that differ from
+the local record (local is the source of truth, including clearing a value),
+and reports deleted/404 as "missing" so the caller creates a fresh one. Both
+`createInvoiceFromJob` and `getOrCreateStripeCustomer` (parking invoices, card
+on file) call it before touching Stripe. A failed patch fails closed with a
+clear message rather than letting Stripe reject the invoice later. The
+deleted/`resource_missing` handling moved into the helper unchanged;
+`getOrCreateStripeCustomer` gains that verification for the first time.
+
+**Verified.** Local `.env.local` holds a test-mode Stripe key, so the live
+customer `cus_V62JNAyONDTpbX` could not be read directly; the diagnosis rests
+on the code path and the Supabase timeline. Tests 590 → 602. Mutation battery
+13/13 killed across the helper and both call sites (field diffs, dropped
+update, wrong id, swallowed update error, 404 narrowing, deleted check, and the
+action ignoring a sync failure or a null id).
+
+**Immediate workaround for RO-1701** until this deploys: add the email to the
+customer in the Stripe Dashboard, then click Create again.
+
+**Known gaps.**
+
+- Parking invoices pass `hasEmail: !!reservation.email` while the Stripe
+  customer's email comes from the linked `customers` row. A reservation with an
+  email whose customer row has none can still hit the same Stripe refusal.
+- Contact edits still don't push to Stripe at edit time; the sync runs only when
+  something needs the Stripe customer. Stripe receipts sent between an edit and
+  the next invoice use the old address.

@@ -89,7 +89,13 @@ beforeEach(() => {
   vi.mocked(getShopSettings).mockResolvedValue({} as Awaited<ReturnType<typeof getShopSettings>>);
   vi.mocked(getStripe).mockReturnValue({
     customers: {
-      retrieve: vi.fn().mockResolvedValue({ id: STRIPE_CUSTOMER_ID }),
+      retrieve: vi.fn().mockResolvedValue({
+        id: STRIPE_CUSTOMER_ID,
+        name: "Mike Rivera",
+        email: "mike@example.com",
+        phone: "+15551234567",
+      }),
+      update: vi.fn().mockResolvedValue({ id: STRIPE_CUSTOMER_ID }),
       create: vi.fn().mockResolvedValue({ id: STRIPE_CUSTOMER_ID }),
     },
   } as unknown as ReturnType<typeof getStripe>);
@@ -229,5 +235,113 @@ describe("createInvoiceFromJob — job state", () => {
 
     expect(r.error).toBe("Job not found");
     expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+});
+
+describe("createInvoiceFromJob — Stripe customer contact sync", () => {
+  type StripeCustomersMock = {
+    customers: {
+      retrieve: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+      create: ReturnType<typeof vi.fn>;
+    };
+  };
+
+  function mockStripeCustomers(customers: StripeCustomersMock["customers"]): StripeCustomersMock {
+    const mock = { customers };
+    vi.mocked(getStripe).mockReturnValue(mock as unknown as ReturnType<typeof getStripe>);
+    return mock;
+  }
+
+  it("pushes a locally-added email onto the existing Stripe customer before invoicing", async () => {
+    // The RO-1701 incident: the Stripe customer was created before the shop
+    // added an email, so send_invoice failed with Stripe's "Missing email".
+    const { customers } = mockStripeCustomers({
+      retrieve: vi.fn().mockResolvedValue({
+        id: STRIPE_CUSTOMER_ID,
+        name: "Mike Rivera",
+        email: null,
+        phone: "+15551234567",
+      }),
+      update: vi.fn().mockResolvedValue({ id: STRIPE_CUSTOMER_ID }),
+      create: vi.fn(),
+    });
+    mockSupabase(healthyQueue());
+
+    const r = await createInvoiceFromJob(JOB_ID);
+
+    expect(r.error).toBeUndefined();
+    expect(customers.update).toHaveBeenCalledWith(STRIPE_CUSTOMER_ID, { email: "mike@example.com" });
+    expect(customers.update.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(createStripeInvoice).mock.invocationCallOrder[0]
+    );
+    expect(customers.create).not.toHaveBeenCalled();
+    expect(createStripeInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ stripeCustomerId: STRIPE_CUSTOMER_ID, hasEmail: true })
+    );
+  });
+
+  it("refuses to invoice when the contact sync fails, instead of letting Stripe reject it later", async () => {
+    mockStripeCustomers({
+      retrieve: vi.fn().mockResolvedValue({
+        id: STRIPE_CUSTOMER_ID,
+        name: "Mike Rivera",
+        email: null,
+        phone: null,
+      }),
+      update: vi.fn().mockRejectedValue(new Error("rate limited")),
+      create: vi.fn(),
+    });
+    mockSupabase(healthyQueue());
+
+    const r = await createInvoiceFromJob(JOB_ID);
+
+    expect(r.error).toMatch(/contact info in Stripe: rate limited/);
+    expect(createStripeInvoice).not.toHaveBeenCalled();
+  });
+
+  it("creates a fresh Stripe customer when the stored one was deleted", async () => {
+    const { customers } = mockStripeCustomers({
+      retrieve: vi.fn().mockResolvedValue({ id: STRIPE_CUSTOMER_ID, deleted: true }),
+      update: vi.fn(),
+      create: vi.fn().mockResolvedValue({ id: "cus_fresh" }),
+    });
+    mockSupabase([
+      { data: buildJob(), error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: { id: "inv-1" }, error: null },
+    ]);
+
+    const r = await createInvoiceFromJob(JOB_ID);
+
+    expect(r.error).toBeUndefined();
+    expect(customers.update).not.toHaveBeenCalled();
+    expect(customers.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: "mike@example.com",
+        metadata: { supabase_customer_id: CUSTOMER_ID },
+      })
+    );
+    expect(createStripeInvoice).toHaveBeenCalledWith(
+      expect.objectContaining({ stripeCustomerId: "cus_fresh" })
+    );
+  });
+
+  it("surfaces a non-404 Stripe outage rather than creating a duplicate customer", async () => {
+    const { customers } = mockStripeCustomers({
+      retrieve: vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error("Stripe is down"), { code: "api_error" })),
+      update: vi.fn(),
+      create: vi.fn(),
+    });
+    mockSupabase(healthyQueue());
+
+    const r = await createInvoiceFromJob(JOB_ID);
+
+    expect(r.error).toBe("Stripe is down");
+    expect(customers.create).not.toHaveBeenCalled();
+    expect(createStripeInvoice).not.toHaveBeenCalled();
   });
 });
