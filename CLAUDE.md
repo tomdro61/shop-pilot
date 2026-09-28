@@ -223,7 +223,11 @@ invoice. The delete predicate was asserted; the lookup predicate never was.
 `resend-invoice.test.ts` has the same hole, so treat it as a house pattern.
 
 For any action that reads a row and then mutates money state, assert:
-- the **lookup predicate** (`{ method: "eq", args: ["job_id", JOB_ID] }`)
+- the **lookup predicate** (`{ method: "eq", args: ["job_id", JOB_ID] }`) —
+  and assert it **adjacent to the write**, not as membership in the recorded
+  calls. When an earlier select in the same action makes the identical `.eq`,
+  `toContainEqual` passes with the predicate deleted from the update
+  (September 2026, `getOrCreateStripeCustomer`).
 - the **selected columns**, when a later branch depends on one of them — dropping
   a column from `.select()` is invisible to the mock and silently skips the branch
 - the **argument passed to the third-party call** (`retrieve` called with *this*

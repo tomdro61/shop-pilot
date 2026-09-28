@@ -4903,7 +4903,15 @@ could not tell them apart. The test now pins the `.eq` that follows the
 `.update` — the lookup-predicate hole CLAUDE.md describes, found again.
 
 **Immediate workaround for RO-1701** until this deploys: add the email to the
-customer in the Stripe Dashboard, then click Create again.
+customer in the Stripe Dashboard, then click Create again. The owner did this
+before the merge, so RO-1701 was invoiced under the old code.
+
+**Shipped.** Merged to master and deployed 2026-09-28 (`046212b`).
+`/post-deploy-check`: Vercel Ready in 1m 2s, aliased to production; `/`,
+`/login`, `/dashboard`, both public pages and both public POST endpoints
+answered as expected; no migrations in the diff. Sentry not scanned from the
+session (no token locally) — owner to glance at the production filter.
+Review findings logged as CS-1..CS-5 in REVIEW-FINDINGS.md.
 
 **Known gaps.**
 

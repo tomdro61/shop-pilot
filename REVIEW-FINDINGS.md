@@ -1684,3 +1684,55 @@ idempotent so redelivery is free.
   draft-invoice gap is unreachable (all creation paths finalize before inserting
   the local row), and the paid-race is safe because `voidInvoice()` is the
   atomicity boundary, not the preceding `retrieve()`.
+
+## September 2026 — Stripe customer contact sync (`fd8e36e`, `046212b`), caught in review, fixed pre-ship
+
+Context: RO-1701 invoice creation failed with Stripe's "Missing email" because
+the Stripe customer was a one-time snapshot taken before the shop added the
+email locally. Four reviewers on the first draft; no Criticals.
+
+## CS-1 — Clearing a Stripe contact value with `""` was silently destructive (MEDIUM, fixed)
+
+The first draft treated the local record as the source of truth including
+absence: a local `email: null` would wipe the email on the Stripe customer. The
+most likely source of a Stripe-only email is the manager typing it into the
+Stripe Dashboard as a workaround for this exact incident. The sync now only
+pushes values the local record has; it never clears.
+
+## CS-2 — The "missing" outcome was a null id on the success arm (MEDIUM, fixed)
+
+`{ ok: true; stripeCustomerId: string | null }` encoded "Stripe customer is
+gone" as a nullable field whose non-null value was always the input. Now
+`status: "synced" | "missing"`.
+
+## CS-3 — 404 and non-404 retrieve failures were invisible to Sentry (MEDIUM, fixed)
+
+A key/mode mismatch reports `resource_missing` exactly like a deletion, and the
+callers respond by creating a fresh customer and overwriting the local pointer.
+A burst of those is the wrong key, not a wave of deletions; the helper now logs
+both the missing path and non-404 failures with `source: stripe-customer-sync`.
+
+## CS-4 — `stripe.customers.create` was uncaught on both paths (HIGH, pre-existing, fixed)
+
+A 404 now falls through to create, which made this reachable from the shared
+helper for the first time. A Stripe error there escaped the server action and
+left the parking-invoice dialog spinning with no message. Wrapped in
+`createStripeCustomer()`.
+
+## CS-5 — `getOrCreateStripeCustomer` wrote to Stripe with no gate of its own (MEDIUM, pre-existing, fixed)
+
+Both callers gate, but the function is exported from a `"use server"` file and
+now performs a Stripe write. `requireManager()` added; React `cache()` dedupes
+the second call within a request.
+
+## Process notes
+
+- **The lookup-predicate hole, again, one layer deeper.** The new test for the
+  save-ID update asserted `{ method: "eq", args: ["id", CUSTOMER_ID] }` was
+  *somewhere* in the recorded calls. The select two calls earlier makes the
+  identical call, so deleting the `.eq` from the update survived. The fix is to
+  assert the call that immediately follows the `.update`, not membership in the
+  list. 24/25 on the first battery; 25/25 after.
+- **A reviewer finding changed the design, not just the code.** CS-1 came from
+  asking "where would a Stripe-only value come from?" The answer was the
+  workaround the owner had already been given in the same conversation.
