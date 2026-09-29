@@ -8,10 +8,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ requireManager: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
 
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
-import { cancelJob, deleteJob } from "./jobs";
+import { cancelJob, deleteJob, getJobs } from "./jobs";
 import { createSupabaseMock } from "./__test-helpers__/supabase-mock";
 
 const JOB_ID = "11111111-1111-4111-9111-111111111111";
@@ -28,6 +29,49 @@ function mockClientReturning(jobRow: Record<string, unknown>) {
   );
   return mock;
 }
+
+function mockSearch(customers: { id: string }[] = [], vehicles: { id: string }[] = []) {
+  const mock = createSupabaseMock([
+    { data: customers, error: null },
+    { data: vehicles, error: null },
+    { data: [], error: null },
+  ]);
+  vi.mocked(createClient).mockResolvedValue(
+    mock.client as unknown as Awaited<ReturnType<typeof createClient>>,
+  );
+  return mock;
+}
+
+// The customer and vehicle lookups call .or() on the same builder before the
+// jobs query does, so the jobs filter is the last one recorded.
+function jobsOrFilter(mock: ReturnType<typeof mockSearch>) {
+  const ors = mock.calls.filter((c) => c.method === "or");
+  return ors[ors.length - 1]?.args[0];
+}
+
+describe("getJobs RO-number search", () => {
+  it("adds an exact ro_number match when the search reads as an RO", async () => {
+    const mock = mockSearch();
+    await getJobs({ search: "RO-1860" });
+    expect(jobsOrFilter(mock)).toBe(
+      "title.ilike.%ro-1860%,notes.ilike.%ro-1860%,ro_number.eq.1860",
+    );
+  });
+
+  it("keeps the customer and vehicle clauses alongside the RO match", async () => {
+    const mock = mockSearch([{ id: "c1" }], [{ id: "v1" }]);
+    await getJobs({ search: "1860" });
+    expect(jobsOrFilter(mock)).toBe(
+      "title.ilike.%1860%,notes.ilike.%1860%,ro_number.eq.1860,customer_id.in.(c1),vehicle_id.in.(v1)",
+    );
+  });
+
+  it("adds no ro_number clause for a plain text search", async () => {
+    const mock = mockSearch();
+    await getJobs({ search: "honda" });
+    expect(jobsOrFilter(mock)).toBe("title.ilike.%honda%,notes.ilike.%honda%");
+  });
+});
 
 describe("cancelJob payment guards (H-6)", () => {
   it("blocks cancellation of a paid job and never issues an UPDATE", async () => {

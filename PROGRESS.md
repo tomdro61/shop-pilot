@@ -4940,9 +4940,25 @@ when the search text parses. The `search_jobs` tool description now says RO
 numbers are searchable.
 
 **Files.** `src/lib/utils/format.ts`, `src/lib/utils/format.test.ts` (new),
-`src/lib/actions/jobs.ts`, `src/lib/ai/tools.ts`.
+`src/lib/actions/jobs.ts`, `src/lib/actions/jobs.test.ts`, `src/lib/ai/tools.ts`.
 
-**Verified.** Parser unit tests (19 cases), existing jobs tests, typecheck.
+**Review.** Three reviewers, no Criticals. The test reviewer found that nothing
+asserted `getJobs` emits the RO clause and that the 9-digit cap was not pinned
+at its boundary; both are now tested (exact `.or()` string on the jobs query,
+9 vs 10 digits). Open findings, not fixed in this commit:
+
+- High: a cancelled RO returns an empty list, so the assistant reports the job
+  as not found. The tool's `status` enum has no `cancelled`.
+- High: a one-character search such as `7` fails the 2-character gate and
+  `getJobs` returns the unfiltered list rather than nothing.
+- Medium: `str()` in the AI handler turns a numeric `search` into `""`, which
+  takes the same unfiltered path.
+- Medium (pre-existing): search text is interpolated unescaped into `.or()`, so
+  a comma in the search can break the filter.
+- Medium (pre-existing): the jobs list read has no `count`/`assertComplete`
+  guard against the 1000-row cap.
+
+**Verified.** Parser and `getJobs` unit tests, typecheck, lint.
 **Not verified against the running system** — a read-only probe of the live
 database was blocked by the session's permission classifier, so the PostgREST
 filter itself has not been exercised. Search for an RO on the staging preview
