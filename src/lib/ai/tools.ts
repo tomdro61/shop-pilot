@@ -552,6 +552,18 @@ export const tools: Anthropic.Tool[] = [
       required: ["job_id", "payment_method"],
     },
   },
+  {
+    name: "mark_job_unpaid",
+    description:
+      "Undo a payment that was recorded on a job by mistake: sets the job back to unpaid and clears the payment method. Use this, not update_job or record_payment, to move a job off 'paid'. It refuses jobs paid on the card reader or through a Stripe invoice, which need a refund in Stripe instead. Confirm with the user before calling this.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        job_id: { type: "string", description: "Job UUID (required)" },
+      },
+      required: ["job_id"],
+    },
+  },
 
   // ── Fleet / AR tools ──────────────────────────────────────────
   {

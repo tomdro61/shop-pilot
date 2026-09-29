@@ -67,6 +67,7 @@ If still ambiguous, ask the user.
 | `quick-pay` | `src/app/(dashboard)/quick-pay/**`, `src/app/api/terminal/**`, `src/components/dashboard/terminal*` |
 | `job-cancel` | `src/components/dashboard/job-cancel-button.tsx`, `src/lib/actions/jobs.ts` (`cancelJob`), `src/lib/ai/handlers.ts` (`cancel_job` case), `src/lib/ai/tools.ts` |
 | `resend-invoice` | `src/lib/actions/invoices.ts` (`resendInvoiceForJob`), `src/components/dashboard/resend-invoice-button.tsx`, `src/components/dashboard/invoice-section.tsx` |
+| `mark-unpaid` | `src/lib/actions/jobs.ts` (`markJobUnpaid`, `recordPayment`, `updateJob`), `src/components/dashboard/mark-job-unpaid-button.tsx`, `src/components/dashboard/job-payment-footer.tsx`, `src/lib/ai/handlers.ts` (`mark_job_unpaid` case) |
 
 ---
 
@@ -429,6 +430,50 @@ and restart before running any of this** (see Context, top of file).
   unchecked, and the dialog stays open for the retry
 - Assert: in test mode the "(test mode — nothing actually sent)" suffix appears on
   the PARTIAL toast too, not only on full success
+
+---
+
+### Flow: `mark-unpaid`
+
+Undoes a payment recorded by hand. The button is the easy part; the refusals
+are the point — a job Stripe was paid for must never go back to unpaid.
+
+**Test data prereq:** a shop-owned `complete` job with line items, unpaid, no
+invoice. Every write here lands in the production database, so don't borrow a
+real customer's job. Stripe is test mode locally, so a job carrying a
+production `stripe_payment_intent_id` will always hit the "couldn't check"
+refusal — that is the guard failing closed, not a bug.
+
+**Scenario 1 — Round trip**
+- Mark as Paid → Card on the payment footer
+- Assert: pill reads "Paid via Card", the pay buttons are gone, and "Mark as
+  Unpaid" is the only action in the footer
+- Click Mark as Unpaid → confirm
+- Assert: toast "Marked as unpaid", dialog closes, pill reads "Unpaid" with NO
+  "via …" suffix, the pay buttons are back
+- Assert (DB): `payment_method` and `paid_at` are both null
+- ❌ FAIL signal: the dialog stays open after the toast (controlled-dialog
+  state), or the pill reads "Unpaid via Card" (method not cleared)
+
+**Scenario 2 — Cancel does nothing**
+- On a paid job, open the dialog → "Keep as paid"
+- Assert: no toast, job still paid
+
+**Scenario 3 — Button is hidden on Stripe-paid jobs**
+- Open a job paid on the card reader (`payment_method = "terminal"`) and one
+  with a paid invoice
+- Assert: no "Mark as Unpaid" button on either
+- ❌ FAIL signal: the button renders. The server would still refuse, but the
+  manager should be pointed at a refund, not offered an undo.
+
+**Scenario 4 — The assistant cannot go around it**
+- In `/chat`: "set RO-XXXX to unpaid" for a job paid by hand
+- Assert: the assistant calls `mark_job_unpaid`, not `update_job`
+- For a job paid on the card reader, assert it relays the refusal and the job
+  stays paid
+- ❌ FAIL signal: the job flips to unpaid through `update_job` or
+  `record_payment`. Both refuse to move a job off `paid`; check those guards in
+  `jobs.ts`.
 
 ---
 

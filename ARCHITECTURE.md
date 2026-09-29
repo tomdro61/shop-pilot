@@ -58,6 +58,13 @@ This is the **current shape of the system** — what exists, where it lives, and
 - Public page `/receipt/[token]` (`getReceiptByToken`, admin client, **paid-only query gate**, enumerated columns so wholesale `cost` never rides along) renders the same itemized bill stamped PAID. `jobs.receipt_token` (DB-default `gen_random_uuid()`) keys the link; the route is exempted in `middleware.ts`.
 - Fills the gap where Terminal / Quick Pay / manually-paid jobs never triggered the automatic `invoice.paid` receipt.
 
+### Undoing a recorded payment — "Mark as Unpaid"
+- Reverses a payment recorded by hand (Mark as Paid → cash / check / ACH / card). `MarkJobUnpaidButton` in the job payment footer; `markJobUnpaid(jobId)` in `src/lib/actions/jobs.ts`; `mark_job_unpaid` on the AI tool surface. Sets `payment_status = 'unpaid'` and nulls `payment_method` and `paid_at`.
+- Refuses whenever Stripe holds, or may hold, the money: `payment_method = 'terminal'`, a paid `invoices` row for the job, or a `stripe_payment_intent_id` whose PaymentIntent is anything but `canceled` / `requires_payment_method`. `/api/terminal/pay` stores that id when a reader charge *starts*, so its presence alone doesn't mean money moved — Stripe is asked, and an unreachable Stripe refuses.
+- The update is pinned to the `paid_at` that was read, so a payment recorded between the checks and the write makes it match no rows.
+- `recordPayment` and `updateJob` refuse to move a job off `paid`; this action is the way to do it.
+- Does not recall a receipt that was already sent. Does not cover `waived`.
+
 ### Invoice reminders — "Resend Invoice"
 - Re-delivers an existing Stripe invoice's payment link by text and/or email to a customer who hasn't paid. `ResendInvoiceButton` on the job's invoice card; `resendInvoiceForJob({ jobId, email, sms })` in `src/lib/actions/invoices.ts`. Both channels are awaited and report per-channel status, unlike `createInvoiceFromJob`'s fire-and-forget sends.
 - **The action never writes `invoices.status = 'paid'`.** `handleInvoicePaid` owns that transition, and its side effects (`jobs.payment_status`, receipt email, customer SMS, owner notify) can't be replicated from a server action — a pre-emptive write trips the webhook's idempotency guard and none of them run.

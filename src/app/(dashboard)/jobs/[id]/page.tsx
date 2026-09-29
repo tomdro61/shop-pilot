@@ -395,6 +395,11 @@ export default async function JobDetailPage({
         grandTotal={grandTotal}
         customerName={customer ? formatCustomerName(customer) : null}
         savedCard={savedCard}
+        canMarkUnpaid={
+          job.payment_status === "paid" &&
+          job.payment_method !== "terminal" &&
+          invoice?.status !== "paid"
+        }
       />
     </>
   );

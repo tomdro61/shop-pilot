@@ -7,6 +7,8 @@ import { requireManager } from "@/lib/auth";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
 import { todayET, shiftScheduledAtToNewDate } from "@/lib/utils";
 import { parseRONumber } from "@/lib/utils/format";
+import { getPaymentIntentStatus } from "@/lib/stripe/terminal";
+import type { ActionResult } from "./_types";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
 import type { JobStatus, PaymentMethod, PaymentStatus } from "@/types";
@@ -196,6 +198,20 @@ export async function updateJob(id: string, formData: JobFormData) {
   }
 
   const supabase = await createClient();
+
+  // Moving a job off 'paid' has to go through markJobUnpaid, which checks that
+  // no money was actually collected.
+  if (parsed.data.payment_status !== "paid") {
+    const { data: current, error: fetchError } = await supabase
+      .from("jobs")
+      .select("payment_status")
+      .eq("id", id)
+      .maybeSingle();
+    if (fetchError) return { error: fetchError.message };
+    if (!current) return { error: "Job not found" };
+    if (current.payment_status === "paid") return { error: PAID_LOCKED_MSG };
+  }
+
   const { data, error } = await supabase
     .from("jobs")
     .update(prepareJobData(parsed.data))
@@ -492,6 +508,9 @@ export async function getLineItemCategories() {
   return categories;
 }
 
+const PAID_LOCKED_MSG =
+  "This job is marked paid — use Mark as Unpaid to undo the payment first";
+
 export async function recordPayment(
   jobId: string,
   paymentMethod: PaymentMethod,
@@ -501,6 +520,19 @@ export async function recordPayment(
   if (!auth.ok) return { error: auth.error };
 
   const supabase = await createClient();
+
+  // Moving a job off 'paid' has to go through markJobUnpaid, which checks that
+  // no money was actually collected.
+  if (paymentStatus !== "paid") {
+    const { data: current, error: fetchError } = await supabase
+      .from("jobs")
+      .select("payment_status")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (fetchError) return { error: fetchError.message };
+    if (!current) return { error: "Job not found" };
+    if (current.payment_status === "paid") return { error: PAID_LOCKED_MSG };
+  }
 
   const { error } = await supabase
     .from("jobs")
@@ -517,4 +549,103 @@ export async function recordPayment(
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/dashboard");
   return { success: true };
+}
+
+// A PaymentIntent in one of these states has collected nothing and is not in
+// the middle of collecting.
+const DEAD_PAYMENT_INTENT_STATUSES = ["canceled", "requires_payment_method"];
+
+// Undoes a payment recorded by hand (Mark as Paid). Refuses whenever Stripe
+// holds, or may hold, the money: flipping those back to unpaid would put the
+// charge buttons back on a job the customer has already paid for.
+export async function markJobUnpaid(jobId: string): Promise<ActionResult> {
+  const auth = await requireManager();
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: job, error: fetchError } = await supabase
+    .from("jobs")
+    .select("id, payment_status, payment_method, paid_at, stripe_payment_intent_id, customer_id")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (fetchError) return { ok: false, error: fetchError.message };
+  if (!job) return { ok: false, error: "Job not found" };
+  if (job.payment_status !== "paid") {
+    return { ok: false, error: "This job isn't marked paid" };
+  }
+  if (job.payment_method === "terminal") {
+    return {
+      ok: false,
+      error: "This job was paid on the card reader — refund it in Stripe instead",
+    };
+  }
+
+  const { data: paidInvoices, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("job_id", jobId)
+    .eq("status", "paid")
+    .limit(1);
+
+  if (invoiceError) return { ok: false, error: invoiceError.message };
+  if (paidInvoices && paidInvoices.length > 0) {
+    return {
+      ok: false,
+      error: "This job was paid through a Stripe invoice — refund it in Stripe instead",
+    };
+  }
+
+  // /api/terminal/pay stores the PaymentIntent id when a reader charge starts,
+  // so an id here can belong to an abandoned attempt. Stripe knows which.
+  if (job.stripe_payment_intent_id) {
+    let status: string;
+    try {
+      ({ status } = await getPaymentIntentStatus(job.stripe_payment_intent_id));
+    } catch (err) {
+      Sentry.captureException(err, {
+        tags: { source: "mark-job-unpaid" },
+        extra: { jobId, paymentIntentId: job.stripe_payment_intent_id },
+      });
+      return {
+        ok: false,
+        error: "Couldn't check this job's card-reader payment with Stripe — nothing was changed. Try again.",
+      };
+    }
+    if (!DEAD_PAYMENT_INTENT_STATUSES.includes(status)) {
+      return {
+        ok: false,
+        error: "A card-reader payment on this job went through or is still in progress — check Stripe before changing it",
+      };
+    }
+  }
+
+  // Pinned to the paid_at that was read: the Stripe webhook writes a fresh
+  // paid_at when it records a payment, so one landing after the checks above
+  // makes this match no rows.
+  const flip = supabase
+    .from("jobs")
+    .update({ payment_status: "unpaid", payment_method: null, paid_at: null })
+    .eq("id", jobId)
+    .eq("payment_status", "paid");
+  const { data: updated, error: updateError } = await (
+    job.paid_at ? flip.eq("paid_at", job.paid_at) : flip.is("paid_at", null)
+  )
+    .select("id")
+    .maybeSingle();
+
+  if (updateError) return { ok: false, error: updateError.message };
+  if (!updated) {
+    return {
+      ok: false,
+      error: "This job's payment changed while you were undoing it — nothing was changed. Reload and check it.",
+    };
+  }
+
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${jobId}`);
+  if (job.customer_id) revalidatePath(`/customers/${job.customer_id}`);
+  revalidatePath("/dashboard");
+  return { ok: true };
 }

@@ -4968,8 +4968,44 @@ before merging.
 
 - Search still hides cancelled jobs unless the Cancelled filter is selected, so
   a cancelled job is not findable by RO number through the assistant.
-- There is still no "mark as unpaid" control on the job page. `recordPayment`
-  already accepts a status and clears `paid_at`; a button would need a guard
-  that refuses jobs with a real Stripe payment or invoice attached.
-- The assistant's `update_job` path can set `payment_status` back to unpaid but
-  leaves `payment_method` and `paid_at` as they were.
+
+### Mark as Unpaid (same session)
+
+**Asked for by the owner** after the search fix, to undo the mistaken payment
+without going through the assistant.
+
+**Shipped.** `markJobUnpaid(jobId)` in `src/lib/actions/jobs.ts`, a
+`MarkJobUnpaidButton` with a confirm dialog in the job payment footer, and a
+`mark_job_unpaid` AI tool. It sets the job to unpaid and clears
+`payment_method` and `paid_at`. It refuses a job paid on the card reader, a job
+with a paid invoice row, and a job whose stored PaymentIntent is anything but
+`canceled` / `requires_payment_method`; if Stripe can't be reached it refuses.
+The update is pinned to the `paid_at` that was read.
+
+**Closed on the way.** Before this, `update_job` and `record_payment` could set
+any paid job to unpaid, invoiced or waived with no check, including jobs paid
+through Stripe. `updateJob` and `recordPayment` now refuse to move a job off
+`paid`.
+
+**Files.** `src/lib/actions/jobs.ts`, `src/lib/actions/mark-job-unpaid.test.ts`
+(new), `src/components/dashboard/mark-job-unpaid-button.tsx` (new),
+`src/components/dashboard/job-payment-footer.tsx`,
+`src/app/(dashboard)/jobs/[id]/page.tsx`, `src/lib/ai/tools.ts`,
+`src/lib/ai/handlers.ts`, `.claude/skills/verify-flow/SKILL.md` (new
+`mark-unpaid` flow), `ARCHITECTURE.md`.
+
+**Verified.** Tests 641 → 682. Mutation battery 48/48 killed across
+`markJobUnpaid` and both guards, source restored and checked by hash.
+Typecheck, lint and production build clean. **The UI flow was not clicked
+through**: no dev server was running and no shop-owned test job was named, and
+a local click-through writes to the production database. Run
+`/verify-flow mark-unpaid` before merging.
+
+**Known gaps.**
+
+- A receipt already sent for the mistaken payment is not recalled.
+- `waived` has no undo.
+- `recordPayment` will still overwrite the method on a job that is already
+  paid; the UI hides that path, the AI tool does not.
+- A local run against a job carrying a production PaymentIntent id always
+  refuses, because `.env.local` holds a test-mode Stripe key.

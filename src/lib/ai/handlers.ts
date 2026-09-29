@@ -23,6 +23,7 @@ import {
   cancelJob,
   getLineItemCategories,
   recordPayment,
+  markJobUnpaid,
 } from "@/lib/actions/jobs";
 import {
   createLineItem,
@@ -406,6 +407,10 @@ export async function executeToolCall(
           str(toolInput.payment_method) as Parameters<typeof recordPayment>[1],
           (str(toolInput.payment_status, "paid") as Parameters<typeof recordPayment>[2])
         );
+        return JSON.stringify(result);
+      }
+      case "mark_job_unpaid": {
+        const result = await markJobUnpaid(str(toolInput.job_id));
         return JSON.stringify(result);
       }
 

@@ -15,6 +15,7 @@ import { PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS } from "@/lib/constants";
 import { CreditCard, Banknote, Landmark, CircleDollarSign, ChevronDown } from "lucide-react";
 import { TerminalPayButton } from "@/components/dashboard/terminal-pay-button";
 import { ChargeCardOnFileButton } from "@/components/dashboard/charge-card-on-file-button";
+import { MarkJobUnpaidButton } from "@/components/dashboard/mark-job-unpaid-button";
 import type { SavedCard } from "@/lib/actions/payment-methods";
 import type { JobStatus, PaymentStatus, PaymentMethod } from "@/types";
 
@@ -47,6 +48,7 @@ interface JobPaymentFooterProps {
   grandTotal: number;
   customerName: string | null;
   savedCard: SavedCard | null;
+  canMarkUnpaid: boolean;
 }
 
 export function JobPaymentFooter({
@@ -57,6 +59,7 @@ export function JobPaymentFooter({
   grandTotal,
   customerName,
   savedCard,
+  canMarkUnpaid,
 }: JobPaymentFooterProps) {
   const [loading, setLoading] = useState(false);
 
@@ -124,6 +127,12 @@ export function JobPaymentFooter({
             )}
           </div>
         </div>
+
+        {canMarkUnpaid && (
+          <div className="ml-auto flex items-center self-center w-full justify-end lg:w-auto">
+            <MarkJobUnpaidButton jobId={jobId} paymentMethod={paymentMethod} />
+          </div>
+        )}
 
         {showMarkAsPaid && (
           <div className="ml-auto flex flex-wrap items-center gap-2 self-center w-full justify-end lg:w-auto">
