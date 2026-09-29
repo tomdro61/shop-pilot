@@ -1,6 +1,7 @@
 "use server";
 
 import { cache } from "react";
+import Stripe from "stripe";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
@@ -521,29 +522,32 @@ export async function recordPayment(
 
   const supabase = await createClient();
 
-  // Moving a job off 'paid' has to go through markJobUnpaid, which checks that
-  // no money was actually collected.
-  if (paymentStatus !== "paid") {
-    const { data: current, error: fetchError } = await supabase
-      .from("jobs")
-      .select("payment_status")
-      .eq("id", jobId)
-      .maybeSingle();
-    if (fetchError) return { error: fetchError.message };
-    if (!current) return { error: "Job not found" };
-    if (current.payment_status === "paid") return { error: PAID_LOCKED_MSG };
-  }
+  // A paid job is changed through markJobUnpaid, which checks that no money
+  // was actually collected. Overwriting the method here would also hide a
+  // card-reader payment from that check.
+  const { data: current, error: fetchError } = await supabase
+    .from("jobs")
+    .select("payment_status")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (fetchError) return { error: fetchError.message };
+  if (!current) return { error: "Job not found" };
+  if (current.payment_status === "paid") return { error: PAID_LOCKED_MSG };
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("jobs")
     .update({
       payment_method: paymentMethod,
       payment_status: paymentStatus,
       paid_at: paymentStatus === "paid" ? new Date().toISOString() : null,
     })
-    .eq("id", jobId);
+    .eq("id", jobId)
+    .neq("payment_status", "paid")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!updated) return { error: PAID_LOCKED_MSG };
 
   revalidatePath("/jobs");
   revalidatePath(`/jobs/${jobId}`);
@@ -551,9 +555,11 @@ export async function recordPayment(
   return { success: true };
 }
 
-// A PaymentIntent in one of these states has collected nothing and is not in
-// the middle of collecting.
+// A PaymentIntent in one of these states has collected nothing. A reader still
+// waiting for a tap also reports requires_payment_method, so a recent one is
+// treated as live.
 const DEAD_PAYMENT_INTENT_STATUSES = ["canceled", "requires_payment_method"];
+const READER_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 
 // Undoes a payment recorded by hand (Mark as Paid). Refuses whenever Stripe
 // holds, or may hold, the money: flipping those back to unpaid would put the
@@ -600,20 +606,39 @@ export async function markJobUnpaid(jobId: string): Promise<ActionResult> {
   // /api/terminal/pay stores the PaymentIntent id when a reader charge starts,
   // so an id here can belong to an abandoned attempt. Stripe knows which.
   if (job.stripe_payment_intent_id) {
-    let status: string;
+    let attempt: { status: string; created: number };
     try {
-      ({ status } = await getPaymentIntentStatus(job.stripe_payment_intent_id));
+      attempt = await getPaymentIntentStatus(job.stripe_payment_intent_id);
     } catch (err) {
+      const transient =
+        err instanceof Stripe.errors.StripeConnectionError ||
+        err instanceof Stripe.errors.StripeAPIError ||
+        err instanceof Stripe.errors.StripeRateLimitError;
       Sentry.captureException(err, {
-        tags: { source: "mark-job-unpaid" },
+        tags: {
+          source: "mark-job-unpaid",
+          path: "payment-intent-check",
+          transient: String(transient),
+        },
         extra: { jobId, paymentIntentId: job.stripe_payment_intent_id },
       });
       return {
         ok: false,
-        error: "Couldn't check this job's card-reader payment with Stripe — nothing was changed. Try again.",
+        error: transient
+          ? "Couldn't reach Stripe to check this job's card-reader payment — nothing was changed. Try again."
+          : "Stripe couldn't look up this job's card-reader payment, so it can't be undone here — nothing was changed. Look the payment up in Stripe.",
       };
     }
-    if (!DEAD_PAYMENT_INTENT_STATUSES.includes(status)) {
+    if (
+      attempt.status === "requires_payment_method" &&
+      Date.now() - attempt.created * 1000 < READER_ATTEMPT_WINDOW_MS
+    ) {
+      return {
+        ok: false,
+        error: "A card-reader charge was started on this job in the last 15 minutes — cancel it on the reader or wait, then try again",
+      };
+    }
+    if (!DEAD_PAYMENT_INTENT_STATUSES.includes(attempt.status)) {
       return {
         ok: false,
         error: "A card-reader payment on this job went through or is still in progress — check Stripe before changing it",
@@ -621,9 +646,9 @@ export async function markJobUnpaid(jobId: string): Promise<ActionResult> {
     }
   }
 
-  // Pinned to the paid_at that was read: the Stripe webhook writes a fresh
-  // paid_at when it records a payment, so one landing after the checks above
-  // makes this match no rows.
+  // Pinned to the paid_at that was read: the Stripe webhook and the terminal
+  // status route write a fresh paid_at when they record a payment, so one
+  // landing after the checks above makes this match no rows.
   const flip = supabase
     .from("jobs")
     .update({ payment_status: "unpaid", payment_method: null, paid_at: null })

@@ -39,6 +39,7 @@ export async function getPaymentIntentStatus(paymentIntentId: string) {
     status: pi.status,
     amount: pi.amount,
     metadata: pi.metadata,
+    created: pi.created,
   };
 }
 

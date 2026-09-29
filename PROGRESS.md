@@ -4994,18 +4994,47 @@ through Stripe. `updateJob` and `recordPayment` now refuse to move a job off
 `src/lib/ai/handlers.ts`, `.claude/skills/verify-flow/SKILL.md` (new
 `mark-unpaid` flow), `ARCHITECTURE.md`.
 
-**Verified.** Tests 641 → 682. Mutation battery 48/48 killed across
-`markJobUnpaid` and both guards, source restored and checked by hash.
-Typecheck, lint and production build clean. **The UI flow was not clicked
+**What review changed.** Three reviewers, no Criticals.
+
+- The confirm dialog said a customer keeps a receipt already sent. The receipt
+  page is paid-only, so the link stops working. Copy corrected.
+- The client `catch` said "nothing was changed" when a lost response means the
+  state is unknown. It now says so, reports to Sentry, and refreshes.
+- One Stripe failure message said "Try again" for failures that can never
+  succeed (unknown PaymentIntent, key mismatch). Now split by error class.
+- A reader waiting for a tap reports `requires_payment_method`, the same state
+  as an abandoned attempt. One created in the last 15 minutes is now refused.
+- `recordPayment` on an already-paid job could overwrite `payment_method` and
+  walk a card-reader payment past the terminal guard. It now refuses any paid
+  job, and its write carries `.neq("payment_status", "paid")`.
+- Tests: every Stripe-guard and invoice-guard test used `payment_method:
+  "stripe"`, so making either guard conditional on the method survived, and
+  the positional mock queue hid a skipped invoice query. Fixtures now vary the
+  method and the happy path pins the table sequence.
+
+**Verified.** Tests 641 → 705. Mutation battery 78/78 killed across
+`markJobUnpaid`, `recordPayment` and the `updateJob` guard, source restored and
+checked by hash. Typecheck, lint and production build clean. **The UI flow was not clicked
 through**: no dev server was running and no shop-owned test job was named, and
 a local click-through writes to the production database. Run
 `/verify-flow mark-unpaid` before merging.
 
 **Known gaps.**
 
-- A receipt already sent for the mistaken payment is not recalled.
+- A receipt link already sent for the mistaken payment stops working while the
+  job is unpaid (`getReceiptByToken` is paid-only). The text or email itself
+  is not recalled.
 - `waived` has no undo.
-- `recordPayment` will still overwrite the method on a job that is already
-  paid; the UI hides that path, the AI tool does not.
+- `updateJob` with `payment_status: "paid"` can still rewrite `payment_method`
+  on a paid job and sets no `paid_at`. The invoice and PaymentIntent checks in
+  `markJobUnpaid` don't depend on the method, so they still hold.
+- The `updateJob` guard is read-then-write, not pinned in the write.
+- A card-on-file charge whose webhook hasn't landed leaves the invoice row
+  `sent`; a job hand-marked paid in that window can be undone until it does.
+- Supabase errors in `markJobUnpaid` are returned to the caller but not sent
+  to Sentry. A zero-row update is always reported as "payment changed", which
+  an RLS refusal would also produce.
+- The AI handler's outer catch describes every thrown error as a failed read,
+  including for tools that write.
 - A local run against a job carrying a production PaymentIntent id always
   refuses, because `.env.local` holds a test-mode Stripe key.

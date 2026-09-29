@@ -62,8 +62,11 @@ This is the **current shape of the system** — what exists, where it lives, and
 - Reverses a payment recorded by hand (Mark as Paid → cash / check / ACH / card). `MarkJobUnpaidButton` in the job payment footer; `markJobUnpaid(jobId)` in `src/lib/actions/jobs.ts`; `mark_job_unpaid` on the AI tool surface. Sets `payment_status = 'unpaid'` and nulls `payment_method` and `paid_at`.
 - Refuses whenever Stripe holds, or may hold, the money: `payment_method = 'terminal'`, a paid `invoices` row for the job, or a `stripe_payment_intent_id` whose PaymentIntent is anything but `canceled` / `requires_payment_method`. `/api/terminal/pay` stores that id when a reader charge *starts*, so its presence alone doesn't mean money moved — Stripe is asked, and an unreachable Stripe refuses.
 - The update is pinned to the `paid_at` that was read, so a payment recorded between the checks and the write makes it match no rows.
-- `recordPayment` and `updateJob` refuse to move a job off `paid`; this action is the way to do it.
-- Does not recall a receipt that was already sent. Does not cover `waived`.
+- `recordPayment` refuses any job that is already paid (it would otherwise overwrite `payment_method` and hide a card-reader payment from the check above), and its write carries `.neq("payment_status", "paid")`. `updateJob` refuses to move a job off `paid`. This action is the way to do it.
+- A Stripe failure is reported as retryable only for connection, server and rate-limit errors. A PaymentIntent Stripe doesn't have — including a test/live key mismatch — tells the manager to look it up in Stripe.
+- A receipt link already sent stops resolving while the job is unpaid (`getReceiptByToken` is paid-only) and works again once it is paid. Does not cover `waived`.
+- `requires_payment_method` is also what a reader reports while it waits for a tap, so a PaymentIntent in that state created in the last 15 minutes is refused as a live charge.
+- Not covered: a card-on-file charge whose `invoice.paid` webhook hasn't landed yet leaves the invoice row `sent`, so a job hand-marked paid in that window can be undone. The webhook re-marks it paid when it arrives.
 
 ### Invoice reminders — "Resend Invoice"
 - Re-delivers an existing Stripe invoice's payment link by text and/or email to a customer who hasn't paid. `ResendInvoiceButton` on the job's invoice card; `resendInvoiceForJob({ jobId, email, sms })` in `src/lib/actions/invoices.ts`. Both channels are awaited and report per-channel status, unlike `createInvoiceFromJob`'s fire-and-forget sends.

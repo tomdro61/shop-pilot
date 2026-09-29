@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { toast } from "sonner";
 import { Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,15 +37,24 @@ export function MarkJobUnpaidButton({
     setLoading(true);
     try {
       const result = await markJobUnpaid(jobId);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
+      if (result.ok) {
+        toast.success("Marked as unpaid");
+      } else {
+        toast.error(result.error, { duration: 10000 });
       }
-      toast.success("Marked as unpaid");
-      router.refresh();
-    } catch {
-      toast.error("Couldn't mark the job as unpaid — nothing was changed. Try again.");
+    } catch (err) {
+      // The request may have reached the server before it failed, so the
+      // job's state is unknown here.
+      Sentry.captureException(err, {
+        tags: { source: "mark-job-unpaid-button" },
+        extra: { jobId },
+      });
+      toast.error(
+        "Couldn't confirm whether the job was marked unpaid. Check its payment status before trying again.",
+        { duration: 10000 }
+      );
     } finally {
+      router.refresh();
       setLoading(false);
       setOpen(false);
     }
@@ -69,7 +79,8 @@ export function MarkJobUnpaidButton({
             This clears the recorded payment
             {paymentMethod ? ` (${PAYMENT_METHOD_LABELS[paymentMethod]})` : ""} and
             puts the balance back on the job. It doesn&apos;t refund anything. If a
-            receipt was already sent, the customer keeps it.
+            receipt was already sent, its link stops working until the job is
+            paid again.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

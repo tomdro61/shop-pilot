@@ -533,7 +533,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "record_payment",
     description:
-      "Record a payment on a job. Sets the payment method and payment status. Confirm with the user before calling this.",
+      "Record a payment on a job. Sets the payment method and payment status. Refuses a job that is already paid; use mark_job_unpaid to undo a payment first. Confirm with the user before calling this.",
     input_schema: {
       type: "object" as const,
       properties: {

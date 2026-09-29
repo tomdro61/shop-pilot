@@ -1,13 +1,14 @@
 /**
- * Tests for markJobUnpaid and the guards that force every other path through
- * it.
+ * Tests for markJobUnpaid, and for the guards in recordPayment and updateJob
+ * that stop those two from changing a paid job.
  *
  * The shape to protect: a job goes back to unpaid only when nothing was
  * collected for it. Flipping a job that Stripe was paid for puts the charge
  * buttons back on it, so most of these tests assert both the refusal AND that
  * no UPDATE was issued.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import Stripe from "stripe";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ requireManager: vi.fn() }));
@@ -27,6 +28,10 @@ const JOB_ID = "11111111-1111-4111-9111-111111111111";
 const CUSTOMER_ID = "22222222-2222-4222-9222-222222222222";
 const PAID_AT = "2026-09-29T14:02:11.123456+00:00";
 const PI_ID = "pi_test123";
+const NOW = new Date("2026-09-29T18:00:00.000Z");
+const MINUTE = 60 * 1000;
+const secondsAgo = (ms: number) => Math.floor((NOW.getTime() - ms) / 1000);
+const LONG_AGO = secondsAgo(24 * 60 * MINUTE);
 
 function buildJob(overrides: Record<string, unknown> = {}) {
   return {
@@ -57,7 +62,7 @@ function queue(
   return [{ data: job, error: null }, { data: paidInvoices, error: null }, update];
 }
 
-function mockPaymentIntent(status: string | Error) {
+function mockPaymentIntent(status: string | Error, created: number = LONG_AGO) {
   if (status instanceof Error) {
     vi.mocked(getPaymentIntentStatus).mockRejectedValue(status);
   } else {
@@ -65,12 +70,15 @@ function mockPaymentIntent(status: string | Error) {
       status,
       amount: 10000,
       metadata: {},
+      created,
     } as Awaited<ReturnType<typeof getPaymentIntentStatus>>);
   }
 }
 
 type Mock = ReturnType<typeof mockSupabase>;
 const updated = (mock: Mock) => mock.calls.find((c) => c.method === "update");
+const tables = (mock: Mock) =>
+  mock.calls.filter((c) => c.method === "from").map((c) => c.args[0]);
 const callsAfter = (mock: Mock, method: string, arg?: unknown) => {
   const idx = mock.calls.findIndex(
     (c) => c.method === method && (arg === undefined || c.args[0] === arg)
@@ -80,9 +88,15 @@ const callsAfter = (mock: Mock, method: string, arg?: unknown) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers();
+  vi.setSystemTime(NOW);
   vi.mocked(requireManager).mockResolvedValue({ ok: true } as Awaited<
     ReturnType<typeof requireManager>
   >);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("markJobUnpaid — the happy path", () => {
@@ -133,12 +147,18 @@ describe("markJobUnpaid — the happy path", () => {
     expect(revalidatePath).toHaveBeenCalledWith(`/customers/${CUSTOMER_ID}`);
   });
 
-  it.each(["cash", "check", "ach", "stripe"])("allows a payment recorded as %s", async (method) => {
-    const mock = mockSupabase(queue(buildJob({ payment_method: method })));
+  // The table list pins the query count: the mock hands results out by
+  // position, so a skipped invoice check would otherwise be absorbed by the
+  // update consuming its result.
+  it.each(["cash", "check", "ach", "stripe"])(
+    "checks invoices, then updates, for a payment recorded as %s",
+    async (method) => {
+      const mock = mockSupabase(queue(buildJob({ payment_method: method })));
 
-    expect(await markJobUnpaid(JOB_ID)).toEqual({ ok: true });
-    expect(updated(mock)).toBeDefined();
-  });
+      expect(await markJobUnpaid(JOB_ID)).toEqual({ ok: true });
+      expect(tables(mock)).toEqual(["jobs", "invoices", "jobs"]);
+    }
+  );
 });
 
 describe("markJobUnpaid — what it reads", () => {
@@ -202,7 +222,7 @@ describe("markJobUnpaid — refusals", () => {
 
     const result = await markJobUnpaid(JOB_ID);
 
-    expect(result.ok).toBe(false);
+    expect(result).toEqual({ ok: false, error: "This job isn't marked paid" });
     expect(updated(mock)).toBeUndefined();
   });
 
@@ -215,14 +235,17 @@ describe("markJobUnpaid — refusals", () => {
     expect(updated(mock)).toBeUndefined();
   });
 
-  it("refuses a job with a paid Stripe invoice", async () => {
-    const mock = mockSupabase(queue(buildJob(), [{ id: "inv1" }]));
+  it.each(["cash", "check", "ach", "stripe"])(
+    "refuses a job with a paid Stripe invoice, recorded as %s",
+    async (method) => {
+      const mock = mockSupabase(queue(buildJob({ payment_method: method }), [{ id: "inv1" }]));
 
-    const result = await markJobUnpaid(JOB_ID);
+      const result = await markJobUnpaid(JOB_ID);
 
-    expect(result).toEqual({ ok: false, error: expect.stringContaining("Stripe invoice") });
-    expect(updated(mock)).toBeUndefined();
-  });
+      expect(result).toEqual({ ok: false, error: expect.stringContaining("Stripe invoice") });
+      expect(updated(mock)).toBeUndefined();
+    }
+  );
 
   it("refuses when the invoice lookup fails", async () => {
     const mock = mockSupabase([
@@ -252,7 +275,9 @@ describe("markJobUnpaid — refusals", () => {
 });
 
 describe("markJobUnpaid — a card-reader attempt on the job", () => {
-  const jobWithAttempt = () => buildJob({ stripe_payment_intent_id: PI_ID });
+  // Recorded as cash: a reader attempt that was abandoned, then settled by hand.
+  const jobWithAttempt = (method = "cash") =>
+    buildJob({ payment_method: method, stripe_payment_intent_id: PI_ID });
 
   it("does not ask Stripe when no attempt was ever started", async () => {
     mockSupabase(queue());
@@ -272,8 +297,22 @@ describe("markJobUnpaid — a card-reader attempt on the job", () => {
     expect(getPaymentIntentStatus).toHaveBeenCalledWith(PI_ID);
   });
 
+  it.each(["cash", "check", "ach", "stripe"])(
+    "asks Stripe whatever the payment was recorded as (%s)",
+    async (method) => {
+      const mock = mockSupabase(queue(jobWithAttempt(method)));
+      mockPaymentIntent("succeeded");
+
+      const result = await markJobUnpaid(JOB_ID);
+
+      expect(result.ok).toBe(false);
+      expect(getPaymentIntentStatus).toHaveBeenCalledWith(PI_ID);
+      expect(updated(mock)).toBeUndefined();
+    }
+  );
+
   it.each(["canceled", "requires_payment_method"])(
-    "proceeds when the attempt is %s",
+    "proceeds when an old attempt is %s",
     async (status) => {
       const mock = mockSupabase(queue(jobWithAttempt()));
       mockPaymentIntent(status);
@@ -291,29 +330,113 @@ describe("markJobUnpaid — a card-reader attempt on the job", () => {
 
       const result = await markJobUnpaid(JOB_ID);
 
-      expect(result).toEqual({ ok: false, error: expect.stringContaining("card-reader payment") });
+      expect(result).toEqual({
+        ok: false,
+        error: expect.stringContaining("went through or is still in progress"),
+      });
       expect(updated(mock)).toBeUndefined();
     }
   );
 
-  it("refuses and reports to Sentry when Stripe cannot be reached", async () => {
+  it("refuses an attempt started 14 minutes ago that is still waiting for a card", async () => {
     const mock = mockSupabase(queue(jobWithAttempt()));
-    const failure = new Error("stripe down");
+    mockPaymentIntent("requires_payment_method", secondsAgo(14 * MINUTE));
+
+    const result = await markJobUnpaid(JOB_ID);
+
+    expect(result).toEqual({ ok: false, error: expect.stringContaining("last 15 minutes") });
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("proceeds when that attempt is 16 minutes old", async () => {
+    const mock = mockSupabase(queue(jobWithAttempt()));
+    mockPaymentIntent("requires_payment_method", secondsAgo(16 * MINUTE));
+
+    expect(await markJobUnpaid(JOB_ID)).toEqual({ ok: true });
+    expect(updated(mock)).toBeDefined();
+  });
+
+  it("proceeds on an attempt cancelled a minute ago", async () => {
+    const mock = mockSupabase(queue(jobWithAttempt()));
+    mockPaymentIntent("canceled", secondsAgo(MINUTE));
+
+    expect(await markJobUnpaid(JOB_ID)).toEqual({ ok: true });
+    expect(updated(mock)).toBeDefined();
+  });
+
+  it("refuses a recent attempt that succeeded, as a payment and not as a pending charge", async () => {
+    mockSupabase(queue(jobWithAttempt()));
+    mockPaymentIntent("succeeded", secondsAgo(MINUTE));
+
+    expect(await markJobUnpaid(JOB_ID)).toEqual({
+      ok: false,
+      error: expect.stringContaining("went through or is still in progress"),
+    });
+  });
+
+  it.each([
+    [
+      "a connection error",
+      new Stripe.errors.StripeConnectionError({ type: "api_error", message: "socket hang up" }),
+    ],
+    ["a Stripe server error", new Stripe.errors.StripeAPIError({ type: "api_error", message: "500" })],
+    [
+      "a rate limit",
+      new Stripe.errors.StripeRateLimitError({ type: "rate_limit_error", message: "slow down" }),
+    ],
+  ])("says to try again after %s", async (_label, failure) => {
+    const mock = mockSupabase(queue(jobWithAttempt()));
     mockPaymentIntent(failure);
 
     const result = await markJobUnpaid(JOB_ID);
 
-    expect(result).toEqual({ ok: false, error: expect.stringContaining("nothing was changed") });
+    expect(result).toEqual({ ok: false, error: expect.stringContaining("Try again") });
     expect(updated(mock)).toBeUndefined();
     expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
-      tags: { source: "mark-job-unpaid" },
+      tags: { source: "mark-job-unpaid", path: "payment-intent-check", transient: "true" },
+      extra: { jobId: JOB_ID, paymentIntentId: PI_ID },
+    });
+  });
+
+  it.each([
+    [
+      "a PaymentIntent Stripe does not have",
+      new Stripe.errors.StripeInvalidRequestError({
+        type: "invalid_request_error",
+        code: "resource_missing",
+        message: "No such payment_intent",
+      }),
+    ],
+    [
+      "a rejected API key",
+      new Stripe.errors.StripeAuthenticationError({ type: "authentication_error", message: "bad key" }),
+    ],
+    ["an error that is not from Stripe", new Error("STRIPE_SECRET_KEY is not set")],
+  ])("does not say to try again after %s", async (_label, failure) => {
+    const mock = mockSupabase(queue(jobWithAttempt()));
+    mockPaymentIntent(failure);
+
+    const result = await markJobUnpaid(JOB_ID);
+
+    expect(result).toEqual({ ok: false, error: expect.stringContaining("Look the payment up") });
+    expect(result).not.toEqual({ ok: false, error: expect.stringContaining("Try again") });
+    expect(updated(mock)).toBeUndefined();
+    expect(Sentry.captureException).toHaveBeenCalledWith(failure, {
+      tags: { source: "mark-job-unpaid", path: "payment-intent-check", transient: "false" },
       extra: { jobId: JOB_ID, paymentIntentId: PI_ID },
     });
   });
 });
 
-describe("recordPayment — cannot move a job off paid", () => {
-  it.each(["unpaid", "invoiced", "waived"] as const)(
+describe("recordPayment — leaves a paid job alone", () => {
+  const LOOKUP = [
+    { method: "from", args: ["jobs"] },
+    { method: "select", args: ["payment_status"] },
+    { method: "eq", args: ["id", JOB_ID] },
+    { method: "maybeSingle", args: [] },
+  ];
+
+  it.each(["paid", "unpaid", "invoiced", "waived"] as const)(
     "refuses to set a paid job to %s",
     async (status) => {
       const mock = mockSupabase([{ data: { payment_status: "paid" }, error: null }]);
@@ -321,35 +444,79 @@ describe("recordPayment — cannot move a job off paid", () => {
       const result = await recordPayment(JOB_ID, "cash", status);
 
       expect(result).toEqual({ error: expect.stringContaining("Mark as Unpaid") });
-      expect(mock.calls.slice(0, 4)).toEqual([
-        { method: "from", args: ["jobs"] },
-        { method: "select", args: ["payment_status"] },
-        { method: "eq", args: ["id", JOB_ID] },
-        { method: "maybeSingle", args: [] },
-      ]);
+      expect(mock.calls.slice(0, 4)).toEqual(LOOKUP);
       expect(updated(mock)).toBeUndefined();
     }
   );
 
-  it("still waives a job that is not paid", async () => {
-    const mock = mockSupabase([{ data: { payment_status: "unpaid" }, error: null }, { error: null }]);
-
-    expect(await recordPayment(JOB_ID, "cash", "waived")).toEqual({ success: true });
-    expect(updated(mock)).toBeDefined();
-  });
-
   it("refuses when the job cannot be read", async () => {
     const mock = mockSupabase([{ data: null, error: { message: "boom" } }]);
 
-    expect(await recordPayment(JOB_ID, "cash", "unpaid")).toEqual({ error: "boom" });
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({ error: "boom" });
     expect(updated(mock)).toBeUndefined();
   });
 
-  it("still records a payment", async () => {
-    const mock = mockSupabase([{ error: null }]);
+  it("refuses when the job does not exist", async () => {
+    const mock = mockSupabase([{ data: null, error: null }]);
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({ error: "Job not found" });
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("records a payment on this job, and only while it is not paid", async () => {
+    const mock = mockSupabase([
+      { data: { payment_status: "unpaid" }, error: null },
+      { data: { id: JOB_ID }, error: null },
+    ]);
 
     expect(await recordPayment(JOB_ID, "cash")).toEqual({ success: true });
-    expect(updated(mock)?.args[0]).toMatchObject({ payment_status: "paid", payment_method: "cash" });
+    expect(updated(mock)?.args[0]).toEqual({
+      payment_method: "cash",
+      payment_status: "paid",
+      paid_at: NOW.toISOString(),
+    });
+    expect(callsAfter(mock, "update").slice(0, 4)).toEqual([
+      { method: "eq", args: ["id", JOB_ID] },
+      { method: "neq", args: ["payment_status", "paid"] },
+      { method: "select", args: ["id"] },
+      { method: "maybeSingle", args: [] },
+    ]);
+  });
+
+  it("waives an unpaid job with no paid date", async () => {
+    const mock = mockSupabase([
+      { data: { payment_status: "unpaid" }, error: null },
+      { data: { id: JOB_ID }, error: null },
+    ]);
+
+    expect(await recordPayment(JOB_ID, "cash", "waived")).toEqual({ success: true });
+    expect(updated(mock)?.args[0]).toEqual({
+      payment_method: "cash",
+      payment_status: "waived",
+      paid_at: null,
+    });
+  });
+
+  it("refuses when the job became paid between the read and the write", async () => {
+    mockSupabase([
+      { data: { payment_status: "unpaid" }, error: null },
+      { data: null, error: null },
+    ]);
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({
+      error: expect.stringContaining("Mark as Unpaid"),
+    });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a failed write", async () => {
+    mockSupabase([
+      { data: { payment_status: "unpaid" }, error: null },
+      { data: null, error: { message: "write failed" } },
+    ]);
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({ error: "write failed" });
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
 
@@ -380,12 +547,35 @@ describe("updateJob — cannot move a job off paid", () => {
     }
   );
 
-  it("still updates a paid job that stays paid", async () => {
+  it("refuses when the job cannot be read", async () => {
+    const mock = mockSupabase([{ data: null, error: { message: "boom" } }]);
+
+    expect(await updateJob(JOB_ID, form("unpaid"))).toEqual({ error: "boom" });
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("refuses when the job does not exist", async () => {
+    const mock = mockSupabase([{ data: null, error: null }]);
+
+    expect(await updateJob(JOB_ID, form("unpaid"))).toEqual({ error: "Job not found" });
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("updates an unpaid job, by id", async () => {
+    const mock = mockSupabase([
+      { data: { payment_status: "unpaid" }, error: null },
+      { data: { id: JOB_ID }, error: null },
+    ]);
+
+    expect(await updateJob(JOB_ID, form("unpaid"))).toEqual({ data: { id: JOB_ID } });
+    expect(callsAfter(mock, "update")[0]).toEqual({ method: "eq", args: ["id", JOB_ID] });
+  });
+
+  it("skips the lookup when the form keeps the job paid, and updates by id", async () => {
     const mock = mockSupabase([{ data: { id: JOB_ID }, error: null }]);
 
-    const result = await updateJob(JOB_ID, form("paid"));
-
-    expect(result).toEqual({ data: { id: JOB_ID } });
-    expect(updated(mock)).toBeDefined();
+    expect(await updateJob(JOB_ID, form("paid"))).toEqual({ data: { id: JOB_ID } });
+    expect(tables(mock)).toEqual(["jobs"]);
+    expect(callsAfter(mock, "update")[0]).toEqual({ method: "eq", args: ["id", JOB_ID] });
   });
 });
