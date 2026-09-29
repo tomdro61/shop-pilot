@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { jobSchema, prepareJobData } from "@/lib/validators/job";
 import { todayET, shiftScheduledAtToNewDate } from "@/lib/utils";
+import { parseRONumber } from "@/lib/utils/format";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
 import type { JobStatus, PaymentMethod, PaymentStatus } from "@/types";
@@ -117,6 +118,10 @@ export async function getJobs(filters?: {
       `title.ilike.%${searchLower}%`,
       `notes.ilike.%${searchLower}%`,
     ];
+    const roNumber = parseRONumber(searchLower);
+    if (roNumber !== null) {
+      orParts.push(`ro_number.eq.${roNumber}`);
+    }
     if (customerIds.length > 0) {
       orParts.push(`customer_id.in.(${customerIds.join(",")})`);
     }

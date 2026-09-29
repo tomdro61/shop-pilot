@@ -50,6 +50,16 @@ export function formatRONumber(n: number | null): string {
   return `RO-${String(n).padStart(4, "0")}`;
 }
 
+// Parse a typed RO reference back to its number: "RO-1860", "ro 1860",
+// "#1860", "0042" -> 1860 / 42. Capped at 9 digits so the result always fits
+// the integer ro_number column.
+export function parseRONumber(input: string): number | null {
+  const match = input.trim().match(/^(?:ro)?[\s#-]*0*(\d{1,9})$/i);
+  if (!match) return null;
+  const n = Number(match[1]);
+  return n > 0 ? n : null;
+}
+
 // Format a date string (YYYY-MM-DD or ISO) for display without timezone shift.
 // new Date("2026-02-27") parses as UTC midnight which shows as the previous
 // day in US timezones. Appending T00:00:00 forces local-time interpretation.

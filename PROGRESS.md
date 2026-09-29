@@ -4921,3 +4921,39 @@ Review findings logged as CS-1..CS-5 in REVIEW-FINDINGS.md.
 - Contact edits still don't push to Stripe at edit time; the sync runs only when
   something needs the Stripe customer. Stripe receipts sent between an edit and
   the next invoice use the old address.
+
+## Session 80 — 2026-09-29 — Job search could not find a job by its RO number
+
+**Reported by the owner.** A job was marked paid by card by mistake. There is no
+UI to undo that, so the owner asked the AI assistant to set RO-1860 back to
+unpaid, and the assistant answered "No job found with RO-1860."
+
+**Cause.** The search branch of `getJobs` matched job title, job notes, customer
+first/last name and vehicle make/model. It did not look at `ro_number`. The
+`search_jobs` tool description said results *include* the RO number, which read
+as if it were searchable. The Jobs page search box calls the same function.
+
+**Fix.** `parseRONumber()` in `src/lib/utils/format.ts` turns `RO-1860`,
+`ro 1860`, `#1860`, `1860` and `RO-0042` into the number, capped at 9 digits so
+it fits the integer column. `getJobs` adds `ro_number.eq.<n>` to its OR filter
+when the search text parses. The `search_jobs` tool description now says RO
+numbers are searchable.
+
+**Files.** `src/lib/utils/format.ts`, `src/lib/utils/format.test.ts` (new),
+`src/lib/actions/jobs.ts`, `src/lib/ai/tools.ts`.
+
+**Verified.** Parser unit tests (19 cases), existing jobs tests, typecheck.
+**Not verified against the running system** — a read-only probe of the live
+database was blocked by the session's permission classifier, so the PostgREST
+filter itself has not been exercised. Search for an RO on the staging preview
+before merging.
+
+**Known gaps.**
+
+- Search still hides cancelled jobs unless the Cancelled filter is selected, so
+  a cancelled job is not findable by RO number through the assistant.
+- There is still no "mark as unpaid" control on the job page. `recordPayment`
+  already accepts a status and clears `paid_at`; a button would need a guard
+  that refuses jobs with a real Stripe payment or invoice attached.
+- The assistant's `update_job` path can set `payment_status` back to unpaid but
+  leaves `payment_method` and `paid_at` as they were.
