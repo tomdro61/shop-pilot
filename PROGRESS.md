@@ -4994,6 +4994,16 @@ through Stripe. `updateJob` and `recordPayment` now refuse to move a job off
 `src/lib/ai/handlers.ts`, `.claude/skills/verify-flow/SKILL.md` (new
 `mark-unpaid` flow), `ARCHITECTURE.md`.
 
+**Shipped.** Both changes merged to master (fast-forward) and deployed
+2026-09-29 (`f5583a5`) at the owner's request, before any click-through.
+`/post-deploy-check`: Vercel Ready in 52s, aliased to production; `/`,
+`/login`, `/dashboard`, the three public token pages and both public POST
+endpoints answered as expected; no migrations in the diff; Sentry showed no
+new production issues, minutes after the deploy. Nothing in the diff is
+visible without logging in, so "new code is live" rests on the Vercel alias
+and commit SHA, not on a probe of the feature. RO search and Mark as Unpaid
+are still unexercised in the running app.
+
 **What review changed.** Three reviewers, no Criticals.
 
 - The confirm dialog said a customer keeps a receipt already sent. The receipt
