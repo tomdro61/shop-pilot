@@ -5001,8 +5001,9 @@ through Stripe. `updateJob` and `recordPayment` now refuse to move a job off
 endpoints answered as expected; no migrations in the diff; Sentry showed no
 new production issues, minutes after the deploy. Nothing in the diff is
 visible without logging in, so "new code is live" rests on the Vercel alias
-and commit SHA, not on a probe of the feature. RO search and Mark as Unpaid
-are still unexercised in the running app.
+and commit SHA, not on a probe of the feature. The owner then tested Mark as
+Unpaid on production and confirmed it worked. RO search is still unexercised
+in the running app, as are the refusal paths of Mark as Unpaid.
 
 **What review changed.** Three reviewers, no Criticals.
 
