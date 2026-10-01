@@ -139,8 +139,8 @@ export function LineItemForm({
   const unitCost = form.watch("unit_cost");
   const watchCost = form.watch("cost");
   const total = (Number(quantity) || 0) * (Number(unitCost) || 0);
-  const marginPct = watchType === "part" && watchCost && unitCost
-    ? ((unitCost - watchCost) / unitCost) * 100
+  const markupPct = watchType === "part" && watchCost && unitCost
+    ? ((unitCost - watchCost) / watchCost) * 100
     : null;
 
   async function onSubmit(data: LineItemFormData) {
@@ -346,9 +346,9 @@ export function LineItemForm({
               <span className="text-lg font-semibold">
                 {formatCurrency(total)}
               </span>
-              {marginPct !== null && (
-                <span className={`ml-2 text-sm font-medium ${marginPct >= 30 ? "text-emerald-600 dark:text-emerald-400" : marginPct >= 15 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
-                  ({marginPct.toFixed(1)}% margin)
+              {markupPct !== null && (
+                <span className={`ml-2 text-sm font-medium ${markupPct >= 43 ? "text-emerald-600 dark:text-emerald-400" : markupPct >= 18 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                  ({markupPct.toFixed(1)}% markup)
                 </span>
               )}
             </div>

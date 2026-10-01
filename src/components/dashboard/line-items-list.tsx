@@ -190,11 +190,12 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
                         {item.type === "part" && item.cost != null && (
                           <span>
                             {" · "}cost {formatCurrency(item.cost)}
-                            {" · "}
-                            {item.unit_cost > 0
-                              ? ((item.unit_cost - item.cost) / item.unit_cost * 100).toFixed(0)
-                              : 0}
-                            % margin
+                            {item.cost > 0 && (
+                              <>
+                                {" · "}
+                                {((item.unit_cost - item.cost) / item.cost * 100).toFixed(0)}% markup
+                              </>
+                            )}
                           </span>
                         )}
                       </p>
