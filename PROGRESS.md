@@ -5049,3 +5049,24 @@ a local click-through writes to the production database. Run
   including for tools that write.
 - A local run against a job carrying a production PaymentIntent id always
   refuses, because `.env.local` holds a test-mode Stripe key.
+
+## Session 81 — 2026-10-01 — Line items show markup, not margin
+
+The owner read "50.0% margin" on a $380 tire costing $190 and expected 100%.
+The shop talks in markup (profit ÷ cost); the line-item UI showed margin
+(profit ÷ price).
+
+**Changed.** The job and estimate line-item dialogs and the job line-items
+list now show markup. Color bands keep their meaning, converted: green ≥ 43%
+markup (was 30% margin), amber ≥ 18% (was 15%), red below. The list hides the
+percentage when a part's cost is $0, where markup is undefined. Reports keep
+Gross Margin %, the accounting figure. A reviewer's grep found no other
+per-line margin display.
+
+**Files.** `src/components/forms/line-item-form.tsx`,
+`src/components/forms/estimate-line-item-form.tsx`,
+`src/components/dashboard/line-items-list.tsx`.
+
+**Shipped.** `ad37e7a`, merged to master (fast-forward) on 2026-10-01 at the
+owner's request. `/scoped-review` (one reviewer, forms scope): no findings.
+Typecheck clean. Not clicked through in the running app.
