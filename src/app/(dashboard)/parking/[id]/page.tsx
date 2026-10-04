@@ -170,6 +170,17 @@ export default async function ParkingDetailPage({
                     Created
                   </div>
                 </div>
+                <span aria-hidden className="self-stretch w-px bg-stone-300 dark:bg-stone-700" />
+                <div>
+                  <div className="text-base font-bold text-stone-900 dark:text-stone-50 leading-none">
+                    {reservation.confirmation_number.startsWith("APB_")
+                      ? "Airport Parking Boston"
+                      : "Website form"}
+                  </div>
+                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                    Source
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">

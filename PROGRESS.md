@@ -5121,3 +5121,8 @@ reservation rows share confirmation `GAP61199970` but name different vehicles
 first with no name check — same bug class, untouched this session.
 `createParkingInvoice` still texts the customer row's phone rather than the
 reservation's; the detail page still displays the reservation's.
+
+**Also.** The reservation detail header now shows a Source block: "Airport
+Parking Boston" when the confirmation number starts with `APB_` (the APB
+webhook's enforced format), otherwise "Website form". Display-only, no column;
+the Wix path is dead per the owner. `src/app/(dashboard)/parking/[id]/page.tsx`.
