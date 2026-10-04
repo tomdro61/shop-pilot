@@ -5126,3 +5126,14 @@ reservation's; the detail page still displays the reservation's.
 Parking Boston" when the confirmation number starts with `APB_` (the APB
 webhook's enforced format), otherwise "Website form". Display-only, no column;
 the Wix path is dead per the owner. `src/app/(dashboard)/parking/[id]/page.tsx`.
+
+**Shipped.** `9f47c3d`, merged to master (fast-forward) on 2026-10-04 at the
+owner's request, together with `5a6b7af` and `62c2ee7`. `/post-deploy-check`:
+Vercel deploy Ready in 47s and aliased to production; `/`, `/login`,
+`/dashboard`, the public approval and inspect pages, and the two public POST
+endpoints all answered as expected; Sentry showed no production errors in the
+hour after. The Source block is on an auth-gated page, so "new code is live"
+rests on the deploy alias and timing, not on a fetched string. The owner ran
+the SandraLee relink SQL in the Supabase editor and the read-back confirmed
+both rows on the new customer; the duplicate Stripe invoice void was still
+pending.
