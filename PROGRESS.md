@@ -5070,3 +5070,40 @@ per-line margin display.
 **Shipped.** `ad37e7a`, merged to master (fast-forward) on 2026-10-01 at the
 owner's request. `/scoped-review` (one reviewer, forms scope): no findings.
 Typecheck clean. Not clicked through in the running app.
+
+## Session 82 — 2026-10-04 — Parking invoice texted to the wrong customer
+
+Two people booked two cars on one email address (Sept 6, four minutes apart).
+`findOrCreateCustomer` matched the second booking to the first person's
+customer row by email alone, so no customer record was ever created for the
+second person. `createParkingInvoice` texts through `sendCustomerSMS`, which
+reads the phone off the customer row, so three "Hi SandraLee" invoice/receipt
+texts on Oct 3 went to Jeff Williams' phone, and both Stripe invoices were
+raised under his Stripe customer. The parking detail page showed the
+reservation's phone next to the Send-text checkbox, so the screen said one
+number while the code texted another.
+
+**Changed.** Matcher order is now phone first, then email, and an email hit
+only counts when first + last name match (case/whitespace-insensitive). The
+email query no longer `.limit(1)`s, since a shared inbox now legitimately
+yields several rows. Name mismatch creates a new customer: a duplicate row
+the manager can merge is the cheaper failure. Eight tests; mutation-checked
+(dropping the name comparison fails two).
+
+**Files.** `src/lib/parking-customer.ts`, `src/lib/parking-customer.test.ts`,
+`ARCHITECTURE.md`.
+
+**Not done (needs the owner).** Data cleanup was blocked by the permission
+classifier: create a customer for SandraLee Robinson (+1 858-472-3067,
+hisness@gmail.com) and relink reservations `5ab43dc6…` and `8fb22a45…` to it.
+The duplicate $80 Stripe invoice `in_1UMWfXLniXa9pCdE9HBz8xLQ` (17:24 UTC on
+the already-paid reservation) still needs voiding in Stripe — the local key is
+test mode — and the webhook leaves parking rows alone on void, so its local
+`invoices` row must be deleted by hand afterward. The Sept 6 and Sept 29
+reservation rows share confirmation `GAP61199970` but name different vehicles
+(Blazer vs Sierra), so neither was deleted.
+
+**Known.** `findOrCreateBookingCustomer` (appointments) still matches email
+first with no name check — same bug class, untouched this session.
+`createParkingInvoice` still texts the customer row's phone rather than the
+reservation's; the detail page still displays the reservation's.

@@ -177,7 +177,7 @@ Reusable templates with pre-filled line items, managed at `/presets`.
 - 5 public forms on BroadwayMotorsMA.com: self-park, shuttle, APB1, APB2, valet
 - Lot-specific confirmation pages with parking instructions
 - 6 AI tools for parking operations
-- Parking reservations auto-link to `customers` table via `findOrCreateParkingCustomer()` (dedup by email, then phone). Customer detail page shows "Parking History" section.
+- Parking reservations auto-link to `customers` table via `findOrCreateCustomer()` in `src/lib/parking-customer.ts` (dedup by phone, then email — an email hit only counts when first + last name also match, so two people sharing one inbox get two customer rows). Customer detail page shows "Parking History" section.
 - **Checkout flow** with lockbox selection modal (8 physical lockboxes) — sends pickup SMS with box number + code, or in-person checkout without SMS
 - "Send Specials" button for upselling services to checked-in customers
 - Reservation detail page shows two-column layout with customer/vehicle cards, trip timeline, and Key Pickup section (lockbox number + code or "in person")

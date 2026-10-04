@@ -16,12 +16,33 @@ interface FindOrCreateCustomerInput {
   phone: string;
 }
 
+function normalizeName(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function sameName(
+  candidate: { first_name: string; last_name: string },
+  input: FindOrCreateCustomerInput
+): boolean {
+  return (
+    normalizeName(candidate.first_name) === normalizeName(input.first_name) &&
+    normalizeName(candidate.last_name) === normalizeName(input.last_name)
+  );
+}
+
 /**
- * Find an existing customer or create a new one. Dedup: email first
- * (case-insensitive), then phone (E.164 normalized). An existing match is returned
- * as-is — `customerType` only stamps a NEWLY created row, so a caller never
- * reclassifies someone else's existing customer. Returns the customer ID, or null
- * on failure (the submission still saves without the link).
+ * Find an existing customer or create a new one. Dedup: phone first (E.164
+ * normalized), then email (case-insensitive) — but an email hit only counts when
+ * the customer's name also matches. A household often shares one inbox across
+ * two people booking two cars; linking the second booking to the first person's
+ * record routes their invoice SMS and Stripe invoice to the wrong phone and name
+ * (Oct 2026, two parking customers on one email). A duplicate customer row is
+ * the cheaper failure — the manager can merge it — so a name mismatch creates.
+ *
+ * An existing match is returned as-is — `customerType` only stamps a NEWLY
+ * created row, so a caller never reclassifies someone else's existing customer.
+ * Returns the customer ID, or null on failure (the submission still saves
+ * without the link).
  */
 export async function findOrCreateCustomer(
   input: FindOrCreateCustomerInput,
@@ -30,22 +51,7 @@ export async function findOrCreateCustomer(
   try {
     const supabase = createAdminClient();
 
-    // 1. Try matching by email (case-insensitive). Skip when no email — an empty
-    //    string `ilike ''` spuriously matches any customer stored with an empty
-    //    email, mis-linking the submission to an unrelated person. (The form often
-    //    has no email; this guard mirrors findOrCreateBookingCustomer.)
-    if (input.email && input.email.trim().length > 0) {
-      const { data: emailMatch } = await supabase
-        .from("customers")
-        .select("id")
-        .ilike("email", input.email)
-        .limit(1)
-        .single();
-
-      if (emailMatch) return emailMatch.id;
-    }
-
-    // 2. Try matching by phone (E.164 normalized)
+    // 1. Try matching by phone (E.164 normalized)
     const normalizedPhone = formatPhoneForStorage(input.phone);
     if (normalizedPhone) {
       const { data: phoneMatch } = await supabase
@@ -56,6 +62,22 @@ export async function findOrCreateCustomer(
         .single();
 
       if (phoneMatch) return phoneMatch.id;
+    }
+
+    // 2. Try matching by email (case-insensitive), accepting only a same-name
+    //    row. Skip when no email — an empty string `ilike ''` spuriously matches
+    //    any customer stored with an empty email, mis-linking the submission to
+    //    an unrelated person. (The form often has no email; this guard mirrors
+    //    findOrCreateBookingCustomer.) No .limit(1): once two people share an
+    //    email there are two rows, and the right one may not sort first.
+    if (input.email && input.email.trim().length > 0) {
+      const { data: emailMatches } = await supabase
+        .from("customers")
+        .select("id, first_name, last_name")
+        .ilike("email", input.email);
+
+      const emailMatch = emailMatches?.find((c) => sameName(c, input));
+      if (emailMatch) return emailMatch.id;
     }
 
     // 3. No match — create a new customer of the requested type
