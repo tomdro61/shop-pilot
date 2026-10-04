@@ -76,7 +76,7 @@ export async function persistQuoteRequest(fields: QuoteFields): Promise<PersistR
   const supabase = createAdminClient();
   const e164 = toE164(fields.phone);
 
-  // find-or-create customer (dedup by email then phone). Best-effort: a null id
+  // find-or-create customer. Best-effort: a null id
   // still saves the request — the manager links it manually — mirroring the
   // booking flow's null-customer handling. Logged loudly, never silently dropped.
   let customerId: string | null = null;

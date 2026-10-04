@@ -1,11 +1,12 @@
+import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPhoneForStorage } from "@/lib/validators/customer";
 
 // Shared customer find-or-create for public form submissions. The file name is
 // historical (it began parking-only); it now also serves estimate requests, which
-// pass customer_type 'retail'. Booking has a near-identical sibling at
-// src/lib/appointments/find-or-create-customer.ts; the two are slated to merge
-// into one helper in V1.5.
+// pass customer_type 'retail'. Booking has an older sibling at
+// src/lib/appointments/find-or-create-customer.ts (email first, no name check);
+// the two are slated to merge into one helper in V1.5.
 
 type CustomerType = "parking" | "retail";
 
@@ -31,56 +32,83 @@ function sameName(
 }
 
 /**
- * Find an existing customer or create a new one. Dedup: phone first (E.164
- * normalized), then email (case-insensitive) — but an email hit only counts when
- * the customer's name also matches. A household often shares one inbox across
- * two people booking two cars; linking the second booking to the first person's
- * record routes their invoice SMS and Stripe invoice to the wrong phone and name
- * (Oct 2026, two parking customers on one email). A duplicate customer row is
- * the cheaper failure — the manager can merge it — so a name mismatch creates.
+ * Dedup: phone first (E.164 normalized), then email (case-insensitive) — but an
+ * email hit only counts when the customer's name also matches. Two people can
+ * share one inbox and book two cars; linking the second booking to the first
+ * person's record texts the invoice to the other person's phone and raises the
+ * Stripe invoice under their name (Oct 2026, two parking customers on one
+ * email). A duplicate customer row is the cheaper failure — it can be deleted
+ * and the reservation relinked by hand — so a name mismatch creates.
  *
- * An existing match is returned as-is — `customerType` only stamps a NEWLY
- * created row, so a caller never reclassifies someone else's existing customer.
- * Returns the customer ID, or null on failure (the submission still saves
- * without the link).
+ * An existing match is returned as-is — the type arg is not applied to an
+ * existing row. Returns null when a lookup or the insert fails (the submission
+ * still saves without the link). A failed lookup must not fall through to the
+ * insert: a transient DB error would otherwise spawn a duplicate that shares
+ * the original's phone, and phone-first matching would then pick between the
+ * two at random on every later booking.
  */
 export async function findOrCreateCustomer(
   input: FindOrCreateCustomerInput,
   customerType: CustomerType
 ): Promise<string | null> {
-  try {
-    const supabase = createAdminClient();
+  // Outside the try so a missing service-role key surfaces as a thrown
+  // deployment error rather than as a quiet "no customer link".
+  const supabase = createAdminClient();
 
-    // 1. Try matching by phone (E.164 normalized)
+  try {
     const normalizedPhone = formatPhoneForStorage(input.phone);
     if (normalizedPhone) {
-      const { data: phoneMatch } = await supabase
+      const { data: phoneMatch, error: phoneErr } = await supabase
         .from("customers")
         .select("id")
         .eq("phone", normalizedPhone)
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      if (phoneErr) {
+        console.error("[findOrCreateCustomer] phone lookup failed:", phoneErr.message);
+        Sentry.captureException(phoneErr, {
+          tags: { source: "find-or-create-customer", path: "phone-lookup" },
+          extra: { phone: normalizedPhone },
+        });
+        return null;
+      }
 
       if (phoneMatch) return phoneMatch.id;
     }
 
-    // 2. Try matching by email (case-insensitive), accepting only a same-name
-    //    row. Skip when no email — an empty string `ilike ''` spuriously matches
-    //    any customer stored with an empty email, mis-linking the submission to
-    //    an unrelated person. (The form often has no email; this guard mirrors
-    //    findOrCreateBookingCustomer.) No .limit(1): once two people share an
-    //    email there are two rows, and the right one may not sort first.
+    // Skip when no email — an empty string `ilike ''` matches every customer
+    // stored with email '' (the estimate-request form and the Wix webhook can
+    // pass an empty email), mis-linking the submission to an unrelated person.
+    // No .limit(1): once two people share an email there are two rows, and the
+    // right one may not sort first.
     if (input.email && input.email.trim().length > 0) {
-      const { data: emailMatches } = await supabase
+      const { data: emailMatches, error: emailErr } = await supabase
         .from("customers")
         .select("id, first_name, last_name")
         .ilike("email", input.email);
 
-      const emailMatch = emailMatches?.find((c) => sameName(c, input));
+      if (emailErr) {
+        console.error("[findOrCreateCustomer] email lookup failed:", emailErr.message);
+        Sentry.captureException(emailErr, {
+          tags: { source: "find-or-create-customer", path: "email-lookup" },
+          extra: { email: input.email },
+        });
+        return null;
+      }
+
+      const emailMatch = emailMatches.find((c) => sameName(c, input));
       if (emailMatch) return emailMatch.id;
+
+      if (emailMatches.length > 0) {
+        console.warn(
+          `[findOrCreateCustomer] email ${input.email} already belongs to customer(s) ${emailMatches
+            .map((c) => c.id)
+            .join(", ")} with a different name; creating a new row for ${input.first_name} ${input.last_name}`
+        );
+      }
     }
 
-    // 3. No match — create a new customer of the requested type
     const { data: newCustomer, error } = await supabase
       .from("customers")
       .insert({

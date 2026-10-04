@@ -5086,12 +5086,26 @@ number while the code texted another.
 **Changed.** Matcher order is now phone first, then email, and an email hit
 only counts when first + last name match (case/whitespace-insensitive). The
 email query no longer `.limit(1)`s, since a shared inbox now legitimately
-yields several rows. Name mismatch creates a new customer: a duplicate row
-the manager can merge is the cheaper failure. Eight tests; mutation-checked
-(dropping the name comparison fails two).
+yields several rows. Name mismatch creates a new customer and logs a warning
+naming the rows that share the email: a duplicate row that can be deleted and
+relinked by hand is the cheaper failure (there is no merge feature). Both
+lookups now check `error`, log to Sentry, and return null instead of falling
+through to insert — a DB blip used to spawn a duplicate sharing the original's
+phone, which phone-first matching would then pick between at random.
+`createAdminClient()` moved outside the try, mirroring the booking sibling.
+Eleven tests; mutation-checked (dropping the name comparison fails two).
+
+`/scoped-review` (three reviewers): no Criticals. Fixed from findings: the
+silent duplicate-creation branch, the discarded lookup errors (pre-existing,
+known since the booking sibling fixed it), two false comment claims ("manager
+can merge", "the form often has no email"), and stale comments in
+`quote-requests/submit.ts` and the booking sibling's header. Left: `ilike`
+treats `_` in an email as a wildcard (pre-existing, Low, neutralised by the
+name check); the booking sibling's own email-first matching.
 
 **Files.** `src/lib/parking-customer.ts`, `src/lib/parking-customer.test.ts`,
-`ARCHITECTURE.md`.
+`src/lib/quote-requests/submit.ts` (comment),
+`src/lib/appointments/find-or-create-customer.ts` (comments), `ARCHITECTURE.md`.
 
 **Not done (needs the owner).** Data cleanup was blocked by the permission
 classifier: create a customer for SandraLee Robinson (+1 858-472-3067,

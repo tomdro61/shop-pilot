@@ -1,13 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
+import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findOrCreateCustomer } from "./parking-customer";
 import { createSupabaseMock } from "@/lib/actions/__test-helpers__/supabase-mock";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 function baseInput(overrides: Record<string, unknown> = {}) {
@@ -64,6 +68,7 @@ describe("findOrCreateCustomer", () => {
 
     expect(id).toBe("cust-phone");
     expect(mock.calls).toContainEqual({ method: "eq", args: ["phone", "+16175551234"] });
+    expect(mock.calls).toContainEqual({ method: "maybeSingle", args: [] });
     expect(mock.calls.find((c) => c.method === "ilike")).toBeUndefined();
     expect(mock.calls.find((c) => c.method === "insert")).toBeUndefined();
   });
@@ -82,7 +87,12 @@ describe("findOrCreateCustomer", () => {
 
     expect(id).toBe("cust-existing");
     expect(mock.calls).toContainEqual({ method: "ilike", args: ["email", "maria@example.com"] });
+    expect(mock.calls).toContainEqual({
+      method: "select",
+      args: ["id, first_name, last_name"],
+    });
     expect(mock.calls.find((c) => c.method === "insert")).toBeUndefined();
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it("creates a new customer when the email matches but the name does not (shared household inbox)", async () => {
@@ -114,6 +124,8 @@ describe("findOrCreateCustomer", () => {
       email: "shared@example.com",
       phone: "+18585550000",
     });
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.warn).mock.calls[0][0]).toContain("cust-jeff");
   });
 
   it("picks the same-name row when several customers share the email, ignoring case and spacing", async () => {
@@ -153,6 +165,7 @@ describe("findOrCreateCustomer", () => {
     const between = mock.calls.slice(emailSelectIndex, insertIndex);
     expect(between.find((c) => c.method === "limit")).toBeUndefined();
     expect(between.find((c) => c.method === "single")).toBeUndefined();
+    expect(between.find((c) => c.method === "maybeSingle")).toBeUndefined();
   });
 
   it("skips the email lookup when no email (no spurious '' match), falls through to insert", async () => {
@@ -168,5 +181,46 @@ describe("findOrCreateCustomer", () => {
     // The empty-email guard must prevent any email ilike query (which would
     // otherwise mis-link to a customer stored with an empty email).
     expect(mock.calls.find((c) => c.method === "ilike")).toBeUndefined();
+  });
+
+  it("returns null without inserting when the phone lookup errors", async () => {
+    const mock = createSupabaseMock([
+      { data: null, error: { message: "connection reset" } },
+    ]);
+    useMock(mock);
+
+    const id = await findOrCreateCustomer(baseInput(), "parking");
+
+    expect(id).toBeNull();
+    expect(mock.calls.find((c) => c.method === "ilike")).toBeUndefined();
+    expect(mock.calls.find((c) => c.method === "insert")).toBeUndefined();
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null without inserting when the email lookup errors", async () => {
+    const mock = createSupabaseMock([
+      { data: null, error: null }, // phone lookup miss
+      { data: null, error: { message: "statement timeout" } },
+    ]);
+    useMock(mock);
+
+    const id = await findOrCreateCustomer(baseInput(), "parking");
+
+    expect(id).toBeNull();
+    expect(mock.calls.find((c) => c.method === "insert")).toBeUndefined();
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null when the insert fails", async () => {
+    const mock = createSupabaseMock([
+      { data: null, error: null },
+      { data: [], error: null },
+      { data: null, error: { message: "duplicate key" } },
+    ]);
+    useMock(mock);
+
+    const id = await findOrCreateCustomer(baseInput(), "parking");
+
+    expect(id).toBeNull();
   });
 });

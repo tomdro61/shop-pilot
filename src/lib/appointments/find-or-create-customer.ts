@@ -1,10 +1,12 @@
 // Find-or-create the customer record behind an online appointment booking.
 //
-// Mirrors findOrCreateCustomer (src/lib/parking-customer.ts) BUT always stamps
-// `customer_type: 'retail'`. The two helpers will
-// consolidate into a single shared `findOrCreateCustomer(input, type)` in V1.5
-// (per BOOKING_TECHNICAL_PLAN.md §13 #4); for V1 they live as siblings to
-// avoid bundling a wider refactor with the booking work.
+// Older sibling of findOrCreateCustomer (src/lib/parking-customer.ts). Differs:
+// email first with no name check (the shared-inbox mis-link fixed there in
+// Oct 2026 is still open here), and always stamps `customer_type: 'retail'`.
+// The two helpers will consolidate into a single shared
+// `findOrCreateCustomer(input, type)` in V1.5 (per BOOKING_TECHNICAL_PLAN.md
+// §13 #4); for V1 they live as siblings to avoid bundling a wider refactor with
+// the booking work.
 //
 // Dedup strategy: email first (case-insensitive), then phone (E.164 normalized).
 // Per BOOKING_TECHNICAL_PLAN.md §5.1 step 1.
@@ -35,8 +37,9 @@ export async function findOrCreateBookingCustomer(
   const supabase = createAdminClient();
 
   try {
-    // 1. Email match (case-insensitive). Skip when no email — empty-string ilike
-    //    matches no rows but still wastes a roundtrip.
+    // 1. Email match (case-insensitive). Skip when no email — an empty-string
+    //    ilike matches every customer stored with email '' (this function
+    //    writes '' when the form had none).
     if (input.email && input.email.trim().length > 0) {
       const { data: emailMatch, error: emailErr } = await supabase
         .from("customers")
