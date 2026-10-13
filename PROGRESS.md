@@ -5286,3 +5286,11 @@ customer's history (`.env.local` has live keys, so this is latent);
 (2) `createInvoiceFromJob`'s fire-and-forget sends refuse before logging on
 an invalid phone or missing email, so the toast says "sent via text" and the
 history shows nothing.
+
+**Deployed 2026-10-13.** The owner checked EZY Rent's page on the staging
+preview and asked to merge. `master` fast-forwarded to `8884f58`; Vercel
+production `shop-pilot-22ke3n5mf` (built from that SHA) is aliased to
+`shop-pilot-rosy.vercel.app`. `/post-deploy-check`: public routes return the
+expected codes (login 200, dashboard 307, approval and DVI pages render their
+not-found copy for a fake token, empty POSTs 400); no migration this session;
+Sentry shows no production issue first seen or active around the deploy.
