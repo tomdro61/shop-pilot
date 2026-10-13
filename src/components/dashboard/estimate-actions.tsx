@@ -19,6 +19,7 @@ import {
   sendEstimate,
   resendEstimate,
   deleteEstimate,
+  duplicateEstimate,
   markEstimateApproved,
   markEstimateDeclined,
   convertEstimateToJob,
@@ -28,6 +29,7 @@ import {
   ArrowRight,
   Check,
   Copy,
+  CopyPlus,
   HandCoins,
   RotateCw,
   Send,
@@ -43,6 +45,7 @@ interface EstimateActionsProps {
   approvalToken: string | null;
   jobId: string | null;
   customerId: string | null;
+  editedSinceSent: boolean;
 }
 
 export function EstimateActions({
@@ -51,6 +54,7 @@ export function EstimateActions({
   approvalToken,
   jobId,
   customerId,
+  editedSinceSent,
 }: EstimateActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -91,8 +95,36 @@ export function EstimateActions({
       return;
     }
 
-    toast.success("Estimate resent via SMS");
+    if (result.data?.deliveryWarning) {
+      toast.warning(`Estimate resent — ${result.data.deliveryWarning}`);
+    } else {
+      toast.success("Estimate resent by text and email");
+    }
+    router.refresh();
   }
+
+  async function handleDuplicate() {
+    if (loading) return;
+    setLoading(true);
+    const result = await duplicateEstimate(estimateId);
+    setLoading(false);
+
+    if ("error" in result && result.error) {
+      toast.error(result.error);
+      return;
+    }
+    if ("data" in result && result.data?.id) {
+      toast.success("Draft copy created");
+      router.push(`/estimates/${result.data.id}`);
+    }
+  }
+
+  const duplicateButton = (
+    <Button variant="outline" onClick={handleDuplicate} disabled={loading}>
+      <CopyPlus className="mr-2 h-4 w-4" />
+      Duplicate
+    </Button>
+  );
 
   async function handleCopyLink() {
     const url =
@@ -200,7 +232,8 @@ export function EstimateActions({
               <AlertDialogDescription>
                 This will mark the estimate as sent and generate an approval link.
                 You can then share the link with the customer via text or email.
-                The estimate cannot be edited after sending.
+                You can still change line items afterward and resend until the
+                customer approves or declines.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -216,6 +249,8 @@ export function EstimateActions({
           <HandCoins className="mr-2 h-4 w-4" />
           Mark approved
         </Button>
+
+        {duplicateButton}
 
         <DeleteConfirmDialog
           title="Delete Estimate"
@@ -237,7 +272,7 @@ export function EstimateActions({
       <div className="flex flex-wrap gap-2">
         <Button onClick={handleResend} disabled={loading}>
           <RotateCw className="mr-2 h-4 w-4" />
-          {loading ? "Sending..." : "Resend"}
+          {loading ? "Sending..." : editedSinceSent ? "Resend updated estimate" : "Resend"}
         </Button>
         <Button variant="outline" onClick={handleCopyLink}>
           {copied ? (
@@ -278,6 +313,8 @@ export function EstimateActions({
           </AlertDialogContent>
         </AlertDialog>
 
+        {duplicateButton}
+
         <DeleteConfirmDialog
           title="Delete Estimate"
           description="This estimate has been sent to the customer. Deleting it will invalidate the approval link."
@@ -301,6 +338,7 @@ export function EstimateActions({
             View job
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
+          {duplicateButton}
         </div>
       );
     }
@@ -310,9 +348,10 @@ export function EstimateActions({
           <Workflow className="mr-2 h-4 w-4" />
           {loading ? "Converting..." : "Convert to Job"}
         </Button>
+        {duplicateButton}
       </div>
     );
   }
 
-  return null;
+  return <div className="flex flex-wrap gap-2">{duplicateButton}</div>;
 }

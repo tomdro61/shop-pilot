@@ -310,6 +310,19 @@ export const tools: Anthropic.Tool[] = [
     },
   },
 
+  {
+    name: "duplicate_job",
+    description:
+      "Create a fresh job for the same customer and vehicle by copying an existing job's title, category, notes, and line items. The copy starts as not_started, unpaid, dated today, with no tech, mileage, or drop-off time. Use when the customer is back for a repeat of earlier work. Confirm with the user before calling.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "UUID of the job to copy" },
+      },
+      required: ["id"],
+    },
+  },
+
   // ── Job Line Item tools ─────────────────────────────────────────
   {
     name: "create_line_item",
@@ -375,6 +388,30 @@ export const tools: Anthropic.Tool[] = [
     },
   },
   {
+    name: "duplicate_estimate",
+    description:
+      "Create a new DRAFT estimate by copying an existing estimate's customer, vehicle, notes, and line items. The copy is standalone (not attached to a job) and gets its own approval link when sent. Use this to revise an estimate the customer already approved or declined, since those can't be edited. Confirm with the user before calling.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "UUID of the estimate to copy" },
+      },
+      required: ["id"],
+    },
+  },
+  {
+    name: "resend_estimate",
+    description:
+      "Resend a sent estimate's approval link to the customer by SMS and email. Use after editing a sent estimate so the customer sees the revised total. Only works on sent estimates.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "Estimate UUID" },
+      },
+      required: ["id"],
+    },
+  },
+  {
     name: "get_estimate",
     description: "Get full estimate details including line items and related job/customer/vehicle info.",
     input_schema: {
@@ -411,7 +448,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "create_estimate_line_item",
     description:
-      "Add a line item to a draft estimate. Will fail if the estimate is not in 'draft' status.",
+      "Add a line item to a draft or sent estimate. Will fail once the estimate is approved or declined — duplicate it instead. Editing a sent estimate flags it as edited; the manager should resend so the customer sees the new total.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -429,7 +466,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "update_estimate_line_item",
     description:
-      "Update a line item on a draft estimate. Will fail if the estimate is not in 'draft' status.",
+      "Update a line item on a draft or sent estimate. Will fail once the estimate is approved or declined — duplicate it instead.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -448,7 +485,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "delete_estimate_line_item",
     description:
-      "Delete a line item from a draft estimate. Will fail if estimate is not in 'draft' status. Always confirm with the user.",
+      "Delete a line item from a draft or sent estimate. Will fail once the estimate is approved or declined. Always confirm with the user.",
     input_schema: {
       type: "object" as const,
       properties: {

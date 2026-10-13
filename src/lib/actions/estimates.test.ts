@@ -81,8 +81,8 @@ describe("updateEstimateLineItem ownership guard (C-1)", () => {
     expect(draftLookup.calls).toContainEqual({ method: "eq", args: ["estimate_id", ESTIMATE_A] });
   });
 
-  it("blocks updates to non-draft estimates", async () => {
-    const sentEstimate = createSupabaseMock({ data: { id: ESTIMATE_A, status: "sent" }, error: null });
+  it("blocks updates once the estimate is approved", async () => {
+    const sentEstimate = createSupabaseMock({ data: { id: ESTIMATE_A, status: "approved" }, error: null });
     vi.mocked(createClient).mockResolvedValueOnce(
       sentEstimate.client as unknown as Awaited<ReturnType<typeof createClient>>,
     );
@@ -96,7 +96,9 @@ describe("updateEstimateLineItem ownership guard (C-1)", () => {
       part_number: "",
     });
 
-    expect(result).toEqual({ error: "Can only edit items on draft estimates" });
+    expect(result).toEqual({
+      error: "Only draft or sent estimates can be edited — duplicate this one to make changes",
+    });
     // Update should never have been issued.
     expect(sentEstimate.calls.find((c) => c.method === "update")).toBeUndefined();
   });
@@ -131,7 +133,7 @@ describe("deleteEstimateLineItem ownership guard (C-2)", () => {
     expect(mock.calls.find((c) => c.method === "delete")).toBeDefined();
   });
 
-  it("blocks deletes on non-draft estimates without issuing a delete query", async () => {
+  it("blocks deletes on approved estimates without issuing a delete query", async () => {
     const approved = createSupabaseMock({ data: { id: ESTIMATE_A, status: "approved" }, error: null });
     vi.mocked(createClient).mockResolvedValueOnce(
       approved.client as unknown as Awaited<ReturnType<typeof createClient>>,
@@ -139,7 +141,9 @@ describe("deleteEstimateLineItem ownership guard (C-2)", () => {
 
     const result = await deleteEstimateLineItem(LINE_ITEM_X, ESTIMATE_A);
 
-    expect(result).toEqual({ error: "Can only delete items from draft estimates" });
+    expect(result).toEqual({
+      error: "Only draft or sent estimates can be edited — duplicate this one to make changes",
+    });
     expect(approved.calls.find((c) => c.method === "delete")).toBeUndefined();
   });
 });

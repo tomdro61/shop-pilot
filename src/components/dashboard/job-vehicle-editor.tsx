@@ -36,6 +36,32 @@ interface JobVehicleEditorProps {
 }
 
 export function JobVehicleEditor({ jobId, customerId, currentVehicleId }: JobVehicleEditorProps) {
+  return (
+    <VehiclePickerEditor
+      customerId={customerId}
+      currentVehicleId={currentVehicleId}
+      onAssign={async (vehicleId) => {
+        const result = await updateJobFields(jobId, { vehicle_id: vehicleId });
+        return "error" in result && result.error
+          ? typeof result.error === "string" ? result.error : "Update failed"
+          : null;
+      }}
+    />
+  );
+}
+
+interface VehiclePickerEditorProps {
+  customerId: string | null;
+  currentVehicleId: string | null;
+  // Resolves to an error message, or null on success.
+  onAssign: (vehicleId: string | null) => Promise<string | null>;
+}
+
+export function VehiclePickerEditor({
+  customerId,
+  currentVehicleId,
+  onAssign,
+}: VehiclePickerEditorProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
@@ -62,10 +88,10 @@ export function JobVehicleEditor({ jobId, customerId, currentVehicleId }: JobVeh
       return;
     }
     setSaving(true);
-    const result = await updateJobFields(jobId, { vehicle_id: vehicleId });
+    const error = await onAssign(vehicleId);
     setSaving(false);
-    if ("error" in result && result.error) {
-      toast.error(typeof result.error === "string" ? result.error : "Update failed");
+    if (error) {
+      toast.error(error);
       return;
     }
     toast.success(vehicleId ? "Vehicle updated" : "Vehicle cleared");

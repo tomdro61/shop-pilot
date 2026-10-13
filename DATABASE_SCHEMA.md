@@ -50,10 +50,13 @@ When a migration ships, update three things: the migration file, `src/types/supa
 `id, name, category, line_items (JSONB), created_at`
 
 ## `estimates`
-`id, job_id, status, sent_at, approved_at, declined_at, approval_token, tax_rate, charge_sales_tax, created_at`
+`id, job_id, status, sent_at, last_sent_at, last_edited_at, approved_at, declined_at, approval_token, tax_rate, charge_sales_tax, created_at`
 
-- **`status`** — `draft | sent | approved | declined`
-- **`approval_token`** — used for public approval page links
+- **`status`** — `draft | sent | approved | declined`. Line items and the vehicle are editable in `draft` **and** `sent`; `approved` / `declined` are frozen (duplicate to revise).
+- **`approval_token`** — used for public approval page links. Kept across edits and resends — the customer's link always shows the current line items.
+- **`sent_at`** — the ORIGINAL send. The inbox ages open estimates from it, so a resend must not bump it.
+- **`last_sent_at`** — timestamptz, nullable (Session 83). Stamped by `resendEstimate` only when at least one channel delivered. Null means "never resent".
+- **`last_edited_at`** — timestamptz, nullable (Session 83). Stamped by every line-item create/update/delete and by `updateEstimateFields`. The detail page shows "edited since last sent" when `status = 'sent'` and `last_edited_at > coalesce(last_sent_at, sent_at)`. Null means "not edited since the column shipped".
 - **`charge_sales_tax`** — boolean, NOT NULL default true (Session 58). Inherited from the job at creation (`createEstimateFromJob`); standalone estimates default true. The approval page + estimate email honor it so the customer-facing total matches the invoice.
 
 ## `invoices`

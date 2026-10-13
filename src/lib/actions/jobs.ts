@@ -493,6 +493,97 @@ export async function deleteJob(id: string) {
   return { success: true };
 }
 
+// A fresh job for the same customer and vehicle with the line items, title,
+// category, notes, and tax setting copied. Everything that describes THIS
+// visit is reset: status, dates, drop-off time, tech, mileage, and every
+// payment field. The source's estimate, invoice, and inspection stay with
+// the source.
+export async function duplicateJob(id: string) {
+  const auth = await requireManager();
+  if (!auth.ok) return { error: auth.error };
+
+  const supabase = await createClient();
+
+  const { data: source, error: fetchError } = await supabase
+    .from("jobs")
+    .select("id, customer_id, vehicle_id, title, category, notes, charge_sales_tax")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!source) return { error: "Job not found" };
+
+  const { data: lineItems, error: lineItemsError } = await supabase
+    .from("job_line_items")
+    .select("type, description, quantity, unit_cost, cost, part_number, category")
+    .eq("job_id", id)
+    .order("created_at")
+    .order("id");
+
+  if (lineItemsError) return { error: lineItemsError.message };
+
+  const { data: job, error } = await supabase
+    .from("jobs")
+    .insert({
+      customer_id: source.customer_id,
+      vehicle_id: source.vehicle_id,
+      title: source.title,
+      category: source.category,
+      notes: source.notes,
+      charge_sales_tax: source.charge_sales_tax,
+      status: "not_started",
+      date_received: todayET(),
+      date_finished: null,
+      scheduled_at: null,
+      assigned_tech: null,
+      mileage_in: null,
+      payment_status: "unpaid",
+      payment_method: null,
+      paid_at: null,
+      stripe_payment_intent_id: null,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { error: error.message };
+
+  if (lineItems && lineItems.length > 0) {
+    const { error: copyError } = await supabase.from("job_line_items").insert(
+      lineItems.map((li) => ({
+        job_id: job.id,
+        type: li.type,
+        description: li.description,
+        quantity: li.quantity,
+        unit_cost: li.unit_cost,
+        cost: li.type === "part" ? (li.cost ?? null) : null,
+        part_number: li.part_number,
+        category: li.category,
+      }))
+    );
+
+    if (copyError) {
+      const { error: rollbackError } = await supabase.from("jobs").delete().eq("id", job.id);
+      if (rollbackError) {
+        console.error("[duplicateJob] rollback failed — orphan job left in DB", {
+          rollbackError,
+          copyError,
+          jobId: job.id,
+          sourceId: id,
+        });
+        return {
+          error: `Couldn't copy line items and rollback failed — the job may need manual cleanup: ${copyError.message}`,
+        };
+      }
+      return { error: `Failed to copy line items: ${copyError.message}` };
+    }
+  }
+
+  revalidatePath("/jobs");
+  revalidatePath("/dashboard");
+  revalidatePath(`/customers/${source.customer_id}`);
+  return { data: { id: job.id } };
+}
+
 export async function getLineItemCategories() {
   const supabase = await createClient();
 

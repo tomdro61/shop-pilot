@@ -30,8 +30,9 @@ import { updateJobFields } from "@/lib/actions/jobs";
 import { searchCustomersForPicker } from "@/lib/actions/customers";
 import { formatCustomerName, formatPhone } from "@/lib/utils/format";
 import { Pencil } from "lucide-react";
+import type { ReactNode } from "react";
 
-type CustomerOption = {
+export type CustomerOption = {
   id: string;
   first_name: string;
   last_name: string;
@@ -45,6 +46,41 @@ interface JobCustomerEditorProps {
 }
 
 export function JobCustomerEditor({ jobId, currentCustomer, hasVehicle }: JobCustomerEditorProps) {
+  return (
+    <CustomerPickerEditor
+      currentCustomer={currentCustomer}
+      onConfirm={async (customer) => {
+        const result = await updateJobFields(jobId, {
+          customer_id: customer.id,
+          vehicle_id: null,
+        });
+        return "error" in result && result.error
+          ? typeof result.error === "string" ? result.error : "Update failed"
+          : null;
+      }}
+      describeChange={(name) => (
+        <>
+          This job will be reassigned to <strong>{name}</strong>.
+          {hasVehicle && " The vehicle association will be cleared, since vehicles belong to the previous customer."}
+          {" Existing line items, estimates, and invoices stay attached to the job."}
+        </>
+      )}
+    />
+  );
+}
+
+interface CustomerPickerEditorProps {
+  currentCustomer: CustomerOption | null;
+  // Resolves to an error message, or null on success.
+  onConfirm: (customer: CustomerOption) => Promise<string | null>;
+  describeChange: (newCustomerName: string) => ReactNode;
+}
+
+export function CustomerPickerEditor({
+  currentCustomer,
+  onConfirm,
+  describeChange,
+}: CustomerPickerEditorProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -72,13 +108,10 @@ export function JobCustomerEditor({ jobId, currentCustomer, hasVehicle }: JobCus
   async function confirm() {
     if (!pending) return;
     setSaving(true);
-    const result = await updateJobFields(jobId, {
-      customer_id: pending.id,
-      vehicle_id: null,
-    });
+    const error = await onConfirm(pending);
     setSaving(false);
-    if ("error" in result && result.error) {
-      toast.error(typeof result.error === "string" ? result.error : "Update failed");
+    if (error) {
+      toast.error(error);
       return;
     }
     toast.success(`Customer changed to ${formatCustomerName(pending)}`);
@@ -141,13 +174,7 @@ export function JobCustomerEditor({ jobId, currentCustomer, hasVehicle }: JobCus
           <AlertDialogHeader>
             <AlertDialogTitle>Change customer?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pending && (
-                <>
-                  This job will be reassigned to <strong>{formatCustomerName(pending)}</strong>.
-                  {hasVehicle && " The vehicle association will be cleared, since vehicles belong to the previous customer."}
-                  {" Existing line items, estimates, and invoices stay attached to the job."}
-                </>
-              )}
+              {pending && describeChange(formatCustomerName(pending))}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

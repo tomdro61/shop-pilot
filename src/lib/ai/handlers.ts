@@ -21,6 +21,7 @@ import {
   updateJobStatus,
   deleteJob,
   cancelJob,
+  duplicateJob,
   getLineItemCategories,
   recordPayment,
   markJobUnpaid,
@@ -35,6 +36,8 @@ import {
   getEstimate,
   getEstimateForJob,
   sendEstimate,
+  resendEstimate,
+  duplicateEstimate,
   createEstimateLineItem,
   updateEstimateLineItem,
   deleteEstimateLineItem,
@@ -277,6 +280,10 @@ export async function executeToolCall(
         const result = await cancelJob(str(toolInput.id));
         return JSON.stringify(result);
       }
+      case "duplicate_job": {
+        const result = await duplicateJob(str(toolInput.id));
+        return JSON.stringify(result);
+      }
 
       // ── Job Line Items ─────────────────────────────────────
       case "create_line_item": {
@@ -329,6 +336,14 @@ export async function executeToolCall(
       }
       case "send_estimate": {
         const result = await sendEstimate(str(toolInput.id));
+        return JSON.stringify(result);
+      }
+      case "resend_estimate": {
+        const result = await resendEstimate(str(toolInput.id));
+        return JSON.stringify(result);
+      }
+      case "duplicate_estimate": {
+        const result = await duplicateEstimate(str(toolInput.id));
         return JSON.stringify(result);
       }
       case "create_estimate_line_item": {

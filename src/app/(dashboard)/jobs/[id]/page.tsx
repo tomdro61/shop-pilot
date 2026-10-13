@@ -17,6 +17,7 @@ import { InvoiceSection } from "@/components/dashboard/invoice-section";
 import { DviSection } from "@/components/dashboard/dvi-section";
 import { JobDeleteButton } from "@/components/dashboard/job-delete-button";
 import { JobCancelButton } from "@/components/dashboard/job-cancel-button";
+import { JobDuplicateButton } from "@/components/dashboard/job-duplicate-button";
 import { SendReadyTextButton } from "@/components/dashboard/send-ready-text-button";
 import { SendReceiptButton } from "@/components/dashboard/send-receipt-button";
 import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
@@ -122,6 +123,7 @@ export default async function JobDetailPage({
                 Print
               </Button>
             </Link>
+            <JobDuplicateButton jobId={id} />
             {job.status !== "complete" && job.status !== "cancelled" && (
               <JobCancelButton jobId={id} />
             )}

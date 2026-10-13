@@ -9,6 +9,8 @@ import {
   EstimateLineItemsAddButton,
 } from "@/components/dashboard/estimate-line-items-list";
 import { EstimateActions } from "@/components/dashboard/estimate-actions";
+import { EstimateCustomerEditor } from "@/components/dashboard/estimate-customer-editor";
+import { EstimateVehicleEditor } from "@/components/dashboard/estimate-vehicle-editor";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { PageShell } from "@/components/layout/page-shell";
@@ -23,7 +25,7 @@ import {
   formatDateLong,
   getInitials,
 } from "@/lib/utils/format";
-import { ArrowLeft, FileText, Printer, User as UserIcon, Truck } from "lucide-react";
+import { ArrowLeft, FileText, Printer, User as UserIcon, Truck, PencilLine } from "lucide-react";
 import type {
   EstimateStatus,
   EstimateLineItem,
@@ -88,6 +90,13 @@ export default async function EstimateDetailPage({
   } | null;
 
   const isDraft = status === "draft";
+  const isEditable = isDraft || status === "sent";
+  const lastSentAt = estimate.last_sent_at ?? estimate.sent_at;
+  const editedSinceSent =
+    status === "sent" &&
+    !!estimate.last_edited_at &&
+    !!lastSentAt &&
+    new Date(estimate.last_edited_at) > new Date(lastSentAt);
   const estimateNumber = formatEstimateNumber(estimate.estimate_number);
 
   // Back link points to the parent job when there is one (estimate was
@@ -151,6 +160,15 @@ export default async function EstimateDetailPage({
           <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
             <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
               <UserIcon className="h-3 w-3" /> Customer
+              {isDraft && !job && (
+                <span className="ml-auto">
+                  <EstimateCustomerEditor
+                    estimateId={id}
+                    currentCustomer={customer}
+                    hasVehicle={!!vehicle}
+                  />
+                </span>
+              )}
             </div>
             {customer ? (
               <>
@@ -200,6 +218,15 @@ export default async function EstimateDetailPage({
           <div className="px-5 py-5 flex flex-col gap-4 min-w-0">
             <div className={`${SECTION_LABEL} flex items-center gap-1.5`}>
               <Truck className="h-3 w-3" /> Vehicle
+              {isEditable && !job && (
+                <span className="ml-auto">
+                  <EstimateVehicleEditor
+                    estimateId={id}
+                    customerId={customer?.id ?? null}
+                    currentVehicleId={vehicle?.id ?? null}
+                  />
+                </span>
+              )}
             </div>
             {vehicle ? (
               <>
@@ -245,6 +272,14 @@ export default async function EstimateDetailPage({
                 </span>
               </span>
             )}
+            {estimate.last_sent_at && (
+              <span>
+                <span className={SECTION_LABEL}>Resent</span>{" "}
+                <span className="font-mono tabular-nums text-stone-700 dark:text-stone-300">
+                  {formatDateLong(estimate.last_sent_at)}
+                </span>
+              </span>
+            )}
             {estimate.approved_at && (
               <span>
                 <span className={SECTION_LABEL}>Approved</span>{" "}
@@ -270,11 +305,25 @@ export default async function EstimateDetailPage({
         )}
       </section>
 
+      {editedSinceSent && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+        >
+          <PencilLine className="mt-0.5 h-4 w-4 flex-none" />
+          <div>
+            <span className="font-semibold">Edited since it was last sent.</span>{" "}
+            The customer&apos;s link shows the current line items, but they haven&apos;t
+            been told about the change. Resend when you&apos;re done editing.
+          </div>
+        </div>
+      )}
+
       <section className="pt-2">
         <SectionTitle
           title="Line items"
           action={
-            isDraft ? (
+            isEditable ? (
               <EstimateLineItemsAddButton
                 estimateId={id}
                 presets={presets}
@@ -286,7 +335,7 @@ export default async function EstimateDetailPage({
         <EstimateLineItemsList
           estimateId={id}
           lineItems={lineItems}
-          readOnly={!isDraft}
+          readOnly={!isEditable}
           settings={settings}
           chargeSalesTax={estimate.charge_sales_tax}
         />
@@ -300,6 +349,7 @@ export default async function EstimateDetailPage({
           approvalToken={estimate.approval_token}
           jobId={job?.id ?? null}
           customerId={customer?.id ?? null}
+          editedSinceSent={editedSinceSent}
         />
       </section>
     </PageShell>

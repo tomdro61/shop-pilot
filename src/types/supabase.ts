@@ -629,6 +629,8 @@ export type Database = {
           estimate_number: number | null
           id: string
           job_id: string | null
+          last_edited_at: string | null
+          last_sent_at: string | null
           notes: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["estimate_status"]
@@ -648,6 +650,8 @@ export type Database = {
           estimate_number?: number | null
           id?: string
           job_id?: string | null
+          last_edited_at?: string | null
+          last_sent_at?: string | null
           notes?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["estimate_status"]
@@ -667,6 +671,8 @@ export type Database = {
           estimate_number?: number | null
           id?: string
           job_id?: string | null
+          last_edited_at?: string | null
+          last_sent_at?: string | null
           notes?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["estimate_status"]
