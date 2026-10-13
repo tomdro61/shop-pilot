@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
 import { getInvoiceForJob } from "@/lib/actions/invoices";
+import { getInvoiceDeliveriesForJobs } from "@/lib/actions/invoice-deliveries";
+import { groupInvoiceDeliveries } from "@/lib/invoices/deliveries";
 import { getPaymentMethodForJob } from "@/lib/actions/payment-methods";
 import { getEstimateForJob } from "@/lib/actions/estimates";
 import { getInspectionForJob } from "@/lib/actions/dvi";
@@ -63,7 +65,7 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, invoice, estimate, dviInspection, settings, presets, technicians, savedCardResult] = await Promise.all([
+  const [job, invoice, estimate, dviInspection, settings, presets, technicians, savedCardResult, deliveriesResult] = await Promise.all([
     getJob(id),
     getInvoiceForJob(id),
     getEstimateForJob(id),
@@ -72,6 +74,7 @@ export default async function JobDetailPage({
     getPresets(),
     getTechnicians(),
     getPaymentMethodForJob(id),
+    getInvoiceDeliveriesForJobs([id]),
   ]);
   if (!job) notFound();
 
@@ -384,6 +387,8 @@ export default async function JobDetailPage({
               paymentStatus={(job.payment_status || "unpaid") as PaymentStatus}
               isFleet={customer?.customer_type === "fleet"}
               hasCardOnFile={!!savedCard}
+              deliveries={deliveriesResult.ok ? groupInvoiceDeliveries(deliveriesResult.data) : []}
+              deliveriesError={deliveriesResult.ok ? null : deliveriesResult.error}
             />
           </div>
         </section>

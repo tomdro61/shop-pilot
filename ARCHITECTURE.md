@@ -79,6 +79,7 @@ This is the **current shape of the system** — what exists, where it lives, and
 - Balance comes from live `amount_remaining`, not `amount_due` (fixed at finalization) or the local `invoices.amount`. Fails closed on any Stripe error, distinguishing a deleted invoice from a transient outage.
 - `invoices.last_sent_at` backs a 24h soft throttle (warn + second click, not a hard block). Null means **unknown**, not "never sent" — no backfill. Written only by this action.
 - Reminder copy is distinct from first-send copy; a draft that was never delivered gets the original "your invoice is ready" wording. See `isFirstDelivery` in `src/lib/invoices/delivery.ts` for what that predicate can and can't detect.
+- **Send history.** Every invoice text and email is already logged to `messages`; `getInvoiceDeliveriesForJobs` (`src/lib/actions/invoice-deliveries.ts`) reads it back (outbound, body matching "invoice") and `groupInvoiceDeliveries` (`src/lib/invoices/deliveries.ts`) folds a text + email sent seconds apart into one delivery, labelled first send / reminder / other from the template wording. Shown under the invoice card on the job page and under the payment pill on the customer page. The log outlives a void, so a voided invoice's sends still show. The body match is a heuristic: a hand-typed text that says "invoice" appears as "Message" with its excerpt.
 - Not yet on the AI tool surface — the chat can still reach the raw hosted URL via `get_invoice_for_job` + `send_sms`, bypassing every guard above. Tracked as follow-up.
 
 ## Messaging

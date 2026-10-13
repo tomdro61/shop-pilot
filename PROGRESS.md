@@ -5235,3 +5235,33 @@ pages render their not-found copy for a fake token, empty POSTs 400), the two
 new columns are on the shared DB, and Sentry shows no production issue first
 seen or active in the two hours around the deploy. Review findings logged in
 `REVIEW-FINDINGS.md` (EE-1 to EE-5).
+
+## Session 84 — 2026-10-13 — Invoice send history on the job and customer pages
+
+The owner needed the dates the EZY Rent invoices went out and couldn't find
+them. They were in the `messages` log (every invoice text and email is
+written there with a timestamp) but no page read that table; the Invoices
+list shows `created_at`, and the job card shows `last_sent_at`, which only
+resend writes.
+
+**Changed.** New read `getInvoiceDeliveriesForJobs(jobIds)` in
+`src/lib/actions/invoice-deliveries.ts` (outbound rows for those jobs whose
+body mentions "invoice", newest first, `ActionResult`). Pure
+`src/lib/invoices/deliveries.ts` classifies each row from the template
+wording (first send / reminder / other) and merges a text + email logged
+within two minutes of each other into one delivery, per job and kind.
+`InvoiceDeliveryList` renders it: a "Sent to customer" list under the
+invoice card on the job page (shows even after a void, since the log
+outlives the row) and a compact three-line version under the payment pill in
+the customer page's job table. Timestamps use the new `formatDateTimeET` so
+server and client agree. A failed read shows an inline error on the job page
+and joins the customer page's "couldn't load" banner.
+
+**Tests.** 13 new: grouping rules (merge, don't merge across jobs / kinds /
+channels / the window, failed channel attribution) and the read's full
+predicate chain pinned with `toEqual` so a dropped `.in("job_id")` or
+`.eq("direction","out")` fails.
+
+**Not done.** No click-through (no test login). Worth checking on EZY Rent's
+customer page: three jobs with sends, RO 1301 showing both the first send
+and the reminder.

@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCustomer } from "@/lib/actions/customers";
 import { getInspectionsForVehicle } from "@/lib/actions/dvi";
+import { getInvoiceDeliveriesForJobs } from "@/lib/actions/invoice-deliveries";
+import { groupInvoiceDeliveries, type InvoiceDeliveryGroup } from "@/lib/invoices/deliveries";
+import { InvoiceDeliveryList } from "@/components/dashboard/invoice-delivery-list";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { SECTION_LABEL, COLUMN_HEADER } from "@/components/ui/section-card";
@@ -201,6 +204,20 @@ export default async function CustomerDetailPage({
       : allJobs;
   const displayJobs = filteredJobs.slice(0, JOBS_DISPLAY_LIMIT);
   const moreCount = Math.max(0, filteredJobs.length - JOBS_DISPLAY_LIMIT);
+
+  const deliveriesResult = await getInvoiceDeliveriesForJobs(displayJobs.map((j) => j.id));
+  const deliveriesByJob = new Map<string, InvoiceDeliveryGroup[]>();
+  if (deliveriesResult.ok) {
+    for (const group of groupInvoiceDeliveries(deliveriesResult.data)) {
+      if (!group.jobId) continue;
+      const list = deliveriesByJob.get(group.jobId) ?? [];
+      list.push(group);
+      deliveriesByJob.set(group.jobId, list);
+    }
+  } else {
+    console.error("[CustomerDetail] invoice deliveries query failed:", deliveriesResult.error);
+    failedSections.push("invoice send history");
+  }
 
   const vehicleDviMap = new Map<string, Awaited<ReturnType<typeof getInspectionsForVehicle>>>();
   if (vehicles.length > 0) {
@@ -650,6 +667,11 @@ export default async function CustomerDetailPage({
                             <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
                             {PAYMENT_STATUS_LABELS[paymentStatus]}
                           </span>
+                          <InvoiceDeliveryList
+                            compact
+                            limit={3}
+                            groups={deliveriesByJob.get(job.id) ?? []}
+                          />
                         </td>
                         <td className="px-4 py-3 align-middle text-right font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50">
                           {total > 0 ? formatCurrencyWhole(total) : <span className="text-stone-400 font-normal">—</span>}

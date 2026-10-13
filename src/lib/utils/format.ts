@@ -91,6 +91,18 @@ export function formatDateLong(dateStr: string | null): string | null {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// "Oct 9, 2:50 PM" in shop time. The zone is explicit because this renders
+// on the server (UTC on Vercel) and on the client, and the two must agree.
+export function formatDateTimeET(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function getInitials(value: string | null | undefined, fallback = "?"): string {
   if (!value) return fallback;
   const parts = value.trim().split(/\s+/);

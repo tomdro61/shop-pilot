@@ -76,6 +76,7 @@ When a migration ships, update three things: the migration file, `src/types/supa
 - **`direction`** — `in | out`
 - **`status`** — `sent | failed`
 - **`phone_line`** — text, nullable. Values: `'shop' | 'parking'`. Tracks which Quo line a message came in/out on.
+- Read back by `getInvoiceDeliveriesForJobs` (Session 84) for the invoice send history on the job and customer pages: `job_id in (...)`, `direction = 'out'`, `body ilike '%invoice%'`. The log is the only record of *when* the first invoice send went out — `invoices.last_sent_at` is written by resend alone.
 
 ## `catalog_items`
 `id, type, description, default_quantity, default_unit_cost, default_cost, part_number, category, is_active, usage_count, created_at, updated_at`

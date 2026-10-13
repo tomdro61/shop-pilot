@@ -18,7 +18,9 @@ import { Label } from "@/components/ui/label";
 import { createInvoiceFromJob } from "@/lib/actions/invoices";
 import { ResendInvoiceButton } from "@/components/dashboard/resend-invoice-button";
 import { VoidInvoiceButton } from "@/components/dashboard/void-invoice-button";
+import { InvoiceDeliveryList } from "@/components/dashboard/invoice-delivery-list";
 import { isFirstDelivery } from "@/lib/invoices/delivery";
+import type { InvoiceDeliveryGroup } from "@/lib/invoices/deliveries";
 import { INVOICE_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { FileText, ExternalLink } from "lucide-react";
@@ -38,6 +40,9 @@ interface InvoiceSectionProps {
   paymentStatus: PaymentStatus;
   isFleet?: boolean;
   hasCardOnFile?: boolean;
+  /** Invoice texts/emails from the messages log, newest first. Survives a void. */
+  deliveries: InvoiceDeliveryGroup[];
+  deliveriesError?: string | null;
 }
 
 const STATUS_ACCENT: Record<InvoiceStatus, Accent> = {
@@ -46,7 +51,24 @@ const STATUS_ACCENT: Record<InvoiceStatus, Accent> = {
   paid: "green",
 };
 
-export function InvoiceSection({
+export function InvoiceSection(props: InvoiceSectionProps) {
+  const { deliveries, deliveriesError = null } = props;
+  const showHistory = deliveries.length > 0 || !!deliveriesError;
+  // Same guard as InvoiceCard's first early return. The history still renders
+  // without a card: a voided invoice deletes its row (and may un-complete the
+  // job) but the texts that went out are still a fact the shop may need.
+  const cardHidden = props.jobStatus !== "complete" && !props.invoice;
+  if (cardHidden && !showHistory) return null;
+
+  return (
+    <div className="space-y-2">
+      {!cardHidden && <InvoiceCard {...props} />}
+      {showHistory && <InvoiceDeliveryList groups={deliveries} error={deliveriesError} />}
+    </div>
+  );
+}
+
+function InvoiceCard({
   jobId,
   jobStatus,
   invoice,
