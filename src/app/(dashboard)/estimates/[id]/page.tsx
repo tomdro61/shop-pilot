@@ -11,6 +11,7 @@ import {
 import { EstimateActions } from "@/components/dashboard/estimate-actions";
 import { EstimateCustomerEditor } from "@/components/dashboard/estimate-customer-editor";
 import { EstimateVehicleEditor } from "@/components/dashboard/estimate-vehicle-editor";
+import { isEditedSinceSent } from "@/lib/estimates/editing";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { PageShell } from "@/components/layout/page-shell";
@@ -91,12 +92,7 @@ export default async function EstimateDetailPage({
 
   const isDraft = status === "draft";
   const isEditable = isDraft || status === "sent";
-  const lastSentAt = estimate.last_sent_at ?? estimate.sent_at;
-  const editedSinceSent =
-    status === "sent" &&
-    !!estimate.last_edited_at &&
-    !!lastSentAt &&
-    new Date(estimate.last_edited_at) > new Date(lastSentAt);
+  const editedSinceSent = isEditedSinceSent(estimate);
   const estimateNumber = formatEstimateNumber(estimate.estimate_number);
 
   // Back link points to the parent job when there is one (estimate was

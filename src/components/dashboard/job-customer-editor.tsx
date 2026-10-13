@@ -31,6 +31,7 @@ import { searchCustomersForPicker } from "@/lib/actions/customers";
 import { formatCustomerName, formatPhone } from "@/lib/utils/format";
 import { Pencil } from "lucide-react";
 import type { ReactNode } from "react";
+import type { ActionResult } from "@/lib/actions/_types";
 
 export type CustomerOption = {
   id: string;
@@ -55,8 +56,8 @@ export function JobCustomerEditor({ jobId, currentCustomer, hasVehicle }: JobCus
           vehicle_id: null,
         });
         return "error" in result && result.error
-          ? typeof result.error === "string" ? result.error : "Update failed"
-          : null;
+          ? { ok: false, error: result.error }
+          : { ok: true };
       }}
       describeChange={(name) => (
         <>
@@ -71,8 +72,7 @@ export function JobCustomerEditor({ jobId, currentCustomer, hasVehicle }: JobCus
 
 interface CustomerPickerEditorProps {
   currentCustomer: CustomerOption | null;
-  // Resolves to an error message, or null on success.
-  onConfirm: (customer: CustomerOption) => Promise<string | null>;
+  onConfirm: (customer: CustomerOption) => Promise<ActionResult>;
   describeChange: (newCustomerName: string) => ReactNode;
 }
 
@@ -108,10 +108,16 @@ export function CustomerPickerEditor({
   async function confirm() {
     if (!pending) return;
     setSaving(true);
-    const error = await onConfirm(pending);
-    setSaving(false);
-    if (error) {
-      toast.error(error);
+    let result: ActionResult;
+    try {
+      result = await onConfirm(pending);
+    } catch {
+      result = { ok: false, error: "Something went wrong — try again" };
+    } finally {
+      setSaving(false);
+    }
+    if (!result.ok) {
+      toast.error(result.error);
       return;
     }
     toast.success(`Customer changed to ${formatCustomerName(pending)}`);

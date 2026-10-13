@@ -21,6 +21,7 @@ import { updateJobFields } from "@/lib/actions/jobs";
 import { createClient } from "@/lib/supabase/client";
 import { formatVehicle } from "@/lib/utils/format";
 import { Pencil, Plus } from "lucide-react";
+import type { ActionResult } from "@/lib/actions/_types";
 
 type VehicleOption = {
   id: string;
@@ -43,8 +44,8 @@ export function JobVehicleEditor({ jobId, customerId, currentVehicleId }: JobVeh
       onAssign={async (vehicleId) => {
         const result = await updateJobFields(jobId, { vehicle_id: vehicleId });
         return "error" in result && result.error
-          ? typeof result.error === "string" ? result.error : "Update failed"
-          : null;
+          ? { ok: false, error: result.error }
+          : { ok: true };
       }}
     />
   );
@@ -53,8 +54,7 @@ export function JobVehicleEditor({ jobId, customerId, currentVehicleId }: JobVeh
 interface VehiclePickerEditorProps {
   customerId: string | null;
   currentVehicleId: string | null;
-  // Resolves to an error message, or null on success.
-  onAssign: (vehicleId: string | null) => Promise<string | null>;
+  onAssign: (vehicleId: string | null) => Promise<ActionResult>;
 }
 
 export function VehiclePickerEditor({
@@ -88,10 +88,16 @@ export function VehiclePickerEditor({
       return;
     }
     setSaving(true);
-    const error = await onAssign(vehicleId);
-    setSaving(false);
-    if (error) {
-      toast.error(error);
+    let result: ActionResult;
+    try {
+      result = await onAssign(vehicleId);
+    } catch {
+      result = { ok: false, error: "Something went wrong — try again" };
+    } finally {
+      setSaving(false);
+    }
+    if (!result.ok) {
+      toast.error(result.error);
       return;
     }
     toast.success(vehicleId ? "Vehicle updated" : "Vehicle cleared");

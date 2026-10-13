@@ -70,8 +70,10 @@ export function EstimateLineItemsList({
 
   async function handleDelete(id: string) {
     const result = await deleteEstimateLineItem(id, estimateId);
-    if (result.error) {
+    if ("error" in result && result.error) {
       toast.error(result.error);
+    } else if ("warning" in result && result.warning) {
+      toast.warning(result.warning);
     } else {
       toast.success("Line item deleted");
     }

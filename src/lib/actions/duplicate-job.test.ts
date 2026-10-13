@@ -101,14 +101,22 @@ describe("duplicateJob", () => {
 
     const result = await duplicateJob(JOB_A);
 
-    expect(result).toEqual({ data: { id: NEW_JOB } });
+    expect(result).toEqual({ ok: true, data: { id: NEW_JOB } });
 
     const sourceLookup = mock.calls.findIndex((c) => c.method === "from" && c.args[0] === "jobs");
+    expect(mock.calls[sourceLookup + 1]).toEqual({
+      method: "select",
+      args: ["id, customer_id, vehicle_id, title, category, notes, charge_sales_tax"],
+    });
     expect(eqsAfter(mock.calls, sourceLookup)).toEqual([["id", JOB_A]]);
 
     const itemLookup = mock.calls.findIndex(
       (c) => c.method === "from" && c.args[0] === "job_line_items"
     );
+    expect(mock.calls[itemLookup + 1]).toEqual({
+      method: "select",
+      args: ["type, description, quantity, unit_cost, cost, part_number, category"],
+    });
     expect(eqsAfter(mock.calls, itemLookup)).toEqual([["job_id", JOB_A]]);
 
     const insert = writeIndex(mock.calls, "insert", 0);
@@ -180,14 +188,13 @@ describe("duplicateJob", () => {
 
     const result = await duplicateJob(JOB_A);
 
-    expect(result).toEqual({ error: "Failed to copy line items: copy failed" });
+    expect(result).toEqual({ ok: false, error: "Failed to copy line items: copy failed" });
     const del = writeIndex(mock.calls, "delete");
     expect(mock.calls[del - 1]).toEqual({ method: "from", args: ["jobs"] });
     expect(eqsAfter(mock.calls, del)).toEqual([["id", NEW_JOB]]);
   });
 
   it("reports the orphan when rollback also fails", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockClient([
       { data: SOURCE, error: null },
       { data: ITEMS, error: null },
@@ -199,10 +206,10 @@ describe("duplicateJob", () => {
     const result = await duplicateJob(JOB_A);
 
     expect(result).toEqual({
+      ok: false,
       error:
         "Couldn't copy line items and rollback failed — the job may need manual cleanup: copy failed",
     });
-    spy.mockRestore();
   });
 
   it("refuses non-managers before touching the database", async () => {
@@ -210,7 +217,7 @@ describe("duplicateJob", () => {
 
     const result = await duplicateJob(JOB_A);
 
-    expect(result).toEqual({ error: "Unauthorized" });
+    expect(result).toEqual({ ok: false, error: "Unauthorized" });
     expect(createClient).not.toHaveBeenCalled();
   });
 });

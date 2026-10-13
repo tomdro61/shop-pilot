@@ -25,17 +25,22 @@ export function JobDuplicateButton({ jobId }: { jobId: string }) {
   async function handleDuplicate() {
     if (loading) return;
     setLoading(true);
-    const result = await duplicateJob(jobId);
-    setLoading(false);
+    let result: Awaited<ReturnType<typeof duplicateJob>>;
+    try {
+      result = await duplicateJob(jobId);
+    } catch {
+      toast.error("Something went wrong — try again");
+      return;
+    } finally {
+      setLoading(false);
+    }
 
-    if ("error" in result && result.error) {
+    if (!result.ok) {
       toast.error(result.error);
       return;
     }
-    if ("data" in result && result.data?.id) {
-      toast.success("Job copied");
-      router.push(`/jobs/${result.data.id}`);
-    }
+    toast.success("Job copied");
+    router.push(`/jobs/${result.data.id}`);
   }
 
   return (

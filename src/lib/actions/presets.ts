@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import type { PresetLineItem } from "@/types";
+import {
+  isEditableStatus,
+  NOT_EDITABLE_MSG,
+  stampEstimateEdited,
+} from "@/lib/estimates/editing";
 
 interface PresetFormData {
   name: string;
@@ -149,8 +154,6 @@ export async function applyPresetToEstimate(estimateId: string, presetId: string
 
   const supabase = await createClient();
 
-  // Block on non-draft estimates so the audit trail of what the customer
-  // saw at send time stays accurate.
   const { data: estimate, error: estimateError } = await supabase
     .from("estimates")
     .select("id, status")
@@ -158,9 +161,7 @@ export async function applyPresetToEstimate(estimateId: string, presetId: string
     .single();
   if (estimateError) return { error: estimateError.message };
   if (!estimate) return { error: "Estimate not found" };
-  if (estimate.status !== "draft") {
-    return { error: "Can only add presets to draft estimates" };
-  }
+  if (!isEditableStatus(estimate.status)) return { error: NOT_EDITABLE_MSG };
 
   const { data: preset, error: presetError } = await supabase
     .from("job_presets")
@@ -194,6 +195,12 @@ export async function applyPresetToEstimate(estimateId: string, presetId: string
 
   if (error) return { error: error.message };
 
+  // Rows are committed; a stamp failure is a warning, not a failed add.
+  const stampError = await stampEstimateEdited(supabase, estimateId);
   revalidatePath(`/estimates/${estimateId}`);
-  return { success: true, inserted: rows.length };
+  return {
+    success: true,
+    inserted: rows.length,
+    warning: stampError ? `Added, but couldn't flag the estimate as edited: ${stampError}` : undefined,
+  };
 }

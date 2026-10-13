@@ -5137,3 +5137,92 @@ rests on the deploy alias and timing, not on a fetched string. The owner ran
 the SandraLee relink SQL in the Supabase editor and the read-back confirmed
 both rows on the new customer; the duplicate Stripe invoice void was still
 pending.
+
+## Session 83 — 2026-10-13 — Edit a sent estimate, resend it, duplicate jobs and estimates
+
+The owner asked for two things: a way to change an estimate after it has
+gone out instead of deleting and rebuilding it, and a way to copy a job or
+an estimate so repeat work doesn't start from a blank form. Decisions taken
+with the owner before building: only sent estimates are editable (approved
+ones are revised by duplicating), the customer keeps the same approval link,
+a duplicated job resets status/dates/payment, and duplicates land on the same
+customer with the customer changeable afterward.
+
+**Changed.** Line items, catalog adds, and presets now work while an estimate
+is `draft` or `sent`; approved/declined are frozen. Every such edit stamps the
+new `estimates.last_edited_at`, and the detail page shows an "edited since it
+was last sent" banner until Resend, which now goes out by SMS **and** email
+(it was SMS-only) and stamps the new `last_sent_at`. `sent_at` is untouched so
+the inbox keeps ageing the quote from the first send. The approval token never
+changes; the public page already reads live, so the customer's existing link
+shows the revised items. New `updateEstimateFields` lets a standalone draft
+change customer (clears the vehicle) and a standalone draft/sent estimate
+change vehicle, with ownership checked against the effective customer and an
+exact-count predicate on the status-scoped write. New `duplicateEstimate`
+(any status → standalone draft; copies customer, vehicle, tax flag, notes,
+line items; refuses if shop settings can't load rather than guessing a tax
+rate) and `duplicateJob` (not_started, unpaid, dated today, tech/mileage/
+drop-off/payment fields cleared, line items copied). Both roll back the new
+row if the line-item copy fails and report to Sentry if the rollback fails.
+The job page's customer/vehicle pickers became `CustomerPickerEditor` /
+`VehiclePickerEditor` with an `ActionResult` callback and are reused on
+standalone estimates. Shared rules (`isEditableStatus`, `stampEstimateEdited`,
+`isEditedSinceSent`) live in `src/lib/estimates/editing.ts`. AI: new
+`duplicate_job`, `duplicate_estimate`, `resend_estimate` tools; the system
+prompt and tool descriptions no longer say sent estimates are read-only.
+
+**Tests.** 25 new (`estimate-editing.test.ts`, `duplicate-job.test.ts`):
+lookup predicates asserted adjacent to each write, selected columns pinned,
+zero-row stamp/update paths covered. Mutation-checked before review: eight
+mutations (unscoped line-item lookups, dropped status guard on the resend
+stamp, stamp-on-total-failure, vehicle ownership check, job_id kept on
+duplicate, payment_status copied, stamp removed) each turned a test red.
+
+`/scoped-review` (four reviewers): no Criticals. Fixed from findings: the AI
+system prompt still said draft-only (High); `applyPresetToEstimate` was still
+draft-only and didn't stamp, so the preset tab would have failed on a sent
+estimate; a stamp failure after a committed line item returned `{ error }`,
+which kept the add sheet open and invited a duplicate insert — now
+`{ data, warning }` and the sheet closes with a warning toast; status-scoped
+updates reported success on zero rows (count checks added); vehicle change on
+a job-attached estimate was refused only in the UI; `createEstimateFromJob`
+now uses the shared copy helper; thrown-exception handling in the new click
+handlers; four universal-claim comments and three doc sentences narrowed to
+what the code does. Left for the owner (below).
+
+**Files.** `src/lib/actions/{estimates,jobs,presets}.ts`,
+`src/lib/estimates/editing.ts` (new), `src/lib/ai/{tools,handlers,system-prompt}.ts`,
+`src/app/(dashboard)/estimates/[id]/page.tsx`, `src/app/(dashboard)/jobs/[id]/page.tsx`,
+`src/components/dashboard/{estimate-actions,estimate-line-items-list,estimate-line-items-add-sheet,job-customer-editor,job-vehicle-editor}.tsx`,
+`src/components/dashboard/{estimate-customer-editor,estimate-vehicle-editor,job-duplicate-button}.tsx` (new),
+`src/components/forms/estimate-line-item-form.tsx`, two new test files,
+`supabase/migrations/20261013000000_estimates_edit_after_send.sql`,
+`src/types/supabase.ts`, `ARCHITECTURE.md`, `DATABASE_SCHEMA.md`.
+
+**Not done (needs the owner).**
+- The migration is **not applied**. `npx supabase db push` was blocked by the
+  permission classifier (the one Supabase project is production). Until it
+  runs, any line-item edit on staging will save the item and then warn
+  "couldn't flag the estimate as edited", and resend won't record its time.
+  Run `! npx supabase db push` from `shop-pilot/`.
+- No click-through. The dev server came up but the Playwright browser had no
+  session and the repo holds no test login. To verify: on a sent estimate,
+  add/edit/delete an item and a preset, see the banner, Resend (with the live
+  Quo/Resend keys commented out per `/verify-flow`), see the banner clear;
+  Duplicate on a job and on an estimate; change vehicle on a standalone
+  estimate; the job page's own customer/vehicle pickers still work.
+- Review items left open, owner's call: (1) a customer can approve from a
+  page they loaded before an edit — the approval flip doesn't check
+  `last_edited_at`; the reviewer's fix is a hidden field on the approval form
+  and `.eq("last_edited_at", seen)` on the atomic flip, a public-surface
+  change that needs `/verify-flow estimate-approval`. (2) `getShopSettings`
+  still returns null on error for `createEstimate` / `createEstimateFromJob`,
+  which bake in 6.25% (pre-existing). (3) `resendEstimate` previously
+  collapsed DB errors into "not found" — fixed here, but `sendEstimate` has the
+  same pattern (pre-existing). (4) The preset add-sheet's own `useEffect`
+  setState lint error at `estimate-line-items-add-sheet.tsx:39` predates this
+  session.
+
+**Known.** `last_sent_at` / `last_edited_at` are null for everything before
+this session; the UI treats null as "never" for the banner, which is correct
+(nothing could have been edited after send before this shipped).

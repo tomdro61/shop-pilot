@@ -92,29 +92,47 @@ describe("line items on a sent estimate", () => {
     const mock = mockClient([
       { data: { id: ESTIMATE_A, status: "sent", job_id: null }, error: null },
       { data: { id: LINE_ITEM_X }, error: null },
-      { error: null },
+      { error: null, count: 1 },
     ]);
 
     const result = await createEstimateLineItem(LINE_ITEM_INPUT);
 
-    expect(result).toEqual({ data: { id: LINE_ITEM_X } });
+    expect(result).toEqual({ data: { id: LINE_ITEM_X }, warning: undefined });
     const idx = writeIndex(mock.calls, "update");
     expect(idx).toBeGreaterThan(-1);
     expect(mock.calls[idx - 1]).toEqual({ method: "from", args: ["estimates"] });
     expect(Object.keys(mock.calls[idx].args[0] as object)).toEqual(["last_edited_at"]);
+    expect(mock.calls[idx].args[1]).toEqual({ count: "exact" });
     expect(eqsAfter(mock.calls, idx)).toEqual([["id", ESTIMATE_A]]);
+    expect(mock.calls[idx + 2]).toEqual({ method: "in", args: ["status", ["draft", "sent"]] });
+  });
+
+  it("surfaces an approval that landed mid-edit instead of a green toast", async () => {
+    mockClient([
+      { data: { id: ESTIMATE_A, status: "sent", job_id: null }, error: null },
+      { data: { id: LINE_ITEM_X }, error: null },
+      { error: null, count: 0 },
+    ]);
+
+    const result = await createEstimateLineItem(LINE_ITEM_INPUT);
+
+    expect(result).toEqual({
+      data: { id: LINE_ITEM_X },
+      warning:
+        "Saved, but couldn't flag the estimate as edited: the estimate was approved or declined while you were editing — duplicate it to send a revised version",
+    });
   });
 
   it("updates a line item on a sent estimate and stamps last_edited_at", async () => {
     const mock = mockClient([
       { data: { id: ESTIMATE_A, status: "sent" }, error: null },
       { data: { id: LINE_ITEM_X }, error: null },
-      { error: null },
+      { error: null, count: 1 },
     ]);
 
     const result = await updateEstimateLineItem(LINE_ITEM_X, LINE_ITEM_INPUT);
 
-    expect(result).toEqual({ data: { id: LINE_ITEM_X } });
+    expect(result).toEqual({ data: { id: LINE_ITEM_X }, warning: undefined });
     const itemUpdate = writeIndex(mock.calls, "update", 0);
     expect(eqsAfter(mock.calls, itemUpdate)).toEqual([
       ["id", LINE_ITEM_X],
@@ -129,12 +147,12 @@ describe("line items on a sent estimate", () => {
     const mock = mockClient([
       { data: { id: ESTIMATE_A, status: "sent" }, error: null },
       { error: null, count: 1 },
-      { error: null },
+      { error: null, count: 1 },
     ]);
 
     const result = await deleteEstimateLineItem(LINE_ITEM_X, ESTIMATE_A);
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, warning: undefined });
     const del = writeIndex(mock.calls, "delete");
     expect(eqsAfter(mock.calls, del)).toEqual([
       ["id", LINE_ITEM_X],
@@ -144,7 +162,7 @@ describe("line items on a sent estimate", () => {
     expect(eqsAfter(mock.calls, stamp)).toEqual([["id", ESTIMATE_A]]);
   });
 
-  it("reports a failed stamp instead of pretending the edit flag is set", async () => {
+  it("reports a failed stamp as a warning on a successful delete, not as a failure", async () => {
     const mock = mockClient([
       { data: { id: ESTIMATE_A, status: "sent" }, error: null },
       { error: null, count: 1 },
@@ -154,7 +172,8 @@ describe("line items on a sent estimate", () => {
     const result = await deleteEstimateLineItem(LINE_ITEM_X, ESTIMATE_A);
 
     expect(result).toEqual({
-      error: "Line item deleted, but couldn't flag the estimate as edited: boom",
+      success: true,
+      warning: "Deleted, but couldn't flag the estimate as edited: boom",
     });
     expect(writeIndex(mock.calls, "delete")).toBeGreaterThan(-1);
   });
@@ -176,21 +195,38 @@ describe("updateEstimateFields", () => {
     const mock = mockClient([
       { data: { id: ESTIMATE_A, status: "sent", customer_id: CUSTOMER_A, job_id: null }, error: null },
       { data: { id: VEHICLE_B, customer_id: CUSTOMER_A }, error: null },
-      { error: null },
+      { error: null, count: 1 },
     ]);
 
     const result = await updateEstimateFields(ESTIMATE_A, { vehicle_id: VEHICLE_B });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: true });
     const lookup = mock.calls.findIndex((c) => c.method === "from" && c.args[0] === "vehicles");
+    expect(mock.calls[lookup + 1]).toEqual({ method: "select", args: ["id, customer_id"] });
     expect(eqsAfter(mock.calls, lookup)).toEqual([["id", VEHICLE_B]]);
     const idx = writeIndex(mock.calls, "update");
     expect(mock.calls[idx].args[0]).toMatchObject({ vehicle_id: VEHICLE_B });
     expect(mock.calls[idx].args[0]).toHaveProperty("last_edited_at");
+    expect(mock.calls[idx].args[1]).toEqual({ count: "exact" });
     expect(eqsAfter(mock.calls, idx)).toEqual([
       ["id", ESTIMATE_A],
       ["status", "sent"],
     ]);
+  });
+
+  it("fails when the status changed between the read and the write", async () => {
+    mockClient([
+      { data: { id: ESTIMATE_A, status: "sent", customer_id: CUSTOMER_A, job_id: null }, error: null },
+      { data: { id: VEHICLE_B, customer_id: CUSTOMER_A }, error: null },
+      { error: null, count: 0 },
+    ]);
+
+    const result = await updateEstimateFields(ESTIMATE_A, { vehicle_id: VEHICLE_B });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "The estimate changed status while you were editing — reload and try again",
+    });
   });
 
   it("refuses a vehicle owned by a different customer", async () => {
@@ -201,7 +237,7 @@ describe("updateEstimateFields", () => {
 
     const result = await updateEstimateFields(ESTIMATE_A, { vehicle_id: VEHICLE_B });
 
-    expect(result).toEqual({ error: "Vehicle does not belong to this customer" });
+    expect(result).toEqual({ ok: false, error: "Vehicle does not belong to this customer" });
     expect(mock.calls.find((c) => c.method === "update")).toBeUndefined();
   });
 
@@ -209,12 +245,12 @@ describe("updateEstimateFields", () => {
     const mock = mockClient([
       { data: { id: ESTIMATE_A, status: "draft", customer_id: CUSTOMER_A, job_id: null }, error: null },
       { data: { id: CUSTOMER_B }, error: null },
-      { error: null },
+      { error: null, count: 1 },
     ]);
 
     const result = await updateEstimateFields(ESTIMATE_A, { customer_id: CUSTOMER_B });
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ ok: true });
     const idx = writeIndex(mock.calls, "update");
     expect(mock.calls[idx].args[0]).toMatchObject({ customer_id: CUSTOMER_B, vehicle_id: null });
     expect(eqsAfter(mock.calls, idx)).toEqual([
@@ -231,20 +267,25 @@ describe("updateEstimateFields", () => {
     const result = await updateEstimateFields(ESTIMATE_A, { customer_id: CUSTOMER_B });
 
     expect(result).toEqual({
+      ok: false,
       error: "The customer can only be changed on a draft estimate — duplicate this one instead",
     });
     expect(mock.calls.find((c) => c.method === "update")).toBeUndefined();
   });
 
-  it("refuses to change the customer on an estimate attached to a job", async () => {
+  it.each([
+    ["customer", { customer_id: CUSTOMER_B }],
+    ["vehicle", { vehicle_id: VEHICLE_B }],
+  ])("refuses a %s change on an estimate attached to a job", async (_label, patch) => {
     const mock = mockClient([
       { data: { id: ESTIMATE_A, status: "draft", customer_id: CUSTOMER_A, job_id: JOB_A }, error: null },
     ]);
 
-    const result = await updateEstimateFields(ESTIMATE_A, { customer_id: CUSTOMER_B });
+    const result = await updateEstimateFields(ESTIMATE_A, patch);
 
     expect(result).toEqual({
-      error: "This estimate belongs to a job — change the customer on the job",
+      ok: false,
+      error: "This estimate belongs to a job — change the customer or vehicle on the job",
     });
     expect(mock.calls.find((c) => c.method === "update")).toBeUndefined();
   });
@@ -257,6 +298,7 @@ describe("updateEstimateFields", () => {
     const result = await updateEstimateFields(ESTIMATE_A, { vehicle_id: null });
 
     expect(result).toEqual({
+      ok: false,
       error: "Only draft or sent estimates can be edited — duplicate this one to make changes",
     });
     expect(mock.calls.find((c) => c.method === "update")).toBeUndefined();
@@ -302,11 +344,21 @@ describe("duplicateEstimate", () => {
 
     const result = await duplicateEstimate(ESTIMATE_A);
 
-    expect(result).toEqual({ data: { id: NEW_ESTIMATE } });
+    expect(result).toEqual({ ok: true, data: { id: NEW_ESTIMATE } });
+
+    const sourceLookup = mock.calls.findIndex((c) => c.method === "from" && c.args[0] === "estimates");
+    expect(mock.calls[sourceLookup + 1]).toEqual({
+      method: "select",
+      args: ["id, customer_id, vehicle_id, charge_sales_tax, notes"],
+    });
 
     const itemLookup = mock.calls.findIndex(
       (c) => c.method === "from" && c.args[0] === "estimate_line_items"
     );
+    expect(mock.calls[itemLookup + 1]).toEqual({
+      method: "select",
+      args: ["type, description, quantity, unit_cost, cost, part_number, category"],
+    });
     expect(eqsAfter(mock.calls, itemLookup)).toEqual([["estimate_id", ESTIMATE_A]]);
 
     const insert = writeIndex(mock.calls, "insert", 0);
@@ -369,10 +421,23 @@ describe("duplicateEstimate", () => {
 
     const result = await duplicateEstimate(ESTIMATE_A);
 
-    expect(result).toEqual({ error: "Failed to copy line items: copy failed" });
+    expect(result).toEqual({ ok: false, error: "Failed to copy line items: copy failed" });
     const del = writeIndex(mock.calls, "delete");
     expect(mock.calls[del - 1]).toEqual({ method: "from", args: ["estimates"] });
     expect(eqsAfter(mock.calls, del)).toEqual([["id", NEW_ESTIMATE]]);
+  });
+
+  it("refuses to guess a tax rate when shop settings can't be loaded", async () => {
+    vi.mocked(getShopSettings).mockResolvedValue(null);
+    const mock = mockClient([
+      { data: SOURCE, error: null },
+      { data: ITEMS, error: null },
+    ]);
+
+    const result = await duplicateEstimate(ESTIMATE_A);
+
+    expect(result).toEqual({ ok: false, error: "Couldn't load shop settings — try again" });
+    expect(mock.calls.find((c) => c.method === "insert")).toBeUndefined();
   });
 
   it("skips the copy insert when the source has no line items", async () => {
@@ -384,7 +449,7 @@ describe("duplicateEstimate", () => {
 
     const result = await duplicateEstimate(ESTIMATE_A);
 
-    expect(result).toEqual({ data: { id: NEW_ESTIMATE } });
+    expect(result).toEqual({ ok: true, data: { id: NEW_ESTIMATE } });
     expect(mock.calls.filter((c) => c.method === "insert")).toHaveLength(1);
   });
 });
@@ -405,7 +470,7 @@ describe("resendEstimate", () => {
       data: { sent: true, testMode: false, to: "+16175550100", customerName: "Ana" },
     });
     vi.mocked(sendEstimateEmail).mockResolvedValue({ sent: true });
-    const mock = mockClient([{ data: SENT_ROW, error: null }, { error: null }]);
+    const mock = mockClient([{ data: SENT_ROW, error: null }, { error: null, count: 1 }]);
 
     const result = await resendEstimate(ESTIMATE_A);
 
@@ -425,12 +490,30 @@ describe("resendEstimate", () => {
   it("still stamps when one channel fails, and says which one", async () => {
     vi.mocked(sendCustomerSMS).mockResolvedValue({ error: "Quo down" });
     vi.mocked(sendEstimateEmail).mockResolvedValue({ sent: true });
-    const mock = mockClient([{ data: SENT_ROW, error: null }, { error: null }]);
+    const mock = mockClient([{ data: SENT_ROW, error: null }, { error: null, count: 1 }]);
 
     const result = await resendEstimate(ESTIMATE_A);
 
     expect(result).toEqual({ data: { success: true, deliveryWarning: "SMS: Quo down" } });
     expect(writeIndex(mock.calls, "update")).toBeGreaterThan(-1);
+  });
+
+  it("warns when the stamp matched no row because the status moved on", async () => {
+    vi.mocked(sendCustomerSMS).mockResolvedValue({
+      data: { sent: true, testMode: false, to: "+16175550100", customerName: "Ana" },
+    });
+    vi.mocked(sendEstimateEmail).mockResolvedValue({ sent: true });
+    mockClient([{ data: SENT_ROW, error: null }, { error: null, count: 0 }]);
+
+    const result = await resendEstimate(ESTIMATE_A);
+
+    expect(result).toEqual({
+      data: {
+        success: true,
+        deliveryWarning:
+          "Delivered, but the estimate is no longer in sent status so the resend time wasn't recorded",
+      },
+    });
   });
 
   it("does not stamp last_sent_at when nothing was delivered", async () => {

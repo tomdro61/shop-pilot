@@ -18,13 +18,9 @@ export function EstimateCustomerEditor({
   return (
     <CustomerPickerEditor
       currentCustomer={currentCustomer}
-      onConfirm={async (customer) => {
-        const result = await updateEstimateFields(estimateId, {
-          customer_id: customer.id,
-          vehicle_id: null,
-        });
-        return "error" in result && result.error ? result.error : null;
-      }}
+      onConfirm={(customer) =>
+        updateEstimateFields(estimateId, { customer_id: customer.id, vehicle_id: null })
+      }
       describeChange={(name) => (
         <>
           This estimate will be reassigned to <strong>{name}</strong>.

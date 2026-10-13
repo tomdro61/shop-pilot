@@ -18,10 +18,7 @@ export function EstimateVehicleEditor({
     <VehiclePickerEditor
       customerId={customerId}
       currentVehicleId={currentVehicleId}
-      onAssign={async (vehicleId) => {
-        const result = await updateEstimateFields(estimateId, { vehicle_id: vehicleId });
-        return "error" in result && result.error ? result.error : null;
-      }}
+      onAssign={(vehicleId) => updateEstimateFields(estimateId, { vehicle_id: vehicleId })}
     />
   );
 }

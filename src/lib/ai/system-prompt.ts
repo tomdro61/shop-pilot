@@ -23,8 +23,8 @@ export function getSystemPrompt(): string {
 - **Vehicles** belong to a customer (year, make, model, VIN, mileage)
 - **Jobs** belong to a customer + vehicle, have a status, title, assigned technician, line items, payment_status, payment_method, mileage_in, and an auto-assigned RO number (ro_number, displayed as RO-0001)
 - **Job Line Items** are labor or parts with description, quantity, unit cost, and category (e.g. 'Brake Service', 'Oil Change'). Line-item categories are the single source of truth for service categorization. Categories are configurable via shop settings (Settings > Job Categories) and returned by get_shop_settings.
-- **Estimates** are created from a job's line items, sent to customers for approval
-- **Estimate Line Items** can be edited independently (only when estimate is in "draft" status)
+- **Estimates** are created from a job's line items or standalone for a customer, sent to customers for approval. Any estimate can be copied with duplicate_estimate into a fresh standalone draft.
+- **Estimate Line Items** can be edited independently while the estimate is "draft" or "sent". Approved and declined estimates are frozen — use duplicate_estimate to revise them. After editing a sent estimate, call resend_estimate so the customer sees the new total (their existing link already shows it).
 - **Invoices** are created from completed jobs via Stripe (retail only)
 - **Catalog Items** are saved parts and labor with default pricing (description, quantity, unit cost, part number, category). Use search_catalog to find items, then add_catalog_items_to_job to add them to a job efficiently. The catalog grows over time as the shop saves commonly used items. When the user asks to add common parts or services, prefer catalog items over manually specifying descriptions/prices.
 
@@ -49,8 +49,8 @@ Payment methods: stripe (card), cash, check, ach
 - Shop supplies fee and environmental fee are optional and may be disabled.
 - Cannot delete a customer who has active jobs (not_started, waiting_for_parts, in_progress)
 - Cannot create an invoice unless the job status is "complete"
-- Estimate line items can only be added/edited/deleted when the estimate is in "draft" status
-- An estimate can only be sent when it's in "draft" status
+- Estimate line items can only be added/edited/deleted when the estimate is "draft" or "sent" (never once approved or declined)
+- An estimate can only be sent when it's in "draft" status, and only resent (resend_estimate) when it's "sent"
 - A job can only have one estimate and one invoice
 
 ## Messaging (SMS & Email)
@@ -83,7 +83,8 @@ When showing parking info, include: customer name, vehicle (make model), plate, 
 
 ## Confirmation Required
 You MUST ask "Should I go ahead?" and wait for the user to confirm BEFORE executing any of these actions:
-- Creating or sending estimates
+- Creating, sending, or resending estimates
+- Duplicating a job or an estimate (duplicate_job, duplicate_estimate)
 - Creating invoices
 - Sending SMS messages (send_sms) or emails (send_email)
 - Deleting anything (customers, vehicles, jobs, line items, estimate line items)

@@ -108,7 +108,11 @@ function PresetsTab({
       toast.info(`"${preset.name}" has no line items`);
       return;
     }
-    toast.success(`Added "${preset.name}" items`);
+    if ("warning" in result && result.warning) {
+      toast.warning(result.warning);
+    } else {
+      toast.success(`Added "${preset.name}" items`);
+    }
     onDone();
   }
 
@@ -216,7 +220,11 @@ function CatalogTab({ estimateId }: { estimateId: string }) {
     if ("error" in result && result.error) {
       toast.error(typeof result.error === "string" ? result.error : "Failed to add");
     } else {
-      toast.success(`Added "${item.description}"`);
+      if ("warning" in result && result.warning) {
+        toast.warning(result.warning);
+      } else {
+        toast.success(`Added "${item.description}"`);
+      }
       incrementUsageCount(item.id);
     }
   }

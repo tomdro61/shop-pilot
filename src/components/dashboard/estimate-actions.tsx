@@ -87,8 +87,15 @@ export function EstimateActions({
   async function handleResend() {
     if (loading) return;
     setLoading(true);
-    const result = await resendEstimate(estimateId);
-    setLoading(false);
+    let result: Awaited<ReturnType<typeof resendEstimate>>;
+    try {
+      result = await resendEstimate(estimateId);
+    } catch {
+      toast.error("Something went wrong — try again");
+      return;
+    } finally {
+      setLoading(false);
+    }
 
     if (result.error) {
       toast.error(result.error);
@@ -106,17 +113,22 @@ export function EstimateActions({
   async function handleDuplicate() {
     if (loading) return;
     setLoading(true);
-    const result = await duplicateEstimate(estimateId);
-    setLoading(false);
+    let result: Awaited<ReturnType<typeof duplicateEstimate>>;
+    try {
+      result = await duplicateEstimate(estimateId);
+    } catch {
+      toast.error("Something went wrong — try again");
+      return;
+    } finally {
+      setLoading(false);
+    }
 
-    if ("error" in result && result.error) {
+    if (!result.ok) {
       toast.error(result.error);
       return;
     }
-    if ("data" in result && result.data?.id) {
-      toast.success("Draft copy created");
-      router.push(`/estimates/${result.data.id}`);
-    }
+    toast.success("Draft copy created");
+    router.push(`/estimates/${result.data.id}`);
   }
 
   const duplicateButton = (

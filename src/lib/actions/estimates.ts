@@ -19,29 +19,12 @@ import crypto from "crypto";
 import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
-
-// Line items, vehicle, and customer can change while the estimate is draft or
-// sent. Once a customer has approved (or declined) a price, the record is
-// frozen — the manager duplicates it to send a revised version.
-function isEditableStatus(status: string): boolean {
-  return status === "draft" || status === "sent";
-}
-
-const NOT_EDITABLE_MSG =
-  "Only draft or sent estimates can be edited — duplicate this one to make changes";
-
-// Stamp after a successful content write so the detail page can flag a sent
-// estimate as "edited since last sent" and the manager knows to resend.
-async function stampEstimateEdited(
-  supabase: SupabaseClient<Database>,
-  estimateId: string
-): Promise<string | null> {
-  const { error } = await supabase
-    .from("estimates")
-    .update({ last_edited_at: new Date().toISOString() })
-    .eq("id", estimateId);
-  return error ? error.message : null;
-}
+import type { ActionResult } from "./_types";
+import {
+  isEditableStatus,
+  NOT_EDITABLE_MSG,
+  stampEstimateEdited,
+} from "@/lib/estimates/editing";
 
 type CopiedLineItem = Pick<
   Database["public"]["Tables"]["estimate_line_items"]["Row"],
@@ -96,39 +79,23 @@ export async function createEstimateFromJob(jobId: string) {
 
   if (error) return { error: error.message };
 
-  if (lineItems && lineItems.length > 0) {
-    const estimateLineItems = lineItems.map((li) => ({
-      estimate_id: estimate.id,
-      type: li.type,
-      description: li.description,
-      quantity: li.quantity,
-      unit_cost: li.unit_cost,
-      cost: li.type === "part" ? (li.cost ?? null) : null,
-      part_number: li.part_number,
-      category: li.category,
-    }));
+  const copyError = await copyLineItemsToEstimate(supabase, estimate.id, lineItems ?? []);
+  if (copyError) {
+    const { error: rollbackError } = await supabase
+      .from("estimates")
+      .delete()
+      .eq("id", estimate.id);
 
-    const { error: copyError } = await supabase
-      .from("estimate_line_items")
-      .insert(estimateLineItems);
-
-    if (copyError) {
-      const { error: rollbackError } = await supabase
-        .from("estimates")
-        .delete()
-        .eq("id", estimate.id);
-
-      if (rollbackError) {
-        console.error(
-          "[createEstimateFromJob] rollback failed — orphan estimate left in DB",
-          { rollbackError, copyError, estimateId: estimate.id, jobId }
-        );
-        return {
-          error: `Couldn't copy line items and rollback failed — the estimate may need manual cleanup: ${copyError.message}`,
-        };
-      }
-      return { error: `Failed to copy line items: ${copyError.message}` };
+    if (rollbackError) {
+      console.error(
+        "[createEstimateFromJob] rollback failed — orphan estimate left in DB",
+        { rollbackError, copyError, estimateId: estimate.id, jobId }
+      );
+      return {
+        error: `Couldn't copy line items and rollback failed — the estimate may need manual cleanup: ${copyError}`,
+      };
     }
+    return { error: `Failed to copy line items: ${copyError}` };
   }
 
   revalidatePath(`/jobs/${jobId}`);
@@ -384,7 +351,8 @@ export async function resendEstimate(id: string) {
     .eq("id", id)
     .single();
 
-  if (fetchError || !estimate) return { error: "Estimate not found" };
+  if (fetchError) return { error: fetchError.message };
+  if (!estimate) return { error: "Estimate not found" };
   if (estimate.status !== "sent") return { error: "Only sent estimates can be resent" };
   if (!estimate.approval_token) return { error: "No approval token found" };
 
@@ -452,13 +420,15 @@ export async function resendEstimate(id: string) {
   // Only stamp when at least one channel landed — the "edited since last
   // sent" flag clears off this timestamp, and clearing it after a total
   // delivery failure would hide the edit the customer never received.
-  const { error: stampError } = await supabase
+  const { error: stampError, count: stampCount } = await supabase
     .from("estimates")
-    .update({ last_sent_at: new Date().toISOString() })
+    .update({ last_sent_at: new Date().toISOString() }, { count: "exact" })
     .eq("id", id)
     .eq("status", "sent");
   if (stampError) {
     warnings.push(`Couldn't record the resend time: ${stampError.message}`);
+  } else if (stampCount !== 1) {
+    warnings.push("Delivered, but the estimate is no longer in sent status so the resend time wasn't recorded");
   }
 
   revalidatePath(`/estimates/${id}`);
@@ -481,9 +451,12 @@ export type EstimateFieldPatch = {
 // customer can only change on a draft: a sent estimate's link has already
 // been delivered to a specific person, so re-pointing it would show that
 // person someone else's name and price. Duplicate instead.
-export async function updateEstimateFields(id: string, patch: EstimateFieldPatch) {
+export async function updateEstimateFields(
+  id: string,
+  patch: EstimateFieldPatch
+): Promise<ActionResult> {
   const auth = await requireManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const supabase = await createClient();
 
@@ -493,9 +466,14 @@ export async function updateEstimateFields(id: string, patch: EstimateFieldPatch
     .eq("id", id)
     .single();
 
-  if (fetchError) return { error: fetchError.message };
-  if (!estimate) return { error: "Estimate not found" };
-  if (!isEditableStatus(estimate.status)) return { error: NOT_EDITABLE_MSG };
+  if (fetchError) return { ok: false, error: fetchError.message };
+  if (!estimate) return { ok: false, error: "Estimate not found" };
+  if (!isEditableStatus(estimate.status)) return { ok: false, error: NOT_EDITABLE_MSG };
+  // An estimate created from a job mirrors that job's customer and vehicle;
+  // both are changed on the job.
+  if (estimate.job_id) {
+    return { ok: false, error: "This estimate belongs to a job — change the customer or vehicle on the job" };
+  }
 
   const update: { customer_id?: string; vehicle_id?: string | null; last_edited_at: string } = {
     last_edited_at: new Date().toISOString(),
@@ -503,18 +481,18 @@ export async function updateEstimateFields(id: string, patch: EstimateFieldPatch
 
   if (patch.customer_id !== undefined && patch.customer_id !== estimate.customer_id) {
     if (estimate.status !== "draft") {
-      return { error: "The customer can only be changed on a draft estimate — duplicate this one instead" };
-    }
-    if (estimate.job_id) {
-      return { error: "This estimate belongs to a job — change the customer on the job" };
+      return {
+        ok: false,
+        error: "The customer can only be changed on a draft estimate — duplicate this one instead",
+      };
     }
     const { data: customer, error: customerError } = await supabase
       .from("customers")
       .select("id")
       .eq("id", patch.customer_id)
       .maybeSingle();
-    if (customerError) return { error: customerError.message };
-    if (!customer) return { error: "Customer not found" };
+    if (customerError) return { ok: false, error: customerError.message };
+    if (!customer) return { ok: false, error: "Customer not found" };
     update.customer_id = patch.customer_id;
     // Vehicles belong to a customer; the old one can't follow.
     update.vehicle_id = null;
@@ -530,38 +508,44 @@ export async function updateEstimateFields(id: string, patch: EstimateFieldPatch
         .select("id, customer_id")
         .eq("id", patch.vehicle_id)
         .maybeSingle();
-      if (vehicleError) return { error: vehicleError.message };
+      if (vehicleError) return { ok: false, error: vehicleError.message };
       if (!vehicle || vehicle.customer_id !== owner) {
-        return { error: "Vehicle does not belong to this customer" };
+        return { ok: false, error: "Vehicle does not belong to this customer" };
       }
       update.vehicle_id = patch.vehicle_id;
     }
   }
 
   if (update.customer_id === undefined && update.vehicle_id === undefined) {
-    return { error: "Nothing to update" };
+    return { ok: false, error: "Nothing to update" };
   }
 
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from("estimates")
-    .update(update)
+    .update(update, { count: "exact" })
     .eq("id", id)
     .eq("status", estimate.status);
-  if (error) return { error: error.message };
+  if (error) return { ok: false, error: error.message };
+  if (count !== 1) {
+    return {
+      ok: false,
+      error: "The estimate changed status while you were editing — reload and try again",
+    };
+  }
 
   revalidatePath(`/estimates/${id}`);
   revalidatePath(`/customers/${estimate.customer_id}`);
   if (update.customer_id) revalidatePath(`/customers/${update.customer_id}`);
-  return { success: true };
+  return { ok: true };
 }
 
 // A fresh draft with the same customer, vehicle, tax setting, notes, and line
-// items. Always standalone (job_id null) — a job can only carry one estimate,
-// and the usual reason to duplicate is to re-quote something already
-// approved, where the original stays attached to its job.
-export async function duplicateEstimate(id: string) {
+// items. Always standalone (job_id null) — createEstimateFromJob refuses a
+// second estimate on a job, and the usual reason to duplicate is to re-quote
+// something already approved, where the original stays attached to its job.
+export async function duplicateEstimate(id: string): Promise<ActionResult<{ id: string }>> {
   const auth = await requireManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const supabase = await createClient();
 
@@ -571,8 +555,8 @@ export async function duplicateEstimate(id: string) {
     .eq("id", id)
     .single();
 
-  if (fetchError) return { error: fetchError.message };
-  if (!source) return { error: "Estimate not found" };
+  if (fetchError) return { ok: false, error: fetchError.message };
+  if (!source) return { ok: false, error: "Estimate not found" };
 
   const [{ data: lineItems, error: lineItemsError }, settings] = await Promise.all([
     supabase
@@ -584,7 +568,8 @@ export async function duplicateEstimate(id: string) {
     getShopSettings(),
   ]);
 
-  if (lineItemsError) return { error: lineItemsError.message };
+  if (lineItemsError) return { ok: false, error: lineItemsError.message };
+  if (!settings) return { ok: false, error: "Couldn't load shop settings — try again" };
 
   const { data: estimate, error } = await supabase
     .from("estimates")
@@ -593,14 +578,14 @@ export async function duplicateEstimate(id: string) {
       customer_id: source.customer_id,
       vehicle_id: source.vehicle_id,
       status: "draft",
-      tax_rate: settings?.tax_rate ?? 0.0625,
+      tax_rate: settings.tax_rate,
       charge_sales_tax: source.charge_sales_tax,
       notes: source.notes,
     })
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { ok: false, error: error.message };
 
   const copyError = await copyLineItemsToEstimate(supabase, estimate.id, lineItems ?? []);
   if (copyError) {
@@ -609,22 +594,21 @@ export async function duplicateEstimate(id: string) {
       .delete()
       .eq("id", estimate.id);
     if (rollbackError) {
-      console.error("[duplicateEstimate] rollback failed — orphan estimate left in DB", {
-        rollbackError,
-        copyError,
-        estimateId: estimate.id,
-        sourceId: id,
+      Sentry.captureException(new Error(rollbackError.message), {
+        tags: { action: "duplicateEstimate", phase: "rollback" },
+        extra: { copyError, estimateId: estimate.id, sourceId: id },
       });
       return {
+        ok: false,
         error: `Couldn't copy line items and rollback failed — the estimate may need manual cleanup: ${copyError}`,
       };
     }
-    return { error: `Failed to copy line items: ${copyError}` };
+    return { ok: false, error: `Failed to copy line items: ${copyError}` };
   }
 
   revalidatePath(`/customers/${source.customer_id}`);
   revalidatePath("/estimates");
-  return { data: { id: estimate.id } };
+  return { ok: true, data: { id: estimate.id } };
 }
 
 async function copyLineItemsToEstimate(
@@ -1263,7 +1247,7 @@ export async function deleteEstimate(id: string) {
   return { success: true };
 }
 
-// Estimate Line Item CRUD (only allowed when estimate is draft)
+// Estimate Line Item CRUD (draft or sent — see isEditableStatus)
 
 export async function createEstimateLineItem(formData: EstimateLineItemFormData) {
   const auth = await requireManager();
@@ -1276,7 +1260,6 @@ export async function createEstimateLineItem(formData: EstimateLineItemFormData)
 
   const supabase = await createClient();
 
-  // Verify estimate is draft
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select("id, status, job_id")
@@ -1295,12 +1278,15 @@ export async function createEstimateLineItem(formData: EstimateLineItemFormData)
 
   if (error) return { error: error.message };
 
+  // The item is committed at this point. A stamp failure is reported as a
+  // warning, not an error — an error would keep the add sheet open with the
+  // fields still filled, and the natural retry inserts the item twice.
   const stampError = await stampEstimateEdited(supabase, parsed.data.estimate_id);
   revalidatePath(`/estimates/${parsed.data.estimate_id}`);
-  if (stampError) {
-    return { error: `Line item added, but couldn't flag the estimate as edited: ${stampError}` };
-  }
-  return { data };
+  return {
+    data,
+    warning: stampError ? `Saved, but couldn't flag the estimate as edited: ${stampError}` : undefined,
+  };
 }
 
 export async function updateEstimateLineItem(
@@ -1317,7 +1303,6 @@ export async function updateEstimateLineItem(
 
   const supabase = await createClient();
 
-  // Verify estimate is draft
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select("id, status")
@@ -1329,7 +1314,7 @@ export async function updateEstimateLineItem(
   if (!isEditableStatus(estimate.status)) return { error: NOT_EDITABLE_MSG };
 
   // Scope by estimate_id too — without it, a caller could pass a draft
-  // estimate_id alongside a line-item id from a *different* (sent/approved)
+  // estimate_id alongside a line-item id from a *different* (approved/declined)
   // estimate. The status guard would pass on the wrong estimate while the
   // update lands on the protected one.
   const { data, error } = await supabase
@@ -1345,10 +1330,10 @@ export async function updateEstimateLineItem(
 
   const stampError = await stampEstimateEdited(supabase, parsed.data.estimate_id);
   revalidatePath(`/estimates/${parsed.data.estimate_id}`);
-  if (stampError) {
-    return { error: `Line item saved, but couldn't flag the estimate as edited: ${stampError}` };
-  }
-  return { data };
+  return {
+    data,
+    warning: stampError ? `Saved, but couldn't flag the estimate as edited: ${stampError}` : undefined,
+  };
 }
 
 export async function deleteEstimateLineItem(id: string, estimateId: string) {
@@ -1357,7 +1342,6 @@ export async function deleteEstimateLineItem(id: string, estimateId: string) {
 
   const supabase = await createClient();
 
-  // Verify estimate is draft
   const { data: estimate, error: fetchError } = await supabase
     .from("estimates")
     .select("id, status")
@@ -1380,8 +1364,8 @@ export async function deleteEstimateLineItem(id: string, estimateId: string) {
 
   const stampError = await stampEstimateEdited(supabase, estimateId);
   revalidatePath(`/estimates/${estimateId}`);
-  if (stampError) {
-    return { error: `Line item deleted, but couldn't flag the estimate as edited: ${stampError}` };
-  }
-  return { success: true };
+  return {
+    success: true,
+    warning: stampError ? `Deleted, but couldn't flag the estimate as edited: ${stampError}` : undefined,
+  };
 }

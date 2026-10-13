@@ -498,9 +498,9 @@ export async function deleteJob(id: string) {
 // visit is reset: status, dates, drop-off time, tech, mileage, and every
 // payment field. The source's estimate, invoice, and inspection stay with
 // the source.
-export async function duplicateJob(id: string) {
+export async function duplicateJob(id: string): Promise<ActionResult<{ id: string }>> {
   const auth = await requireManager();
-  if (!auth.ok) return { error: auth.error };
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   const supabase = await createClient();
 
@@ -510,8 +510,8 @@ export async function duplicateJob(id: string) {
     .eq("id", id)
     .single();
 
-  if (fetchError) return { error: fetchError.message };
-  if (!source) return { error: "Job not found" };
+  if (fetchError) return { ok: false, error: fetchError.message };
+  if (!source) return { ok: false, error: "Job not found" };
 
   const { data: lineItems, error: lineItemsError } = await supabase
     .from("job_line_items")
@@ -520,7 +520,7 @@ export async function duplicateJob(id: string) {
     .order("created_at")
     .order("id");
 
-  if (lineItemsError) return { error: lineItemsError.message };
+  if (lineItemsError) return { ok: false, error: lineItemsError.message };
 
   const { data: job, error } = await supabase
     .from("jobs")
@@ -545,7 +545,7 @@ export async function duplicateJob(id: string) {
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { ok: false, error: error.message };
 
   if (lineItems && lineItems.length > 0) {
     const { error: copyError } = await supabase.from("job_line_items").insert(
@@ -564,24 +564,23 @@ export async function duplicateJob(id: string) {
     if (copyError) {
       const { error: rollbackError } = await supabase.from("jobs").delete().eq("id", job.id);
       if (rollbackError) {
-        console.error("[duplicateJob] rollback failed — orphan job left in DB", {
-          rollbackError,
-          copyError,
-          jobId: job.id,
-          sourceId: id,
+        Sentry.captureException(new Error(rollbackError.message), {
+          tags: { action: "duplicateJob", phase: "rollback" },
+          extra: { copyError, jobId: job.id, sourceId: id },
         });
         return {
+          ok: false,
           error: `Couldn't copy line items and rollback failed — the job may need manual cleanup: ${copyError.message}`,
         };
       }
-      return { error: `Failed to copy line items: ${copyError.message}` };
+      return { ok: false, error: `Failed to copy line items: ${copyError.message}` };
     }
   }
 
   revalidatePath("/jobs");
   revalidatePath("/dashboard");
   revalidatePath(`/customers/${source.customer_id}`);
-  return { data: { id: job.id } };
+  return { ok: true, data: { id: job.id } };
 }
 
 export async function getLineItemCategories() {

@@ -115,7 +115,11 @@ export function EstimateLineItemForm(props: EstimateLineItemFormProps) {
       return;
     }
 
-    toast.success(isEditing ? "Line item updated" : "Line item added");
+    if ("warning" in result && result.warning) {
+      toast.warning(result.warning);
+    } else {
+      toast.success(isEditing ? "Line item updated" : "Line item added");
+    }
     closeForm();
     form.reset({
       estimate_id: estimateId,
