@@ -5200,11 +5200,10 @@ what the code does. Left for the owner (below).
 `src/types/supabase.ts`, `ARCHITECTURE.md`, `DATABASE_SCHEMA.md`.
 
 **Not done (needs the owner).**
-- The migration is **not applied**. `npx supabase db push` was blocked by the
-  permission classifier (the one Supabase project is production). Until it
-  runs, any line-item edit on staging will save the item and then warn
-  "couldn't flag the estimate as edited", and resend won't record its time.
-  Run `! npx supabase db push` from `shop-pilot/`.
+- ~~The migration is not applied.~~ **Applied 2026-10-13** with the owner's
+  permission grant (`npx supabase db push`); `migration list` shows
+  `20261013000000` on the remote and `information_schema.columns` confirms
+  `last_edited_at` / `last_sent_at` on `estimates`.
 - No click-through. The dev server came up but the Playwright browser had no
   session and the repo holds no test login. To verify: on a sent estimate,
   add/edit/delete an item and a preset, see the banner, Resend (with the live
