@@ -64,6 +64,22 @@ For each item, classify:
 
 ## Step 3 — Audit the other docs
 
+Route each kind of change to the doc that owns it. This is the same table
+CLAUDE.md's "After Every Change" prescribes, plus the two running-findings
+files that are easy to forget when the session's review happened hours ago.
+
+| What the session did | Update |
+|---|---|
+| Anything shipped or decided | `PROGRESS.md` (session entry) |
+| Added / retired a feature or integration | `ARCHITECTURE.md` (current shape only, no history) |
+| Migration added / changed / dropped a column or table | `DATABASE_SCHEMA.md` + regenerate `src/types/supabase.ts` |
+| A roadmap checkbox actually shipped or un-shipped | `../SHOPPILOT_ROADMAP.md` (Step 2 evidence) |
+| Changed a workflow rule, anti-pattern, convention, skill, or hook | `CLAUDE.md` (and the skill's own `SKILL.md`) |
+| A review pass surfaced findings, or an incident reached customers | `REVIEW-FINDINGS.md` (one entry per session, findings + process notes) |
+| UI consistency findings | `UI-AUDIT.md` |
+| Cross-project contract changed (parking forms, quote form, SMS link targets) | `../CLAUDE.md` |
+| Something surprising the next session would re-derive wrong | memory (Step 6) |
+
 **`ARCHITECTURE.md`** — Did this session add/remove/change an integration or feature? If yes, propose the section to update. If no (just bug fixes inside existing surfaces), leave alone — ARCHITECTURE describes *current shape*, not session history.
 
 **`DATABASE_SCHEMA.md`** — Did any migration this session add/change/remove a column or table? If yes, draft the entry. Cross-check against `src/types/supabase.ts` to confirm types are regenerated.
@@ -71,6 +87,10 @@ For each item, classify:
 **`src/types/supabase.ts`** — If a migration shipped, was the file regenerated? Check `git log -- src/types/supabase.ts` against the migration timestamp.
 
 **`CLAUDE.md` files** — Did the session change a workflow rule, anti-pattern, or convention? Almost always "no" — flag explicitly if "yes."
+
+**`REVIEW-FINDINGS.md`** — If `/scoped-review` ran this session and returned findings that were fixed, is there an entry? The October 2026 session shipped five review fixes and the entry was only written during `/post-deploy-check`. Format: a dated header naming the commits, one `## XX-N — <claim> (SEVERITY, fixed|open)` per finding, then `## Process notes` for the pattern worth remembering.
+
+**`UI-AUDIT.md`** — Only if the session changed a visual pattern or found an inconsistency.
 
 **Memory** (`C:\Users\tomjd\.claude\projects\...\memory\`) — Did anything come up that's *surprising or non-obvious* and worth recording for future sessions? User preferences expressed, anti-patterns encountered, decisions made. Skim for candidates; do NOT save routine "we updated X" facts (those belong in PROGRESS.md, not memory).
 
@@ -110,6 +130,8 @@ Present in this order:
 4. **DATABASE_SCHEMA.md changes** — if any.
 5. **Memory candidates** — listed but NOT auto-written; user picks.
 6. **Anything stale you found** — checkboxes that were on but code says no, doc that contradicts another doc, etc.
+7. **Rows of the Step 3 table that were skipped, and why** — "no migration, so no schema change" is a sentence the user can check. An audit that only lists what it changed cannot be told apart from one that forgot to look.
+8. **Pending follow-ups** — anything the session left for the user (apply a migration, click through a flow, decide on an open review item, merge). Restate them here even if they were said earlier; the end-of-session message is the one that gets read next time.
 
 Wait for the user to approve. Then write the changes — separate commits per doc category so the diff is reviewable:
 - `docs(progress): Session NN — <title> [skip-review]`
