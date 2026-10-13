@@ -1801,3 +1801,57 @@ set, so the AI or a stale tab cannot desync the estimate from its job.
   told the sheet "nothing happened, try again". The result type has to say
   which half happened. `resendInvoice` already uses the same `sent: true`
   plus `warnings` shape for a one-channel failure.
+
+## October 2026 — Invoice send history (`03a8d39` + follow-up), caught in review, fixed pre-ship
+
+Context: the owner couldn't see when EZY Rent's invoices went out. The
+`messages` log had every send; no page read it. Five reviewers on the first
+draft; no Criticals.
+
+## IH-1 — A send whose every channel failed read "Invoice sent" (HIGH, fixed)
+
+The headline came from the message kind; the failure lived only in a trailing
+"text failed". On the customer table, at 11px grey, the manager reads "sent".
+Now "Send failed" in red when every channel failed.
+
+## IH-2 — `.limit(200)` across all of a customer's jobs, no count (MEDIUM, fixed)
+
+Newest first, so the oldest displayed jobs — the ones a chronic non-payer's
+history is for — would silently show no sends. Paged with `fetchAllRows` and
+`{ count: "exact" }`; a short page now fails the read instead of lying.
+
+## IH-3 — Job page rendered the raw Postgres message and logged nothing (MEDIUM, fixed)
+
+The customer page `console.error`ed; the job page didn't, and the component
+printed `error.message`. Both pages log; the component shows a fixed line.
+
+## IH-4 — Two comments were false (MEDIUM, fixed)
+
+"RLS scopes `messages` to signed-in staff" — the only policy is
+`managers_full_messages`, so a tech gets an empty history, not an error.
+"A voided invoice may un-complete the job" — `voidInvoiceForJob` deletes the
+row and resets `payment_status`; it never writes `jobs.status`. Both rewritten
+to what the code does.
+
+## Left open (pre-existing, owner's call)
+
+- Test-mode sends (Quo/Resend key unset) are logged `status: 'sent'` without
+  sending; dev shares the production DB. Latent while `.env.local` carries
+  live keys.
+- `createInvoiceFromJob` refuses an invalid phone / missing email before
+  logging, so "sent via text" in the toast can have no row behind it.
+
+## Process notes
+
+- **The surface made old gaps visible.** Both open items predate this work;
+  the history is the first place they show. A new read surface deserves the
+  same "what writes this, and when does it lie?" pass as a new write.
+- **Test against the templates, not against strings that look like them.**
+  `classifyInvoiceMessage` was tested with hand-typed bodies. The reviewer's
+  point: a copy tweak would demote every send to "Message" and nothing goes
+  red. The suite now feeds it `invoiceSentSMS`, `invoiceReminderSMS` and both
+  `invoiceReadyEmail` subjects.
+- **Five mutations survived a 14-test suite on the first pass** (kind guard,
+  window size, null status, excerpt, precedence). Each had a test that
+  *looked* like it covered the rule but used fixtures where another rule
+  already produced the same answer.

@@ -21,6 +21,7 @@ import { VoidInvoiceButton } from "@/components/dashboard/void-invoice-button";
 import { InvoiceDeliveryList } from "@/components/dashboard/invoice-delivery-list";
 import { isFirstDelivery } from "@/lib/invoices/delivery";
 import type { InvoiceDeliveryGroup } from "@/lib/invoices/deliveries";
+import type { ActionResult } from "@/lib/actions/_types";
 import { INVOICE_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import { FileText, ExternalLink } from "lucide-react";
@@ -41,8 +42,13 @@ interface InvoiceSectionProps {
   isFleet?: boolean;
   hasCardOnFile?: boolean;
   /** Invoice texts/emails from the messages log, newest first. Survives a void. */
-  deliveries: InvoiceDeliveryGroup[];
-  deliveriesError?: string | null;
+  deliveries: ActionResult<InvoiceDeliveryGroup[]>;
+}
+
+type InvoiceCardProps = Omit<InvoiceSectionProps, "deliveries">;
+
+function isCardHidden({ jobStatus, invoice }: Pick<InvoiceCardProps, "jobStatus" | "invoice">) {
+  return jobStatus !== "complete" && !invoice;
 }
 
 const STATUS_ACCENT: Record<InvoiceStatus, Accent> = {
@@ -51,19 +57,18 @@ const STATUS_ACCENT: Record<InvoiceStatus, Accent> = {
   paid: "green",
 };
 
-export function InvoiceSection(props: InvoiceSectionProps) {
-  const { deliveries, deliveriesError = null } = props;
-  const showHistory = deliveries.length > 0 || !!deliveriesError;
-  // Same guard as InvoiceCard's first early return. The history still renders
-  // without a card: a voided invoice deletes its row (and may un-complete the
-  // job) but the texts that went out are still a fact the shop may need.
-  const cardHidden = props.jobStatus !== "complete" && !props.invoice;
+export function InvoiceSection({ deliveries, ...card }: InvoiceSectionProps) {
+  const showHistory = !deliveries.ok || deliveries.data.length > 0;
+  // The history still renders without a card: voiding deletes the invoice row
+  // and unblocks cancelJob, so a job can leave "complete" after texts went
+  // out — and those are still a fact the shop may need.
+  const cardHidden = isCardHidden(card);
   if (cardHidden && !showHistory) return null;
 
   return (
     <div className="space-y-2">
-      {!cardHidden && <InvoiceCard {...props} />}
-      {showHistory && <InvoiceDeliveryList groups={deliveries} error={deliveriesError} />}
+      {!cardHidden && <InvoiceCard {...card} />}
+      {showHistory && <InvoiceDeliveryList deliveries={deliveries} />}
     </div>
   );
 }
@@ -77,7 +82,7 @@ function InvoiceCard({
   paymentStatus,
   isFleet = false,
   hasCardOnFile = false,
-}: InvoiceSectionProps) {
+}: InvoiceCardProps) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [sendText, setSendText] = useState(!!customerPhone);
@@ -102,7 +107,7 @@ function InvoiceCard({
     }
   }
 
-  if (jobStatus !== "complete" && !invoice) {
+  if (isCardHidden({ jobStatus, invoice })) {
     return null;
   }
 

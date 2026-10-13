@@ -1,8 +1,8 @@
 /**
- * getInvoiceDeliveriesForJobs reads the messages log for the invoice-send
- * history shown on the job and customer pages. The predicates are the feature:
- * drop the job filter and customer A's page lists customer B's invoice texts;
- * drop the direction filter and a customer's inbound reply counts as a send.
+ * getInvoiceDeliveriesForJobs reads the messages log for invoice-send history.
+ * The predicates are the feature: drop the job filter and customer A's page
+ * lists customer B's invoice texts; drop the direction filter and a customer's
+ * inbound reply counts as a send.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -35,8 +35,8 @@ describe("getInvoiceDeliveriesForJobs", () => {
     expect(createClient).not.toHaveBeenCalled();
   });
 
-  it("scopes the read to the given jobs, outbound only, invoice wording only, newest first", async () => {
-    const mock = createSupabaseMock({ data: [ROW], error: null });
+  it("scopes the read to the given jobs, outbound only, invoice wording only, newest first, paged with an exact count", async () => {
+    const mock = createSupabaseMock({ data: [ROW], error: null, count: 1 });
     vi.mocked(createClient).mockResolvedValue(mock.client as never);
 
     const result = await getInvoiceDeliveriesForJobs([JOB_A, JOB_B]);
@@ -44,12 +44,13 @@ describe("getInvoiceDeliveriesForJobs", () => {
     expect(result).toEqual({ ok: true, data: [ROW] });
     expect(mock.calls).toEqual([
       { method: "from", args: ["messages"] },
-      { method: "select", args: ["id, job_id, channel, status, body, sent_at"] },
+      { method: "select", args: ["id, job_id, channel, status, body, sent_at", { count: "exact" }] },
       { method: "in", args: ["job_id", [JOB_A, JOB_B]] },
       { method: "eq", args: ["direction", "out"] },
       { method: "ilike", args: ["body", "%invoice%"] },
       { method: "order", args: ["sent_at", { ascending: false }] },
-      { method: "limit", args: [200] },
+      { method: "order", args: ["id", { ascending: false }] },
+      { method: "range", args: [0, 999] },
     ]);
   });
 
@@ -59,6 +60,16 @@ describe("getInvoiceDeliveriesForJobs", () => {
 
     const result = await getInvoiceDeliveriesForJobs([JOB_A]);
 
-    expect(result).toEqual({ ok: false, error: "boom" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("boom");
+  });
+
+  it("fails rather than returning a short list when the page came back without a count", async () => {
+    const mock = createSupabaseMock({ data: [ROW], error: null });
+    vi.mocked(createClient).mockResolvedValue(mock.client as never);
+
+    const result = await getInvoiceDeliveriesForJobs([JOB_A]);
+
+    expect(result.ok).toBe(false);
   });
 });

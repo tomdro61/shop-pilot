@@ -3,7 +3,8 @@ import Link from "next/link";
 import { getJob } from "@/lib/actions/jobs";
 import { getInvoiceForJob } from "@/lib/actions/invoices";
 import { getInvoiceDeliveriesForJobs } from "@/lib/actions/invoice-deliveries";
-import { groupInvoiceDeliveries } from "@/lib/invoices/deliveries";
+import { groupInvoiceDeliveries, type InvoiceDeliveryGroup } from "@/lib/invoices/deliveries";
+import type { ActionResult } from "@/lib/actions/_types";
 import { getPaymentMethodForJob } from "@/lib/actions/payment-methods";
 import { getEstimateForJob } from "@/lib/actions/estimates";
 import { getInspectionForJob } from "@/lib/actions/dvi";
@@ -77,6 +78,13 @@ export default async function JobDetailPage({
     getInvoiceDeliveriesForJobs([id]),
   ]);
   if (!job) notFound();
+
+  if (!deliveriesResult.ok) {
+    console.error("[JobDetail] invoice deliveries query failed:", deliveriesResult.error);
+  }
+  const deliveries: ActionResult<InvoiceDeliveryGroup[]> = deliveriesResult.ok
+    ? { ok: true, data: groupInvoiceDeliveries(deliveriesResult.data) }
+    : deliveriesResult;
 
   // No cast. The previous `as (Customer & { email; customer_type })` fabricated
   // fields getJob never selected, so `customer_type` and `address` were always
@@ -387,8 +395,7 @@ export default async function JobDetailPage({
               paymentStatus={(job.payment_status || "unpaid") as PaymentStatus}
               isFleet={customer?.customer_type === "fleet"}
               hasCardOnFile={!!savedCard}
-              deliveries={deliveriesResult.ok ? groupInvoiceDeliveries(deliveriesResult.data) : []}
-              deliveriesError={deliveriesResult.ok ? null : deliveriesResult.error}
+              deliveries={deliveries}
             />
           </div>
         </section>

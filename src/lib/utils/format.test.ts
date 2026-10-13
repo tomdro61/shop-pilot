@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRONumber } from "./format";
+import { parseRONumber, formatDateTimeET } from "./format";
 
 describe("parseRONumber", () => {
   it.each([
@@ -32,5 +32,15 @@ describe("parseRONumber", () => {
     [""],
   ])("rejects %s", (input) => {
     expect(parseRONumber(input)).toBeNull();
+  });
+});
+
+describe("formatDateTimeET", () => {
+  it("renders a UTC instant in shop time with the hour and minute", () => {
+    expect(formatDateTimeET("2026-10-09T18:50:33.447Z")).toBe("Oct 9, 2:50 PM");
+  });
+
+  it("follows the Eastern offset through the winter", () => {
+    expect(formatDateTimeET("2026-01-15T18:50:00Z")).toBe("Jan 15, 1:50 PM");
   });
 });

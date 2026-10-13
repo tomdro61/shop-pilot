@@ -670,7 +670,7 @@ export default async function CustomerDetailPage({
                           <InvoiceDeliveryList
                             compact
                             limit={3}
-                            groups={deliveriesByJob.get(job.id) ?? []}
+                            deliveries={{ ok: true, data: deliveriesByJob.get(job.id) ?? [] }}
                           />
                         </td>
                         <td className="px-4 py-3 align-middle text-right font-mono tabular-nums text-sm font-medium text-stone-900 dark:text-stone-50">

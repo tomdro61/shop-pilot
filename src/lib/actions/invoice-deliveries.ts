@@ -1,28 +1,39 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
 import type { ActionResult } from "./_types";
 import type { InvoiceDeliveryRow } from "@/lib/invoices/deliveries";
 
-// Read-only page data; RLS scopes `messages` to signed-in staff, the same way
-// getInvoiceForJob relies on it. The body filter is the only thing that tells an
-// invoice send apart from a receipt or an estimate in this log — see
-// classifyInvoiceMessage for the wording it keys on.
+// Read-only. `messages` RLS is managers-only (is_manager()), so a tech gets an
+// empty history, not an error. The log has no message-type column; the body
+// filter is what separates an invoice send from the receipt, estimate and
+// status texts that share a job_id — see classifyInvoiceMessage.
+//
+// Paged rather than capped: a chronic non-payer is exactly the customer whose
+// oldest sends must not fall off the end of a silent LIMIT.
 export async function getInvoiceDeliveriesForJobs(
   jobIds: string[]
 ): Promise<ActionResult<InvoiceDeliveryRow[]>> {
   if (jobIds.length === 0) return { ok: true, data: [] };
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("messages")
-    .select("id, job_id, channel, status, body, sent_at")
-    .in("job_id", jobIds)
-    .eq("direction", "out")
-    .ilike("body", "%invoice%")
-    .order("sent_at", { ascending: false })
-    .limit(200);
-
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, data: data ?? [] };
+  try {
+    const rows = await fetchAllRows<InvoiceDeliveryRow>(
+      (from, to) =>
+        supabase
+          .from("messages")
+          .select("id, job_id, channel, status, body, sent_at", { count: "exact" })
+          .in("job_id", jobIds)
+          .eq("direction", "out")
+          .ilike("body", "%invoice%")
+          .order("sent_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      "invoice send history"
+    );
+    return { ok: true, data: rows };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }

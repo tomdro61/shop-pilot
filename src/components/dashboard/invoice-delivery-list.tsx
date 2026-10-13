@@ -1,6 +1,11 @@
 import { Send } from "lucide-react";
 import { formatDateTimeET } from "@/lib/utils/format";
-import type { InvoiceDeliveryGroup } from "@/lib/invoices/deliveries";
+import {
+  allChannelsFailed,
+  type DeliveryChannel,
+  type InvoiceDeliveryGroup,
+} from "@/lib/invoices/deliveries";
+import type { ActionResult } from "@/lib/actions/_types";
 
 const KIND_LABEL: Record<InvoiceDeliveryGroup["kind"], string> = {
   invoice: "Invoice sent",
@@ -8,43 +13,50 @@ const KIND_LABEL: Record<InvoiceDeliveryGroup["kind"], string> = {
   other: "Message",
 };
 
-const CHANNEL_LABEL: Record<"sms" | "email", string> = {
+const CHANNEL_LABEL: Record<DeliveryChannel, string> = {
   sms: "text",
   email: "email",
 };
 
+const FAILED_TEXT = "text-red-600 dark:text-red-400";
+
 interface InvoiceDeliveryListProps {
-  groups: InvoiceDeliveryGroup[];
-  error?: string | null;
+  deliveries: ActionResult<InvoiceDeliveryGroup[]>;
   limit?: number;
   compact?: boolean;
 }
 
-function channelSummary(group: InvoiceDeliveryGroup) {
-  return group.channels.map((c) => {
-    const failed = group.failedChannels.includes(c);
-    return (
-      <span key={c} className={failed ? "text-red-600 dark:text-red-400" : undefined}>
-        {CHANNEL_LABEL[c]}
+function headline(group: InvoiceDeliveryGroup) {
+  return allChannelsFailed(group) ? "Send failed" : KIND_LABEL[group.kind];
+}
+
+function channelNodes(group: InvoiceDeliveryGroup, separator: string) {
+  return group.channels.flatMap(({ channel, failed }, i) => {
+    const node = (
+      <span key={channel} className={failed ? FAILED_TEXT : undefined}>
+        {CHANNEL_LABEL[channel]}
         {failed ? " failed" : ""}
       </span>
     );
+    return i === 0 ? [node] : [<span key={`sep-${channel}`}>{separator}</span>, node];
   });
 }
 
 export function InvoiceDeliveryList({
-  groups,
-  error = null,
+  deliveries,
   limit = 5,
   compact = false,
 }: InvoiceDeliveryListProps) {
-  if (error) {
+  if (!deliveries.ok) {
+    // The cause is logged where the read ran; the raw Postgres text is no use here.
     return (
-      <p className={`text-xs text-red-600 dark:text-red-400 ${compact ? "mt-1" : ""}`}>
-        Couldn&apos;t load send history: {error}
+      <p className={`text-xs ${FAILED_TEXT} ${compact ? "mt-1" : ""}`}>
+        Couldn&apos;t load send history
       </p>
     );
   }
+
+  const groups = deliveries.data;
   if (groups.length === 0) return null;
 
   const shown = groups.slice(0, limit);
@@ -53,15 +65,21 @@ export function InvoiceDeliveryList({
   if (compact) {
     return (
       <ul className="mt-1.5 space-y-0.5 text-[11px] text-stone-500 dark:text-stone-400">
-        {shown.map((g) => (
-          <li key={`${g.jobId}-${g.sentAt}`} className="flex flex-wrap items-center gap-x-1">
-            <span className="font-mono tabular-nums">{formatDateTimeET(g.sentAt)}</span>
-            <span aria-hidden>·</span>
-            <span>{KIND_LABEL[g.kind].toLowerCase()}</span>
-            <span aria-hidden>·</span>
-            <span className="inline-flex gap-1">{channelSummary(g)}</span>
-          </li>
-        ))}
+        {shown.map((g) => {
+          const failed = allChannelsFailed(g);
+          return (
+            <li
+              key={`${g.jobId}-${g.sentAt}`}
+              className={`flex flex-wrap items-center gap-x-1 ${failed ? FAILED_TEXT : ""}`}
+            >
+              <span className="font-mono tabular-nums">{formatDateTimeET(g.sentAt)}</span>
+              <span aria-hidden>·</span>
+              <span>{headline(g).toLowerCase()}</span>
+              <span aria-hidden>·</span>
+              <span className="inline-flex gap-1">{channelNodes(g, "+")}</span>
+            </li>
+          );
+        })}
         {hidden > 0 && <li>+{hidden} more</li>}
       </ul>
     );
@@ -74,24 +92,28 @@ export function InvoiceDeliveryList({
         Sent to customer
       </div>
       <ul className="divide-y divide-stone-200 dark:divide-stone-800">
-        {shown.map((g) => (
-          <li
-            key={`${g.jobId}-${g.sentAt}`}
-            className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-4 py-2 text-xs"
-          >
-            <span className="font-mono tabular-nums text-stone-700 dark:text-stone-300">
-              {formatDateTimeET(g.sentAt)}
-            </span>
-            <span className="font-medium text-stone-900 dark:text-stone-50">{KIND_LABEL[g.kind]}</span>
-            <span className="inline-flex gap-1 text-stone-500 dark:text-stone-400">
-              {g.channels.length > 0 ? "via " : null}
-              {channelSummary(g).flatMap((node, i) => (i === 0 ? [node] : [<span key={`sep-${i}`}>+</span>, node]))}
-            </span>
-            {g.kind === "other" && (
-              <span className="basis-full text-stone-500 dark:text-stone-400 truncate">{g.excerpt}</span>
-            )}
-          </li>
-        ))}
+        {shown.map((g) => {
+          const failed = allChannelsFailed(g);
+          return (
+            <li
+              key={`${g.jobId}-${g.sentAt}`}
+              className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-4 py-2 text-xs"
+            >
+              <span className="font-mono tabular-nums text-stone-700 dark:text-stone-300">
+                {formatDateTimeET(g.sentAt)}
+              </span>
+              <span className={`font-medium ${failed ? FAILED_TEXT : "text-stone-900 dark:text-stone-50"}`}>
+                {headline(g)}
+              </span>
+              <span className="inline-flex gap-1 text-stone-500 dark:text-stone-400">
+                via {channelNodes(g, "+")}
+              </span>
+              {g.kind === "other" && (
+                <span className="basis-full text-stone-500 dark:text-stone-400 truncate">{g.excerpt}</span>
+              )}
+            </li>
+          );
+        })}
         {hidden > 0 && (
           <li className="px-4 py-2 text-xs text-stone-500 dark:text-stone-400">
             +{hidden} earlier

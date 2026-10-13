@@ -66,6 +66,7 @@ export function createSupabaseMock(
   builder.or = chain("or");
   builder.order = chain("order");
   builder.limit = chain("limit");
+  builder.range = chain("range");
   builder.abortSignal = chain("abortSignal");
   builder.single = vi.fn(() => {
     calls.push({ method: "single", args: [] });

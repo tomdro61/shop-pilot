@@ -5262,6 +5262,27 @@ channels / the window, failed channel attribution) and the read's full
 predicate chain pinned with `toEqual` so a dropped `.in("job_id")` or
 `.eq("direction","out")` fails.
 
+`/scoped-review` (five reviewers): no Criticals. Fixed from findings: a send
+whose every channel failed read "Invoice sent" (High) — now "Send failed" in
+red; the read used a silent `.limit(200)` across all of a customer's jobs
+(two reviewers) — now paged with `fetchAllRows` and an exact count, so a
+truncated page fails instead of hiding the oldest jobs' history; the job page
+rendered the raw Postgres error and logged nothing — now logs and shows a
+fixed message; the row type is a `Pick` of the generated `messages` Row
+instead of a hand copy; the two parallel channel arrays became one
+`{ channel, failed }[]`; the section prop carries an `ActionResult` instead
+of array-plus-optional-error; two comments were wrong (RLS on `messages` is
+managers-only, not "signed-in staff", so a tech sees an empty history; voiding
+never changes `jobs.status`). Tests grew to 42 across the three files, and
+five mutations of the grouping guards (kind, job, window, null status, sort)
+each turn a test red.
+
 **Not done.** No click-through (no test login). Worth checking on EZY Rent's
 customer page: three jobs with sends, RO 1301 showing both the first send
-and the reminder.
+and the reminder. Two pre-existing findings for the owner: (1) with Quo or
+Resend keys unset, a send is logged `status: 'sent'` without sending, and
+dev shares the production DB — now visible as "Invoice sent" in a real
+customer's history (`.env.local` has live keys, so this is latent);
+(2) `createInvoiceFromJob`'s fire-and-forget sends refuse before logging on
+an invalid phone or missing email, so the toast says "sent via text" and the
+history shows nothing.
