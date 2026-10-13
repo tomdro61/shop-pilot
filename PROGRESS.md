@@ -5225,3 +5225,13 @@ what the code does. Left for the owner (below).
 **Known.** `last_sent_at` / `last_edited_at` are null for everything before
 this session; the UI treats null as "never" for the banner, which is correct
 (nothing could have been edited after send before this shipped).
+
+**Deployed 2026-10-13.** The owner sent a test estimate to themselves on the
+staging preview, then asked to merge. `master` fast-forwarded to `91547ef`;
+Vercel production `dpl_9PDL9rf5cjSBXXCDiVGFTzFko4UR` (built from that SHA,
+47s) is aliased to `shop-pilot-rosy.vercel.app`. `/post-deploy-check`: public
+routes return the expected codes (login 200, dashboard 307, approval and DVI
+pages render their not-found copy for a fake token, empty POSTs 400), the two
+new columns are on the shared DB, and Sentry shows no production issue first
+seen or active in the two hours around the deploy. Review findings logged in
+`REVIEW-FINDINGS.md` (EE-1 to EE-5).

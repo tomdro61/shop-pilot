@@ -1736,3 +1736,68 @@ the second call within a request.
 - **A reviewer finding changed the design, not just the code.** CS-1 came from
   asking "where would a Stripe-only value come from?" The answer was the
   workaround the owner had already been given in the same conversation.
+
+## October 2026 — Edit sent estimates, resend, duplicate job/estimate (`1b3a378`, `aaa2060`), caught in review, fixed pre-ship
+
+Context: the owner wanted to change an estimate after sending instead of
+deleting and rebuilding it, and to copy a job or estimate. Four reviewers on
+the first draft; no Criticals. Eight mutations run before review each turned a
+test red.
+
+## EE-1 — The AI system prompt still said sent estimates were read-only (HIGH, fixed)
+
+The tool descriptions were updated but the prose instructions told the model
+line items could only change on a draft, so the assistant would have refused
+the exact request the feature exists for. The prompt is a consumer of the
+status rule the same way `tools.ts` is; grep both when a status gate moves.
+
+## EE-2 — Presets were still draft-only and did not stamp (HIGH, fixed)
+
+`applyPresetToEstimate` had its own copy of the "draft only" check and its own
+message. The preset tab on a sent estimate would have failed while the form
+tab worked. Both paths now use `isEditableStatus` / `stampEstimateEdited` from
+`lib/estimates/editing.ts`; a duplicated guard is a guard that will be missed.
+
+## EE-3 — A stamp failure after a committed insert returned `{ error }` (HIGH, fixed)
+
+The line item was already written when `last_edited_at` failed to stamp. The
+`{ error }` return kept the add sheet open with the form filled, inviting a
+second submit and a duplicate row. Now `{ data, warning }`: the sheet closes
+and a warning toast says the item saved but the estimate was not flagged.
+
+## EE-4 — Status-scoped updates reported success on zero rows (MEDIUM, fixed)
+
+`.update().eq("id").eq("status", "sent")` with no matching row is not an error
+to Supabase. The stamp, the resend stamp, and `updateEstimateFields` now pass
+`{ count: "exact" }` and treat `count !== 1` as "the estimate changed status
+while you were editing". Same shape as the invoice void atomic flip.
+
+## EE-5 — Vehicle change on a job-attached estimate was refused only in the UI (MEDIUM, fixed)
+
+The page hid the picker when `job` was set; the server action accepted the
+call. `updateEstimateFields` now refuses any field change when `job_id` is
+set, so the AI or a stale tab cannot desync the estimate from its job.
+
+## Left open (owner's call, logged in PROGRESS.md session 83)
+
+- A customer who loaded the approval page before an edit can still approve
+  the old numbers from that tab. Fix is a hidden `last_edited_at` on the
+  approval form and `.eq("last_edited_at", seen)` on the flip; public surface,
+  needs `/verify-flow estimate-approval`.
+- `createEstimate` / `createEstimateFromJob` still bake in 6.25% when
+  `getShopSettings` returns null (pre-existing). `duplicateEstimate` refuses
+  instead.
+- `sendEstimate` collapses DB errors into "not found" (pre-existing;
+  `resendEstimate` fixed here).
+
+## Process notes
+
+- **Two consumers of one rule were not in the diff.** The status gate moved
+  in `estimates.ts`; the preset action and the AI system prompt each carried
+  their own copy and neither was touched. The scoped-review column-impact grep
+  (Step 2.5) is for columns; a moved *rule* needs the same grep on the old
+  message string. `grep -rn "draft estimates"` would have found both.
+- **A return shape is a UI instruction.** `{ error }` after a committed write
+  told the sheet "nothing happened, try again". The result type has to say
+  which half happened. `resendInvoice` already uses the same `sent: true`
+  plus `warnings` shape for a one-channel failure.
