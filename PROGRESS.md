@@ -5328,8 +5328,16 @@ void the 106 with a script; scope = Criticals + live-data cleanups.
   `invoices_one_per_job`; drops `techs_update_assigned_jobs` (techs have no
   server action that writes jobs; the policy only served direct PostgREST
   writes); revokes `record_quick_pay_job` from anon/authenticated and
-  re-creates it writing the snapshot. **Not yet applied** — the CLI isn't
-  linked to this project; run it in the SQL editor before deploying.
+  re-creates it writing the snapshot. **Applied 2026-10-15** via `npx supabase
+  db push` at the owner's request, after a read-only pre-check (one settings
+  row, 0 rows violating either CHECK, 0 jobs with two invoice rows). Verified
+  after: all 1,487 paid jobs carry a snapshot, 0 paid jobs without `paid_at`,
+  sample rows match the app's rounding, both new indexes present. The CLI ran
+  the file outside a transaction (its `set local lock_timeout` was a no-op
+  warning), so a failure mid-file would have needed a hand repair; none
+  occurred. Regenerated types match the hand-added columns exactly; the only
+  generator differences are pre-existing (`receipt_token` ordering, the Quick
+  Pay RPC's nullable args), so `src/types/supabase.ts` was left as is.
 - `recordPayment` loads settings, calls the new `voidOpenInvoiceForJob`
   (`src/lib/invoices/void-open-invoice.ts`: retrieve → void → delete row with
   `.neq paid .select()`, refuse on any uncertainty), then flips with the
