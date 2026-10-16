@@ -306,16 +306,10 @@ problems are in what those definitions leave out and in what can change after th
 
 ## 7. Not verified — needs the live database
 
-Code review cannot see drift that already exists in the rows. A read-only probe script is at
-`C:\Users\tomjd\AppData\Local\Temp\claude\C--Projects-broadway-motors-shop-pilot\34061084-84b1-4b79-a3f5-36f640d1221f\scratchpad\integrity.mjs`
-(uses the service-role key from `.env.local`, reads only, pages all tables). It was blocked by the
-session's permission policy. Run it from the shop-pilot folder with:
-
-```
-node "C:\Users\tomjd\AppData\Local\Temp\claude\C--Projects-broadway-motors-shop-pilot\34061084-84b1-4b79-a3f5-36f640d1221f\scratchpad\integrity.mjs"
-```
-
-It reports, among other things: complete jobs with null `date_finished` (invisible revenue), jobs
+Code review cannot see drift that already exists in the rows. A read-only probe script (service-role
+key from `.env.local`, reads only, pages all tables) lived in the session's temp folder and was run
+with the owner's approval; its results are in §7a below. The script was a one-off and is not kept in
+the repo. It reported, among other things: complete jobs with null `date_finished` (invisible revenue), jobs
 with >1 invoice row, paid jobs whose Stripe invoice row is still `sent` (C-1 exposure), waived
 revenue per month (H-2 size), parts cost coverage per year (M-6 size), whether fees are enabled
 (M-3 relevance), invoice amounts that no longer match current line items (H-1 size), and the A/R
