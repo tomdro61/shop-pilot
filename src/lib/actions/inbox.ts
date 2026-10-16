@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { todayET } from "@/lib/utils";
 import { hasPendingService } from "@/lib/utils/parking";
+import { getShopSettings } from "@/lib/actions/settings";
+import { receivableAmount, RECEIVABLE_LINE_ITEMS_SELECT, type ReceivableLineItem } from "@/lib/receivables/amount";
 
 // ── Types ───────────────────────────────────────────────
 
@@ -142,7 +144,7 @@ export async function getInboxData(): Promise<InboxData> {
     // Unpaid completed jobs
     supabase
       .from("jobs")
-      .select("id, title, date_finished, customers(id, first_name, last_name), vehicles(year, make, model), job_line_items(total)")
+      .select(`id, title, date_finished, charge_sales_tax, customers(id, first_name, last_name), vehicles(year, make, model), ${RECEIVABLE_LINE_ITEMS_SELECT}`)
       .eq("status", "complete")
       .neq("payment_status", "paid")
       .neq("payment_status", "waived")
@@ -183,14 +185,19 @@ export async function getInboxData(): Promise<InboxData> {
   if (parkingLeadResult.error) throw new Error(`Failed to load parking service leads: ${parkingLeadResult.error.message}`);
   if (parkingSpecialsResult.error) throw new Error(`Failed to load parking specials: ${parkingSpecialsResult.error.message}`);
 
-  // Process unpaid jobs — sum line item totals
+  // Amount owed, the same figure the receivables report shows (tax included).
+  const settings = await getShopSettings();
+  if (!settings) throw new Error("Failed to load shop settings — refusing to show amounts owed with a guessed tax rate.");
   const unpaidJobs: InboxUnpaidJob[] = (unpaidResult.data || []).map((j) => ({
     id: j.id,
     title: j.title,
     date_finished: j.date_finished,
     customers: j.customers as CustomerJoin | null,
     vehicles: j.vehicles as VehicleJoin | null,
-    total: ((j.job_line_items as { total: number }[]) || []).reduce((s, li) => s + (li.total || 0), 0),
+    total: receivableAmount(
+      { charge_sales_tax: j.charge_sales_tax, job_line_items: j.job_line_items as ReceivableLineItem[] | null },
+      settings
+    ),
   }));
 
   // Process estimates — sum line item totals

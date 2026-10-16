@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { catalogItemSchema, type CatalogItemFormData } from "@/lib/validators/catalog";
+import { getLineItemLock, LINE_ITEMS_LOCKED_MSG } from "@/lib/jobs/line-item-lock";
 import { revalidatePath } from "next/cache";
 
 export async function searchCatalog(
@@ -300,6 +301,10 @@ export async function addCatalogItemsToJob(
   if (!items.length) return { success: true };
 
   const supabase = await createClient();
+
+  const lock = await getLineItemLock(supabase, jobId);
+  if (!lock.ok) return { error: lock.error };
+  if (lock.locked) return { error: LINE_ITEMS_LOCKED_MSG };
 
   // Fetch all catalog items
   const ids = items.map((i) => i.catalog_item_id);

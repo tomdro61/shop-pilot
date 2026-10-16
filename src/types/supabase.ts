@@ -856,6 +856,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          amount_collected: number | null
           assigned_tech: string | null
           category: string | null
           charge_sales_tax: boolean
@@ -870,15 +871,21 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           payment_status: Database["public"]["Enums"]["payment_status"]
           receipt_token: string
+          refunded_amount: number | null
+          refunded_at: string | null
           ro_number: number | null
           scheduled_at: string | null
           status: Database["public"]["Enums"]["job_status"]
           stripe_payment_intent_id: string | null
+          tax_collected: number | null
+          tax_rate_applied: number | null
+          taxable_collected: number | null
           title: string | null
           updated_at: string
           vehicle_id: string | null
         }
         Insert: {
+          amount_collected?: number | null
           assigned_tech?: string | null
           category?: string | null
           charge_sales_tax?: boolean
@@ -892,16 +899,22 @@ export type Database = {
           paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          refunded_amount?: number | null
+          refunded_at?: string | null
           ro_number?: number | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_intent_id?: string | null
+          tax_collected?: number | null
+          tax_rate_applied?: number | null
+          taxable_collected?: number | null
           title?: string | null
           updated_at?: string
           receipt_token?: string
           vehicle_id?: string | null
         }
         Update: {
+          amount_collected?: number | null
           assigned_tech?: string | null
           category?: string | null
           charge_sales_tax?: boolean
@@ -915,10 +928,15 @@ export type Database = {
           paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          refunded_amount?: number | null
+          refunded_at?: string | null
           ro_number?: number | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           stripe_payment_intent_id?: string | null
+          tax_collected?: number | null
+          tax_rate_applied?: number | null
+          taxable_collected?: number | null
           title?: string | null
           updated_at?: string
           receipt_token?: string

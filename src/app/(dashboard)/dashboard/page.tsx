@@ -13,7 +13,7 @@ import { INSPECTION_RATE_STATE, INSPECTION_RATE_TNC, MANAGED_PARKING_LOTS } from
 import { formatCurrencyWhole } from "@/lib/utils/format";
 import { todayET, nowET, isScheduledOnEtDate } from "@/lib/utils";
 import { etDateOf } from "@/lib/appointments/display";
-import { sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
+import { isRevenueJob, sumJobRevenue, sumManualIncome } from "@/lib/utils/revenue";
 import { resolveDateRange } from "@/lib/utils/date-range";
 import { hasPendingService } from "@/lib/utils/parking";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
@@ -245,6 +245,10 @@ async function getDashboardData() {
     (e) => e.date >= lastMonthStart && e.date <= lastMonthEnd
   );
 
+  // Shown beside revenue, so inspection-only Quick Pay jobs (revenue reported via
+  // inspection counts) don't count as closed jobs here.
+  const countRevenueJobs = (jobs: typeof completedJobs) =>
+    jobs.filter((j) => isRevenueJob(j.job_line_items)).length;
   const todayCompleted = completedJobs.filter((j) => j.date_finished === today);
   const weekCompleted = completedJobs.filter(
     (j) => j.date_finished !== null && j.date_finished >= weekStart && j.date_finished <= weekEnd
@@ -319,9 +323,9 @@ async function getDashboardData() {
       tncToday: sumTncCounts(inspToday),
       tncWeek: sumTncCounts(inspWeek),
       tncMonth: sumTncCounts(inspMonth),
-      jobsClosedToday: todayCompleted.length,
-      jobsClosedWeek: weekCompleted.length,
-      jobsClosedMonth: monthCompleted.length,
+      jobsClosedToday: countRevenueJobs(todayCompleted),
+      jobsClosedWeek: countRevenueJobs(weekCompleted),
+      jobsClosedMonth: countRevenueJobs(monthCompleted),
     },
     shopFloor: { notStarted, waitingForParts, inProgress, completedToday: completedTodayWithTotals },
     parking: { dropOffsToday, pickupsToday, pickupsPreparedToday },

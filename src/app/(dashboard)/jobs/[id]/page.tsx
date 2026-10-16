@@ -12,6 +12,7 @@ import { getShopSettings } from "@/lib/actions/settings";
 import { getPresets } from "@/lib/actions/presets";
 import { getTechnicians } from "@/lib/actions/team";
 import { calculateTotals } from "@/lib/utils/totals";
+import { isSettledPaymentStatus } from "@/lib/jobs/line-item-lock";
 import { Button } from "@/components/ui/button";
 import { StatusSelect } from "@/components/dashboard/status-select";
 import { LineItemsList, LineItemsAddButton } from "@/components/dashboard/line-items-list";
@@ -96,6 +97,7 @@ export default async function JobDetailPage({
   const lineItems = (job.job_line_items || []) as JobLineItem[];
   const totals = calculateTotals(lineItems, settings, job.charge_sales_tax);
   const grandTotal = totals.grandTotal;
+  const lineItemsLocked = isSettledPaymentStatus(job.payment_status);
 
   // If the lookup fails (Stripe outage, etc.) treat as "no card" — the
   // chargeCardOnFile preflight re-verifies the PM and surfaces a clearer
@@ -366,7 +368,7 @@ export default async function JobDetailPage({
         <section>
           <SectionTitle
             title="Line items"
-            action={<LineItemsAddButton jobId={id} settings={settings} presets={presets} />}
+            action={<LineItemsAddButton jobId={id} settings={settings} presets={presets} locked={lineItemsLocked} />}
           />
           <LineItemsList
             jobId={id}
@@ -374,6 +376,7 @@ export default async function JobDetailPage({
             settings={settings}
             chargeSalesTax={job.charge_sales_tax}
             salesTaxLocked={!!invoice || (job.payment_status ?? "unpaid") !== "unpaid"}
+            lineItemsLocked={lineItemsLocked}
           />
         </section>
 

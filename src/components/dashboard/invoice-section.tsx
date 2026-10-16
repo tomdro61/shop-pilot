@@ -34,9 +34,9 @@ interface InvoiceSectionProps {
   customerEmail: string | null;
   customerPhone: string | null;
   /**
-   * The job's payment state, which is the only signal that sees money collected
-   * outside Stripe — cash, check, Terminal and waived all update `jobs` and
-   * never touch the invoice row.
+   * The job's payment state. A counter settlement voids the open invoice, but a
+   * card-reader settlement whose void failed leaves a paid job with its row
+   * still reading sent, so this is the signal that is always right.
    */
   paymentStatus: PaymentStatus;
   isFleet?: boolean;
@@ -111,11 +111,10 @@ function InvoiceCard({
     return null;
   }
 
-  // Settled outside Stripe (cash, check, Terminal, waived). `recordPayment`
-  // touches only `jobs`, so there is no invoice row to reflect it — this is the
-  // one signal that sees those payments. Hoisted above the !invoice branch so it
-  // suppresses the Create card too, not just Resend: billing a customer who
-  // already paid at the counter is the same incident either way.
+  // Settled outside Stripe (cash, check, Terminal, waived). Hoisted above the
+  // !invoice branch so it suppresses the Create card too, not just Resend:
+  // billing a customer who already paid at the counter is the same incident
+  // either way.
   const settled = paymentStatus === "paid" || paymentStatus === "waived";
 
   if (!invoice) {

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { resolveDateRange } from "@/lib/utils/date-range";
-import { isInspectionCategory } from "@/lib/utils/revenue";
+import { isInspectionCategory, isRevenueJob } from "@/lib/utils/revenue";
+import { toCSVRow } from "@/lib/utils/csv";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
 import { assertComplete } from "@/lib/supabase/assert-complete";
+import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import {
   INSPECTION_RATE_STATE,
   INSPECTION_RATE_TNC,
@@ -50,26 +52,20 @@ type ExportJobRow = {
   } | null;
   job_line_items: ExportLineItem[] | null;
 };
+type InspectionDayRow = { date: string; state_count: number; tnc_count: number };
+type ManualIncomeRow = Awaited<ReturnType<typeof getManualIncomeForRange>>[number];
 
-function escapeCSV(value: string): string {
-  if (
-    value.includes(",") ||
-    value.includes('"') ||
-    value.includes("\n") ||
-    value.includes("\r")
-  ) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
+const CUSTOMER_TYPES = ["all", "retail", "fleet", "parking"] as const;
+type CustomerTypeParam = (typeof CUSTOMER_TYPES)[number];
+
+function parseCustomerType(raw: string | null): CustomerTypeParam | null {
+  if (raw === null || raw === "") return "all";
+  return (CUSTOMER_TYPES as readonly string[]).includes(raw) ? (raw as CustomerTypeParam) : null;
 }
 
-function toCSVRow(fields: (string | number | null | undefined)[]): string {
-  return fields
-    .map((f) => {
-      if (f == null || f === "") return "";
-      return escapeCSV(String(f));
-    })
-    .join(",");
+// Pads a label/value pair out to the "Total" column of the job sheet.
+function totalRow(label: string, value: string): string {
+  return toCSVRow([...Array<string>(17).fill(""), label, value]);
 }
 
 export async function GET(req: NextRequest) {
@@ -87,9 +83,24 @@ export async function GET(req: NextRequest) {
   const range = searchParams.get("range") || undefined;
   const from = searchParams.get("from") || undefined;
   const to = searchParams.get("to") || undefined;
+  const customerType = parseCustomerType(searchParams.get("customerType"));
+  if (customerType === null) {
+    return NextResponse.json({ error: "Invalid customerType" }, { status: 400 });
+  }
+  const filterType = customerType === "all" ? null : customerType;
+  const isFiltered = filterType !== null;
   const resolved = resolveDateRange(range, from, to);
 
-  // Both reads below used to discard `error` and fall back to `[]`, so any
+  // Mirrors getReportData: a customer-type filter is an inner join on
+  // customers, and inspections + manual income (which carry no customer type)
+  // are left out of a filtered export, as they are on screen.
+  const jobSelect: string = `id, ro_number, status, date_received, date_finished, payment_status, payment_method, paid_at, notes,
+     assigned_tech, users!jobs_assigned_tech_fkey(name),
+     ${isFiltered ? "customers!inner" : "customers"}(first_name, last_name, phone, email, customer_type, fleet_account),
+     vehicles(year, make, model, vin, license_plate),
+     job_line_items(type, description, quantity, unit_cost, total, cost, part_number, category)`;
+
+  // Every read below used to discard `error` and fall back to `[]`, so any
   // failure produced a well-formed CSV reading GRAND TOTAL REVENUE: 0.00 —
   // which opens in Excel and looks authoritative. They are also the reason the
   // "All Time" preset (2000-01-01) silently truncated at 1000 jobs.
@@ -98,42 +109,39 @@ export async function GET(req: NextRequest) {
   // completion date — so paging on it would duplicate and drop rows. The `id`
   // tiebreaker is what makes the paging deterministic; keep both.
   let jobs: ExportJobRow[];
-  let dailyCounts: { date: string; state_count: number; tnc_count: number }[];
+  let dailyCounts: InspectionDayRow[];
+  let manualEntries: ManualIncomeRow[];
   try {
-    [jobs, dailyCounts] = await Promise.all([
-      fetchAllRows<ExportJobRow>(
-        (pageFrom, pageTo) =>
-          supabase
-            .from("jobs")
-            .select(
-              `id, ro_number, status, date_received, date_finished, payment_status, payment_method, paid_at, notes,
-               assigned_tech, users!jobs_assigned_tech_fkey(name),
-               customers(first_name, last_name, phone, email, customer_type, fleet_account),
-               vehicles(year, make, model, vin, license_plate),
-               job_line_items(type, description, quantity, unit_cost, total, cost, part_number, category)`,
-              { count: "exact" }
-            )
-            .eq("status", "complete")
-            .gte("date_finished", resolved.from)
-            .lte("date_finished", resolved.to)
-            .order("date_finished", { ascending: true })
-            .order("id", { ascending: true })
-            .range(pageFrom, pageTo)
-            .returns<ExportJobRow[]>(),
-        "jobs for revenue export"
-      ),
-      supabase
-        .from("daily_inspection_counts")
-        .select("date, state_count, tnc_count", { count: "exact" })
-        .gte("date", resolved.from)
-        .lte("date", resolved.to)
-        .order("date", { ascending: true })
-        .then((r) => assertComplete(r, "inspection counts for export")),
+    [jobs, dailyCounts, manualEntries] = await Promise.all([
+      fetchAllRows<ExportJobRow>((pageFrom, pageTo) => {
+        let q = supabase
+          .from("jobs")
+          .select(jobSelect, { count: "exact" })
+          .eq("status", "complete")
+          .gte("date_finished", resolved.from)
+          .lte("date_finished", resolved.to)
+          .order("date_finished", { ascending: true })
+          .order("id", { ascending: true })
+          .range(pageFrom, pageTo);
+        if (filterType) q = q.eq("customers.customer_type", filterType);
+        return q.returns<ExportJobRow[]>();
+      }, "jobs for revenue export"),
+      isFiltered
+        ? Promise.resolve([])
+        : supabase
+            .from("daily_inspection_counts")
+            .select("date, state_count, tnc_count", { count: "exact" })
+            .gte("date", resolved.from)
+            .lte("date", resolved.to)
+            .order("date", { ascending: true })
+            .then((r) => assertComplete(r, "inspection counts for export")),
+      isFiltered ? Promise.resolve([]) : getManualIncomeForRange(resolved.from, resolved.to),
     ]);
   } catch (err) {
     console.error("[reports-export] data fetch failed", {
       userId: auth.userId,
       range,
+      customerType,
       from: resolved.from,
       to: resolved.to,
       error: err instanceof Error ? err.message : err,
@@ -178,6 +186,7 @@ export async function GET(req: NextRequest) {
 
   const rows: string[] = [toCSVRow(jobHeaders)];
   let grandTotal = 0;
+  let revenueJobCount = 0;
 
   jobs.forEach((job) => {
     // No casts — the row is typed by ExportJobRow above. The casts that used to
@@ -187,6 +196,7 @@ export async function GET(req: NextRequest) {
     const vehicle = job.vehicles;
     const tech = job.users;
     const lineItems = job.job_line_items ?? [];
+    if (isRevenueJob(lineItems)) revenueJobCount++;
 
     const roStr = job.ro_number ? `RO-${String(job.ro_number).padStart(4, "0")}` : "";
     const customerName = customer
@@ -220,7 +230,7 @@ export async function GET(req: NextRequest) {
           tech?.name,
           "",
           "",
-          "(no line items)",
+          lineItems.length > 0 ? "(inspection only)" : "(no line items)",
           "",
           "",
           "0.00",
@@ -281,96 +291,109 @@ export async function GET(req: NextRequest) {
     });
   });
 
-  // Add a blank line and grand total
-  rows.push("");
-  rows.push(toCSVRow(["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "Job Revenue Total:", grandTotal.toFixed(2)]));
+  // Same definitions as the Revenue report: inspection-only jobs are not
+  // counted as jobs, and the average ticket is job revenue only.
+  const avgTicket = revenueJobCount > 0 ? grandTotal / revenueJobCount : 0;
 
-  // --- Inspection sheet (appended after a separator) ---
   rows.push("");
-  rows.push("");
-  rows.push("--- INSPECTIONS ---");
-
-  const inspHeaders = [
-    "Date",
-    "State Inspections",
-    "TNC Inspections",
-    "State Revenue",
-    "TNC Revenue",
-    "State Cost",
-    "Total Revenue",
-    "Total Profit",
-  ];
-  rows.push(toCSVRow(inspHeaders));
+  rows.push(totalRow("Job Revenue Total:", grandTotal.toFixed(2)));
+  rows.push(totalRow("Jobs Completed:", String(revenueJobCount)));
+  rows.push(totalRow("Avg Ticket:", avgTicket.toFixed(2)));
 
   let inspTotalRevenue = 0;
-  let inspTotalProfit = 0;
+  let manualTotal = 0;
 
-  dailyCounts.forEach((day) => {
-    const stateRev = day.state_count * INSPECTION_RATE_STATE;
-    const tncRev = day.tnc_count * INSPECTION_RATE_TNC;
-    const stateCost = day.state_count * INSPECTION_COST_STATE;
-    const dayRevenue = stateRev + tncRev;
-    const dayProfit = dayRevenue - stateCost;
-    inspTotalRevenue += dayRevenue;
-    inspTotalProfit += dayProfit;
+  if (!isFiltered) {
+    // --- Inspection sheet (appended after a separator) ---
+    rows.push("");
+    rows.push("");
+    rows.push("--- INSPECTIONS ---");
+
+    const inspHeaders = [
+      "Date",
+      "State Inspections",
+      "TNC Inspections",
+      "State Revenue",
+      "TNC Revenue",
+      "State Cost",
+      "Total Revenue",
+      "Total Profit",
+    ];
+    rows.push(toCSVRow(inspHeaders));
+
+    let inspTotalProfit = 0;
+
+    dailyCounts.forEach((day) => {
+      const stateRev = day.state_count * INSPECTION_RATE_STATE;
+      const tncRev = day.tnc_count * INSPECTION_RATE_TNC;
+      const stateCost = day.state_count * INSPECTION_COST_STATE;
+      const dayRevenue = stateRev + tncRev;
+      const dayProfit = dayRevenue - stateCost;
+      inspTotalRevenue += dayRevenue;
+      inspTotalProfit += dayProfit;
+
+      rows.push(
+        toCSVRow([
+          day.date,
+          day.state_count,
+          day.tnc_count,
+          stateRev.toFixed(2),
+          tncRev.toFixed(2),
+          stateCost.toFixed(2),
+          dayRevenue.toFixed(2),
+          dayProfit.toFixed(2),
+        ])
+      );
+    });
 
     rows.push(
       toCSVRow([
-        day.date,
-        day.state_count,
-        day.tnc_count,
-        stateRev.toFixed(2),
-        tncRev.toFixed(2),
-        stateCost.toFixed(2),
-        dayRevenue.toFixed(2),
-        dayProfit.toFixed(2),
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Inspection Total:",
+        inspTotalRevenue.toFixed(2),
+        inspTotalProfit.toFixed(2),
       ])
     );
-  });
 
-  rows.push(
-    toCSVRow([
-      "",
-      "",
-      "",
-      "",
-      "",
-      "Inspection Total:",
-      inspTotalRevenue.toFixed(2),
-      inspTotalProfit.toFixed(2),
-    ])
-  );
+    // --- Manual income sheet ---
+    rows.push("");
+    rows.push("");
+    rows.push("--- MANUAL INCOME ---");
+    rows.push(toCSVRow(["Date", "Category", "Amount", "Shop Keep %", "Shop Profit"]));
+
+    let manualProfit = 0;
+    [...manualEntries]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .forEach((entry) => {
+        const profit = entry.amount * (entry.shop_keep_pct / 100);
+        manualTotal += entry.amount;
+        manualProfit += profit;
+        rows.push(
+          toCSVRow([
+            entry.date,
+            entry.category,
+            entry.amount.toFixed(2),
+            entry.shop_keep_pct,
+            profit.toFixed(2),
+          ])
+        );
+      });
+
+    rows.push(toCSVRow(["", "Manual Income Total:", manualTotal.toFixed(2), "", manualProfit.toFixed(2)]));
+  }
 
   // Grand total summary
   rows.push("");
-  rows.push(
-    toCSVRow([
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "GRAND TOTAL REVENUE:",
-      (grandTotal + inspTotalRevenue).toFixed(2),
-    ])
-  );
+  rows.push(totalRow("GRAND TOTAL REVENUE:", (grandTotal + inspTotalRevenue + manualTotal).toFixed(2)));
 
   const csv = rows.join("\r\n");
 
-  // Build filename
-  const filename = `shoppilot-revenue-${resolved.from}-to-${resolved.to}.csv`;
+  const typeSuffix = filterType ? `-${filterType}` : "";
+  const filename = `shoppilot-revenue${typeSuffix}-${resolved.from}-to-${resolved.to}.csv`;
 
   return new NextResponse(csv, {
     headers: {

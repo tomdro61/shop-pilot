@@ -5,6 +5,7 @@ import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { isInspectionCategory } from "@/lib/utils/revenue";
 import { getShopSettings } from "@/lib/actions/settings";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import { toCSVRow } from "@/lib/utils/csv";
 
 // Shape of `jobSelect` below — declared once because the select string is built
 // dynamically (the customer-type filter adds an !inner join), which defeats
@@ -32,6 +33,9 @@ type TaxAuditJobRow = {
   date_finished: string | null;
   payment_method: string | null;
   charge_sales_tax: boolean;
+  taxable_collected: number | null;
+  tax_collected: number | null;
+  tax_rate_applied: number | null;
   customers: TaxAuditCustomer | null;
   vehicles: TaxAuditVehicle | null;
   job_line_items: TaxAuditLineItem[] | null;
@@ -41,19 +45,6 @@ const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-
-function escapeCSV(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n") || value.includes("\r")) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
-function toCSVRow(fields: (string | number | null | undefined)[]): string {
-  return fields
-    .map((f) => (f == null || f === "" ? "" : escapeCSV(String(f))))
-    .join(",");
-}
 
 function fmt(n: number): string {
   return n.toFixed(2);
@@ -108,10 +99,12 @@ export async function GET(req: NextRequest) {
 
   const jobSelect = isFiltered
     ? `id, ro_number, paid_at, date_finished, payment_method, charge_sales_tax,
+       taxable_collected, tax_collected, tax_rate_applied,
        customers!inner(first_name, last_name, customer_type),
        vehicles(year, make, model, license_plate),
        job_line_items(type, description, quantity, unit_cost, total, cost, category, part_number)`
     : `id, ro_number, paid_at, date_finished, payment_method, charge_sales_tax,
+       taxable_collected, tax_collected, tax_rate_applied,
        customers(first_name, last_name, customer_type),
        vehicles(year, make, model, license_plate),
        job_line_items(type, description, quantity, unit_cost, total, cost, category, part_number)`;
@@ -221,10 +214,20 @@ export async function GET(req: NextRequest) {
       if (li.type === "labor") labor += t;
       else if (li.type === "part") parts += t;
     }
-    // Parts are billed either way, but only taxable when the job charges tax.
-    const taxableParts = job.charge_sales_tax !== false ? parts : 0;
+    // The payment snapshot (frozen when the job was paid) is what was actually
+    // billed; recomputing at the live rate is only the fallback for a paid
+    // job that has none.
+    const hasSnapshot =
+      job.tax_rate_applied != null && job.tax_collected != null && job.taxable_collected != null;
+    const taxableParts = hasSnapshot
+      ? (job.taxable_collected ?? 0)
+      : job.charge_sales_tax !== false
+        ? parts
+        : 0;
     const subtotal = Math.round((labor + parts) * 100) / 100;
-    const tax = Math.round(taxableParts * taxRate * 100) / 100;
+    const tax = hasSnapshot
+      ? (job.tax_collected ?? 0)
+      : Math.round(taxableParts * taxRate * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
 
     filteredJobs.push({
@@ -272,7 +275,7 @@ export async function GET(req: NextRequest) {
 
   rows.push(`Tax Audit — ${periodLabel}${customerTypeLabel}`);
   rows.push(`Generated: ${new Date().toISOString()}`);
-  rows.push(`Tax rate applied: ${(taxRate * 100).toFixed(2)}%`);
+  rows.push(`Tax per job is the amount frozen when the job was paid; current shop rate ${(taxRate * 100).toFixed(2)}% is used only for a paid job with no frozen figure`);
   rows.push(`Source: jobs where payment_status='paid', bucketed by paid_at (ET); inspection-category line items excluded`);
   rows.push(`Note: jobs with sales tax turned off (e.g. outsourced parts) show 0 in Parts (Taxable) and 0 tax; those parts stay in Subtotal/Total as non-taxable revenue`);
   if (isFiltered) {

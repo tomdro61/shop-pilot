@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { todayET } from "@/lib/utils";
-import { isInspectionCategory } from "@/lib/utils/revenue";
+import { isInspectionCategory, isRevenueJob } from "@/lib/utils/revenue";
 import {
   INSPECTION_RATE_STATE,
   INSPECTION_RATE_TNC,
@@ -48,6 +48,8 @@ export interface TrendBucket {
   key: string;
   label: string;
   revenue: number;
+  /** Line-item revenue only (no inspections or manual income) — the ARO numerator. */
+  jobRevenue: number;
   grossProfit: number;
   partsRevenue: number;
   laborRevenue: number;
@@ -117,6 +119,7 @@ function finalize(raw: RawBucket): TrendBucket {
     key: raw.key,
     label: raw.label,
     revenue,
+    jobRevenue: raw.revenue,
     grossProfit,
     partsRevenue: raw.partsRevenue,
     laborRevenue: raw.laborRevenue,
@@ -207,7 +210,7 @@ export async function getTrendData(
       (li) => !isInspectionCategory(li.category)
     );
 
-    bucket.jobCount += 1;
+    if (isRevenueJob(job.job_line_items)) bucket.jobCount += 1;
 
     for (const li of lineItems) {
       const total = li.total || 0;

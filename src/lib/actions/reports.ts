@@ -4,11 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { subDays, differenceInDays, parseISO } from "date-fns";
 import { todayET } from "@/lib/utils";
 import { getInspectionCountsRange } from "@/lib/actions/inspections";
-import { isInspectionCategory, calcInspectionRevenue, sumManualIncome, sumManualIncomeProfit } from "@/lib/utils/revenue";
+import { isInspectionCategory, isRevenueJob, calcInspectionRevenue, sumManualIncome, sumManualIncomeProfit } from "@/lib/utils/revenue";
 import { getManualIncomeForRange } from "@/lib/actions/manual-income";
 import { getShopSettings } from "@/lib/actions/settings";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
 import { assertComplete, assertCount } from "@/lib/supabase/assert-complete";
+import {
+  receivableAmount,
+  RECEIVABLE_LINE_ITEMS_SELECT,
+  type ReceivableLineItem,
+} from "@/lib/receivables/amount";
 
 function toDateStr(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -45,6 +50,7 @@ type FleetARJobRow = {
   id: string;
   date_finished: string | null;
   payment_status: string;
+  charge_sales_tax: boolean;
   customers: {
     id: string;
     first_name: string;
@@ -52,7 +58,7 @@ type FleetARJobRow = {
     customer_type: string;
     fleet_account: string | null;
   } | null;
-  job_line_items: { total: number | null }[] | null;
+  job_line_items: ReceivableLineItem[] | null;
 };
 type DailySummaryJobRow = {
   id: string;
@@ -167,21 +173,22 @@ export async function getReportData(params: {
       .reduce((s, li) => s + (li.total || 0), 0);
   }
 
-  // Job count + revenue
-  const jobsCurrent = currentJobs.length;
-  let revenueCurrent = currentJobs.reduce((sum, job) => sum + sumLineItemTotals(job), 0);
+  // Job counts and ARO exclude inspection-only jobs (see isRevenueJob); their
+  // revenue comes from daily_inspection_counts, not from line items.
+  const jobsCurrent = currentJobs.filter((job) => isRevenueJob(job.job_line_items)).length;
+  const jobRevenueCurrent = currentJobs.reduce((sum, job) => sum + sumLineItemTotals(job), 0);
 
   // Prior period — always initialize to 0 when a prior period exists so trends show.
   // null means "no comparison available" (all-time mode only).
   const hasPrior = priorStart !== null;
-  const jobsPrior = hasPrior ? priorJobs.length : null;
-  let revenuePrior: number | null = hasPrior ? 0 : null;
+  const jobsPrior = hasPrior ? priorJobs.filter((job) => isRevenueJob(job.job_line_items)).length : null;
+  let jobRevenuePrior: number | null = hasPrior ? 0 : null;
   let grossProfitPrior: number | null = hasPrior ? 0 : null;
   if (priorJobs.length > 0) {
     let priorRev = 0;
     let priorPartsCost = 0;
     priorJobs.forEach((job) => {
-      const items = (job.job_line_items as { type: string; total: number; cost: number | null; quantity: number; category: string | null }[]) || [];
+      const items = job.job_line_items ?? [];
       items.filter((li) => !isInspectionCategory(li.category)).forEach((li) => {
         priorRev += li.total || 0;
         if (li.type === "part") {
@@ -189,7 +196,7 @@ export async function getReportData(params: {
         }
       });
     });
-    revenuePrior = priorRev;
+    jobRevenuePrior = priorRev;
     grossProfitPrior = priorRev - priorPartsCost;
   }
 
@@ -230,18 +237,20 @@ export async function getReportData(params: {
       liCatRevenue[cat] = (liCatRevenue[cat] || 0) + (li.total || 0);
     });
     const jobCat = Object.entries(liCatRevenue).sort((a, b) => b[1] - a[1])[0]?.[0] || "Uncategorized";
+    const countsAsJob = isRevenueJob(job.job_line_items);
 
     // Job counts use derived category (one job = one count)
-    catCounts[jobCat] = (catCounts[jobCat] || 0) + 1;
+    if (countsAsJob) {
+      catCounts[jobCat] = (catCounts[jobCat] || 0) + 1;
+      techCounts[techName] = (techCounts[techName] || 0) + 1;
+      custTypeCounts[custType] = (custTypeCounts[custType] || 0) + 1;
+    }
 
-    // Tech counts + revenue
-    techCounts[techName] = (techCounts[techName] || 0) + 1;
-    techRevenue[techName] = (techRevenue[techName] || 0) + jobTotal;
     if (!techPartsCost[techName]) techPartsCost[techName] = 0;
-
-    // Customer type counts + revenue
-    custTypeCounts[custType] = (custTypeCounts[custType] || 0) + 1;
-    custTypeRevenue[custType] = (custTypeRevenue[custType] || 0) + jobTotal;
+    if (countsAsJob || jobTotal !== 0) {
+      techRevenue[techName] = (techRevenue[techName] || 0) + jobTotal;
+      custTypeRevenue[custType] = (custTypeRevenue[custType] || 0) + jobTotal;
+    }
 
     // Revenue + profitability use line-item-level category for accurate multi-service splits
     lineItems.forEach((li) => {
@@ -320,7 +329,7 @@ export async function getReportData(params: {
     ? Math.round((partsWithCostCount / totalPartsCount) * 100)
     : 100;
 
-  const avgTicket = jobsCurrent > 0 ? revenueCurrent / jobsCurrent : 0;
+  const avgTicket = jobsCurrent > 0 ? jobRevenueCurrent / jobsCurrent : 0;
 
   // Merged category breakdown (revenue + job count in one array)
   const categoryBreakdown = Object.entries(catRevenue)
@@ -419,7 +428,7 @@ export async function getReportData(params: {
     manualByCategory[entry.category].cost += cost;
   }
 
-  revenueCurrent += manualIncomeTotal;
+  const revenueCurrent = jobRevenueCurrent + inspectionRevenue + manualIncomeTotal;
   totalRevenue += manualIncomeTotal;
   grossProfit += manualProfitTotal;
 
@@ -446,6 +455,7 @@ export async function getReportData(params: {
   // Prior period comparisons (data already fetched in parallel above)
   let inspectionCountPrior: number | null = null;
   let inspectionProfitPrior: number | null = null;
+  let revenuePrior: number | null = jobRevenuePrior;
   if (priorStart && priorEnd && !isFiltered) {
     const priorInspCalc = calcInspectionRevenue(priorInspectionTotals);
     inspectionCountPrior = priorInspCalc.totalCount;
@@ -463,7 +473,8 @@ export async function getReportData(params: {
 
   // Computed comparison values
   const totalGrossProfit = grossProfit + inspectionProfit;
-  const avgTicketPrior = jobsPrior && jobsPrior > 0 && revenuePrior !== null ? revenuePrior / jobsPrior : hasPrior ? 0 : null;
+  const avgTicketPrior =
+    jobsPrior && jobsPrior > 0 && jobRevenuePrior !== null ? jobRevenuePrior / jobsPrior : hasPrior ? 0 : null;
 
   return {
     jobsCurrent,
@@ -500,9 +511,10 @@ export async function getFleetARSummary() {
   const supabase = await createClient();
 
   // Get all fleet customer jobs that aren't fully paid
+  const fleetSelect: string = `id, date_finished, payment_status, charge_sales_tax, customers!inner(id, first_name, last_name, customer_type, fleet_account), ${RECEIVABLE_LINE_ITEMS_SELECT}`;
   const query = supabase
     .from("jobs")
-    .select("id, date_finished, payment_status, customers!inner(id, first_name, last_name, customer_type, fleet_account), job_line_items(total)", { count: "exact" })
+    .select(fleetSelect, { count: "exact" })
     .eq("customers.customer_type", "fleet")
     .eq("status", "complete")
     .neq("payment_status", "paid")
@@ -515,7 +527,12 @@ export async function getFleetARSummary() {
   // which would then tell the owner "no outstanding fleet receivables, all
   // accounts are current". Unpaid fleet jobs also accumulate, so the read needs
   // the truncation guard as well as the error check.
-  const data = assertComplete(await query, "fleet A/R jobs");
+  const [queryResult, settings] = await Promise.all([query, getShopSettings()]);
+  const data = assertComplete(queryResult, "fleet A/R jobs");
+  // No fallback to defaults — see getTaxReportData.
+  if (!settings) {
+    throw new Error("Failed to load shop settings — refusing to compute fleet A/R with a guessed tax rate.");
+  }
 
   const now = new Date();
   const accounts: Record<string, { current: number; days31to60: number; days60plus: number; total: number }> = {};
@@ -523,7 +540,8 @@ export async function getFleetARSummary() {
   data.forEach((job) => {
     const customer = job.customers;
     const accountName = customer?.fleet_account || `${customer?.first_name} ${customer?.last_name}`;
-    const jobTotal = (job.job_line_items ?? []).reduce((s, li) => s + (li.total || 0), 0);
+    const jobTotal = receivableAmount(job, settings);
+    if (jobTotal <= 0) return;
 
     if (!accounts[accountName]) {
       accounts[accountName] = { current: 0, days31to60: 0, days60plus: 0, total: 0 };
@@ -632,6 +650,9 @@ export interface TaxMonthRow {
 export interface TaxReportData {
   year: number;
   taxRate: number;
+  // Paid jobs in the year whose tax was recomputed at the live rate because no
+  // figure was frozen at payment (a settings failure or a post-invoice line edit).
+  jobsWithoutSnapshot: number;
   months: TaxMonthRow[];
   ytd: Omit<TaxMonthRow, "month" | "monthNum">;
 }
@@ -645,6 +666,9 @@ type TaxReportJobRow = {
   paid_at: string | null;
   date_finished: string | null;
   charge_sales_tax: boolean | null;
+  taxable_collected: number | null;
+  tax_collected: number | null;
+  tax_rate_applied: number | null;
   job_line_items: { type: string; total: number | null; category: string | null }[] | null;
 };
 
@@ -653,8 +677,8 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
   const isFiltered = !!(customerType && customerType !== "all");
 
   const jobSelect: string = isFiltered
-    ? "id, paid_at, date_finished, charge_sales_tax, customers!inner(customer_type), job_line_items(type, total, category)"
-    : "id, paid_at, date_finished, charge_sales_tax, job_line_items(type, total, category)";
+    ? "id, paid_at, date_finished, charge_sales_tax, taxable_collected, tax_collected, tax_rate_applied, customers!inner(customer_type), job_line_items(type, total, category)"
+    : "id, paid_at, date_finished, charge_sales_tax, taxable_collected, tax_collected, tax_rate_applied, job_line_items(type, total, category)";
   // Bound the read to the requested year. Without it this asks for every paid
   // job in the shop's history and narrows to `year` in JS below, which had it
   // 17 rows from the 1000-row cap in Aug 2026 — on the surface used for DOR
@@ -717,11 +741,19 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
   }
   const taxRate = settings.tax_rate;
 
-  // Aggregate by month
-  const monthBuckets: Record<number, { totalRevenue: number; partsTotal: number }> = {};
+  // Aggregate by month. Tax comes from each job's payment snapshot (frozen at
+  // the paid transition, rounded per job the way the bill was), so a later
+  // rate change or line edit can't restate a filed month. `legacyParts` holds
+  // the taxable base of any paid job without a snapshot, taxed at the live
+  // rate the way this report always did.
+  const monthBuckets: Record<
+    number,
+    { totalRevenue: number; partsTotal: number; taxCollected: number; legacyParts: number }
+  > = {};
   for (let m = 1; m <= 12; m++) {
-    monthBuckets[m] = { totalRevenue: 0, partsTotal: 0 };
+    monthBuckets[m] = { totalRevenue: 0, partsTotal: 0, taxCollected: 0, legacyParts: 0 };
   }
+  let jobsWithoutSnapshot = 0;
 
   jobs.forEach((job) => {
     // Use paid_at when available, fall back to date_finished (backfilled data)
@@ -742,16 +774,26 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
     // (e.g. outsourced parts the shop didn't buy) — count them as revenue but
     // exclude from the taxable base so the MA DOR filing isn't overstated.
     const chargeTax = job.charge_sales_tax !== false;
+    const hasSnapshot =
+      job.tax_rate_applied != null && job.tax_collected != null && job.taxable_collected != null;
+    if (!hasSnapshot) jobsWithoutSnapshot++;
 
+    let parts = 0;
     lineItems
       .filter((li) => !isInspectionCategory(li.category))
       .forEach((li) => {
         const total = li.total || 0;
         monthBuckets[month].totalRevenue += total;
-        if (li.type === "part" && chargeTax) {
-          monthBuckets[month].partsTotal += total;
-        }
+        if (li.type === "part") parts += total;
       });
+
+    if (hasSnapshot) {
+      monthBuckets[month].partsTotal += job.taxable_collected ?? 0;
+      monthBuckets[month].taxCollected += job.tax_collected ?? 0;
+    } else if (chargeTax) {
+      monthBuckets[month].partsTotal += parts;
+      monthBuckets[month].legacyParts += parts;
+    }
   });
 
   for (const entry of taxManualEntries) {
@@ -770,8 +812,8 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
   let ytdNonTaxable = 0;
 
   for (let m = 1; m <= 12; m++) {
-    const { totalRevenue, partsTotal } = monthBuckets[m];
-    const taxCollected = Math.round(partsTotal * taxRate * 100) / 100;
+    const { totalRevenue, partsTotal, taxCollected: snapshotTax, legacyParts } = monthBuckets[m];
+    const taxCollected = Math.round((snapshotTax + legacyParts * taxRate) * 100) / 100;
     const nonTaxableAmount = totalRevenue - partsTotal;
 
     months.push({
@@ -792,6 +834,7 @@ export async function getTaxReportData(year: number, customerType?: string): Pro
   return {
     year,
     taxRate,
+    jobsWithoutSnapshot,
     months,
     ytd: {
       totalRevenue: ytdRevenue,

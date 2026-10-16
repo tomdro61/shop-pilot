@@ -107,12 +107,9 @@ export async function createInvoiceFromJob(
     return { error: "Job must be complete before creating an invoice" };
   }
 
-  // Same guard, and for the same reason, as resendInvoiceForJob: recordPayment
-  // and both terminal paths update `jobs` only, so a job settled in cash keeps
-  // an unpaid invoice row and Stripe never learns about it. Without this,
-  // "Create & Send" bills and texts a live payment link to a customer who
-  // already paid at the counter. 'invoiced' is allowed — it means billed and
-  // still owed.
+  // Same guard, and for the same reason, as resendInvoiceForJob: a job settled
+  // at the counter must not be billed. 'invoiced' is allowed — it means billed
+  // and still owed.
   if (job.payment_status === "paid") {
     return { error: "This job is already marked paid — no invoice created." };
   }
@@ -241,7 +238,23 @@ export async function createInvoiceFromJob(
       .single();
 
     if (insertError) {
-      return { error: "Invoice created in Stripe but failed to save locally" };
+      // Without a local row the webhook can't land a payment on this job, so a
+      // payable invoice must not be left standing. chargeCardOnFile does the
+      // same.
+      try {
+        await stripe.invoices.voidInvoice(stripeInvoiceId);
+      } catch (voidErr) {
+        Sentry.captureException(voidErr, {
+          level: "error",
+          tags: { source: "create-invoice", path: "void-after-db-insert" },
+          extra: { jobId, stripeInvoiceId, insertError: insertError.message },
+        });
+        return {
+          error:
+            "Invoice created in Stripe but failed to save locally, and it could not be voided. Void it in the Stripe dashboard before trying again.",
+        };
+      }
+      return { error: "Invoice couldn't be saved locally — the Stripe invoice was voided. Try again." };
     }
 
     const vehicle = job.vehicles as { year: number | null; make: string | null; model: string | null } | null;
@@ -325,10 +338,10 @@ interface ResendInvoiceParams {
 //      transition and carries side effects (jobs.payment_status, receipt email,
 //      customer SMS, owner notify) that a server action cannot replicate. Writing
 //      it here trips the webhook's idempotency guard and those never run.
-//   2. jobs.payment_status is checked BEFORE Stripe. Cash, check, Terminal, and
-//      waived settlements update `jobs` only — they leave the local invoice row
-//      at 'sent' and the Stripe invoice 'open' forever, so no amount of asking
-//      Stripe will reveal them.
+//   2. jobs.payment_status is checked BEFORE Stripe. A counter settlement voids
+//      the open invoice on its way in, but a void that fails on the card-reader
+//      path leaves the row at 'sent' with the job paid, so Stripe alone can't
+//      be trusted to know the job is settled.
 export async function resendInvoiceForJob({
   jobId,
   email,
@@ -393,10 +406,9 @@ export async function resendInvoiceForJob({
     return { ok: false, error: "Fleet accounts are billed off-platform — no reminder sent." };
   }
 
-  // job_id has no unique constraint, so a race or a manual fix can leave two
-  // rows — every creation path refuses when one already exists, so duplicates
-  // are an artifact rather than a normal state. Ordered and limited rather than
-  // .maybeSingle(), which returns an error (PGRST116) on multiple rows. Newest wins.
+  // invoices_one_per_job makes a second row impossible; ordered and limited
+  // rather than .maybeSingle() so a row that predates the index refuses below
+  // instead of erroring (PGRST116). Newest wins.
   const { data: invoiceRows, error: invoiceError } = await supabase
     .from("invoices")
     .select("id, status, stripe_invoice_id, stripe_hosted_invoice_url, last_sent_at")
@@ -712,11 +724,10 @@ export async function voidInvoiceForJob(
 
   const supabase = await createClient();
 
-  // The job's own payment state, which is independent of the invoice row: a job
-  // invoiced through Stripe and then settled in cash reads paid here while the
-  // invoice row still reads sent. Every other mutating invoice action checks
-  // this, and voiding a settled job would delete the only in-app link to the
-  // Stripe invoice on a job createInvoiceFromJob then refuses to re-bill.
+  // The job's own payment state, which is independent of the invoice row: a
+  // card-reader settlement whose auto-void failed leaves a paid job with a row
+  // still reading sent. Voiding a settled job would delete the only in-app link
+  // to the Stripe invoice on a job createInvoiceFromJob then refuses to re-bill.
   const { data: job, error: jobError } = await supabase
     .from("jobs")
     .select("id, payment_status")
@@ -740,8 +751,8 @@ export async function voidInvoiceForJob(
     };
   }
 
-  // Ordered + limited, same as resendInvoiceForJob: job_id has no unique
-  // constraint, so duplicates are an artifact rather than a normal state.
+  // Ordered + limited, same as resendInvoiceForJob, so a duplicate that
+  // predates invoices_one_per_job refuses instead of erroring.
   const { data: invoiceRows, error: invoiceError } = await supabase
     .from("invoices")
     .select("id, status, stripe_invoice_id")
@@ -886,9 +897,9 @@ export async function voidInvoiceForJob(
   }
 
   // cancelJob and deleteJob both refuse while payment_status reads 'invoiced',
-  // telling the manager to void the invoice first — which they just did. Nothing
-  // else in the app ever moves it back, so without this the job is permanently
-  // un-cancellable. Scoped to 'invoiced' so a cash settlement isn't overwritten.
+  // telling the manager to void the invoice first — which they just did. The
+  // invoice.voided webhook does the same reset for a dashboard void. Scoped to
+  // 'invoiced' so a cash settlement isn't overwritten.
   const { error: statusError } = await supabase
     .from("jobs")
     .update({ payment_status: "unpaid" })
@@ -961,11 +972,10 @@ export async function getInvoices(status?: string, search?: string, source?: str
   return invoices;
 }
 
-// `job_id` has no unique constraint, so a race or a manual fix can leave two
-// rows. `.maybeSingle()` returns an error in that case, and swallowing it here
-// used to hide the invoice card entirely — which showed "Ready to invoice →
-// Create" for a job that already had one, inviting a duplicate Stripe invoice.
-// Ordered + limited instead, matching resendInvoiceForJob: newest wins.
+// `.maybeSingle()` errors on two rows, and swallowing that here used to hide
+// the invoice card entirely — which showed "Ready to invoice → Create" for a
+// job that already had one, inviting a duplicate Stripe invoice. Ordered +
+// limited instead, matching resendInvoiceForJob: newest wins.
 export async function getInvoiceForJob(jobId: string) {
   const supabase = await createClient();
 

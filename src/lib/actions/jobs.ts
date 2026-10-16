@@ -9,6 +9,9 @@ import { jobSchema, prepareJobData } from "@/lib/validators/job";
 import { todayET, shiftScheduledAtToNewDate } from "@/lib/utils";
 import { parseRONumber } from "@/lib/utils/format";
 import { getPaymentIntentStatus } from "@/lib/stripe/terminal";
+import { getShopSettings } from "@/lib/actions/settings";
+import { voidOpenInvoiceForJob } from "@/lib/invoices/void-open-invoice";
+import { buildPaymentSnapshot, CLEARED_PAYMENT_SNAPSHOT } from "@/lib/payments/snapshot";
 import type { ActionResult } from "./_types";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
@@ -176,6 +179,10 @@ export async function createJob(formData: JobFormData) {
   }
 
   const supabase = await createClient();
+  if (parsed.data.payment_status === "paid" || parsed.data.status === "cancelled") {
+    return { error: "Create the job first, then record the payment or cancel it" };
+  }
+
   const { data, error } = await supabase
     .from("jobs")
     .insert(prepareJobData(parsed.data))
@@ -200,22 +207,48 @@ export async function updateJob(id: string, formData: JobFormData) {
 
   const supabase = await createClient();
 
-  // Moving a job off 'paid' has to go through markJobUnpaid, which checks that
-  // no money was actually collected.
-  if (parsed.data.payment_status !== "paid") {
-    const { data: current, error: fetchError } = await supabase
-      .from("jobs")
-      .select("payment_status")
-      .eq("id", id)
-      .maybeSingle();
-    if (fetchError) return { error: fetchError.message };
-    if (!current) return { error: "Job not found" };
-    if (current.payment_status === "paid") return { error: PAID_LOCKED_MSG };
+  // This path carries the stored payment_status/payment_method through and
+  // refuses a change; Mark as Paid and Mark as Unpaid own those fields.
+  const { data: current, error: fetchError } = await supabase
+    .from("jobs")
+    .select("payment_status, payment_method, status, date_finished")
+    .eq("id", id)
+    .maybeSingle();
+  if (fetchError) return { error: fetchError.message };
+  if (!current) return { error: "Job not found" };
+  if (parsed.data.status === "cancelled" && current.status !== "cancelled") {
+    return { error: "Use Cancel Job to cancel a job" };
+  }
+  if (parsed.data.payment_status !== current.payment_status) {
+    return {
+      error:
+        current.payment_status === "paid"
+          ? PAID_LOCKED_MSG
+          : "Payment changes go through Mark as Paid or Mark as Unpaid",
+    };
+  }
+  if (current.status === "complete" && parsed.data.status !== "complete") {
+    const leaving = await refuseLeavingComplete(supabase, id, current.payment_status);
+    if (leaving) return { error: leaving };
+  }
+
+  // Payment fields are left out of the write entirely: writing the values read
+  // above would race a webhook or counter payment landing in between and flip
+  // the job back to unpaid with its snapshot still populated.
+  const payload: Partial<ReturnType<typeof prepareJobData>> = prepareJobData(parsed.data);
+  delete payload.payment_status;
+  delete payload.payment_method;
+  // The finish date survives a reopen so that re-completing doesn't move the
+  // job's revenue to today.
+  if (payload.status !== "complete") {
+    payload.date_finished = current.date_finished;
+  } else if (current.date_finished && !parsed.data.date_finished) {
+    payload.date_finished = current.date_finished;
   }
 
   const { data, error } = await supabase
     .from("jobs")
-    .update(prepareJobData(parsed.data))
+    .update(payload)
     .eq("id", id)
     .select()
     .single();
@@ -233,27 +266,72 @@ export async function updateJob(id: string, formData: JobFormData) {
 // guards. A bare status update from a Kanban drag would otherwise bypass them.
 export type ActiveJobStatus = Exclude<JobStatus, "cancelled">;
 
+const SETTLED_LOCKED_STATUS_MSG =
+  "This job is settled, so it can't leave Complete. Mark it as unpaid first.";
+const INVOICED_LOCKED_STATUS_MSG =
+  "This job has an invoice on file, so it can't leave Complete. Void the invoice first.";
+
+// A paid, waived or invoiced job is money that has been reported; moving it off
+// complete would take it out of revenue.
+async function refuseLeavingComplete(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string,
+  paymentStatus: string
+): Promise<string | null> {
+  if (paymentStatus === "paid" || paymentStatus === "waived") return SETTLED_LOCKED_STATUS_MSG;
+  if (paymentStatus === "invoiced") return INVOICED_LOCKED_STATUS_MSG;
+  const { data: invoice, error } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("job_id", id)
+    .limit(1)
+    .maybeSingle();
+  if (error) return error.message;
+  if (invoice) return INVOICED_LOCKED_STATUS_MSG;
+  return null;
+}
+
 export async function updateJobStatus(id: string, status: ActiveJobStatus) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
 
   const supabase = await createClient();
 
-  const updateData: Record<string, unknown> = { status };
+  const { data: job, error: fetchError } = await supabase
+    .from("jobs")
+    .select("status, payment_status, date_finished")
+    .eq("id", id)
+    .maybeSingle();
+  if (fetchError) return { error: fetchError.message };
+  if (!job) return { error: "Job not found" };
 
-  // Auto-set date_finished when completing, clear it when moving back
-  if (status === "complete") {
-    updateData.date_finished = todayET();
-  } else {
-    updateData.date_finished = null;
+  if (job.status === "complete" && status !== "complete") {
+    const refusal = await refuseLeavingComplete(supabase, id, job.payment_status);
+    if (refusal) return { error: refusal };
   }
 
-  const { error } = await supabase
+  // The finish date survives a round trip off and back onto Complete, so
+  // reopening a job to add a note doesn't move its revenue to today.
+  const updateData: Record<string, unknown> = { status };
+  if (status === "complete") {
+    updateData.date_finished = job.date_finished ?? todayET();
+  }
+
+  // Pinned to the state the guards above read, so a payment landing in
+  // between makes this match nothing instead of moving a paid job.
+  const { data: updated, error } = await supabase
     .from("jobs")
     .update(updateData)
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", job.status)
+    .eq("payment_status", job.payment_status)
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!updated) {
+    return { error: "This job changed while you were updating it — reload and try again" };
+  }
 
   revalidatePath("/jobs");
   revalidatePath(`/jobs/${id}`);
@@ -345,6 +423,18 @@ export async function updateJobFields(id: string, patch: JobFieldPatch) {
     return { error: "Nothing to update" };
   }
 
+  if ("date_finished" in update && update.date_finished === null) {
+    const { data: job, error: statusError } = await supabase
+      .from("jobs")
+      .select("status")
+      .eq("id", id)
+      .maybeSingle();
+    if (statusError) return { error: statusError.message };
+    if (job?.status === "complete") {
+      return { error: "A completed job needs a finish date" };
+    }
+  }
+
   // Treat date_received + scheduled_at as a unit. If the caller is moving
   // the drop-off date and the job has a time set, shift scheduled_at to
   // the new date keeping the same ET wall-clock time. If the caller
@@ -418,6 +508,20 @@ export async function updateJobDateFinished(id: string, dateFinished: string) {
   return { success: true };
 }
 
+async function findInvoiceRow(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  jobId: string
+): Promise<{ ok: true; exists: boolean } | { ok: false; error: string }> {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("job_id", jobId)
+    .limit(1)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, exists: !!data };
+}
+
 export async function cancelJob(id: string) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
@@ -443,6 +547,11 @@ export async function cancelJob(id: string) {
   }
   if (job.payment_status === "invoiced") {
     return { error: "This job has an open invoice — void it in Stripe before cancelling" };
+  }
+  const invoiceRow = await findInvoiceRow(supabase, id);
+  if (!invoiceRow.ok) return { error: invoiceRow.error };
+  if (invoiceRow.exists) {
+    return { error: "This job has an invoice on file — void it before cancelling" };
   }
 
   const { error } = await supabase
@@ -481,6 +590,14 @@ export async function deleteJob(id: string) {
   }
   if (job.payment_status === "invoiced") {
     return { error: "This job has an open invoice — void it in Stripe before deleting" };
+  }
+  // createInvoiceFromJob leaves payment_status at 'unpaid', so the check above
+  // misses an invoice it sent. The row is the real signal; the FK is RESTRICT
+  // as the backstop.
+  const invoiceRow = await findInvoiceRow(supabase, id);
+  if (!invoiceRow.ok) return { error: invoiceRow.error };
+  if (invoiceRow.exists) {
+    return { error: "This job has an invoice on file — void it before deleting" };
   }
 
   const { error } = await supabase.from("jobs").delete().eq("id", id);
@@ -602,13 +719,22 @@ export async function getLineItemCategories() {
 const PAID_LOCKED_MSG =
   "This job is marked paid — use Mark as Unpaid to undo the payment first";
 
+export type SettledPaymentStatus = Extract<PaymentStatus, "paid" | "waived">;
+
+// Records a settlement: the customer paid some other way, or the bill was
+// comped. Either closes the job's open payment link, so this must not be
+// used to label a job "invoiced" or "unpaid".
 export async function recordPayment(
   jobId: string,
   paymentMethod: PaymentMethod,
-  paymentStatus: PaymentStatus = "paid"
+  paymentStatus: SettledPaymentStatus = "paid"
 ) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
+
+  if (paymentStatus !== "paid" && paymentStatus !== "waived") {
+    return { error: "recordPayment records a paid or waived settlement only" };
+  }
 
   const supabase = await createClient();
 
@@ -617,12 +743,41 @@ export async function recordPayment(
   // card-reader payment from that check.
   const { data: current, error: fetchError } = await supabase
     .from("jobs")
-    .select("payment_status")
+    .select(
+      "payment_status, charge_sales_tax, job_line_items(type, quantity, unit_cost, total, category)"
+    )
     .eq("id", jobId)
     .maybeSingle();
   if (fetchError) return { error: fetchError.message };
   if (!current) return { error: "Job not found" };
   if (current.payment_status === "paid") return { error: PAID_LOCKED_MSG };
+
+  // The snapshot is the figure the tax report files, so a settings read that
+  // fails refuses the payment rather than freezing a guessed rate.
+  const settings = await getShopSettings();
+  if (!settings) {
+    return { error: "Couldn't load shop settings — nothing was recorded. Refresh and try again." };
+  }
+
+  // A payment link the customer could still tap would collect the same bill a
+  // second time. Settled in Stripe before anything is written here.
+  const closed = await voidOpenInvoiceForJob(supabase, jobId, "record-payment");
+  if (!closed.ok) return { error: closed.error };
+
+  // Re-read after the Stripe round trip so a line added meanwhile is in the
+  // snapshot that gets frozen.
+  const { data: fresh, error: freshError } = await supabase
+    .from("jobs")
+    .select("charge_sales_tax, job_line_items(type, quantity, unit_cost, total, category)")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (freshError) return { error: freshError.message };
+  if (!fresh) return { error: "Job not found" };
+
+  const snapshot =
+    paymentStatus === "paid"
+      ? buildPaymentSnapshot(fresh.job_line_items ?? [], settings, fresh.charge_sales_tax)
+      : CLEARED_PAYMENT_SNAPSHOT;
 
   const { data: updated, error } = await supabase
     .from("jobs")
@@ -630,6 +785,7 @@ export async function recordPayment(
       payment_method: paymentMethod,
       payment_status: paymentStatus,
       paid_at: paymentStatus === "paid" ? new Date().toISOString() : null,
+      ...snapshot,
     })
     .eq("id", jobId)
     .neq("payment_status", "paid")
@@ -741,7 +897,12 @@ export async function markJobUnpaid(jobId: string): Promise<ActionResult> {
   // landing after the checks above makes this match no rows.
   const flip = supabase
     .from("jobs")
-    .update({ payment_status: "unpaid", payment_method: null, paid_at: null })
+    .update({
+      payment_status: "unpaid",
+      payment_method: null,
+      paid_at: null,
+      ...CLEARED_PAYMENT_SNAPSHOT,
+    })
     .eq("id", jobId)
     .eq("payment_status", "paid");
   const { data: updated, error: updateError } = await (

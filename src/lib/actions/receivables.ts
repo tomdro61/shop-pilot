@@ -2,10 +2,16 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { todayET } from "@/lib/utils";
-import { isInspectionCategory } from "@/lib/utils/revenue";
 import { differenceInDays, parseISO } from "date-fns";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
 import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
+import { getShopSettings } from "@/lib/actions/settings";
+import {
+  receivableAmount,
+  RECEIVABLE_LINE_ITEMS_SELECT,
+  type ReceivableLineItem,
+  type ReceivableSettings,
+} from "@/lib/receivables/amount";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -49,6 +55,7 @@ type ReceivablesJobRow = {
   payment_status: string;
   ro_number: number | null;
   customer_id: string | null;
+  charge_sales_tax: boolean;
   customers: {
     id: string;
     first_name: string;
@@ -56,8 +63,32 @@ type ReceivablesJobRow = {
     customer_type: string;
     fleet_account: string | null;
   } | null;
-  job_line_items: { total: number | null; category: string | null }[] | null;
+  job_line_items: ReceivableLineItem[] | null;
 };
+
+type ReceivablesSummaryRow = {
+  customer_id: string | null;
+  date_finished: string | null;
+  charge_sales_tax: boolean;
+  customers: { id: string } | null;
+  job_line_items: ReceivableLineItem[] | null;
+};
+
+async function loadReceivableSettings(): Promise<ReceivableSettings> {
+  // No fallback to defaults: getShopSettings returns null when its read fails
+  // or the row is missing, and a guessed tax rate would print a wrong amount owed.
+  const settings = await getShopSettings();
+  if (!settings) {
+    throw new Error("Failed to load shop settings — refusing to compute receivables with a guessed tax rate.");
+  }
+  return settings;
+}
+
+// Walk-in and customer-less jobs are excluded from A/R: there is no one to
+// collect from. Shared by the summary and the ledger so their totals agree.
+function isCollectible(customerId: string | null): boolean {
+  return !!customerId && customerId !== WALK_IN_CUSTOMER_ID;
+}
 
 /** Lightweight summary for the overview dashboard — avoids building full job/fleet arrays. */
 export async function getReceivablesSummary(): Promise<{ totalOutstanding: number; aging60plus: number }> {
@@ -69,31 +100,30 @@ export async function getReceivablesSummary(): Promise<{ totalOutstanding: numbe
   // indistinguishable from "everyone has paid", on the screen used to chase
   // non-payers. fetchAllRows throws instead, and pages past the 1000-row cap
   // that the old `.limit(10000)` did nothing about (the cap clamps `.limit()`).
-  const data = await fetchAllRows<{
-    date_finished: string | null;
-    job_line_items: { total: number | null; category: string | null }[] | null;
-  }>(
-    (from, to) =>
-      supabase
-        .from("jobs")
-        .select("date_finished, job_line_items(total, category)", { count: "exact" })
-        .eq("status", "complete")
-        .neq("payment_status", "paid")
-        .neq("payment_status", "waived")
-        .order("id", { ascending: true })
-        .range(from, to),
-    "outstanding receivables"
-  );
+  const summarySelect: string = `customer_id, date_finished, charge_sales_tax, customers(id), ${RECEIVABLE_LINE_ITEMS_SELECT}`;
+  const [data, settings] = await Promise.all([
+    fetchAllRows<ReceivablesSummaryRow>(
+      (from, to) =>
+        supabase
+          .from("jobs")
+          .select(summarySelect, { count: "exact" })
+          .eq("status", "complete")
+          .neq("payment_status", "paid")
+          .neq("payment_status", "waived")
+          .order("id", { ascending: true })
+          .range(from, to)
+          .returns<ReceivablesSummaryRow[]>(),
+      "outstanding receivables"
+    ),
+    loadReceivableSettings(),
+  ]);
 
   let totalOutstanding = 0;
   let aging60plus = 0;
 
-  type LI = { total: number | null; category: string | null };
-
   for (const job of data) {
-    const amount = ((job.job_line_items as LI[]) || [])
-      .filter((li) => !isInspectionCategory(li.category))
-      .reduce((s, li) => s + (li.total || 0), 0);
+    if (!isCollectible(job.customer_id) || !job.customers) continue;
+    const amount = receivableAmount(job, settings);
     if (amount <= 0) continue;
     totalOutstanding += amount;
     const days = job.date_finished ? differenceInDays(now, parseISO(job.date_finished)) : 0;
@@ -111,23 +141,27 @@ export async function getReceivablesData(customerType?: string): Promise<Receiva
   const now = parseISO(today);
   const isFiltered = !!(customerType && customerType !== "all");
 
-  const jobSelect: string = isFiltered
-    ? "id, title, date_finished, payment_status, ro_number, customer_id, customers!inner(id, first_name, last_name, customer_type, fleet_account), job_line_items(total, category)"
-    : "id, title, date_finished, payment_status, ro_number, customer_id, customers(id, first_name, last_name, customer_type, fleet_account), job_line_items(total, category)";
+  const customersSelect = isFiltered
+    ? "customers!inner(id, first_name, last_name, customer_type, fleet_account)"
+    : "customers(id, first_name, last_name, customer_type, fleet_account)";
+  const jobSelect: string = `id, title, date_finished, payment_status, ro_number, customer_id, charge_sales_tax, ${customersSelect}, ${RECEIVABLE_LINE_ITEMS_SELECT}`;
   // Same as the summary above: `error` was discarded, so a failed read showed an
   // empty A/R ledger rather than an error.
-  const data = await fetchAllRows<ReceivablesJobRow>((from, to) => {
-    let q = supabase
-      .from("jobs")
-      .select(jobSelect, { count: "exact" })
-      .eq("status", "complete")
-      .neq("payment_status", "paid")
-      .neq("payment_status", "waived")
-      .order("id", { ascending: true })
-      .range(from, to);
-    if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
-    return q.returns<ReceivablesJobRow[]>();
-  }, "receivables");
+  const [data, settings] = await Promise.all([
+    fetchAllRows<ReceivablesJobRow>((from, to) => {
+      let q = supabase
+        .from("jobs")
+        .select(jobSelect, { count: "exact" })
+        .eq("status", "complete")
+        .neq("payment_status", "paid")
+        .neq("payment_status", "waived")
+        .order("id", { ascending: true })
+        .range(from, to);
+      if (isFiltered) q = q.eq("customers.customer_type", customerType as "retail" | "fleet" | "parking");
+      return q.returns<ReceivablesJobRow[]>();
+    }, "receivables"),
+    loadReceivableSettings(),
+  ]);
 
   const jobs: ReceivableJob[] = [];
   let totalOutstanding = 0;
@@ -137,24 +171,13 @@ export async function getReceivablesData(customerType?: string): Promise<Receiva
 
   const fleetMap: Record<string, FleetAccountAging> = {};
 
-  type LineItem = { total: number; category: string | null };
+  for (const job of data) {
+    if (!isCollectible(job.customer_id)) continue;
 
-  for (const job of (data || [])) {
-    if (!job.customer_id || job.customer_id === WALK_IN_CUSTOMER_ID) continue;
-
-    const customer = job.customers as {
-      id: string;
-      first_name: string;
-      last_name: string;
-      customer_type: string;
-      fleet_account: string | null;
-    } | null;
+    const customer = job.customers;
     if (!customer) continue;
 
-    const lineItems = ((job.job_line_items as LineItem[]) || []).filter(
-      (li) => !isInspectionCategory(li.category)
-    );
-    const amount = lineItems.reduce((s, li) => s + (li.total || 0), 0);
+    const amount = receivableAmount(job, settings);
     if (amount <= 0) continue;
 
     const daysOutstanding = job.date_finished

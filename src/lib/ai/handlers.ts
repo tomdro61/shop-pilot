@@ -29,6 +29,7 @@ import {
 import {
   createLineItem,
   updateLineItem,
+  getLineItemById,
   deleteLineItem,
 } from "@/lib/actions/job-line-items";
 import {
@@ -300,16 +301,26 @@ export async function executeToolCall(
         return JSON.stringify(result);
       }
       case "update_line_item": {
-        // For line item updates, we need all fields — the server action validates them
-        const result = await updateLineItem(str(toolInput.id), {
-          job_id: str(toolInput.job_id),
-          type: str(toolInput.type, "labor") as "labor" | "part",
-          description: str(toolInput.description),
-          quantity: num(toolInput.quantity, 1)!,
-          unit_cost: num(toolInput.unit_cost, 0)!,
-          cost: toolInput.cost !== undefined ? (num(toolInput.cost) ?? null) : null,
-          part_number: str(toolInput.part_number),
-          category: str(toolInput.category) || undefined,
+        // Merge onto the stored row: the model usually sends only the field it
+        // was asked to change, and a bare payload used to null the wholesale
+        // cost and category on every quantity edit.
+        const existing = await getLineItemById(str(toolInput.id));
+        if ("error" in existing) return JSON.stringify(existing);
+        const row = existing.data;
+        const result = await updateLineItem(row.id, {
+          job_id: row.job_id,
+          type:
+            toolInput.type !== undefined
+              ? (str(toolInput.type) as "labor" | "part")
+              : (row.type as "labor" | "part"),
+          description:
+            toolInput.description !== undefined ? str(toolInput.description) : row.description,
+          quantity: toolInput.quantity !== undefined ? num(toolInput.quantity, row.quantity)! : row.quantity,
+          unit_cost: toolInput.unit_cost !== undefined ? num(toolInput.unit_cost, row.unit_cost)! : row.unit_cost,
+          cost: toolInput.cost !== undefined ? (num(toolInput.cost) ?? null) : row.cost,
+          part_number: toolInput.part_number !== undefined ? str(toolInput.part_number) : row.part_number ?? "",
+          category:
+            toolInput.category !== undefined ? str(toolInput.category) || undefined : row.category ?? undefined,
         });
         return JSON.stringify(result);
       }

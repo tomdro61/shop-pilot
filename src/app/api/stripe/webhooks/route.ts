@@ -14,6 +14,20 @@ import {
 import { paymentReceiptEmail, parkingPaymentReceiptEmail } from "@/lib/resend/templates";
 import { calculateTotals } from "@/lib/utils/totals";
 import { WALK_IN_CUSTOMER_ID } from "@/lib/constants";
+import {
+  amountOnlySnapshot,
+  buildPaymentSnapshot,
+  type AmountOnlySnapshot,
+  type PaymentSnapshot,
+} from "@/lib/payments/snapshot";
+import { isTransientStripeError } from "@/lib/invoices/void-open-invoice";
+import { recordTerminalPayment } from "@/lib/stripe/terminal-payment";
+import { notifyOwners } from "@/lib/messaging/notify-owners";
+import {
+  disputeOpenedSMS,
+  possibleDoublePaymentSMS,
+  refundRecordedSMS,
+} from "@/lib/messaging/templates";
 import type Stripe from "stripe";
 
 export async function POST(request: Request) {
@@ -44,7 +58,25 @@ export async function POST(request: Request) {
 
   if (event.type === "invoice.paid") {
     const stripeInvoice = event.data.object as Stripe.Invoice;
-    await handleInvoicePaid(stripeInvoice);
+    const settled = await handleInvoicePaid(stripeInvoice);
+    if (!settled) {
+      // Non-2xx so Stripe redelivers. A redelivery whose invoice row already
+      // reads paid only re-attempts the job flip, so a retry is free.
+      return NextResponse.json({ error: "invoice.paid reconcile failed" }, { status: 500 });
+    }
+  }
+
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    const recorded = await handleChargeRefunded(charge);
+    if (!recorded) {
+      return NextResponse.json({ error: "refund record failed" }, { status: 500 });
+    }
+  }
+
+  if (event.type === "charge.dispute.created") {
+    const dispute = event.data.object as Stripe.Dispute;
+    await handleDisputeCreated(dispute);
   }
 
   if (event.type === "invoice.voided") {
@@ -78,7 +110,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "quick_pay record failed" }, { status: 500 });
       }
     } else if (pi.metadata?.job_id) {
-      await handleTerminalPayment(pi);
+      const result = await recordTerminalPayment({
+        paymentIntentId: pi.id,
+        amountCents: pi.amount,
+        jobId: pi.metadata.job_id,
+        source: "stripe-webhook",
+      });
+      if (!result.ok) {
+        // The reader charged the card. If the client poll also failed to
+        // record it, this redelivery is the last path that can.
+        return NextResponse.json({ error: "terminal payment record failed" }, { status: 500 });
+      }
     }
   }
 
@@ -229,8 +271,8 @@ async function handleInvoiceVoided(stripeInvoice: Stripe.Invoice): Promise<boole
   }
 
   // cancelJob and deleteJob refuse while payment_status reads 'invoiced',
-  // telling the manager to void the invoice first. Nothing else moves it back,
-  // so a dashboard void would leave the job permanently un-cancellable.
+  // telling the manager to void the invoice first. voidInvoiceForJob does the
+  // same reset on its own path; this covers a void done in the dashboard.
   const { error: statusError } = await supabase
     .from("jobs")
     .update({ payment_status: "unpaid" })
@@ -248,7 +290,7 @@ async function handleInvoiceVoided(stripeInvoice: Stripe.Invoice): Promise<boole
   return true;
 }
 
-async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
+async function handleInvoicePaid(stripeInvoice: Stripe.Invoice): Promise<boolean> {
   const supabase = createAdminClient();
 
   // Find our invoice by Stripe invoice ID
@@ -267,7 +309,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       tags: { source: "stripe-webhook", path: "invoice-lookup" },
       extra: { stripeInvoiceId: stripeInvoice.id },
     });
-    return;
+    return false;
   }
   if (!invoice) {
     // No local row — could be an invoice created outside ShopPilot, or one we
@@ -280,13 +322,34 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       tags: { source: "stripe-webhook" },
       extra: { stripeInvoiceId: stripeInvoice.id },
     });
-    return;
+    return true;
   }
 
   // Idempotency guard — Stripe retries webhooks until it gets a 2xx, and
   // duplicate delivery happens on reconnects. Without this, a second delivery
   // would re-fire the receipt email, customer SMS, and internal-notify SMS.
-  if (invoice.status === "paid") return;
+  if (invoice.status === "paid") {
+    // A redelivery, or a retry after the job flip below failed. The row is
+    // settled; the job may not be. Re-attempt only the job side, which is
+    // guarded by its own `.neq("payment_status","paid")`.
+    if (!invoice.job_id) return true;
+    const { data: job, error: jobError } = await supabase
+      .from("jobs")
+      .select("payment_status")
+      .eq("id", invoice.job_id)
+      .maybeSingle();
+    if (jobError) {
+      Sentry.captureException(jobError, {
+        tags: { source: "stripe-webhook", path: "redelivery-job-lookup" },
+        extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+      });
+      return false;
+    }
+    if (job) {
+      return settleJobForPaidInvoice(supabase, invoice.job_id, stripeInvoice, { redelivery: true });
+    }
+    return true;
+  }
 
   // Atomic flip — `.neq("status", "paid")` makes the update conditional on the
   // row not having been flipped to paid already. Two concurrent deliveries that
@@ -323,12 +386,12 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       tags: { source: "stripe-webhook", path: "invoice-status-flip" },
       extra: { stripeInvoiceId: stripeInvoice.id, invoiceRowId: invoice.id },
     });
-    return;
+    return false;
   }
   if (!updated) {
     // Zero rows updated — another concurrent delivery already flipped this row
     // (atomic-flip race; expected behavior, not an error).
-    return;
+    return true;
   }
 
   const amount = stripeInvoice.amount_paid
@@ -356,7 +419,10 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
           parkingReservationId: invoice.parking_reservation_id,
         },
       });
-      return;
+      // The money is recorded. A retry would exit at the job_id guard above
+      // (the row already reads paid), so the parking receipt is not re-sent;
+      // the Sentry event is the trace.
+      return true;
     }
 
     // Customer SMS (fire-and-forget)
@@ -467,10 +533,10 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       }
     }
 
-    return;
+    return true;
   }
 
-  // ── Job invoice branch (existing flow) ──────────────────────────
+  // ── Job invoice branch ──────────────────────────────────────────
   if (!invoice.job_id) {
     console.warn("[stripe webhook] handleInvoicePaid: invoice has neither job_id nor parking_reservation_id", {
       stripeInvoiceId: stripeInvoice.id,
@@ -481,53 +547,207 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       tags: { source: "stripe-webhook" },
       extra: { stripeInvoiceId: stripeInvoice.id, invoiceRowId: invoice.id },
     });
-    return;
+    return true;
   }
 
-  // Update job payment tracking (don't change job status — payment is separate from workflow)
-  const { error: jobUpdateErr } = await supabase
+  return settleJobForPaidInvoice(supabase, invoice.job_id, stripeInvoice, { redelivery: false });
+}
+
+// Flips the job behind a paid Stripe invoice and sends the receipt, customer
+// SMS and owner notification. Reached from the first delivery after the
+// invoice row flips, and from a redelivery when that first attempt failed
+// before the job was marked.
+async function settleJobForPaidInvoice(
+  supabase: ReturnType<typeof createAdminClient>,
+  jobId: string,
+  stripeInvoice: Stripe.Invoice,
+  { redelivery }: { redelivery: boolean }
+): Promise<boolean> {
+  const amount = stripeInvoice.amount_paid
+    ? `$${(stripeInvoice.amount_paid / 100).toFixed(2)}`
+    : null;
+
+  // Read once: the snapshot and the receipt both need settings, and the
+  // receipt refuses on a failed read.
+  const { data: settingsRow, error: settingsErr } = await supabase
+    .from("shop_settings")
+    .select("*")
+    .limit(1)
+    .single();
+
+  const { data: jobData, error: jobFetchErr } = await supabase
+    .from("jobs")
+    .select(
+      "id, ro_number, title, payment_status, payment_method, paid_at, charge_sales_tax, customers(id, first_name, last_name, email, phone), vehicles(year, make, model, license_plate, vin), job_line_items(type, description, quantity, unit_cost, total, category)"
+    )
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (jobFetchErr) {
+    console.error("[stripe webhook] handleInvoicePaid: failed to fetch job", {
+      stripeInvoiceId: stripeInvoice.id,
+      jobId,
+      error: jobFetchErr,
+    });
+    Sentry.captureException(jobFetchErr, {
+      tags: { source: "stripe-webhook", path: "job-fetch" },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId },
+    });
+    return false;
+  }
+  if (!jobData) {
+    Sentry.captureMessage("stripe_webhook_paid_invoice_job_missing", {
+      level: "error",
+      tags: { source: "stripe-webhook", path: "job-missing" },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId },
+    });
+    return true;
+  }
+
+  // On the first delivery this handler has just won the one-time invoice flip,
+  // so a job that already reads paid was settled some other way (cash, check,
+  // card reader, or a hand-recorded card payment, which also stores "stripe")
+  // and the old payment link was tapped anyway. On a redelivery a job paid by
+  // "stripe" is the earlier attempt's own flip. The original record is kept;
+  // the shop is told to refund the second charge.
+  const alreadySettledElsewhere =
+    jobData.payment_status === "paid" && (!redelivery || jobData.payment_method !== "stripe");
+  if (alreadySettledElsewhere) {
+    Sentry.captureMessage("stripe_webhook_double_payment", {
+      level: "error",
+      tags: { source: "stripe-webhook", path: "double-payment" },
+      extra: {
+        stripeInvoiceId: stripeInvoice.id,
+        jobId,
+        roNumber: jobData.ro_number,
+        priorMethod: jobData.payment_method,
+        priorPaidAt: jobData.paid_at,
+        amountPaidCents: stripeInvoice.amount_paid,
+      },
+    });
+    await notifyOwners(
+      possibleDoublePaymentSMS({
+        roNumber: jobData.ro_number,
+        priorMethod: jobData.payment_method,
+        amount: amount ?? "an unknown amount",
+      }),
+      "stripe-webhook"
+    );
+    return true;
+  }
+  if (jobData.payment_status === "paid") {
+    return true;
+  }
+
+  const paidCents = typeof stripeInvoice.amount_paid === "number" ? stripeInvoice.amount_paid : 0;
+  let snapshot: PaymentSnapshot | AmountOnlySnapshot;
+  if (settingsErr || !settingsRow) {
+    // The payment can't be refused, but a guessed rate must not be frozen.
+    Sentry.captureException(settingsErr ?? new Error("shop_settings missing"), {
+      level: "error",
+      tags: { source: "stripe-webhook", path: "snapshot-settings" },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId },
+    });
+    snapshot = amountOnlySnapshot(paidCents);
+  } else {
+    const computed = buildPaymentSnapshot(
+      jobData.job_line_items ?? [],
+      settingsRow,
+      jobData.charge_sales_tax
+    );
+    if (Math.round(computed.amount_collected * 100) === paidCents) {
+      snapshot = computed;
+    } else {
+      // Lines were edited after the invoice was sent. The tax those lines
+      // imply is not the tax that was collected, so it is not frozen as filed.
+      Sentry.captureMessage("stripe_webhook_snapshot_mismatch", {
+        level: "error",
+        tags: { source: "stripe-webhook", path: "snapshot-mismatch" },
+        extra: {
+          stripeInvoiceId: stripeInvoice.id,
+          jobId,
+          paidCents,
+          computedCents: Math.round(computed.amount_collected * 100),
+        },
+      });
+      snapshot = amountOnlySnapshot(paidCents);
+    }
+  }
+
+  const { data: jobFlipped, error: jobUpdateErr } = await supabase
     .from("jobs")
     .update({
       payment_status: "paid",
       payment_method: "stripe",
       paid_at: new Date().toISOString(),
+      ...snapshot,
     })
-    .eq("id", invoice.job_id);
+    .eq("id", jobId)
+    .neq("payment_status", "paid")
+    .select("id")
+    .maybeSingle();
 
   if (jobUpdateErr) {
     console.error("[stripe webhook] handleInvoicePaid: failed to flip job payment_status", {
       stripeInvoiceId: stripeInvoice.id,
-      jobId: invoice.job_id,
+      jobId,
       error: jobUpdateErr,
     });
     Sentry.captureException(jobUpdateErr, {
       tags: { source: "stripe-webhook", path: "job-payment-status-flip" },
-      extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId },
     });
-    // Continue — still want to fire the receipt email/SMS so the customer
-    // isn't left wondering. The local row will need manual reconciliation.
+    return false;
   }
-
-  // Fetch job + customer + vehicle for SMS and email (admin client — no auth cookies in webhooks)
-  const { data: jobData, error: jobFetchErr } = await supabase
-    .from("jobs")
-    .select(
-      "id, title, payment_method, charge_sales_tax, customers(id, first_name, last_name, email, phone), vehicles(year, make, model, license_plate, vin), job_line_items(type, description, quantity, unit_cost)"
-    )
-    .eq("id", invoice.job_id)
-    .single();
-
-  if (jobFetchErr || !jobData) {
-    console.error("[stripe webhook] handleInvoicePaid: failed to fetch job for receipt", {
-      stripeInvoiceId: stripeInvoice.id,
-      jobId: invoice.job_id,
-      error: jobFetchErr,
-    });
-    Sentry.captureException(jobFetchErr ?? new Error("Job missing for paid invoice"), {
-      tags: { source: "stripe-webhook", path: "job-fetch-for-receipt" },
-      extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
-    });
-    return;
+  if (!jobFlipped) {
+    // Something flipped the job between the read above and this write. A
+    // counter record (cash, card reader) means the customer has now paid
+    // twice. A "stripe" flip is read as a concurrent delivery of this same
+    // event, which the first-delivery check above can't rule out here; a
+    // hand-recorded card payment landing in this same window would look the
+    // same, so the race is logged either way.
+    const { data: again, error: againError } = await supabase
+      .from("jobs")
+      .select("ro_number, payment_method, paid_at")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (againError) {
+      Sentry.captureException(againError, {
+        tags: { source: "stripe-webhook", path: "job-flip-race-reread" },
+        extra: { stripeInvoiceId: stripeInvoice.id, jobId },
+      });
+      return false;
+    }
+    if (!again) {
+      Sentry.captureMessage("stripe_webhook_paid_invoice_job_missing", {
+        level: "error",
+        tags: { source: "stripe-webhook", path: "job-flip-race-job-missing" },
+        extra: { stripeInvoiceId: stripeInvoice.id, jobId },
+      });
+      return true;
+    }
+    if (again.payment_method === "stripe") {
+      Sentry.captureMessage("stripe_webhook_job_flip_race", {
+        level: "warning",
+        tags: { source: "stripe-webhook", path: "job-flip-race" },
+        extra: { stripeInvoiceId: stripeInvoice.id, jobId, redelivery, priorPaidAt: again.paid_at },
+      });
+    } else {
+      Sentry.captureMessage("stripe_webhook_double_payment", {
+        level: "error",
+        tags: { source: "stripe-webhook", path: "double-payment-race" },
+        extra: { stripeInvoiceId: stripeInvoice.id, jobId, priorMethod: again.payment_method, priorPaidAt: again.paid_at },
+      });
+      await notifyOwners(
+        possibleDoublePaymentSMS({
+          roNumber: again.ro_number,
+          priorMethod: again.payment_method,
+          amount: amount ?? "an unknown amount",
+        }),
+        "stripe-webhook"
+      );
+    }
+    return true;
   }
 
   const customer = jobData.customers as {
@@ -549,25 +769,19 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
   if (!customer) {
     console.warn("[stripe webhook] handleInvoicePaid: paid job has no customer — receipt not sent", {
       stripeInvoiceId: stripeInvoice.id,
-      jobId: invoice.job_id,
+      jobId,
     });
     Sentry.captureMessage("stripe_webhook_paid_job_no_customer", {
       level: "warning",
       tags: { source: "stripe-webhook" },
-      extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+      extra: { stripeInvoiceId: stripeInvoice.id, jobId },
     });
-    return;
+    return true;
   }
 
   // Receipt email (fire-and-forget)
   if (customer.email) {
     try {
-      const { data: settingsRow, error: settingsErr } = await supabase
-        .from("shop_settings")
-        .select("*")
-        .limit(1)
-        .single();
-
       // No receipt beats a receipt with the wrong total. calculateTotals falls
       // back to DEFAULT_SETTINGS when settingsRow is null — no shop supplies, no
       // hazmat, statutory tax rate — so a failed read would email a figure that
@@ -618,7 +832,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         // the parking branch above. The guard makes this equal to
         // totals.grandTotal, so headline and itemisation cannot disagree.
         amount: paidCents / 100,
-        paymentMethod: jobData.payment_method || "stripe",
+        paymentMethod: "stripe",
         lineItems,
         totals,
       });
@@ -627,7 +841,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
 
       await logReceiptEmail(supabase, {
         customerId: customer.id,
-        jobId: invoice.job_id,
+        jobId,
         body: subject,
         sent: result.success,
         stripeInvoiceId: stripeInvoice.id,
@@ -641,7 +855,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         Sentry.captureException(new Error(`receipt email not delivered: ${result.error}`), {
           level: "error",
           tags: { source: "stripe-webhook", path: "receipt-email-delivery" },
-          extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId: invoice.job_id },
+          extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId },
         });
       }
     } catch (err) {
@@ -652,14 +866,14 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       Sentry.captureException(err, {
         level: "error",
         tags: { source: "stripe-webhook", path: "receipt-email" },
-        extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId: invoice.job_id },
+        extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId },
       });
       // Record the attempt. Without a row the customer timeline is
       // indistinguishable from "this customer has no email on file", so nobody
       // can tell a receipt was owed and never went.
       await logReceiptEmail(supabase, {
         customerId: customer.id,
-        jobId: invoice.job_id,
+        jobId,
         body: "Payment receipt — not sent",
         sent: false,
         stripeInvoiceId: stripeInvoice.id,
@@ -683,7 +897,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         await sendSMS({ to, body: smsBody, from: shopPhone });
         await supabase.from("messages").insert({
           customer_id: customer.id,
-          job_id: invoice.job_id,
+          job_id: jobId,
           channel: "sms" as const,
           direction: "out" as const,
           body: smsBody,
@@ -695,7 +909,7 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
       Sentry.captureException(err, {
         level: "warning",
         tags: { source: "stripe-webhook", path: "payment-sms" },
-        extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId: invoice.job_id },
+        extra: { stripeInvoiceId: stripeInvoice.id, customerId: customer.id, jobId },
       });
     }
   }
@@ -740,34 +954,174 @@ async function handleInvoicePaid(stripeInvoice: Stripe.Invoice) {
         Sentry.captureException(err, {
           level: "warning",
           tags: { source: "stripe-webhook", path: "internal-notify-sms" },
-          extra: { stripeInvoiceId: stripeInvoice.id, jobId: invoice.job_id },
+          extra: { stripeInvoiceId: stripeInvoice.id, jobId },
         });
       }
     }
   }
+
+  return true;
 }
 
-async function handleTerminalPayment(pi: Stripe.PaymentIntent) {
+// Stripe's amount_refunded is absolute. The write only moves the figure up, so
+// a redelivery or an out-of-order partial-refund event can't lower it.
+async function handleChargeRefunded(charge: Stripe.Charge): Promise<boolean> {
   const supabase = createAdminClient();
-  const jobId = pi.metadata.job_id;
+  const paymentIntentId =
+    typeof charge.payment_intent === "string"
+      ? charge.payment_intent
+      : charge.payment_intent?.id ?? null;
+  const refunded = `$${(charge.amount_refunded / 100).toFixed(2)}`;
 
-  const { error } = await supabase
+  const found = await findJobForPaymentIntent(supabase, paymentIntentId);
+  if (!found.ok) return false;
+
+  if (!found.job) {
+    Sentry.captureMessage("stripe_webhook_refund_unmatched", {
+      level: "warning",
+      tags: { source: "stripe-webhook", path: "refund-unmatched" },
+      extra: { chargeId: charge.id, paymentIntentId, amountRefunded: charge.amount_refunded },
+    });
+    await notifyOwners(
+      `ShopPilot: Stripe refund of ${refunded} could not be matched to a job. Record it by hand.`,
+      "stripe-webhook"
+    );
+    return true;
+  }
+
+  const refundedDollars = charge.amount_refunded / 100;
+  const { data: updated, error } = await supabase
     .from("jobs")
     .update({
-      payment_status: "paid",
-      payment_method: "terminal",
-      stripe_payment_intent_id: pi.id,
-      paid_at: new Date().toISOString(),
-    } as Record<string, unknown>)
-    .eq("id", jobId);
+      refunded_amount: refundedDollars,
+      refunded_at: new Date().toISOString(),
+    })
+    .eq("id", found.job.id)
+    .or(`refunded_amount.is.null,refunded_amount.lt.${refundedDollars}`)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
-    console.error("[Webhook] Failed to update job payment status:", error, "jobId:", jobId);
     Sentry.captureException(error, {
-      tags: { source: "stripe-webhook", path: "terminal-payment-job-flip" },
-      extra: { jobId, paymentIntentId: pi.id },
+      tags: { source: "stripe-webhook", path: "refund-record" },
+      extra: { chargeId: charge.id, jobId: found.job.id },
     });
-  } else {
-    console.log("[Webhook] Terminal payment recorded for job:", jobId);
+    return false;
   }
+
+  // Zero rows: the figure on the job already covers this event (redelivery,
+  // or a later partial refund that arrived first). Nothing new to report.
+  if (!updated) return true;
+
+  await notifyOwners(
+    refundRecordedSMS({ roNumber: found.job.ro_number, amount: refunded }),
+    "stripe-webhook"
+  );
+  return true;
+}
+
+async function handleDisputeCreated(dispute: Stripe.Dispute): Promise<void> {
+  const supabase = createAdminClient();
+  const paymentIntentId =
+    typeof dispute.payment_intent === "string"
+      ? dispute.payment_intent
+      : dispute.payment_intent?.id ?? null;
+  const found = await findJobForPaymentIntent(supabase, paymentIntentId);
+  const roNumber = found.ok ? (found.job?.ro_number ?? null) : null;
+
+  Sentry.captureMessage("stripe_webhook_dispute_opened", {
+    level: "error",
+    tags: { source: "stripe-webhook", path: "dispute-created" },
+    extra: {
+      disputeId: dispute.id,
+      paymentIntentId,
+      amount: dispute.amount,
+      reason: dispute.reason,
+      roNumber,
+    },
+  });
+  await notifyOwners(
+    disputeOpenedSMS({
+      roNumber,
+      amount: `$${(dispute.amount / 100).toFixed(2)}`,
+      reason: dispute.reason,
+    }),
+    "stripe-webhook"
+  );
+}
+
+// A card-reader charge carries the PaymentIntent on the job itself. An invoice
+// payment's PaymentIntent is only known to Stripe, so it is resolved through
+// the invoice it paid and then our invoices row.
+async function findJobForPaymentIntent(
+  supabase: ReturnType<typeof createAdminClient>,
+  paymentIntentId: string | null
+): Promise<
+  { ok: true; job: { id: string; ro_number: number | null } | null } | { ok: false }
+> {
+  if (!paymentIntentId) return { ok: true, job: null };
+
+  const { data: byPi, error: piError } = await supabase
+    .from("jobs")
+    .select("id, ro_number")
+    .eq("stripe_payment_intent_id", paymentIntentId)
+    .maybeSingle();
+  if (piError) {
+    Sentry.captureException(piError, {
+      tags: { source: "stripe-webhook", path: "find-job-by-payment-intent" },
+      extra: { paymentIntentId },
+    });
+    return { ok: false };
+  }
+  if (byPi) return { ok: true, job: byPi };
+
+  let stripeInvoiceId: string | null = null;
+  try {
+    const stripe = getStripe();
+    const payments = await stripe.invoicePayments.list({
+      payment: { type: "payment_intent", payment_intent: paymentIntentId },
+      limit: 1,
+    });
+    const inv = payments.data[0]?.invoice;
+    stripeInvoiceId = typeof inv === "string" ? inv : inv?.id ?? null;
+  } catch (err) {
+    const transient = isTransientStripeError(err);
+    Sentry.captureException(err, {
+      level: transient ? "warning" : "error",
+      tags: { source: "stripe-webhook", path: "find-invoice-for-payment-intent", transient: String(transient) },
+      extra: { paymentIntentId },
+    });
+    // A transient failure must not turn a matchable refund into "unmatched"
+    // for good; a non-2xx gets the event redelivered.
+    return transient ? { ok: false } : { ok: true, job: null };
+  }
+  if (!stripeInvoiceId) return { ok: true, job: null };
+
+  const { data: row, error: rowError } = await supabase
+    .from("invoices")
+    .select("job_id")
+    .eq("stripe_invoice_id", stripeInvoiceId)
+    .maybeSingle();
+  if (rowError) {
+    Sentry.captureException(rowError, {
+      tags: { source: "stripe-webhook", path: "find-job-by-invoice" },
+      extra: { paymentIntentId, stripeInvoiceId },
+    });
+    return { ok: false };
+  }
+  if (!row?.job_id) return { ok: true, job: null };
+
+  const { data: byInvoice, error: jobError } = await supabase
+    .from("jobs")
+    .select("id, ro_number")
+    .eq("id", row.job_id)
+    .maybeSingle();
+  if (jobError) {
+    Sentry.captureException(jobError, {
+      tags: { source: "stripe-webhook", path: "find-job-by-invoice-job" },
+      extra: { paymentIntentId, stripeInvoiceId, jobId: row.job_id },
+    });
+    return { ok: false };
+  }
+  return { ok: true, job: byInvoice ?? null };
 }

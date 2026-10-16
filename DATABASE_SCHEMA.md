@@ -18,7 +18,13 @@ When a migration ships, update three things: the migration file, `src/types/supa
 `id, customer_id, year, make, model, vin, license_plate, mileage, color, notes`
 
 ## `jobs`
-`id, customer_id, vehicle_id, status, title, category, assigned_tech, date_received, date_finished, scheduled_at, notes, payment_status, payment_method, charge_sales_tax, mileage_in, stripe_payment_intent_id, ro_number, receipt_token`
+`id, customer_id, vehicle_id, status, title, category, assigned_tech, date_received, date_finished, scheduled_at, notes, payment_status, payment_method, paid_at, charge_sales_tax, mileage_in, stripe_payment_intent_id, ro_number, receipt_token, amount_collected, taxable_collected, tax_collected, tax_rate_applied, refunded_amount, refunded_at`
+
+- **`paid_at`** — timestamptz. When the payment was recorded. The Tax Summary report and tax-audit CSV bucket on it (cash basis). CHECK `jobs_paid_has_paid_at`: a `paid` job always has one.
+- **Payment snapshot** (`amount_collected`, `taxable_collected`, `tax_collected`, `tax_rate_applied`, all numeric, nullable) — frozen at the paid transition by `recordPayment`, the Stripe `invoice.paid` webhook, `recordTerminalPayment` (status poll + webhook) and `record_quick_pay_job`. `amount_collected` is what the processor collected (Stripe `amount_paid` / PaymentIntent amount) or the grand total for cash/check. Tax reports sum `tax_collected` / `taxable_collected` and fall back to line items × live rate for a paid job with no snapshot (a settings failure at payment, or lines that no longer added up to what Stripe collected); the Tax Summary page counts those jobs. Cleared by `markJobUnpaid`. Once a job is paid or waived, line-item `type`/`quantity`/`unit_cost`, add/delete, and category changes across the inspection boundary are refused server-side (`getLineItemLock`); description, cost, part number and other category edits stay editable.
+- **`refunded_amount` / `refunded_at`** — written by the `charge.refunded` webhook (absolute `amount_refunded / 100`). Not yet netted out of revenue reports; the owner is texted on every refund.
+- CHECK `jobs_complete_has_date_finished`: a `complete` job always has a `date_finished`. `updateJobStatus` no longer nulls the date when a job leaves Complete and keeps it on re-completion; a paid/waived/invoiced job can't leave Complete at all.
+- RLS: `techs_update_assigned_jobs` was dropped 2026-10-15. Techs have no server action that writes jobs; the policy only served direct PostgREST writes.
 
 - **`category`** — deprecated. Exists in DB but no longer set or displayed. Line-item categories are the source of truth for service categorization.
 - **`date_received`** — DATE, surfaced in UI as "Drop-off date"
@@ -62,12 +68,12 @@ When a migration ships, update three things: the migration file, `src/types/supa
 ## `invoices`
 `id, job_id, parking_reservation_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, last_sent_at, payment_method`
 
-- **`status`** — `draft | sent | paid`. **`handleInvoicePaid` (the Stripe webhook) is the only writer of `'paid'`** — that transition also flips `jobs.payment_status`, emails the receipt, texts the customer, and notifies the owner, so a server action that pre-empts it silently disarms the webhook's idempotency guard and those side effects never run.
-- **`job_id` / `parking_reservation_id`** — exactly one is set (CHECK constraint). `job_id` is indexed but **not unique**, so a query for "the invoice for this job" can return more than one row.
+- **`status`** — `draft | sent | paid`. **`handleInvoicePaid` (the Stripe webhook) is the only writer of `'paid'`** — the job side (`settleJobForPaidInvoice`) then flips `jobs.payment_status` with a snapshot, emails the receipt, texts the customer and notifies the owner, or, when the job already reads paid, texts the owner about a double payment instead. A server action that pre-empts the row flip disarms the webhook's idempotency guard and those side effects never run.
+- **`job_id` / `parking_reservation_id`** — exactly one is set (CHECK constraint). `job_id` is **unique when set** (`invoices_one_per_job`, partial, 2026-10-15); voiding deletes the row so re-billing stays possible. The FK to `jobs` is `ON DELETE RESTRICT` (was CASCADE): deleting a job with an invoice row is refused in `deleteJob` and by the database.
 - **`stripe_invoice_id` / `stripe_hosted_invoice_url`** — nullable, and can also be the **empty string**: `createStripeInvoice` returns `|| ""` while `chargeCardOnFile` writes `|| null`. Check truthiness, never `!= null`.
 - **`last_sent_at`** — timestamptz, nullable (Session 70). When the payment link was last delivered to the customer; drives the resend-invoice 24h throttle. Written **only** by the resend action, which awaits both channels — `createInvoiceFromJob` fires its sends unawaited and cannot know whether anything landed. No backfill, so **null means "unknown", not "never sent"**.
 
-> Payments taken outside Stripe (cash, check, Terminal, `waived`) update **`jobs` only** — `recordPayment` and the terminal paths never touch this table and never void the Stripe invoice. So a fully-paid job can keep an `invoices` row at `sent` with the Stripe invoice `open` forever. Use `jobs.payment_status`, not this table, to answer "does the customer still owe us."
+> Payments taken outside Stripe (cash, check, Terminal, `waived`) update **`jobs`** and, since 2026-10-15, **void any open Stripe invoice and delete its row** (`voidOpenInvoiceForJob`). `recordPayment` refuses when the void can't be confirmed; the terminal paths record the collected payment anyway and text the owner. The `invoice.paid` webhook refuses to overwrite a job already paid by a non-Stripe method and texts the owner about a possible double payment. Rows at `sent` on paid jobs that predate this are closed by `scripts/void-stale-invoices.mjs`. Use `jobs.payment_status`, not this table, to answer "does the customer still owe us."
 
 ## `messages`
 `id, customer_id, job_id, channel, direction, body, status, sent_at, phone_line, related_appointment_id`

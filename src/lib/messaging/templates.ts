@@ -395,3 +395,51 @@ export function appointmentReminderSMS({
 }): string {
   return `Reminder: appointment tomorrow at ${scheduledTime} (${scheduledDate}). Reply C to confirm or R to reschedule. — Broadway Motors`;
 }
+
+export function possibleDoublePaymentSMS({
+  roNumber,
+  priorMethod,
+  amount,
+  via = "invoice",
+}: {
+  roNumber: number | null;
+  priorMethod: string | null;
+  amount: string;
+  via?: "invoice" | "reader";
+}): string {
+  const ro = roNumber != null ? `RO-${String(roNumber).padStart(4, "0")}` : "a job";
+  const second =
+    via === "reader"
+      ? `the card reader just took ${amount} for it too`
+      : `the Stripe invoice for ${amount} was just paid too`;
+  return `ShopPilot: possible DOUBLE PAYMENT on ${ro}. It was already marked paid (${priorMethod ?? "other"}) and ${second}. Refund it in Stripe.`;
+}
+
+export function openInvoiceNotClosedSMS({ roNumber }: { roNumber: number | null }): string {
+  const ro = roNumber != null ? `RO-${String(roNumber).padStart(4, "0")}` : "a job";
+  return `ShopPilot: ${ro} was paid on the card reader but its Stripe invoice link could not be voided. Void it in Stripe so the customer can't pay twice.`;
+}
+
+export function refundRecordedSMS({
+  roNumber,
+  amount,
+}: {
+  roNumber: number | null;
+  amount: string;
+}): string {
+  const ro = roNumber != null ? `RO-${String(roNumber).padStart(4, "0")}` : "an unmatched job";
+  return `ShopPilot: Stripe refund of ${amount} recorded on ${ro}.`;
+}
+
+export function disputeOpenedSMS({
+  roNumber,
+  amount,
+  reason,
+}: {
+  roNumber: number | null;
+  amount: string;
+  reason: string | null;
+}): string {
+  const ro = roNumber != null ? `RO-${String(roNumber).padStart(4, "0")}` : "an unmatched charge";
+  return `ShopPilot: Stripe DISPUTE opened for ${amount} on ${ro}${reason ? ` (${reason})` : ""}. Respond in the Stripe dashboard.`;
+}

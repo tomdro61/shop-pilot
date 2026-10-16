@@ -27,21 +27,27 @@ interface LineItemsListProps {
   chargeSalesTax: boolean;
   // Tax can't change after the job is invoiced — render the toggle read-only.
   salesTaxLocked: boolean;
+  // Paid or waived: type, quantity, price and delete are read-only. Mirrors
+  // the server lock; the server is the real gate.
+  lineItemsLocked?: boolean;
 }
 
 export function LineItemsAddButton({
   jobId,
   settings,
   presets = [],
+  locked = false,
 }: {
   jobId: string;
   settings?: ShopSettings | null;
   presets?: JobPreset[];
+  // Paid or waived: adding a line would change a frozen amount.
+  locked?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
+      <Button size="sm" onClick={() => setOpen(true)} disabled={locked}>
         <Plus className="mr-1.5 h-3.5 w-3.5" />
         Add
       </Button>
@@ -56,7 +62,7 @@ export function LineItemsAddButton({
   );
 }
 
-export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, salesTaxLocked }: LineItemsListProps) {
+export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, salesTaxLocked, lineItemsLocked = false }: LineItemsListProps) {
   const router = useRouter();
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
   // Optimistic so the toggle + totals flip instantly. useOptimistic auto-reverts
@@ -217,16 +223,18 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
                       >
                         <Pencil className="h-3 w-3" />
                       </Button>
-                      <DeleteConfirmDialog
-                        title="Delete Line Item"
-                        description={`Delete "${item.description}"?`}
-                        onConfirm={() => handleDelete(item.id)}
-                        trigger={
-                          <Button variant="ghost" size="icon-xs" title="Delete">
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        }
-                      />
+                      {!lineItemsLocked && (
+                        <DeleteConfirmDialog
+                          title="Delete Line Item"
+                          description={`Delete "${item.description}"?`}
+                          onConfirm={() => handleDelete(item.id)}
+                          trigger={
+                            <Button variant="ghost" size="icon-xs" title="Delete">
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          }
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -282,6 +290,11 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
         </dl>
         {/* Per-job sales-tax toggle. Off = bill parts with no tax (e.g. outsourced
             parts the shop didn't buy). Locked once the job is invoiced. */}
+        {lineItemsLocked && (
+          <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
+            Settled — amounts are frozen. Mark the job as unpaid to change its lines.
+          </p>
+        )}
         <div className="mt-2 flex items-center justify-between gap-3">
           <span className="text-xs text-stone-500 dark:text-stone-400">
             Charge sales tax
@@ -325,6 +338,7 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
           jobId={jobId}
           lineItem={editItem}
           categories={resolveConfiguredCategories(settings)}
+          moneyLocked={lineItemsLocked}
           open={!!editItem}
           onOpenChange={(open) => {
             if (!open) setEditItem(null);

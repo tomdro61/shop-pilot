@@ -5294,3 +5294,114 @@ production `shop-pilot-22ke3n5mf` (built from that SHA) is aliased to
 expected codes (login 200, dashboard 307, approval and DVI pages render their
 not-found copy for a fake token, empty POSTs 400); no migration this session;
 Sentry shows no production issue first seen or active around the deploy.
+
+## Session 85 — 2026-10-15 — Money review: payment snapshot, auto-void, webhook guards, reporting fixes
+
+The owner asked for a thorough review of everything that produces a revenue,
+profit, tax, payment or A/R figure, since ShopPilot is the shop's source of
+truth for those and Wave only sees cash. Four Opus reviewers read the code in
+parallel (reporting math, payment lifecycle, tax/exports/A-R, database layer);
+every Critical and High was re-verified by hand. The full report, with the
+live-data sizes, is `docs/money-review-2026-10-15.md`.
+
+**What the live data showed** (read-only probe, owner-approved): 106 Stripe
+invoice links still open on jobs already paid another way ($66,400 payable);
+9 paid jobs whose line items no longer match their invoice; ARO shown at about
+half its real value (Sep: $177 vs $383) because 127 inspection-only Quick Pay
+jobs sat in the denominator; A/R understated by $1,954 (no tax, no inspection
+lines); 71 jobs since June with tax off and part lines (owner: deliberate, no
+tax owed); 263 Feb–May jobs marked paid "stripe" with no Stripe record (Wix
+era). Clean: 0 waived, 0 complete jobs without a finish date, 0 duplicate
+invoice rows, 0 line-total drift, per-job vs per-month tax rounding $0.66/yr.
+
+**Owner decisions.** Snapshot at payment and keep lines editable for
+notes/cost, but money fields frozen; tax-off jobs with parts are deliberate;
+void the 106 with a script; scope = Criticals + live-data cleanups.
+
+**Changed.**
+- Migration `20261015000000_payment_snapshot_and_guards.sql`: `jobs` gains
+  `amount_collected`, `taxable_collected`, `tax_collected`, `tax_rate_applied`,
+  `refunded_amount`, `refunded_at`; backfills every paid job from current lines
+  at 6.25% (Stripe's `invoices.amount` wins where it exists); CHECKs
+  `jobs_paid_has_paid_at` and `jobs_complete_has_date_finished`; `invoices`
+  FK to jobs becomes `ON DELETE RESTRICT`; partial unique index
+  `invoices_one_per_job`; drops `techs_update_assigned_jobs` (techs have no
+  server action that writes jobs; the policy only served direct PostgREST
+  writes); revokes `record_quick_pay_job` from anon/authenticated and
+  re-creates it writing the snapshot. **Not yet applied** — the CLI isn't
+  linked to this project; run it in the SQL editor before deploying.
+- `recordPayment` loads settings, calls the new `voidOpenInvoiceForJob`
+  (`src/lib/invoices/void-open-invoice.ts`: retrieve → void → delete row with
+  `.neq paid .select()`, refuse on any uncertainty), then flips with the
+  snapshot (`src/lib/payments/snapshot.ts`). `markJobUnpaid` clears it.
+- Stripe webhook: `handleInvoicePaid` returns a retry signal (500 on lookup
+  or job-flip DB failure); redelivery with the invoice row already paid
+  re-attempts only the job via `settleJobForPaidInvoice`; a job already paid
+  by a non-stripe method is not overwritten — Sentry error + owner SMS
+  "possible double payment". New `charge.refunded` (writes `refunded_*`, owner
+  SMS; job found by PI, else `invoicePayments.list` → invoices row) and
+  `charge.dispute.created` (alert). Terminal success goes through one shared
+  `recordTerminalPayment` (`src/lib/stripe/terminal-payment.ts`) from both the
+  status poll and the webhook: `.neq paid` flip + snapshot, then auto-void,
+  owner SMS on void failure or double collection.
+- `/api/terminal/pay` computes the amount server-side, refuses non-complete
+  or settled jobs, 409 on a client mismatch; `TerminalPayButton.handleCancel`
+  checks `res.ok` and reconciles through status (new `unconfirmed` state).
+- `deleteJob`/`cancelJob` refuse when an `invoices` row exists (the
+  `invoiced` status check never fired — nothing writes it). `updateJobStatus`
+  refuses leaving Complete when paid/waived/invoiced and keeps `date_finished`
+  across a reopen. `updateJob` can't change payment state or cancel;
+  `createJob` refuses `paid`/`cancelled`.
+- Line items on a paid/waived job: create/delete refused (also via presets and
+  catalog); update refuses `type`/`quantity`/`unit_cost` changes, ignores the
+  client's `job_id`, writes `.eq("id").eq("job_id")`. UI hides Delete,
+  disables Add and the money fields. AI `update_line_item` merges onto the
+  stored row instead of nulling cost/category.
+- Reports: `isRevenueJob` gates job counts and ARO; `revenueCurrent`/prior
+  and `avgTicket`/prior use one definition; A/R = `calculateTotals(...)
+  .grandTotal` via `receivableAmount` in summary, page and AI fleet A/R;
+  Tax Summary and tax-audit CSV sum the snapshot; revenue CSV honors
+  `customerType`, adds manual income and Jobs/Avg Ticket rows; shared
+  `escapeCSV` neutralizes formula injection; manual income zod-validated
+  (0% no longer becomes 100%), range read count-guarded. Deprecated
+  `/api/quick-pay` route deleted.
+- `scripts/void-stale-invoices.mjs`: dry run by default, needs
+  `STRIPE_LIVE_SECRET_KEY`, voids the 106 and lists any that are also paid in
+  Stripe (double-payment candidates).
+
+**Review round.** Eight scoped reviewers (silent-failure, code-reviewer,
+type-design, comment, test-coverage) over the staged diff. Highs fixed before
+commit: the webhook's first-delivery double-payment check exempted jobs
+recorded by hand as "stripe"; the terminal recorder trusted a matching
+PaymentIntent id as proof of its own payment (the id is stored before money
+moves, so a cash record taken while the reader was armed carried it);
+`recordPayment` voided the open invoice for every status, not just
+paid/waived; a redelivery skipped the double-payment check entirely; the
+terminal client treated a failed record as success; `notifyOwners` could
+throw out of a money path; a refund webhook lost on a transient Stripe error
+and an out-of-order partial-refund event could lower `refunded_amount`.
+Residuals from the test pass folded in: a failed re-read after a zero-row
+flip now returns a retryable failure (terminal) and a `missing` Sentry trace
+(webhook) instead of a silent "already recorded"; a "stripe" flip seen in
+the webhook's race branch is logged as a warning, since a concurrent
+delivery and a hand-recorded card payment are indistinguishable there.
+
+**Tests.** 977 across 60 files (was 789/51): recordPayment void ordering and
+snapshot, updateJob refusals, webhook double-payment / 500 / redelivery /
+refund / race re-read, terminal recorder and `/api/terminal/pay`, void helper
+(void-before-delete pinned), line-item lock and every caller, cancel/delete/
+status guards, receivables, tax report snapshot path, tax-audit and revenue
+CSV routes, AI `update_line_item` merge, `escapeCSV`, `isRevenueJob`. Seven
+mutations of the webhook and recordPayment guards each turned a test red.
+
+**Not done / for the owner.** No click-through: dev, preview and prod share
+one Supabase and live Quo/Resend, so a terminal or invoice test is a real
+transaction — do one real card-reader payment on a job after deploy and
+confirm the job page shows the collected amount and the old invoice link is
+gone. Enable `charge.refunded` and `charge.dispute.created` on the Stripe
+webhook endpoint. `refunded_amount` is recorded but not yet netted out of
+revenue. Still open from the review: waived-as-revenue (0 waived today),
+Quick Pay parts untaxed, tax page vs export labels, prior-period comparisons
+computed but not displayed, card-on-file idempotency key, parking commingled
+in the shop Stripe account, four columns with no migration, `paid_at` is
+processing time not Stripe's.

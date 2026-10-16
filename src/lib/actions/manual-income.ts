@@ -3,6 +3,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { assertComplete } from "@/lib/supabase/assert-complete";
+import {
+  manualIncomeSchema,
+  manualIncomeUpdateSchema,
+  type ManualIncomeInput,
+  type ManualIncomeUpdateInput,
+} from "@/lib/validators/manual-income";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -32,16 +39,17 @@ export async function getManualIncomeForRange(
   customer_id: string | null;
 }>> {
   const supabase = await createClient();
-  // Throw on infra error — this feeds the dashboard's revenue KPIs and the
-  // reports page. Silently returning [] understates revenue figures the
-  // owner sees, with no signal anything went wrong.
-  const { data, error } = await supabase
-    .from("manual_income")
-    .select("date, amount, shop_keep_pct, category, customer_id")
-    .gte("date", startDate)
-    .lte("date", endDate);
-  if (error) throw new Error(`Failed to load manual income: ${error.message}`);
-  return data ?? [];
+  // Summed into revenue figures, so a failed or truncated read must throw
+  // rather than understate them.
+  return assertComplete(
+    await supabase
+      .from("manual_income")
+      .select("date, amount, shop_keep_pct, category, customer_id", { count: "exact" })
+      .gte("date", startDate)
+      .lte("date", endDate)
+      .order("id", { ascending: true }),
+    "manual income"
+  );
 }
 
 // ── CRUD ─────────────────────────────────────────────────────
@@ -87,27 +95,23 @@ export async function getManualIncomeCategories(): Promise<string[]> {
   return Array.from(cats).sort();
 }
 
-export async function createManualIncome(input: {
-  date: string;
-  amount: number;
-  shop_keep_pct: number;
-  label: string;
-  category: string;
-  customer_id?: string | null;
-  notes?: string | null;
-}) {
+export async function createManualIncome(input: ManualIncomeInput) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
 
+  const parsed = manualIncomeSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const valid = parsed.data;
+
   const supabase = await createClient();
   const { error } = await supabase.from("manual_income").insert({
-    date: input.date,
-    amount: input.amount,
-    shop_keep_pct: input.shop_keep_pct,
-    label: input.label,
-    category: input.category,
-    customer_id: input.customer_id || null,
-    notes: input.notes || null,
+    date: valid.date,
+    amount: valid.amount,
+    shop_keep_pct: valid.shop_keep_pct,
+    label: valid.label,
+    category: valid.category,
+    customer_id: valid.customer_id || null,
+    notes: valid.notes || null,
   });
 
   if (error) return { error: error.message };
@@ -115,25 +119,17 @@ export async function createManualIncome(input: {
   return { success: true };
 }
 
-export async function updateManualIncome(
-  id: string,
-  input: {
-    date?: string;
-    amount?: number;
-    shop_keep_pct?: number;
-    label?: string;
-    category?: string;
-    customer_id?: string | null;
-    notes?: string | null;
-  }
-) {
+export async function updateManualIncome(id: string, input: ManualIncomeUpdateInput) {
   const auth = await requireManager();
   if (!auth.ok) return { error: auth.error };
+
+  const parsed = manualIncomeUpdateSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("manual_income")
-    .update(input)
+    .update(parsed.data)
     .eq("id", id);
 
   if (error) return { error: error.message };

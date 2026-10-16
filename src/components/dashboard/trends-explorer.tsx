@@ -134,9 +134,9 @@ export function TrendsExplorer({
       return values.reduce((s, v) => s + v, 0);
     }
     if (metric === "aro") {
-      const totalRev = data.buckets.reduce((s, b) => s + b.revenue, 0);
+      const totalJobRev = data.buckets.reduce((s, b) => s + b.jobRevenue, 0);
       const totalJobs = data.buckets.reduce((s, b) => s + b.jobCount, 0);
-      return totalJobs > 0 ? totalRev / totalJobs : 0;
+      return totalJobs > 0 ? totalJobRev / totalJobs : 0;
     }
     if (metric === "grossMarginPct") {
       const totalRev = data.buckets.reduce((s, b) => s + b.revenue, 0);

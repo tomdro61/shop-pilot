@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { getLineItemLock, LINE_ITEMS_LOCKED_MSG } from "@/lib/jobs/line-item-lock";
 import type { PresetLineItem } from "@/types";
 import {
   isEditableStatus,
@@ -128,6 +129,10 @@ export async function applyPresetToJob(jobId: string, presetId: string) {
     // No revalidate needed since nothing changed in the DB.
     return { success: true, inserted: 0 };
   }
+
+  const lock = await getLineItemLock(supabase, jobId);
+  if (!lock.ok) return { error: lock.error };
+  if (lock.locked) return { error: LINE_ITEMS_LOCKED_MSG };
 
   const rows = lineItems.map((item) => ({
     job_id: jobId,

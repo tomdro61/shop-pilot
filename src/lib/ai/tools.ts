@@ -221,8 +221,8 @@ export const tools: Anthropic.Tool[] = [
         notes: { type: "string", description: "Job notes" },
         payment_status: {
           type: "string",
-          enum: ["unpaid", "invoiced", "paid", "waived"],
-          description: "Payment status (defaults to unpaid)",
+          enum: ["unpaid", "invoiced", "waived"],
+          description: "Payment status (defaults to unpaid). A job cannot be created already paid — create it, then record_payment.",
         },
         payment_method: {
           type: "string",
@@ -256,14 +256,6 @@ export const tools: Anthropic.Tool[] = [
           description: "Customer-agreed drop-off time as HH:MM 24h ET (e.g. '14:00' for 2:00 PM). Pass empty string to clear. Combined with date_received to update the scheduled appointment.",
         },
         notes: { type: "string" },
-        payment_status: {
-          type: "string",
-          enum: ["unpaid", "invoiced", "paid", "waived"],
-        },
-        payment_method: {
-          type: "string",
-          enum: ["stripe", "cash", "check", "ach"],
-        },
         mileage_in: { type: "number" },
       },
       required: ["id"],
@@ -582,8 +574,9 @@ export const tools: Anthropic.Tool[] = [
         },
         payment_status: {
           type: "string",
-          enum: ["unpaid", "invoiced", "paid", "waived"],
-          description: "Payment status (defaults to 'paid')",
+          enum: ["paid", "waived"],
+          description:
+            "Settlement to record (defaults to 'paid'). 'waived' comps the bill. Either one closes any open Stripe invoice on the job; use mark_job_unpaid to undo.",
         },
       },
       required: ["job_id", "payment_method"],

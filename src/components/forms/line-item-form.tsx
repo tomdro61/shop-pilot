@@ -44,6 +44,9 @@ interface LineItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   inline?: boolean;
+  // The job is paid or waived: the amount is frozen, so type, quantity and
+  // price are read-only. Mirrors the server lock in updateLineItem.
+  moneyLocked?: boolean;
 }
 
 export function LineItemForm({
@@ -54,6 +57,7 @@ export function LineItemForm({
   open,
   onOpenChange,
   inline,
+  moneyLocked = false,
 }: LineItemFormProps) {
   const isEditing = !!lineItem;
   const categoryLocked = !isEditing && !!defaultCategory;
@@ -240,7 +244,12 @@ export function LineItemForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  {moneyLocked && (
+                    <p className="text-xs text-stone-500 dark:text-stone-400">
+                      This job is settled, so type, quantity and price are frozen.
+                    </p>
+                  )}
+                  <Select value={field.value} onValueChange={field.onChange} disabled={moneyLocked}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue />
@@ -310,6 +319,7 @@ export function LineItemForm({
                         type="number"
                         step="0.01"
                         min="0.01"
+                        disabled={moneyLocked}
                         {...field}
                         value={field.value ?? 0}
                         onChange={(e) => field.onChange(Number(e.target.value))}
@@ -330,6 +340,7 @@ export function LineItemForm({
                         type="number"
                         step="0.01"
                         min="0"
+                        disabled={moneyLocked}
                         {...field}
                         value={field.value ?? 0}
                         onChange={(e) => field.onChange(Number(e.target.value))}

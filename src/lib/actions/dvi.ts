@@ -694,7 +694,10 @@ export async function approveRecommendations(
     return { error: "No customer linked to this inspection" };
   }
 
-  if (jobId && (job?.status === "complete" || job?.payment_status === "paid")) {
+  if (
+    jobId &&
+    (job?.status === "complete" || job?.payment_status === "paid" || job?.payment_status === "waived")
+  ) {
     return { error: "This job has already been completed" };
   }
 

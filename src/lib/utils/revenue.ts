@@ -21,6 +21,21 @@ export function isInspectionCategory(
   return INSPECTION_CATEGORY_KEYS.has((category ?? "").trim().toLowerCase());
 }
 
+/**
+ * Whether a job counts as a job in job counts and ARO denominators: it must
+ * carry at least one non-inspection line with a positive total. Quick Pay
+ * inspections create `complete` jobs whose only lines are inspection-category,
+ * and their revenue is reported from daily_inspection_counts instead — counting
+ * those jobs here would deflate ARO with zero-revenue tickets.
+ */
+export function isRevenueJob(
+  lineItems: readonly { total: number | null; category?: string | null }[] | null | undefined
+): boolean {
+  return (lineItems ?? []).some(
+    (li) => !isInspectionCategory(li.category) && (li.total ?? 0) > 0
+  );
+}
+
 type LineItem = { total: number; category?: string | null };
 
 /** Sum line item totals for jobs, excluding inspection-category items */

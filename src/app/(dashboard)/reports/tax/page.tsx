@@ -43,9 +43,16 @@ export default async function TaxReportPage({
             Tax Summary
           </h1>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Monthly taxable sales and MA sales tax (
-            <span className="font-mono tabular-nums">{taxPct}%</span>) by year.
+            Monthly taxable sales and MA sales tax by year, cash basis (by payment date). Tax is
+            the figure frozen when each job was paid; the current rate is{" "}
+            <span className="font-mono tabular-nums">{taxPct}%</span>.
           </p>
+          {data.jobsWithoutSnapshot > 0 && (
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+              {data.jobsWithoutSnapshot} paid {data.jobsWithoutSnapshot === 1 ? "job has" : "jobs have"} no
+              frozen tax figure (recomputed at the current rate). Check them before filing.
+            </p>
+          )}
         </div>
       </div>
 

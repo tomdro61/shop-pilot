@@ -13,6 +13,8 @@ import Stripe from "stripe";
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ requireManager: vi.fn() }));
 vi.mock("@/lib/stripe/terminal", () => ({ getPaymentIntentStatus: vi.fn() }));
+vi.mock("@/lib/actions/settings", () => ({ getShopSettings: vi.fn() }));
+vi.mock("@/lib/invoices/void-open-invoice", () => ({ voidOpenInvoiceForJob: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
 
@@ -21,6 +23,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
 import { getPaymentIntentStatus } from "@/lib/stripe/terminal";
+import { getShopSettings } from "@/lib/actions/settings";
+import { voidOpenInvoiceForJob } from "@/lib/invoices/void-open-invoice";
 import { markJobUnpaid, recordPayment, updateJob } from "./jobs";
 import { createSupabaseMock, type SupabaseMockResult } from "./__test-helpers__/supabase-mock";
 
@@ -110,6 +114,10 @@ describe("markJobUnpaid — the happy path", () => {
       payment_status: "unpaid",
       payment_method: null,
       paid_at: null,
+      amount_collected: null,
+      taxable_collected: null,
+      tax_collected: null,
+      tax_rate_applied: null,
     });
   });
 
@@ -428,24 +436,89 @@ describe("markJobUnpaid — a card-reader attempt on the job", () => {
   });
 });
 
+const SETTINGS = {
+  tax_rate: 0.0625,
+  shop_supplies_enabled: false,
+  shop_supplies_method: "percent_of_labor",
+  shop_supplies_rate: 0.05,
+  shop_supplies_cap: null,
+  hazmat_enabled: false,
+  hazmat_amount: 3,
+  hazmat_label: "Environmental Fee",
+  shop_supplies_categories: null,
+  hazmat_categories: null,
+} as unknown as Awaited<ReturnType<typeof getShopSettings>>;
+
+const LINE_ITEMS = [
+  { type: "labor", quantity: 1, unit_cost: 200, total: 200, category: "Brake Service" },
+  { type: "part", quantity: 2, unit_cost: 50, total: 100, category: "Brake Service" },
+];
+
+const unpaidJob = (overrides: Record<string, unknown> = {}) => ({
+  payment_status: "unpaid",
+  charge_sales_tax: true,
+  job_line_items: LINE_ITEMS,
+  ...overrides,
+});
+
+const freshJob = (overrides: Record<string, unknown> = {}) => ({
+  charge_sales_tax: true,
+  job_line_items: LINE_ITEMS,
+  ...overrides,
+});
+
+const FRESH_SELECT = "charge_sales_tax, job_line_items(type, quantity, unit_cost, total, category)";
+
+/**
+ * recordPayment reads the job, loads settings, closes any open Stripe invoice,
+ * re-reads the job's lines, then flips the job with a payment snapshot built
+ * from that second read. The snapshot is what the tax report files, and the
+ * void is what stops a second payment from an old text, so both are pinned
+ * next to the write.
+ *
+ * Query order: job, fresh job (lines), update (returning).
+ */
 describe("recordPayment — leaves a paid job alone", () => {
   const LOOKUP = [
     { method: "from", args: ["jobs"] },
-    { method: "select", args: ["payment_status"] },
+    {
+      method: "select",
+      args: ["payment_status, charge_sales_tax, job_line_items(type, quantity, unit_cost, total, category)"],
+    },
     { method: "eq", args: ["id", JOB_ID] },
     { method: "maybeSingle", args: [] },
   ];
 
-  it.each(["paid", "unpaid", "invoiced", "waived"] as const)(
+  beforeEach(() => {
+    vi.mocked(getShopSettings).mockResolvedValue(SETTINGS);
+    vi.mocked(voidOpenInvoiceForJob).mockResolvedValue({ ok: true, voided: false, stripeInvoiceId: null });
+  });
+
+  it.each(["unpaid", "invoiced"] as const)(
+    "refuses to record %s at all, before touching the database",
+    async (status) => {
+      const mock = mockSupabase([{ data: unpaidJob(), error: null }]);
+
+      // @ts-expect-error the AI tool surface used to pass these; the runtime guard is the point
+      const result = await recordPayment(JOB_ID, "cash", status);
+
+      expect(result).toEqual({ error: expect.stringContaining("paid or waived") });
+      expect(tables(mock)).toEqual([]);
+      expect(voidOpenInvoiceForJob).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(["paid", "waived"] as const)(
     "refuses to set a paid job to %s",
     async (status) => {
-      const mock = mockSupabase([{ data: { payment_status: "paid" }, error: null }]);
+      const mock = mockSupabase([{ data: unpaidJob({ payment_status: "paid" }), error: null }]);
 
       const result = await recordPayment(JOB_ID, "cash", status);
 
       expect(result).toEqual({ error: expect.stringContaining("Mark as Unpaid") });
       expect(mock.calls.slice(0, 4)).toEqual(LOOKUP);
       expect(updated(mock)).toBeUndefined();
+      expect(voidOpenInvoiceForJob).not.toHaveBeenCalled();
     }
   );
 
@@ -463,9 +536,107 @@ describe("recordPayment — leaves a paid job alone", () => {
     expect(updated(mock)).toBeUndefined();
   });
 
-  it("records a payment on this job, and only while it is not paid", async () => {
+  it("refuses when settings cannot be loaded, before closing any invoice", async () => {
+    vi.mocked(getShopSettings).mockResolvedValue(null);
+    const mock = mockSupabase([{ data: unpaidJob(), error: null }]);
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({
+      error: expect.stringContaining("shop settings"),
+    });
+    expect(voidOpenInvoiceForJob).not.toHaveBeenCalled();
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("closes this job's open Stripe invoice before writing anything", async () => {
     const mock = mockSupabase([
-      { data: { payment_status: "unpaid" }, error: null },
+      { data: unpaidJob(), error: null },
+      { data: freshJob(), error: null },
+      { data: { id: JOB_ID }, error: null },
+    ]);
+    let updatesWhenVoided = -1;
+    let selectsWhenVoided = -1;
+    vi.mocked(voidOpenInvoiceForJob).mockImplementation(async () => {
+      updatesWhenVoided = mock.calls.filter((c) => c.method === "update").length;
+      selectsWhenVoided = mock.calls.filter((c) => c.method === "select").length;
+      return { ok: true, voided: true, stripeInvoiceId: "in_1" };
+    });
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({ success: true });
+    expect(voidOpenInvoiceForJob).toHaveBeenCalledWith(mock.client, JOB_ID, "record-payment");
+    expect(updatesWhenVoided).toBe(0);
+    // The line re-read happens after the void, not before it.
+    expect(selectsWhenVoided).toBe(1);
+  });
+
+  it("snapshots the lines read AFTER the invoice is closed, not the first read", async () => {
+    const mock = mockSupabase([
+      {
+        data: unpaidJob({ job_line_items: [LINE_ITEMS[0]] }),
+        error: null,
+      },
+      { data: freshJob(), error: null },
+      { data: { id: JOB_ID }, error: null },
+    ]);
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({ success: true });
+
+    const freshIdx = mock.calls.findIndex(
+      (c) => c.method === "select" && c.args[0] === FRESH_SELECT
+    );
+    expect(freshIdx).toBeGreaterThan(-1);
+    expect(mock.calls[freshIdx - 1]).toEqual({ method: "from", args: ["jobs"] });
+    expect(mock.calls.slice(freshIdx + 1, freshIdx + 3)).toEqual([
+      { method: "eq", args: ["id", JOB_ID] },
+      { method: "maybeSingle", args: [] },
+    ]);
+    // $200 labor + $100 part with 6.25% on the part — the part only exists in
+    // the second read.
+    expect(updated(mock)?.args[0]).toMatchObject({
+      amount_collected: 306.25,
+      taxable_collected: 100,
+      tax_collected: 6.25,
+      tax_rate_applied: 0.0625,
+    });
+  });
+
+  it("surfaces a failed re-read of the lines, and writes nothing", async () => {
+    const mock = mockSupabase([
+      { data: unpaidJob(), error: null },
+      { data: null, error: { message: "reread failed" } },
+    ]);
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({ error: "reread failed" });
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("refuses when the job vanished between the void and the re-read", async () => {
+    const mock = mockSupabase([
+      { data: unpaidJob(), error: null },
+      { data: null, error: null },
+    ]);
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({ error: "Job not found" });
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("records nothing when the open invoice cannot be closed", async () => {
+    vi.mocked(voidOpenInvoiceForJob).mockResolvedValue({
+      ok: false,
+      reason: "transient",
+      error: "Couldn't reach Stripe",
+      stripeInvoiceId: "in_1",
+    });
+    const mock = mockSupabase([{ data: unpaidJob(), error: null }]);
+
+    expect(await recordPayment(JOB_ID, "cash")).toEqual({ error: "Couldn't reach Stripe" });
+    expect(updated(mock)).toBeUndefined();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("records a payment with its snapshot, on this job, and only while it is not paid", async () => {
+    const mock = mockSupabase([
+      { data: unpaidJob(), error: null },
+      { data: freshJob(), error: null },
       { data: { id: JOB_ID }, error: null },
     ]);
 
@@ -474,6 +645,10 @@ describe("recordPayment — leaves a paid job alone", () => {
       payment_method: "cash",
       payment_status: "paid",
       paid_at: NOW.toISOString(),
+      amount_collected: 306.25,
+      taxable_collected: 100,
+      tax_collected: 6.25,
+      tax_rate_applied: 0.0625,
     });
     expect(callsAfter(mock, "update").slice(0, 4)).toEqual([
       { method: "eq", args: ["id", JOB_ID] },
@@ -483,9 +658,26 @@ describe("recordPayment — leaves a paid job alone", () => {
     ]);
   });
 
-  it("waives an unpaid job with no paid date", async () => {
+  it("snapshots no tax on a job with sales tax turned off", async () => {
     const mock = mockSupabase([
-      { data: { payment_status: "unpaid" }, error: null },
+      { data: unpaidJob({ charge_sales_tax: false }), error: null },
+      { data: freshJob({ charge_sales_tax: false }), error: null },
+      { data: { id: JOB_ID }, error: null },
+    ]);
+
+    await recordPayment(JOB_ID, "check");
+    expect(updated(mock)?.args[0]).toMatchObject({
+      amount_collected: 300,
+      taxable_collected: 0,
+      tax_collected: 0,
+      tax_rate_applied: 0.0625,
+    });
+  });
+
+  it("waives an unpaid job with no paid date and no snapshot", async () => {
+    const mock = mockSupabase([
+      { data: unpaidJob(), error: null },
+      { data: freshJob(), error: null },
       { data: { id: JOB_ID }, error: null },
     ]);
 
@@ -494,58 +686,126 @@ describe("recordPayment — leaves a paid job alone", () => {
       payment_method: "cash",
       payment_status: "waived",
       paid_at: null,
+      amount_collected: null,
+      taxable_collected: null,
+      tax_collected: null,
+      tax_rate_applied: null,
     });
+    expect(voidOpenInvoiceForJob).toHaveBeenCalledTimes(1);
   });
 
   it("refuses when the job became paid between the read and the write", async () => {
-    mockSupabase([
-      { data: { payment_status: "unpaid" }, error: null },
+    const mock = mockSupabase([
+      { data: unpaidJob(), error: null },
+      { data: freshJob(), error: null },
       { data: null, error: null },
     ]);
 
     expect(await recordPayment(JOB_ID, "cash")).toEqual({
       error: expect.stringContaining("Mark as Unpaid"),
     });
+    expect(updated(mock)).toBeDefined();
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("surfaces a failed write", async () => {
-    mockSupabase([
-      { data: { payment_status: "unpaid" }, error: null },
+    const mock = mockSupabase([
+      { data: unpaidJob(), error: null },
+      { data: freshJob(), error: null },
       { data: null, error: { message: "write failed" } },
     ]);
 
     expect(await recordPayment(JOB_ID, "cash")).toEqual({ error: "write failed" });
+    expect(updated(mock)).toBeDefined();
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });
 
-describe("updateJob — cannot move a job off paid", () => {
-  const form = (payment_status: "unpaid" | "invoiced" | "paid" | "waived") => ({
+/**
+ * updateJob carries the form through but may not change payment state or
+ * cancel: payments go through recordPayment / markJobUnpaid (which snapshot
+ * and close invoices) and cancels through cancelJob (which has the guards).
+ */
+describe("updateJob — cannot change payment state", () => {
+  const form = (
+    payment_status: "unpaid" | "invoiced" | "paid" | "waived",
+    status: "complete" | "in_progress" | "cancelled" = "complete"
+  ) => ({
     customer_id: CUSTOMER_ID,
-    status: "complete" as const,
+    status,
     date_received: "2026-09-29",
     notes: "",
     payment_status,
   });
 
+  const CURRENT_LOOKUP = [
+    { method: "from", args: ["jobs"] },
+    { method: "select", args: ["payment_status, payment_method, status, date_finished"] },
+    { method: "eq", args: ["id", JOB_ID] },
+    { method: "maybeSingle", args: [] },
+  ];
+
+  const current = (overrides: Record<string, unknown> = {}) => ({
+    payment_status: "paid",
+    payment_method: "cash",
+    status: "complete",
+    date_finished: "2026-09-28",
+    ...overrides,
+  });
+
   it.each(["unpaid", "invoiced", "waived"] as const)(
     "refuses to set a paid job to %s",
     async (status) => {
-      const mock = mockSupabase([{ data: { payment_status: "paid" }, error: null }]);
+      const mock = mockSupabase([{ data: current(), error: null }]);
 
       const result = await updateJob(JOB_ID, form(status));
 
       expect(result).toEqual({ error: expect.stringContaining("Mark as Unpaid") });
-      expect(mock.calls.slice(0, 4)).toEqual([
-        { method: "from", args: ["jobs"] },
-        { method: "select", args: ["payment_status"] },
-        { method: "eq", args: ["id", JOB_ID] },
-        { method: "maybeSingle", args: [] },
-      ]);
+      expect(mock.calls.slice(0, 4)).toEqual(CURRENT_LOOKUP);
       expect(updated(mock)).toBeUndefined();
     }
   );
+
+  it("refuses to mark an unpaid job paid through the form", async () => {
+    const mock = mockSupabase([{ data: current({ payment_status: "unpaid", payment_method: null }), error: null }]);
+
+    expect(await updateJob(JOB_ID, form("paid"))).toEqual({
+      error: expect.stringContaining("Mark as Paid"),
+    });
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("refuses to cancel through the form, after reading only the job", async () => {
+    const mock = mockSupabase([{ data: current(), error: null }]);
+
+    expect(await updateJob(JOB_ID, form("paid", "cancelled"))).toEqual({
+      error: expect.stringContaining("Cancel Job"),
+    });
+    expect(mock.calls.slice(0, 4)).toEqual(CURRENT_LOOKUP);
+    expect(tables(mock)).toEqual(["jobs"]);
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("lets the form edit a job that is already cancelled", async () => {
+    const mock = mockSupabase([
+      {
+        data: current({
+          payment_status: "unpaid",
+          payment_method: null,
+          status: "cancelled",
+          date_finished: null,
+        }),
+        error: null,
+      },
+      { data: { id: JOB_ID }, error: null },
+    ]);
+
+    expect(await updateJob(JOB_ID, form("unpaid", "cancelled"))).toEqual({
+      data: { id: JOB_ID },
+    });
+    expect(updated(mock)?.args[0]).toMatchObject({ status: "cancelled", date_finished: null });
+    expect(callsAfter(mock, "update")[0]).toEqual({ method: "eq", args: ["id", JOB_ID] });
+  });
 
   it("refuses when the job cannot be read", async () => {
     const mock = mockSupabase([{ data: null, error: { message: "boom" } }]);
@@ -561,21 +821,71 @@ describe("updateJob — cannot move a job off paid", () => {
     expect(updated(mock)).toBeUndefined();
   });
 
-  it("updates an unpaid job, by id", async () => {
+  it("updates an unpaid job, by id, and leaves the payment fields out of the write", async () => {
     const mock = mockSupabase([
-      { data: { payment_status: "unpaid" }, error: null },
+      { data: current({ payment_status: "unpaid", payment_method: null, date_finished: null, status: "in_progress" }), error: null },
       { data: { id: JOB_ID }, error: null },
     ]);
 
     expect(await updateJob(JOB_ID, form("unpaid"))).toEqual({ data: { id: JOB_ID } });
+    const payload = updated(mock)?.args[0];
+    expect(payload).toMatchObject({ status: "complete", customer_id: CUSTOMER_ID });
+    expect(payload).not.toHaveProperty("payment_status");
+    expect(payload).not.toHaveProperty("payment_method");
     expect(callsAfter(mock, "update")[0]).toEqual({ method: "eq", args: ["id", JOB_ID] });
   });
 
-  it("skips the lookup when the form keeps the job paid, and updates by id", async () => {
-    const mock = mockSupabase([{ data: { id: JOB_ID }, error: null }]);
+  it("writes no payment fields on a paid job when the form carries paid through, and keeps its finish date", async () => {
+    const mock = mockSupabase([
+      { data: current(), error: null },
+      { data: { id: JOB_ID }, error: null },
+    ]);
 
-    expect(await updateJob(JOB_ID, form("paid"))).toEqual({ data: { id: JOB_ID } });
-    expect(tables(mock)).toEqual(["jobs"]);
-    expect(callsAfter(mock, "update")[0]).toEqual({ method: "eq", args: ["id", JOB_ID] });
+    expect(await updateJob(JOB_ID, { ...form("paid"), payment_method: "check" })).toEqual({
+      data: { id: JOB_ID },
+    });
+    const payload = updated(mock)?.args[0];
+    expect(payload).toMatchObject({ date_finished: "2026-09-28" });
+    expect(payload).not.toHaveProperty("payment_status");
+    expect(payload).not.toHaveProperty("payment_method");
+  });
+
+  it("keeps the stored finish date when the form moves an unpaid, uninvoiced job off complete", async () => {
+    const mock = mockSupabase([
+      { data: current({ payment_status: "unpaid", payment_method: null }), error: null },
+      { data: null, error: null },
+      { data: { id: JOB_ID }, error: null },
+    ]);
+
+    expect(await updateJob(JOB_ID, form("unpaid", "in_progress"))).toEqual({
+      data: { id: JOB_ID },
+    });
+    expect(tables(mock)).toEqual(["jobs", "invoices", "jobs"]);
+    expect(updated(mock)?.args[0]).toMatchObject({
+      status: "in_progress",
+      date_finished: "2026-09-28",
+    });
+  });
+
+  it("refuses to move a paid job off complete", async () => {
+    const mock = mockSupabase([{ data: current(), error: null }]);
+
+    expect(await updateJob(JOB_ID, form("paid", "in_progress"))).toEqual({
+      error: expect.stringContaining("can't leave Complete"),
+    });
+    expect(updated(mock)).toBeUndefined();
+  });
+
+  it("refuses to move an invoiced-but-unpaid job off complete when an invoice row exists", async () => {
+    const mock = mockSupabase([
+      { data: current({ payment_status: "unpaid", payment_method: null }), error: null },
+      { data: { id: "inv1" }, error: null },
+    ]);
+
+    expect(await updateJob(JOB_ID, form("unpaid", "in_progress"))).toEqual({
+      error: expect.stringContaining("invoice on file"),
+    });
+    expect(mock.calls).toContainEqual({ method: "from", args: ["invoices"] });
+    expect(updated(mock)).toBeUndefined();
   });
 });

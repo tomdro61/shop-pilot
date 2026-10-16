@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { todayET } from "@/lib/utils";
-import { isInspectionCategory } from "@/lib/utils/revenue";
+import { isInspectionCategory, isRevenueJob } from "@/lib/utils/revenue";
 import {
   INSPECTION_RATE_STATE,
   INSPECTION_RATE_TNC,
@@ -192,7 +192,7 @@ export async function getCategoryTrendData(
 
     // Job count goes to the highest-revenue category (matches revenue report)
     const primaryCat = Object.entries(liCatRevenue).sort((a, b) => b[1] - a[1])[0]?.[0];
-    if (primaryCat) {
+    if (primaryCat && isRevenueJob(job.job_line_items)) {
       getOrCreate(bucket.categories, primaryCat).jobCount += 1;
     }
   }

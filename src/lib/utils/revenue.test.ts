@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isInspectionCategory, sumJobRevenue } from "./revenue";
+import { isInspectionCategory, isRevenueJob, sumJobRevenue } from "./revenue";
 
 describe("isInspectionCategory", () => {
   it("matches the canonical inspection categories", () => {
@@ -51,5 +51,53 @@ describe("sumJobRevenue", () => {
 
   it("returns 0 for null input", () => {
     expect(sumJobRevenue(null)).toBe(0);
+  });
+});
+
+describe("isRevenueJob", () => {
+  it("is false for an inspection-only job (Quick Pay inspection)", () => {
+    expect(isRevenueJob([{ total: 35, category: "State Inspection" }])).toBe(false);
+    expect(
+      isRevenueJob([
+        { total: 35, category: "Inspection" },
+        { total: 15, category: "TNC Inspection" },
+      ])
+    ).toBe(false);
+  });
+
+  it("is true when any non-inspection line has a positive total", () => {
+    expect(
+      isRevenueJob([
+        { total: 35, category: "State Inspection" },
+        { total: 120, category: "Brake Service" },
+      ])
+    ).toBe(true);
+  });
+
+  it("treats an uncategorized positive line as revenue", () => {
+    expect(isRevenueJob([{ total: 50, category: null }])).toBe(true);
+    expect(isRevenueJob([{ total: 50 }])).toBe(true);
+  });
+
+  it("is false for empty or missing line items", () => {
+    expect(isRevenueJob([])).toBe(false);
+    expect(isRevenueJob(null)).toBe(false);
+    expect(isRevenueJob(undefined)).toBe(false);
+  });
+
+  it("is false when the only non-inspection lines are zero, negative, or null", () => {
+    expect(
+      isRevenueJob([
+        { total: 0, category: "Brake Service" },
+        { total: -10, category: "Discount" },
+        { total: null, category: "Oil Change" },
+      ])
+    ).toBe(false);
+  });
+
+  it("matches inspection categories regardless of casing and whitespace", () => {
+    expect(isRevenueJob([{ total: 35, category: "state inspection" }])).toBe(false);
+    expect(isRevenueJob([{ total: 35, category: " Inspection " }])).toBe(false);
+    expect(isRevenueJob([{ total: 35, category: "TNC INSPECTION" }])).toBe(false);
   });
 });

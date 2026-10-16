@@ -72,14 +72,25 @@ export function ManualIncomePage({ entries, existingCategories }: ManualIncomePa
       return;
     }
 
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast.error("Amount must be greater than 0");
+      return;
+    }
+    const parsedPct = shopKeepPct.trim() === "" ? 100 : Number(shopKeepPct);
+    if (!Number.isFinite(parsedPct) || parsedPct < 0 || parsedPct > 100) {
+      toast.error("Shop keep % must be between 0 and 100");
+      return;
+    }
+
     setSubmitting(true);
 
     const input = {
       date,
       label: label.trim(),
       category: category.trim(),
-      amount: parseFloat(amount),
-      shop_keep_pct: parseFloat(shopKeepPct) || 100,
+      amount: parsedAmount,
+      shop_keep_pct: parsedPct,
       notes: notes.trim() || null,
     };
 
