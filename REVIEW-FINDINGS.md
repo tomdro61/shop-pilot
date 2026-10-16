@@ -1855,3 +1855,46 @@ to what the code does.
   window size, null status, excerpt, precedence). Each had a test that
   *looked* like it covered the rule but used fixtures where another rule
   already produced the same answer.
+
+## October 2026 — Money review (`6fea43a`), 8 scoped reviewers, Highs fixed pre-ship
+
+Full report: `docs/money-review-2026-10-15.md`; what shipped: PROGRESS.md
+session 85. Findings here are the ones with a lesson beyond the single fix.
+
+## MR-1 — Double-payment guard exempted hand-recorded card payments (HIGH, fixed)
+
+`settleJobForPaidInvoice` skipped the "already paid elsewhere" alert when the
+job's `payment_method` was `stripe`, meant to cover its own redelivery. A
+payment recorded by hand as "stripe" (recordPayment) has the same value, so
+a customer who then tapped the old invoice link paid twice with no alert.
+Fixed by keying the exemption on the delivery, not the method.
+
+## MR-2 — Terminal recorder trusted a matching PaymentIntent id (HIGH, fixed)
+
+`/api/terminal/pay` stores the PaymentIntent id on the job *before* money
+moves. The recorder read "same id ⇒ this is my own earlier record"; a cash
+record taken while the reader was still armed carried the id too, so the
+second collection was reported as a no-op. Now requires method `terminal`
+as well, and a zero-row flip re-reads and classifies rather than assuming.
+
+## MR-3 — Build broke on a Windows path inside tracked markdown (HIGH, fixed before merge)
+
+Tailwind v4 scans every non-ignored file under the project, markdown
+included, for class candidates. `docs/money-review-2026-10-15.md` quoted the
+session's temp folder, `...C--Projects-broadway-motors-shop-pilot\34061084...`,
+which the scanner read as a CSS variable followed by the hex escape
+`\340610`, an invalid code point. `npm run build` failed locally and on
+Vercel; tests, typecheck and lint were all green. Rule: don't paste absolute
+scratchpad paths into tracked docs, and run `npm run build` before pushing
+anything that adds markdown with backslashes.
+
+## Process notes
+
+- **A green suite, typecheck and lint did not cover the build.** Add
+  `npm run build` to the pre-push checklist when the diff adds non-code files.
+- **Reviewers found the two Highs in guards the author had just mutation-tested.**
+  Mutation testing proves a test can go red; it can't prove the predicate
+  is the right one. Both Highs were correct code guarding the wrong condition.
+- **The permission classifier blocks `git push origin master` as a production
+  deploy.** The owner approves it through `/permissions`; plan the handoff
+  rather than retrying.

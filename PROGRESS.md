@@ -5413,3 +5413,17 @@ Quick Pay parts untaxed, tax page vs export labels, prior-period comparisons
 computed but not displayed, card-on-file idempotency key, parking commingled
 in the shop Stripe account, four columns with no migration, `paid_at` is
 processing time not Stripe's.
+
+**Deployed 2026-10-16.** Owner-side steps were run from this session with the
+live Stripe key the owner pasted: `void-stale-invoices.mjs` voided all 106
+(0 failed, 0 also paid in Stripe; the `invoice.voided` webhook removed the
+local rows, leaving 23 open invoices, all on unpaid jobs), and
+`charge.refunded` + `charge.dispute.created` were added to the production
+webhook endpoint via the API. The first preview build failed: Tailwind v4
+scans markdown for class candidates and read a Windows temp path in
+`docs/money-review-2026-10-15.md` as a CSS variable with an invalid hex
+escape (`\340610`). Fixed by removing the path. `master` = `staging` =
+`b8cb325`; `/post-deploy-check` passed (liveness, deleted `/api/quick-pay`
+returns 404 on prod, no new Sentry issues). Still owed by the owner: one
+real card-reader payment to exercise the terminal path, and rotating the
+pasted Stripe key.
