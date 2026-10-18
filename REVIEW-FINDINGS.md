@@ -1899,3 +1899,52 @@ anything that adds markdown with backslashes.
 - **The permission classifier blocks `git push origin master` as a production
   deploy.** The owner approves it through `/permissions`; plan the handoff
   rather than retrying.
+
+## October 2026 — Split a settled line (`08f7cfa`), 5 scoped reviewers, Highs fixed pre-commit
+
+## SL-1 — Insert-then-delete from JS, with a retry that doubled the lines (HIGH, fixed)
+
+The first version inserted the new lines, then deleted the original, with a
+JS rollback if the delete failed. A killed request between the two steps, or
+a delete that failed along with its rollback, left both sets on a settled
+job; the sheet stayed open, a retry passed the sum check against the
+still-present original, and the job ended up over by the original amount
+with a "Line split" success toast. Replaced by the `split_job_line_item`
+Postgres function: sum check, inserts and delete in one transaction.
+
+## SL-2 — A taxed part moved into an inspection category corrupted the tax reports (HIGH, fixed)
+
+The session's own rationale for dropping the inspection-boundary rule
+("the frozen tax figures don't depend on category") was true of the snapshot
+columns and false of the reports: the Tax Summary and the tax-audit CSV sum
+live non-inspection line totals for gross and parts, and take taxable and
+tax from the snapshot. A $100 taxed part refiled as State Inspection after
+payment showed parts $0, taxable $100 on the DOR surface. Rule restored for
+parts only; labor (the Quick Pay case) moves freely.
+
+## SL-3 — Category-scoped fees could move a job's total through a split (MEDIUM, fixed)
+
+Shop supplies and hazmat can be scoped to categories, so a split that
+assigns new categories can switch a fee on or off and move the grand total
+the page and the receipt recompute. Fees are off today. `splitLineItem` now
+recomputes `calculateTotals` before and after and refuses on a difference.
+
+## SL-4 — Splitting a part dropped its wholesale cost (MEDIUM, fixed)
+
+The profit reports assume 60% cost for a part with null `cost`, so a split
+restated a closed month's profit silently. Cost is now shared across the
+parts in proportion to their amounts, remainder on the last.
+
+## Process notes
+
+- **Every one of the four was a correct guard around the wrong condition,
+  or a correct comment about the wrong thing.** The author's ten mutations
+  all went red before review; mutation testing can't tell you the predicate
+  is the one that matters. The reviewers that found SL-2 and SL-3 did it by
+  reading the consumers (reports, totals) rather than the diff.
+- **"The frozen figures don't depend on X" is a claim about the writers.
+  The readers can still depend on X.** Check every report that mixes a
+  snapshot with live rows before relaxing a rule that protects the rows.
+- **Vitest, tsc and lint were green while `npm run build` was red, twice.**
+  Tailwind v4 scans markdown. Now excluded via `@source not`; the planted
+  probe build is the proof, not the config line.

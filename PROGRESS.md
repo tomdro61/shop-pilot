@@ -5521,3 +5521,9 @@ a labor line can't be split into labor + part. A category edit on a settled
 job (not a split) can still move the recomputed total if a category-scoped
 fee is on; fees are off today. Quick Pay still can't be reopened by Mark as
 Unpaid; Split is the intended path.
+
+**Deployed 2026-10-18.** `master` = `staging` = `08f7cfa` at the owner's
+request, untested on the preview; the owner will try Split at the shop on
+production. `/post-deploy-check` passed (alias on the new deployment,
+liveness, no new Sentry issues). Still owed by the owner: the session 85
+real card-reader payment check and the Stripe key rotation.
