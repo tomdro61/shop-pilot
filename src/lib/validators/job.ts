@@ -75,6 +75,32 @@ export const lineItemSchema = z.object({
 
 export type LineItemFormData = z.infer<typeof lineItemSchema>;
 
+export const SPLIT_LINE_TOTAL_MSG = "The new lines must add up to exactly the original amount";
+export const SPLIT_PART_INSPECTION_MSG =
+  "A part can't be split into or out of an inspection category: the tax reports would no longer agree with what was collected.";
+export const PART_INSPECTION_LOCKED_MSG =
+  "On a settled job a part can't move into or out of an inspection category: the tax reports would no longer agree with what was collected.";
+export const SPLIT_FEE_MSG =
+  "This split would change the job's total because a category-based fee applies. Change the categories, or the fee settings, first.";
+
+export const splitLineItemPartSchema = z.object({
+  description: z.string().trim().min(1, "Description is required").max(500),
+  amount: z
+    .number()
+    .positive("Amount must be greater than 0")
+    .refine((n) => Math.round(n * 100) >= 1, "Amount must be at least $0.01"),
+  category: z.string().max(100).nullable().optional(),
+});
+
+export const splitLineItemSchema = z.object({
+  parts: z
+    .array(splitLineItemPartSchema)
+    .min(2, "A split needs at least two lines")
+    .max(20, "A split can have at most 20 lines"),
+});
+
+export type SplitLineItemInput = z.infer<typeof splitLineItemSchema>;
+
 export function prepareLineItemData(data: LineItemFormData) {
   // Trim + collapse empty/whitespace categories to NULL so the DB never
   // stores "" — that ambiguity ("no category picked" vs literal empty string)

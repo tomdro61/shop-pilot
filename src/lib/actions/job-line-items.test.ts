@@ -13,13 +13,35 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ requireManager: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn(), captureMessage: vi.fn() }));
+vi.mock("@/lib/actions/settings", () => ({ getShopSettings: vi.fn() }));
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireManager } from "@/lib/auth";
+import { getShopSettings } from "@/lib/actions/settings";
 import { LINE_ITEMS_LOCKED_MSG } from "@/lib/jobs/line-item-lock";
-import { createLineItem, deleteLineItem, updateLineItem } from "./job-line-items";
+import {
+  PART_INSPECTION_LOCKED_MSG,
+  SPLIT_FEE_MSG,
+  SPLIT_LINE_TOTAL_MSG,
+  SPLIT_PART_INSPECTION_MSG,
+} from "@/lib/validators/job";
+import { createLineItem, deleteLineItem, splitLineItem, updateLineItem } from "./job-line-items";
 import { createSupabaseMock, type SupabaseMockResult } from "./__test-helpers__/supabase-mock";
+import type { ShopSettings } from "@/types";
+
+const SETTINGS = {
+  tax_rate: 0.0625,
+  shop_supplies_enabled: false,
+  shop_supplies_method: "percent_of_labor",
+  shop_supplies_rate: 0,
+  shop_supplies_cap: null,
+  hazmat_enabled: false,
+  hazmat_amount: 0,
+  hazmat_label: "Hazmat",
+  shop_supplies_categories: null,
+  hazmat_categories: null,
+} as unknown as ShopSettings;
 
 const JOB_ID = "11111111-1111-4111-9111-111111111111";
 const OTHER_JOB_ID = "44444444-4444-4444-9444-444444444444";
@@ -81,6 +103,7 @@ const lockLookup = (jobId: string) => [
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(requireManager).mockResolvedValue({ ok: true, userId: "u1" });
+  vi.mocked(getShopSettings).mockResolvedValue(SETTINGS);
 });
 
 describe("createLineItem — the settled-job lock", () => {
@@ -287,24 +310,53 @@ describe("updateLineItem — on a settled job", () => {
     expect(findCall(mock, "update")?.args[0]).toMatchObject(change);
   });
 
+  // A Quick Pay that mixes an inspection with other work is one labor line
+  // with no category; filing part of it under State Inspection afterward is
+  // the normal cleanup. The frozen tax snapshot doesn't depend on category.
+  // The revenue reports do, and moving the inspection out of them is the point.
   it.each([
     ["into", "Brakes", "State Inspection"],
     ["out of", "inspection", "Brakes"],
-  ])(
-    "refuses moving a line %s an inspection category on a paid job, and issues no update",
-    async (_label, from, to) => {
-      const mock = mockSupabase([
-        { data: { ...existingLine, category: from }, error: null },
-        { data: { payment_status: "paid" }, error: null },
-        { data: { id: LINE_ID }, error: null },
-      ]);
+  ])("allows moving a labor line %s an inspection category on a paid job", async (_label, from, to) => {
+    const mock = mockSupabase([
+      { data: { ...existingLine, type: "labor", category: from }, error: null },
+      { data: { payment_status: "paid" }, error: null },
+      { data: { id: LINE_ID }, error: null },
+    ]);
 
-      expect(await updateLineItem(LINE_ID, buildForm({ category: to }))).toEqual({
-        error: expect.stringContaining("inspection category"),
-      });
-      expect(findCall(mock, "update")).toBeUndefined();
-    }
-  );
+    expect(await updateLineItem(LINE_ID, buildForm({ type: "labor", category: to }))).toEqual({
+      data: { id: LINE_ID },
+    });
+    expect(findCall(mock, "update")?.args[0]).toMatchObject({ category: to });
+  });
+
+  // The tax reports pair live non-inspection line totals with the frozen
+  // taxable figure, so a part moved under an inspection category after
+  // payment shows a taxable base larger than the gross.
+  it.each([
+    ["into", "Brakes", "State Inspection"],
+    ["out of", "inspection", "Brakes"],
+  ])("refuses moving a part %s an inspection category on a paid job, and issues no update", async (_label, from, to) => {
+    const mock = mockSupabase([
+      { data: { ...existingLine, category: from }, error: null },
+      { data: { payment_status: "paid" }, error: null },
+      { data: { id: LINE_ID }, error: null },
+    ]);
+
+    expect(await updateLineItem(LINE_ID, buildForm({ category: to }))).toEqual({
+      error: PART_INSPECTION_LOCKED_MSG,
+    });
+    expect(findCall(mock, "update")).toBeUndefined();
+  });
+
+  it("allows moving a part into an inspection category on an unpaid job", async () => {
+    const mock = mockSupabase(queue("unpaid"));
+
+    expect(await updateLineItem(LINE_ID, buildForm({ category: "State Inspection" }))).toEqual({
+      data: { id: LINE_ID },
+    });
+    expect(findCall(mock, "update")?.args[0]).toMatchObject({ category: "State Inspection" });
+  });
 
   it("allows a category change between two inspection categories on a paid job", async () => {
     const mock = mockSupabase([
@@ -348,5 +400,342 @@ describe("updateLineItem — on a settled job", () => {
       data: { id: LINE_ID },
     });
     expect(findCall(mock, "update")?.args[0]).toMatchObject({ quantity: 2, unit_cost: 120 });
+  });
+});
+
+describe("splitLineItem", () => {
+  const NEW_A = "66666666-6666-4666-9666-666666666666";
+  const NEW_B = "77777777-7777-4777-9777-777777777777";
+  const line = {
+    id: LINE_ID,
+    job_id: JOB_ID,
+    type: "labor",
+    quantity: 1,
+    unit_cost: 100,
+    total: 100,
+    cost: null,
+    category: null,
+  };
+  const jobRow = (lines: object[] = [line], chargeSalesTax = false) => ({
+    charge_sales_tax: chargeSalesTax,
+    job_line_items: lines,
+  });
+  const parts = [
+    { description: "Oil change", amount: 60, category: "Oil Change" },
+    { description: "State inspection", amount: 40, category: "State Inspection" },
+  ];
+  const rpcParts = [
+    { description: "Oil change", amount: 60, category: "Oil Change", cost: null },
+    { description: "State inspection", amount: 40, category: "State Inspection", cost: null },
+  ];
+  const happy = (): SupabaseMockResult[] => [
+    { data: line, error: null },
+    { data: jobRow(), error: null },
+    { data: [NEW_A, NEW_B], error: null },
+  ];
+  const rpcCall = (mock: Mock) => findCall(mock, "rpc");
+  const sentParts = <K extends string>(mock: Mock, key: K) =>
+    (rpcCall(mock)?.args[1] as { p_parts: Record<K, unknown>[] }).p_parts.map((p) => p[key]);
+
+  it("reads the line by id with the columns the sum, the cost share and the rules depend on", async () => {
+    const mock = mockSupabase(happy());
+
+    await splitLineItem(LINE_ID, { parts });
+
+    expect(mock.calls.slice(0, 4)).toEqual([
+      { method: "from", args: ["job_line_items"] },
+      { method: "select", args: ["id, job_id, type, quantity, unit_cost, total, cost, category"] },
+      { method: "eq", args: ["id", LINE_ID] },
+      { method: "maybeSingle", args: [] },
+    ]);
+  });
+
+  it("reads the line's own job with its lines for the fee check, then calls the split function", async () => {
+    const mock = mockSupabase(happy());
+
+    expect(await splitLineItem(LINE_ID, { parts })).toEqual({ data: { ids: [NEW_A, NEW_B] } });
+
+    expect(tables(mock)).toEqual(["job_line_items", "jobs"]);
+    expect(callsAfter(mock, "from", "jobs").slice(0, 3)).toEqual([
+      {
+        method: "select",
+        args: ["charge_sales_tax, job_line_items(id, type, quantity, unit_cost, total, category)"],
+      },
+      { method: "eq", args: ["id", JOB_ID] },
+      { method: "maybeSingle", args: [] },
+    ]);
+    expect(rpcCall(mock)?.args).toEqual([
+      "split_job_line_item",
+      { p_line_id: LINE_ID, p_parts: rpcParts },
+    ]);
+    expect(findCall(mock, "insert")).toBeUndefined();
+    expect(findCall(mock, "delete")).toBeUndefined();
+    expect(revalidatePath).toHaveBeenCalledWith(`/jobs/${JOB_ID}`);
+  });
+
+  it("never checks the job's payment status: a split is allowed whether or not the job is settled", async () => {
+    const mock = mockSupabase(happy());
+
+    expect(await splitLineItem(LINE_ID, { parts })).toEqual({ data: { ids: [NEW_A, NEW_B] } });
+    expect(mock.calls.filter((c) => c.method === "select").map((c) => c.args[0])).not.toContain(
+      "payment_status",
+    );
+  });
+
+  it.each([
+    ["under by ten dollars", 30],
+    ["under by a cent", 39.99],
+    ["over by a cent", 40.01],
+  ])("refuses parts that are %s, and calls nothing", async (_label, second) => {
+    const mock = mockSupabase(happy());
+
+    expect(
+      await splitLineItem(LINE_ID, { parts: [parts[0], { ...parts[1], amount: second }] }),
+    ).toEqual({ error: SPLIT_LINE_TOTAL_MSG });
+    expect(rpcCall(mock)).toBeUndefined();
+    expect(tables(mock)).toEqual(["job_line_items"]);
+  });
+
+  it("compares in cents, so thirds that round to the total are accepted", async () => {
+    const mock = mockSupabase(happy());
+    const thirds = [
+      { description: "A", amount: 33.33 },
+      { description: "B", amount: 33.33 },
+      { description: "C", amount: 33.34 },
+    ];
+
+    expect(await splitLineItem(LINE_ID, { parts: thirds })).toEqual({ data: { ids: [NEW_A, NEW_B] } });
+    expect(sentParts(mock, "amount")).toEqual([33.33, 33.33, 33.34]);
+  });
+
+  it("stores whole cents, not the raw amount the caller sent", async () => {
+    const mock = mockSupabase(happy());
+
+    await splitLineItem(LINE_ID, {
+      parts: [
+        { description: "A", amount: 60.004 },
+        { description: "B", amount: 39.996 },
+      ],
+    });
+
+    expect(sentParts(mock, "amount")).toEqual([60, 40]);
+  });
+
+  it("measures against the stored total, not quantity x unit cost", async () => {
+    // The numeric(10,2) column is what the page shows, and on fractional
+    // hours it can sit a cent away from the float product. The fixture makes
+    // the two disagree by more than rounding so the precedence is pinned.
+    const stored = { ...line, quantity: 1, unit_cost: 100, total: 99.99 };
+    const mock = mockSupabase([
+      { data: stored, error: null },
+      { data: jobRow([stored]), error: null },
+      { data: [NEW_A, NEW_B], error: null },
+    ]);
+
+    expect(
+      await splitLineItem(LINE_ID, {
+        parts: [
+          { description: "A", amount: 60 },
+          { description: "B", amount: 39.99 },
+        ],
+      }),
+    ).toEqual({ data: { ids: [NEW_A, NEW_B] } });
+    expect(rpcCall(mock)).toBeDefined();
+  });
+
+  it("falls back to quantity x unit cost when the stored total is null", async () => {
+    const noTotal = { ...line, quantity: 2, unit_cost: 50, total: null };
+    const mock = mockSupabase([
+      { data: noTotal, error: null },
+      { data: jobRow([noTotal]), error: null },
+      { data: [NEW_A, NEW_B], error: null },
+    ]);
+
+    expect(await splitLineItem(LINE_ID, { parts })).toEqual({ data: { ids: [NEW_A, NEW_B] } });
+    expect(rpcCall(mock)).toBeDefined();
+  });
+
+  it("trims categories and sends blank ones as null", async () => {
+    const mock = mockSupabase(happy());
+
+    await splitLineItem(LINE_ID, {
+      parts: [
+        { description: "A", amount: 50, category: "  State Inspection  " },
+        { description: "B", amount: 30, category: "   " },
+        { description: "C", amount: 20 },
+      ],
+    });
+
+    expect(sentParts(mock, "category")).toEqual(["State Inspection", null, null]);
+  });
+
+  describe("a part line", () => {
+    const partLine = { ...line, type: "part", cost: 30, category: "Brakes" };
+    const partParts = [
+      { description: "Pads", amount: 60, category: "Brakes" },
+      { description: "Rotors", amount: 40, category: "Brakes" },
+    ];
+    const partHappy = (): SupabaseMockResult[] => [
+      { data: partLine, error: null },
+      { data: jobRow([partLine], true), error: null },
+      { data: [NEW_A, NEW_B], error: null },
+    ];
+
+    it("shares the wholesale cost across the parts in proportion to their amounts", async () => {
+      const mock = mockSupabase(partHappy());
+
+      expect(await splitLineItem(LINE_ID, { parts: partParts })).toEqual({ data: { ids: [NEW_A, NEW_B] } });
+      expect(sentParts(mock, "cost")).toEqual([18, 12]);
+    });
+
+    it("puts the rounding remainder of the cost on the last part, so the costs still add up", async () => {
+      const tenDollarCost = { ...partLine, cost: 10 };
+      const mock = mockSupabase([
+        { data: tenDollarCost, error: null },
+        { data: jobRow([tenDollarCost], true), error: null },
+        { data: [NEW_A, NEW_B], error: null },
+      ]);
+
+      await splitLineItem(LINE_ID, {
+        parts: [
+          { description: "A", amount: 33.33, category: "Brakes" },
+          { description: "B", amount: 33.33, category: "Brakes" },
+          { description: "C", amount: 33.34, category: "Brakes" },
+        ],
+      });
+
+      const costs = sentParts(mock, "cost") as number[];
+      expect(costs).toEqual([3.33, 3.33, 3.34]);
+      expect(Math.round(costs.reduce((a, b) => a + b, 0) * 100)).toBe(1000);
+    });
+
+    it("multiplies a per-unit cost by the quantity before sharing it", async () => {
+      const twoUnits = { ...partLine, quantity: 2, unit_cost: 50, total: 100, cost: 15 };
+      const mock = mockSupabase([
+        { data: twoUnits, error: null },
+        { data: jobRow([twoUnits], true), error: null },
+        { data: [NEW_A, NEW_B], error: null },
+      ]);
+
+      await splitLineItem(LINE_ID, { parts: partParts });
+
+      expect(sentParts(mock, "cost")).toEqual([18, 12]);
+    });
+
+    it.each([
+      ["into", "Brakes", "State Inspection"],
+      ["out of", "State Inspection", "Brakes"],
+    ])("refuses a part split %s an inspection category, and calls nothing", async (_label, from, to) => {
+      const mock = mockSupabase([
+        { data: { ...partLine, category: from }, error: null },
+        { data: jobRow([{ ...partLine, category: from }], true), error: null },
+        { data: [NEW_A, NEW_B], error: null },
+      ]);
+
+      expect(
+        await splitLineItem(LINE_ID, {
+          parts: [
+            { description: "A", amount: 60, category: from },
+            { description: "B", amount: 40, category: to },
+          ],
+        }),
+      ).toEqual({ error: SPLIT_PART_INSPECTION_MSG });
+      expect(rpcCall(mock)).toBeUndefined();
+      expect(tables(mock)).toEqual(["job_line_items"]);
+    });
+  });
+
+  describe("category-scoped fees", () => {
+    const hazmatOnOilChange = {
+      ...SETTINGS,
+      hazmat_enabled: true,
+      hazmat_amount: 3,
+      hazmat_categories: ["Oil Change"],
+    } as unknown as ShopSettings;
+
+    it("refuses when the new categories would switch a fee on and move the total", async () => {
+      vi.mocked(getShopSettings).mockResolvedValue(hazmatOnOilChange);
+      const mock = mockSupabase(happy());
+
+      expect(await splitLineItem(LINE_ID, { parts })).toEqual({ error: SPLIT_FEE_MSG });
+      expect(rpcCall(mock)).toBeUndefined();
+    });
+
+    it("allows the split when the fee already applied before and still applies after", async () => {
+      vi.mocked(getShopSettings).mockResolvedValue(hazmatOnOilChange);
+      const oilLine = { ...line, category: "Oil Change" };
+      const mock = mockSupabase([
+        { data: oilLine, error: null },
+        { data: jobRow([oilLine]), error: null },
+        { data: [NEW_A, NEW_B], error: null },
+      ]);
+
+      expect(await splitLineItem(LINE_ID, { parts })).toEqual({ data: { ids: [NEW_A, NEW_B] } });
+      expect(rpcCall(mock)).toBeDefined();
+    });
+
+    it("refuses when settings can't be loaded, so the fee check can't be skipped", async () => {
+      vi.mocked(getShopSettings).mockResolvedValue(null);
+      const mock = mockSupabase(happy());
+
+      expect(await splitLineItem(LINE_ID, { parts })).toEqual({
+        error: expect.stringContaining("shop settings"),
+      });
+      expect(rpcCall(mock)).toBeUndefined();
+    });
+  });
+
+  it.each([
+    ["one part", [parts[0]]],
+    ["a zero amount", [parts[0], { ...parts[1], amount: 0 }]],
+    ["an amount under a cent", [parts[0], { ...parts[1], amount: 0.004 }]],
+    ["a blank description", [parts[0], { ...parts[1], description: "  " }]],
+  ])("refuses %s before touching the database", async (_label, bad) => {
+    const mock = mockSupabase(happy());
+
+    const result = await splitLineItem(LINE_ID, { parts: bad });
+
+    expect(result).toHaveProperty("error");
+    expect(result).not.toEqual({ error: SPLIT_LINE_TOTAL_MSG });
+    expect(mock.calls).toEqual([]);
+  });
+
+  it("refuses when the line does not exist", async () => {
+    const mock = mockSupabase([{ data: null, error: null }]);
+
+    expect(await splitLineItem(LINE_ID, { parts })).toEqual({ error: "Line item not found" });
+    expect(rpcCall(mock)).toBeUndefined();
+  });
+
+  it("surfaces a failed job read and calls nothing", async () => {
+    const mock = mockSupabase([
+      { data: line, error: null },
+      { data: null, error: { message: "job boom" } },
+    ]);
+
+    expect(await splitLineItem(LINE_ID, { parts })).toEqual({ error: "job boom" });
+    expect(rpcCall(mock)).toBeUndefined();
+  });
+
+  it("passes the split function's refusal through and revalidates nothing", async () => {
+    const mock = mockSupabase([
+      { data: line, error: null },
+      { data: jobRow(), error: null },
+      { data: null, error: { message: "The new lines must add up to exactly the original amount" } },
+    ]);
+
+    expect(await splitLineItem(LINE_ID, { parts })).toEqual({
+      error: "The new lines must add up to exactly the original amount",
+    });
+    expect(rpcCall(mock)).toBeDefined();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the caller is not a manager, before any read", async () => {
+    vi.mocked(requireManager).mockResolvedValue({ ok: false, error: "Not allowed" });
+    const mock = mockSupabase(happy());
+
+    expect(await splitLineItem(LINE_ID, { parts })).toEqual({ error: "Not allowed" });
+    expect(mock.calls).toEqual([]);
   });
 });

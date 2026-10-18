@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LineItemForm } from "@/components/forms/line-item-form";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
-import { deleteLineItem, createLineItem } from "@/lib/actions/job-line-items";
+import { deleteLineItem, createLineItem, splitLineItem } from "@/lib/actions/job-line-items";
 import { saveToCatalog, incrementUsageCount } from "@/lib/actions/catalog";
 import { applyPresetToJob } from "@/lib/actions/presets";
 import { setJobChargeSalesTax } from "@/lib/actions/jobs";
@@ -15,9 +15,16 @@ import { formatCurrency } from "@/lib/utils/format";
 import { calculateTotals, resolveConfiguredCategories } from "@/lib/utils/totals";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SECTION_LABEL } from "@/components/ui/section-card";
 import { cn } from "@/lib/utils";
-import { Plus, Pencil, Trash2, BookmarkPlus, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, BookmarkPlus, Search, Scissors, X } from "lucide-react";
 import type { JobLineItem, JobPreset, PresetLineItem, ShopSettings, CatalogItem } from "@/types";
 
 interface LineItemsListProps {
@@ -65,6 +72,7 @@ export function LineItemsAddButton({
 export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, salesTaxLocked, lineItemsLocked = false }: LineItemsListProps) {
   const router = useRouter();
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
+  const [splitItem, setSplitItem] = useState<JobLineItem | null>(null);
   // Optimistic so the toggle + totals flip instantly. useOptimistic auto-reverts
   // to the server value when the transition ends: on error there's no refresh, so
   // it snaps back; on success router.refresh() updates the prop and it re-syncs.
@@ -223,6 +231,16 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
                       >
                         <Pencil className="h-3 w-3" />
                       </Button>
+                      {lineItemsLocked && (item.total ?? 0) > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          title="Split into several lines"
+                          onClick={() => setSplitItem(item)}
+                        >
+                          <Scissors className="h-3 w-3" />
+                        </Button>
+                      )}
                       {!lineItemsLocked && (
                         <DeleteConfirmDialog
                           title="Delete Line Item"
@@ -288,13 +306,13 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
             </>
           )}
         </dl>
-        {/* Per-job sales-tax toggle. Off = bill parts with no tax (e.g. outsourced
-            parts the shop didn't buy). Locked once the job is invoiced. */}
         {lineItemsLocked && (
           <p className="mt-2 text-xs text-stone-500 dark:text-stone-400">
-            Settled — amounts are frozen. Mark the job as unpaid to change its lines.
+            Settled — the total is frozen. Use the scissors on a line to split it into several that add up to the same amount.
           </p>
         )}
+        {/* Per-job sales-tax toggle. Off = bill parts with no tax (e.g. outsourced
+            parts the shop didn't buy). Locked once the job is invoiced. */}
         <div className="mt-2 flex items-center justify-between gap-3">
           <span className="text-xs text-stone-500 dark:text-stone-400">
             Charge sales tax
@@ -345,7 +363,219 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
           }}
         />
       )}
+
+      {splitItem && (
+        <SplitLineSheet
+          key={splitItem.id}
+          item={splitItem}
+          categories={resolveConfiguredCategories(settings)}
+          open={!!splitItem}
+          onOpenChange={(open) => {
+            if (!open) setSplitItem(null);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── Split Line Sheet ──────────────────────────────────────────
+
+type SplitRow = { description: string; amount: string; category: string };
+
+const toCents = (amount: string) => {
+  const n = Number(amount);
+  return Number.isFinite(n) ? Math.round(n * 100) : 0;
+};
+
+const MAX_SPLIT_ROWS = 20;
+
+// Breaks one line into several that add up to the same amount. The server
+// checks the sum to the cent and inherits the original's type; this sheet
+// mirrors the checks it can (sum, blanks, row count) so most refusals never
+// leave the phone.
+function SplitLineSheet({
+  item,
+  categories,
+  open,
+  onOpenChange,
+}: {
+  item: JobLineItem;
+  categories: string[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const router = useRouter();
+  const originalCents = Math.round((item.total ?? item.quantity * item.unit_cost) * 100);
+  const [rows, setRows] = useState<SplitRow[]>([
+    {
+      description: item.description,
+      amount: (originalCents / 100).toFixed(2),
+      category: item.category ?? "",
+    },
+    { description: "", amount: "", category: "" },
+  ]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const sumCents = rows.reduce((sum, row) => sum + toCents(row.amount), 0);
+  const leftCents = originalCents - sumCents;
+  const incomplete = rows.some((row) => row.description.trim() === "" || toCents(row.amount) <= 0);
+  const canSubmit = !submitting && !incomplete && leftCents === 0;
+
+  function updateRow(index: number, patch: Partial<SplitRow>) {
+    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  }
+
+  function removeRow(index: number) {
+    setRows((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleSubmit() {
+    setSubmitting(true);
+    try {
+      const result = await splitLineItem(item.id, {
+        parts: rows.map((row) => ({
+          description: row.description.trim(),
+          amount: toCents(row.amount) / 100,
+          category: row.category || undefined,
+        })),
+      });
+      if ("error" in result && result.error) {
+        const message =
+          typeof result.error === "string"
+            ? result.error
+            : (Object.values(result.error).flat()[0] ?? "Check the lines and try again");
+        toast.error(message);
+        // The lines may have changed under this sheet (another tab, the AI);
+        // show the real ones before the next attempt.
+        router.refresh();
+        return;
+      }
+      toast.success("Line split");
+      onOpenChange(false);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't split the line");
+      router.refresh();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="h-[92vh] max-h-[92vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Split Line</SheetTitle>
+        </SheetHeader>
+
+        <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+          <span className="font-medium text-stone-900 dark:text-stone-50">{item.description}</span>
+          {" · "}
+          <span className="font-mono tabular-nums">{formatCurrency(originalCents / 100)}</span>
+        </p>
+        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+          {item.type === "part"
+            ? `New lines will be parts. Wholesale cost is shared in proportion${item.part_number ? "; the part number won't carry over" : ""}.`
+            : "New lines will be labor."}
+        </p>
+
+        <div className="mt-4 space-y-3">
+          {rows.map((row, index) => (
+            <div
+              key={index}
+              className="rounded-md border border-stone-200 bg-card p-3 dark:border-stone-800"
+            >
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Description"
+                  aria-label={`Line ${index + 1} description`}
+                  maxLength={500}
+                  value={row.description}
+                  onChange={(e) => updateRow(index, { description: e.target.value })}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  aria-label={`Line ${index + 1} amount`}
+                  value={row.amount}
+                  onChange={(e) => updateRow(index, { amount: e.target.value })}
+                  className="w-28 font-mono tabular-nums text-right"
+                />
+                {rows.length > 2 && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    title={`Remove line ${index + 1}`}
+                    onClick={() => removeRow(index)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+              <div className="mt-2">
+                <Select
+                  value={row.category || "__none__"}
+                  onValueChange={(v) => updateRow(index, { category: v === "__none__" ? "" : v })}
+                >
+                  <SelectTrigger aria-label={`Line ${index + 1} category`}>
+                    <SelectValue placeholder="No category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No category</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2"
+          disabled={rows.length >= MAX_SPLIT_ROWS}
+          onClick={() => setRows((prev) => [...prev, { description: "", amount: "", category: "" }])}
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          Add line
+        </Button>
+
+        <div className="sticky bottom-0 mt-4 flex items-center justify-between border-t border-stone-200 bg-background pt-3 pb-1 dark:border-stone-800">
+          <span
+            aria-live="polite"
+            className={cn(
+              "font-mono tabular-nums text-xs",
+              leftCents < 0
+                ? "text-red-700 dark:text-red-500"
+                : leftCents > 0 || incomplete
+                  ? "text-amber-700 dark:text-amber-500"
+                  : "text-emerald-700 dark:text-emerald-500"
+            )}
+          >
+            {leftCents < 0
+              ? `${formatCurrency(-leftCents / 100)} over`
+              : leftCents > 0
+                ? `${formatCurrency(leftCents / 100)} left to assign`
+                : incomplete
+                  ? "Fill in every line"
+                  : `Adds up to ${formatCurrency(originalCents / 100)}`}
+          </span>
+          <Button size="sm" disabled={!canSubmit} onClick={handleSubmit}>
+            {submitting ? "Splitting..." : "Split"}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 

@@ -2,6 +2,15 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Tailwind scans every non-ignored file for class candidates, markdown and
+   SQL included. A Windows path in a doc has broken the build twice (a
+   backslash + hex-looking segment parses as a CSS escape). Nothing outside
+   src renders a class. */
+@source not "../../**/*.md";
+@source not "../../docs";
+@source not "../../supabase";
+@source not "../../scripts";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

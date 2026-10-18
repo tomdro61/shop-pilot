@@ -1881,9 +1881,10 @@ as well, and a zero-row flip re-reads and classifies rather than assuming.
 
 Tailwind v4 scans every non-ignored file under the project, markdown
 included, for class candidates. `docs/money-review-2026-10-15.md` quoted the
-session's temp folder, `...C--Projects-broadway-motors-shop-pilot\34061084...`,
-which the scanner read as a CSS variable followed by the hex escape
-`\340610`, an invalid code point. `npm run build` failed locally and on
+session's Windows temp folder (a `C--Projects-...` segment followed by a
+backslash and a hex-looking session id), which the scanner read as a CSS
+variable followed by a six-hex-digit escape, an invalid code point. This
+entry originally quoted the same path and broke the build a second time. `npm run build` failed locally and on
 Vercel; tests, typecheck and lint were all green. Rule: don't paste absolute
 scratchpad paths into tracked docs, and run `npm run build` before pushing
 anything that adds markdown with backslashes.

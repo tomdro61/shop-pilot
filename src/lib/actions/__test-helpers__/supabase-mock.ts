@@ -69,6 +69,7 @@ export function createSupabaseMock(
   builder.range = chain("range");
   builder.abortSignal = chain("abortSignal");
   builder.returns = chain("returns");
+  builder.rpc = chain("rpc");
   builder.single = vi.fn(() => {
     calls.push({ method: "single", args: [] });
     return Promise.resolve(nextResult());
@@ -82,5 +83,5 @@ export function createSupabaseMock(
     resolve: (value: SupabaseMockResult) => unknown,
   ): unknown => resolve(nextResult());
 
-  return { client: { from: builder.from }, calls, builder };
+  return { client: { from: builder.from, rpc: builder.rpc }, calls, builder };
 }

@@ -365,6 +365,32 @@ export const tools: Anthropic.Tool[] = [
       required: ["id", "job_id"],
     },
   },
+  {
+    name: "split_line_item",
+    description:
+      "Split one job line item into two or more lines whose amounts add up to exactly the original. Use it on a settled (paid or waived) job, where lines can't be added, deleted or repriced, to file one line as the services actually done. Typical use: a $100 Quick Pay line becomes a $60 oil change and a $40 state inspection. Card-reader and Stripe-invoice payments can't be marked unpaid, so this is the way to restructure their lines. New lines keep the original's type (labor/part); a part's wholesale cost is shared across them in proportion. A part can't be moved into or out of an inspection category this way.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "Line item UUID to split" },
+        parts: {
+          type: "array",
+          minItems: 2,
+          description: "The replacement lines. Their amounts must sum to the original line's total.",
+          items: {
+            type: "object",
+            properties: {
+              description: { type: "string", description: "What this line is for" },
+              amount: { type: "number", description: "Dollar amount for this line" },
+              category: { type: "string", description: "Service category, e.g. 'Oil Change' or 'State Inspection'" },
+            },
+            required: ["description", "amount"],
+          },
+        },
+      },
+      required: ["id", "parts"],
+    },
+  },
 
   // ── Estimate tools ──────────────────────────────────────────────
   {

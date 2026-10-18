@@ -5427,3 +5427,97 @@ escape (`\340610`). Fixed by removing the path. `master` = `staging` =
 returns 404 on prod, no new Sentry issues). Still owed by the owner: one
 real card-reader payment to exercise the terminal path, and rotating the
 pasted Stripe key.
+
+## Session 86 — 2026-10-18 — Split a settled line; category edits on paid jobs
+
+The owner's Quick Pay habit: ring up one counter amount (say $100 for an oil
+change and a state inspection) with no job, then open the job Quick Pay
+created, assign the customer, and break the single "Quick Pay" line into the
+services actually done, filing the inspection under State Inspection so it
+drops out of job revenue (inspection revenue is reported from the manually
+entered `daily_inspection_counts`). A Quick Pay for an inspection alone
+already arrives categorized from its preset; it is the mixed sale that lands
+as one uncategorized line. The session 85 line-item lock broke the cleanup:
+adding lines and repricing were refused, moving a line into an inspection
+category was refused, and the "mark it as unpaid first" hint was a dead end
+because Mark as Unpaid refuses card-reader payments. Shipped the day after
+deploy.
+
+**Changed.**
+- Migration `20261018000000_split_job_line_item.sql`: `split_job_line_item
+  (p_line_id uuid, p_parts jsonb) returns uuid[]`, security invoker, does
+  the sum check, the inserts and the delete in one transaction. Inherits
+  `type`, quantity 1, `unit_cost` = amount, `cost` per part from the caller,
+  `created_at` staggered 1 ms per part so the page keeps entry order.
+  **Applied** to the shared DB the same day (additive; harmless to the
+  deployed code).
+- `splitLineItem(id, { parts })` in `src/lib/actions/job-line-items.ts`:
+  reads the line (`id, job_id, type, quantity, unit_cost, total, cost,
+  category`), refuses unless the parts sum to the stored `total` to the cent
+  (`SPLIT_LINE_TOTAL_MSG`); refuses a part split into or out of an
+  inspection category (`SPLIT_PART_INSPECTION_MSG`); shares a part's
+  wholesale cost in proportion to the amounts, remainder on the last; reads
+  the job's lines plus `getShopSettings()` and refuses when a
+  category-scoped shop-supplies/hazmat fee would move
+  `calculateTotals().grandTotal` (`SPLIT_FEE_MSG`); then calls the function.
+  No payment-status read: the sum of the lines can't move. Zod
+  `splitLineItemSchema` (2–20 parts, amounts ≥ $0.01 after rounding).
+- `updateLineItem` on a settled job now allows a **labor** line to move into
+  or out of an inspection category and still refuses it for a **part**
+  (`PART_INSPECTION_LOCKED_MSG`): the Tax Summary and the tax-audit CSV pair
+  live non-inspection line totals with the frozen taxable figure, so a taxed
+  part filed under an inspection category after payment would show a taxable
+  base larger than the gross. The revenue reports do change when a labor line
+  moves; that is the point.
+- `LINE_ITEMS_LOCKED_MSG` points at Split, and at Mark as Unpaid only for
+  cash/check. The edit sheet's settled note mentions Split.
+- Job page: a scissors button on each line of a settled job (hidden on $0
+  lines) opens a bottom sheet (`SplitLineSheet` in `line-items-list.tsx`)
+  with description / amount / category rows (capped at 20, labelled per
+  row), a note on what the new lines will be (labor, or parts with cost
+  shared and part number not carried), an "Add line" button, a sticky
+  footer with a live readout (amber "left to assign" / "Fill in every
+  line", red "over", green when it adds up) and Split enabled only when the
+  rows add up. Errors show the first server message and refresh the page so
+  the real lines are visible before a retry. The sheet unmounts on close
+  and is keyed by line id, so it never shows a previous line's rows.
+- AI: `split_line_item` tool mirrors the action (`id`, `parts[]` of
+  description / amount / category).
+- `globals.css`: `@source not` for `**/*.md`, `docs`, `supabase`, `scripts`.
+  Tailwind v4 scans every non-ignored file for class candidates; a Windows
+  temp path in REVIEW-FINDINGS.md broke the build a second time this
+  session (the first was `docs/money-review-2026-10-15.md` in session 85).
+  Verified by planting the bad string in two markdown files and building.
+
+**Review round.** Five Opus reviewers (silent-failure, server-action
+correctness, UI, test coverage, comments). Found and fixed before commit:
+insert-then-delete from JS left a window where a killed request or a failed
+delete kept both the original and the new lines, and a retry then passed
+the sum check and doubled them (→ the transaction function); a taxed part
+moved into an inspection category corrupted the tax reports (→ the part
+rule); category-scoped fees could move the grand total through a split (→
+the fee guard); a split part lost its wholesale cost and the profit reports
+fell back to 60% (→ cost sharing); the sheet's readout read "adds up" while
+disabled, a 21st row was refused with no reason, zod messages were hidden;
+seven comments and doc sentences overstated or misstated what the code does.
+
+**Tests.** 26 new cases in `job-line-items.test.ts` (lookup columns and the
+job read pinned positionally, rpc name + args, sum under/over by a cent,
+sub-cent amounts stored as whole cents, stored `total` over quantity × unit
+cost, null-total fallback, category trimming, cost sharing incl. remainder
+and quantity, part inspection rule both directions, fee guard refuse/allow
+and settings-null refusal, zod refusals before any read, missing line,
+failed job read, function refusal passed through, auth), four on the part
+inspection rule in `updateLineItem`, two on the AI handler. Ten mutations
+each turned a test red: sum tolerance, one-directional sum, part rule
+dropped, fee guard dropped, cost ignoring quantity, remainder not on last,
+raw amount instead of cents, stored total ignored, category untrimmed, job
+read by the client id. Full suite 60 files. `npm run build` passes. Not
+click-tested: dev shares the production DB.
+
+**Known limits.** A split part's `part_number` is not carried onto the new
+lines (it stays editable on a settled job). New lines inherit the type, so
+a labor line can't be split into labor + part. A category edit on a settled
+job (not a split) can still move the recomputed total if a category-scoped
+fee is on; fees are off today. Quick Pay still can't be reopened by Mark as
+Unpaid; Split is the intended path.

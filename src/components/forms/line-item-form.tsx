@@ -246,7 +246,7 @@ export function LineItemForm({
                   <FormLabel>Type</FormLabel>
                   {moneyLocked && (
                     <p className="text-xs text-stone-500 dark:text-stone-400">
-                      This job is settled, so type, quantity and price are frozen.
+                      This job is settled, so type, quantity and price are frozen. Use Split on the line to re-divide it.
                     </p>
                   )}
                   <Select value={field.value} onValueChange={field.onChange} disabled={moneyLocked}>

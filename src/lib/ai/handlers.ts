@@ -31,6 +31,7 @@ import {
   updateLineItem,
   getLineItemById,
   deleteLineItem,
+  splitLineItem,
 } from "@/lib/actions/job-line-items";
 import {
   createEstimateFromJob,
@@ -329,6 +330,19 @@ export async function executeToolCall(
           str(toolInput.id),
           str(toolInput.job_id)
         );
+        return JSON.stringify(result);
+      }
+      case "split_line_item": {
+        const rawParts: unknown[] = Array.isArray(toolInput.parts) ? toolInput.parts : [];
+        const parts = rawParts.map((raw) => {
+          const part = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+          return {
+            description: str(part.description),
+            amount: num(part.amount, 0)!,
+            category: str(part.category) || undefined,
+          };
+        });
+        const result = await splitLineItem(str(toolInput.id), { parts });
         return JSON.stringify(result);
       }
 

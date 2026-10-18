@@ -1504,6 +1504,10 @@ export type Database = {
         }
         Returns: string | null
       }
+      split_job_line_item: {
+        Args: { p_line_id: string; p_parts: Json }
+        Returns: string[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
