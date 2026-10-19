@@ -12,7 +12,7 @@ interface JobMileageEditorProps {
 }
 
 export function JobMileageEditor({ jobId, value }: JobMileageEditorProps) {
-  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(
+  const { editing, setEditing, draft, setDraft, saving, displayValue, commit, cancel } = useInlineEditor(
     value != null ? String(value) : ""
   );
 
@@ -74,7 +74,7 @@ export function JobMileageEditor({ jobId, value }: JobMileageEditorProps) {
       onClick={() => setEditing(true)}
       className="group inline-flex items-center gap-1 font-mono tabular-nums text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
     >
-      {value != null ? `${value.toLocaleString()} mi` : <span className="text-stone-400 font-sans">Not set</span>}
+      {displayValue !== "" ? `${Number(displayValue).toLocaleString()} mi` : <span className="text-stone-400 font-sans">Not set</span>}
       <Pencil className="h-2.5 w-2.5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors" />
     </button>
   );

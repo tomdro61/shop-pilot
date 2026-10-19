@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -21,7 +20,6 @@ export function ParkingValetForm({
   const [arrival, setArrival] = useState(arrivalValet ?? "");
   const [departure, setDeparture] = useState(departureValet ?? "");
   const [saving, setSaving] = useState(false);
-  const router = useRouter();
 
   const hasChanges =
     arrival !== (arrivalValet ?? "") || departure !== (departureValet ?? "");
@@ -40,7 +38,6 @@ export function ParkingValetForm({
     }
 
     toast.success("Updated");
-    router.refresh();
   }
 
   return (

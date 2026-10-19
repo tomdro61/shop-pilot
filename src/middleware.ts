@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 
 const BOT_PATTERN =
   /bot|crawler|spider|crawling|slurp|baidu|yandex|sogou|semrush|ahrefs|dotbot|mj12bot|bytespider|gptbot|claudebot|facebookexternalhit|linkedinbot|twitterbot|pinterestbot|applebot|bingpreview|petalbot|dataforseo|ccbot|amazonbot/i;
@@ -72,15 +73,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated user — check role for login redirect and tech route restriction
-  if (user && !isPublicRoute) {
-    const { data: profile } = await supabase
+  // The role decides the login landing page and the tech route restriction.
+  // One read serves both.
+  if (user && (pathname.startsWith("/login") || !isPublicRoute)) {
+    const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("role")
       .eq("auth_id", user.id)
-      .single();
+      .maybeSingle();
 
-    const role = profile?.role;
+    if (profileError) {
+      Sentry.captureException(new Error(profileError.message), {
+        tags: { source: "middleware" },
+        extra: { path: pathname, authId: user.id },
+      });
+    }
+
+    // Fail closed: a role that can't be read, or a sign-in with no users row,
+    // is treated as a tech. A manager hit by a transient read error lands on
+    // /dvi instead of a manager page; requireManager() still guards writes.
+    const role = profileError || !profile ? "tech" : profile.role;
 
     // Login page → redirect to appropriate home
     if (pathname.startsWith("/login")) {
@@ -100,19 +112,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Handle login redirect for authenticated users hitting /login
-  if (user && pathname.startsWith("/login")) {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("auth_id", user.id)
-      .single();
-
-    const url = request.nextUrl.clone();
-    url.pathname = profile?.role === "tech" ? "/dvi" : "/dashboard";
-    return NextResponse.redirect(url);
-  }
-
   return supabaseResponse;
 }
 
@@ -124,7 +123,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon)
      * - public files (icons, manifest, etc.)
+     * - api/ routes and the Sentry tunnel, which carry no session to refresh
      */
-    "/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|.*\\.svg$|api/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|.*\\.svg$|api/|monitoring).*)",
   ],
 };

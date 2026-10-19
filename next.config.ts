@@ -2,6 +2,23 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Clickjacking and MIME-sniffing protection for the public approval, inspect
+  // and receipt pages; the camera stays allowed for DVI photo capture. No CSP
+  // yet: it would have to enumerate Stripe.js and the Sentry tunnel first.
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
   experimental: {
     optimizePackageImports: [
       "lucide-react",

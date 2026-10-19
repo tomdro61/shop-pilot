@@ -1,5 +1,6 @@
 "use client";
 
+import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Select,
@@ -33,29 +34,41 @@ function StatusChip({ status }: { status: JobStatus }) {
 }
 
 export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
-  async function handleChange(newStatus: string) {
+  // The chip flips as soon as a status is picked. updateJobStatus revalidates
+  // the pages this renders on, so the fresh prop arrives in the action's own
+  // response; a refusal (e.g. leaving Complete on a paid job) ends the
+  // transition with the prop unchanged and the chip snaps back.
+  const [status, setOptimisticStatus] = useOptimistic(currentStatus);
+  const [pending, startTransition] = useTransition();
+
+  function handleChange(newStatus: string) {
     // Dropdown only renders JOB_STATUS_ORDER values (excludes cancelled),
     // so the cast to ActiveJobStatus is sound here.
-    const status = newStatus as ActiveJobStatus;
-    const result = await updateJobStatus(jobId, status);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success(`Status updated to ${JOB_STATUS_LABELS[status]}`);
-    }
+    const next = newStatus as ActiveJobStatus;
+    startTransition(async () => {
+      setOptimisticStatus(next);
+      const result = await updateJobStatus(jobId, next);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Status updated to ${JOB_STATUS_LABELS[next]}`);
+      }
+    });
   }
 
   return (
-    <Select value={currentStatus} onValueChange={handleChange}>
-      <SelectTrigger className="w-auto border-0 bg-transparent p-0 h-auto shadow-none focus:ring-0 gap-1">
+    <Select value={status} onValueChange={handleChange} disabled={pending}>
+      <SelectTrigger
+        className={`w-auto border-0 bg-transparent p-0 h-auto shadow-none focus:ring-0 gap-1 ${pending ? "opacity-70" : ""}`}
+      >
         <SelectValue>
-          <StatusChip status={currentStatus} />
+          <StatusChip status={status} />
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {JOB_STATUS_ORDER.map((status) => (
-          <SelectItem key={status} value={status}>
-            <StatusChip status={status} />
+        {JOB_STATUS_ORDER.map((s) => (
+          <SelectItem key={s} value={s}>
+            <StatusChip status={s} />
           </SelectItem>
         ))}
       </SelectContent>

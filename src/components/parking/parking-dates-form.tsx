@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -30,7 +29,6 @@ export function ParkingDatesForm({
   const [puDate, setPuDate] = useState(pickUpDate);
   const [puTime, setPuTime] = useState(normalize(pickUpTime));
   const [saving, setSaving] = useState(false);
-  const router = useRouter();
 
   const hasChanges =
     doDate !== dropOffDate ||
@@ -55,7 +53,6 @@ export function ParkingDatesForm({
     }
 
     toast.success("Trip dates updated");
-    router.refresh();
   }
 
   return (

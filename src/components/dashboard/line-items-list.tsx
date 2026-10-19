@@ -73,9 +73,10 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
   const router = useRouter();
   const [editItem, setEditItem] = useState<JobLineItem | null>(null);
   const [splitItem, setSplitItem] = useState<JobLineItem | null>(null);
-  // Optimistic so the toggle + totals flip instantly. useOptimistic auto-reverts
-  // to the server value when the transition ends: on error there's no refresh, so
-  // it snaps back; on success router.refresh() updates the prop and it re-syncs.
+  // Optimistic so the toggle + totals flip instantly. setJobChargeSalesTax
+  // revalidates this page, so on success the fresh prop arrives in the action's
+  // own response and useOptimistic settles on it; on error the transition ends
+  // with the prop unchanged and it snaps back.
   const [optimisticCharge, setOptimisticCharge] = useOptimistic(chargeSalesTax);
   const [taxPending, startTaxTransition] = useTransition();
 
@@ -87,10 +88,9 @@ export function LineItemsList({ jobId, lineItems, settings, chargeSalesTax, sale
       const res = await setJobChargeSalesTax(jobId, next);
       if (res && "error" in res && res.error) {
         toast.error(res.error);
+        // The job may have been invoiced in another tab; re-sync the now-locked state.
+        router.refresh();
       }
-      // Refresh either way: on success to pick up the saved value, on error (e.g.
-      // the job was invoiced in another tab) to re-sync the now-locked state.
-      router.refresh();
     });
   }
 
@@ -453,7 +453,6 @@ function SplitLineSheet({
       }
       toast.success("Line split");
       onOpenChange(false);
-      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't split the line");
       router.refresh();

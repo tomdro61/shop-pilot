@@ -33,7 +33,7 @@ export function CustomerTextFieldEditor({
   placeholder,
   children,
 }: CustomerTextFieldEditorProps) {
-  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(value ?? "");
+  const { editing, setEditing, draft, setDraft, saving, displayValue, commit, cancel } = useInlineEditor(value ?? "");
 
   async function save() {
     const next = draft.trim() || null;
@@ -81,7 +81,13 @@ export function CustomerTextFieldEditor({
 
   return (
     <span className="group flex items-center gap-2 min-w-0 w-full">
-      <span className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">{children}</span>
+      <span className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
+        {displayValue !== (value ?? "") ? (
+          <span className="text-sm">{displayValue || <span className="text-stone-400">—</span>}</span>
+        ) : (
+          children
+        )}
+      </span>
       <button
         onClick={() => setEditing(true)}
         title="Edit"

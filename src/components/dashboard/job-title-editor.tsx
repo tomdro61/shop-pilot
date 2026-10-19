@@ -13,7 +13,7 @@ const HEADING_CLASS =
   "text-[22px] lg:text-[26px] font-semibold tracking-tight text-stone-900 dark:text-stone-50 leading-tight";
 
 export function JobTitleEditor({ jobId, value }: JobTitleEditorProps) {
-  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(value ?? "");
+  const { editing, setEditing, draft, setDraft, saving, displayValue, commit, cancel } = useInlineEditor(value ?? "");
 
   async function save() {
     const next = draft.trim() || null;
@@ -49,7 +49,7 @@ export function JobTitleEditor({ jobId, value }: JobTitleEditorProps) {
       className="group flex items-center gap-2 min-w-0 max-w-full text-left"
     >
       <span className={`${HEADING_CLASS} truncate`}>
-        {value || <span className="italic text-stone-400 font-normal">Untitled job</span>}
+        {displayValue || <span className="italic text-stone-400 font-normal">Untitled job</span>}
       </span>
       <Pencil className="h-3.5 w-3.5 shrink-0 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors" />
     </button>

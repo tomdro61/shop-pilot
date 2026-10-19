@@ -1,20 +1,31 @@
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { logInboundSMS } from "@/lib/actions/messages";
+import { QUO_SIGNATURE_HEADER, verifyQuoSignatureAny } from "@/lib/quo/signature";
 import type { PhoneLine } from "@/lib/quo/routing";
 
 export async function POST(request: Request) {
-  // Verify webhook secret if configured
-  const webhookSecret = process.env.QUO_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const signature = request.headers.get("x-openphone-signature");
-    if (signature !== webhookSecret) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+  // Fail closed: with no signing key configured every delivery is refused, and
+  // Sentry says why, rather than accepting unsigned requests.
+  const secrets = process.env.QUO_WEBHOOK_SECRET;
+  if (!secrets) {
+    Sentry.captureMessage("quo_webhook_secret_missing", {
+      level: "error",
+      tags: { source: "quo-webhook" },
+    });
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+  }
+
+  const rawBody = await request.text();
+  const header =
+    request.headers.get(QUO_SIGNATURE_HEADER) ?? request.headers.get(`x-${QUO_SIGNATURE_HEADER}`);
+  if (!verifyQuoSignatureAny(rawBody, header, secrets)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   let payload: Record<string, unknown>;
   try {
-    payload = await request.json();
+    payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

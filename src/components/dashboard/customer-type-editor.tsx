@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Popover,
@@ -38,7 +37,6 @@ interface CustomerTypeEditorProps {
 }
 
 export function CustomerTypeEditor({ customerId, currentType, fleetAccount }: CustomerTypeEditorProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<CustomerType>(currentType);
   const [account, setAccount] = useState(fleetAccount ?? "");
@@ -62,7 +60,6 @@ export function CustomerTypeEditor({ customerId, currentType, fleetAccount }: Cu
     }
     toast.success("Type saved");
     setOpen(false);
-    router.refresh();
   }
 
   const activeConfig = TYPE_CONFIG[currentType];

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarCheck, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,6 @@ export function AppointmentScheduleDialog({
   triggerSize?: "sm" | "default";
   fullWidthTrigger?: boolean;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(defaultEtDate);
   const [time, setTime] = useState(defaultEtTime);
@@ -82,7 +80,6 @@ export function AppointmentScheduleDialog({
       toast.warning(`${verb} — but the text didn't send. Call the customer to confirm.`);
     }
     setOpen(false);
-    router.refresh();
   }
 
   return (

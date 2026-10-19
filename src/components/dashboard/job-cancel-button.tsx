@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,6 @@ import {
 import { cancelJob } from "@/lib/actions/jobs";
 
 export function JobCancelButton({ jobId }: { jobId: string }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleCancel() {
@@ -33,7 +31,6 @@ export function JobCancelButton({ jobId }: { jobId: string }) {
       return;
     }
     toast.success("Job cancelled");
-    router.refresh();
   }
 
   return (

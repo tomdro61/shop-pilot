@@ -24,7 +24,6 @@ export function CheckInButton({
   size?: "default" | "sm";
 }) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleCheckIn() {
     setLoading(true);
@@ -37,7 +36,6 @@ export function CheckInButton({
     }
 
     toast.success("Checked in");
-    router.refresh();
   }
 
   return (
@@ -90,7 +88,6 @@ export function CheckOutButton({
 
 export function NoShowButton({ id }: { id: string }) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleNoShow() {
     setLoading(true);
@@ -103,7 +100,6 @@ export function NoShowButton({ id }: { id: string }) {
     }
 
     toast.success("Marked as no-show");
-    router.refresh();
   }
 
   return (
@@ -122,7 +118,6 @@ export function NoShowButton({ id }: { id: string }) {
 
 export function CancelButton({ id }: { id: string }) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleCancel() {
     setLoading(true);
@@ -135,7 +130,6 @@ export function CancelButton({ id }: { id: string }) {
     }
 
     toast.success("Reservation cancelled");
-    router.refresh();
   }
 
   return (
@@ -211,7 +205,6 @@ export function DeleteReservationButton({ id }: { id: string }) {
 
 export function UndoCheckInButton({ id }: { id: string }) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleUndo() {
     setLoading(true);
@@ -224,7 +217,6 @@ export function UndoCheckInButton({ id }: { id: string }) {
     }
 
     toast.success("Check-in undone");
-    router.refresh();
   }
 
   return (
@@ -243,7 +235,6 @@ export function UndoCheckInButton({ id }: { id: string }) {
 
 export function UndoCheckOutButton({ id }: { id: string }) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleUndo() {
     setLoading(true);
@@ -256,7 +247,6 @@ export function UndoCheckOutButton({ id }: { id: string }) {
     }
 
     toast.success("Check-out undone");
-    router.refresh();
   }
 
   return (

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +24,6 @@ export function AppointmentCancelButton({
   appointmentId: string;
   size?: "sm" | "default";
 }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleCancel() {
@@ -38,7 +36,6 @@ export function AppointmentCancelButton({
       return;
     }
     toast.success("Appointment cancelled");
-    router.refresh();
   }
 
   return (

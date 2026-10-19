@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 export type SaveResult = { error: string } | { success: boolean } | { data: unknown };
 
+// The save runs inside a transition so `displayValue` shows the draft while the
+// server action is in flight. The action revalidates the page it lives on, so
+// the fresh prop arrives in the action's own response and the optimistic value
+// settles on it; on an error the transition ends with the prop unchanged and
+// the display snaps back while the editor reopens with the draft.
 export function useInlineEditor<D>(initial: D) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<D>(initial);
-  const [saving, setSaving] = useState(false);
+  const [displayValue, setOptimisticValue] = useOptimistic(initial);
+  const [saving, startTransition] = useTransition();
   const savingRef = useRef(false);
   const mountedRef = useRef(true);
 
@@ -24,38 +28,44 @@ export function useInlineEditor<D>(initial: D) {
     if (!editing) setDraft(initial);
   }, [initial, editing]);
 
-  async function commit(
+  function commit(
     runSave: () => Promise<SaveResult>,
     successMessage: string,
     errorFallback = "Update failed"
-  ) {
-    if (savingRef.current) return false;
+  ): Promise<boolean> {
+    if (savingRef.current) return Promise.resolve(false);
     savingRef.current = true;
-    setSaving(true);
+    const attempted = draft;
 
-    try {
-      const result = await runSave();
-      if ("error" in result) {
-        if (mountedRef.current) {
-          toast.error(result.error || errorFallback);
-        }
-        return false;
-      }
-      router.refresh();
-      if (mountedRef.current) {
-        toast.success(successMessage);
+    return new Promise((resolve) => {
+      startTransition(async () => {
+        setOptimisticValue(attempted);
         setEditing(false);
-      }
-      return true;
-    } catch (err) {
-      if (mountedRef.current) {
-        toast.error(err instanceof Error ? err.message : errorFallback);
-      }
-      return false;
-    } finally {
-      savingRef.current = false;
-      if (mountedRef.current) setSaving(false);
-    }
+
+        function reopen(message: string) {
+          if (!mountedRef.current) return;
+          toast.error(message);
+          setEditing(true);
+          setDraft(attempted);
+        }
+
+        try {
+          const result = await runSave();
+          if ("error" in result) {
+            reopen(result.error || errorFallback);
+            resolve(false);
+            return;
+          }
+          if (mountedRef.current) toast.success(successMessage);
+          resolve(true);
+        } catch (err) {
+          reopen(err instanceof Error ? err.message : errorFallback);
+          resolve(false);
+        } finally {
+          savingRef.current = false;
+        }
+      });
+    });
   }
 
   function cancel() {
@@ -63,5 +73,5 @@ export function useInlineEditor<D>(initial: D) {
     setEditing(false);
   }
 
-  return { editing, setEditing, draft, setDraft, saving, commit, cancel };
+  return { editing, setEditing, draft, setDraft, saving, displayValue, commit, cancel };
 }

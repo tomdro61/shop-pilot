@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateCustomerFields } from "@/lib/actions/customers";
 import { Pencil } from "lucide-react";
@@ -16,7 +15,6 @@ const HEADING_CLASS =
   "text-[22px] lg:text-[26px] font-semibold tracking-tight text-stone-900 dark:text-stone-50 leading-tight";
 
 export function CustomerNameEditor({ customerId, firstName, lastName }: CustomerNameEditorProps) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [first, setFirst] = useState(firstName);
   const [last, setLast] = useState(lastName);
@@ -42,7 +40,6 @@ export function CustomerNameEditor({ customerId, firstName, lastName }: Customer
     }
     toast.success("Name saved");
     setEditing(false);
-    router.refresh();
   }
 
   function cancel() {

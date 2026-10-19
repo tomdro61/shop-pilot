@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 import { updateJobFields } from "@/lib/actions/jobs";
 import { useInlineEditor } from "@/hooks/use-inline-editor";
-import { etDateTimeToUtcIso, formatTimeEt } from "@/lib/utils";
+import { etDateTimeToUtcIso } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Pencil, Check, X } from "lucide-react";
 
@@ -31,13 +31,21 @@ function isoToEtDate(iso: string): string {
   });
 }
 
+// The editor's value is the ET "HH:MM" the input works in, so the display
+// formats that directly instead of round-tripping through UTC.
+function formatEtTime(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
 export function JobScheduledTimeEditor({
   jobId,
   value,
   dateReceived,
 }: JobScheduledTimeEditorProps) {
   const initialTime = value ? isoToEtTime(value) : "";
-  const { editing, setEditing, draft, setDraft, saving, commit, cancel } =
+  const { editing, setEditing, draft, setDraft, saving, displayValue, commit, cancel } =
     useInlineEditor(initialTime);
 
   async function save() {
@@ -109,8 +117,8 @@ export function JobScheduledTimeEditor({
       onClick={() => setEditing(true)}
       className="group inline-flex items-center gap-1 font-mono tabular-nums text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
     >
-      {value ? (
-        formatTimeEt(value)
+      {displayValue ? (
+        formatEtTime(displayValue)
       ) : (
         <span className="text-stone-400">Not set</span>
       )}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Select,
@@ -21,7 +20,6 @@ interface JobTechEditorProps {
 }
 
 export function JobTechEditor({ jobId, currentTech, techs }: JobTechEditorProps) {
-  const router = useRouter();
 
   async function handleChange(value: string) {
     const nextId = value === UNASSIGNED ? null : value;
@@ -35,7 +33,6 @@ export function JobTechEditor({ jobId, currentTech, techs }: JobTechEditorProps)
     }
     const next = techs.find((t) => t.id === nextId);
     toast.success(next ? `Assigned to ${next.name}` : "Unassigned");
-    router.refresh();
   }
 
   return (

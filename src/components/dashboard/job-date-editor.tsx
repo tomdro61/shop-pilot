@@ -14,7 +14,7 @@ interface JobDateEditorProps {
 }
 
 export function JobDateEditor({ jobId, field, value, emptyLabel = "Not set" }: JobDateEditorProps) {
-  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(value ?? "");
+  const { editing, setEditing, draft, setDraft, saving, displayValue, commit, cancel } = useInlineEditor(value ?? "");
 
   async function save() {
     const next = draft || null;
@@ -63,7 +63,7 @@ export function JobDateEditor({ jobId, field, value, emptyLabel = "Not set" }: J
       onClick={() => setEditing(true)}
       className="group inline-flex items-center gap-1 font-mono tabular-nums text-stone-900 dark:text-stone-50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
     >
-      {value ? formatDate(value) : <span className="text-stone-400">{emptyLabel}</span>}
+      {displayValue ? formatDate(displayValue) : <span className="text-stone-400">{emptyLabel}</span>}
       <Pencil className="h-2.5 w-2.5 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors" />
     </button>
   );

@@ -1,6 +1,6 @@
 ---
 name: verify-flow
-description: End-to-end verification of customer-facing and high-stakes internal flows on shop-pilot. Walks real user journeys (public estimate approval, DVI inspect, parking submit, quote requests, Quick Pay, estimate creation, job cancel) using the local dev server and Playwright when available. Use after any change to checkout/approval/public-API/payment surfaces — code review reads diffs, this clicks through. Existing flows&#58; estimate-approval, dvi-inspect, estimate-create, parking-form, quote-form, quick-pay, job-cancel.
+description: End-to-end verification of customer-facing and high-stakes internal flows on shop-pilot. Walks real user journeys (public estimate approval, DVI inspect, parking submit, quote requests, Quick Pay, estimate creation, job cancel) using the local dev server and Playwright when available. Use after any change to checkout/approval/public-API/payment surfaces — code review reads diffs, this clicks through. Existing flows&#58; estimate-approval, dvi-inspect, estimate-create, parking-form, quote-form, quick-pay, job-cancel, resend-invoice, mark-unpaid, inline-edit.
 ---
 
 # /verify-flow — End-to-end customer-flow verification
@@ -68,6 +68,7 @@ If still ambiguous, ask the user.
 | `job-cancel` | `src/components/dashboard/job-cancel-button.tsx`, `src/lib/actions/jobs.ts` (`cancelJob`), `src/lib/ai/handlers.ts` (`cancel_job` case), `src/lib/ai/tools.ts` |
 | `resend-invoice` | `src/lib/actions/invoices.ts` (`resendInvoiceForJob`), `src/components/dashboard/resend-invoice-button.tsx`, `src/components/dashboard/invoice-section.tsx` |
 | `mark-unpaid` | `src/lib/actions/jobs.ts` (`markJobUnpaid`, `recordPayment`, `updateJob`), `src/components/dashboard/mark-job-unpaid-button.tsx`, `src/components/dashboard/job-payment-footer.tsx`, `src/lib/ai/handlers.ts` (`mark_job_unpaid` case) |
+| `inline-edit` | `src/hooks/use-inline-editor.ts`, `src/components/dashboard/{job-title,job-date,job-mileage,job-scheduled-time,notes,customer-text-field}-editor.tsx`, `src/components/dashboard/status-select.tsx`, any component that drops a `router.refresh()` after a server action |
 
 ---
 
@@ -365,6 +366,56 @@ detail, and the `cancel_job` AI tool.
 - ❌ FAIL signal: AI says the tool isn't available or `update_job_status`
   rejects with "use the cancel_job tool" message. That's MP-2 back —
   re-check both `tools.ts` (definition) and `handlers.ts` (case branch).
+
+---
+
+### Flow: `inline-edit`
+
+Shipped October 2026 (session 87). Inline editors and the status chip
+update from the server action's own response: the action calls
+`revalidatePath` for the page it lives on, the fresh props arrive with the
+action result, and `useOptimistic` shows the draft until then. There is no
+`router.refresh()` on the success path any more, so the failure to look for
+is a stale page: the save toasts success but the old value stays on screen.
+
+**Test data prereq:** a job on a shop-owned customer (search customers for
+"Test"), `payment_status = "unpaid"`. Create one if none exists and delete it
+afterward.
+
+**Scenario 1 — Title edit lands without a reload**
+- Open the job. Click the title, type a new one, press Enter.
+- Assert: the new title shows immediately (before the toast), the toast says
+  "Title saved", and the title is still the new one after the toast. Reload:
+  still the new one.
+- Open the browser's network panel: exactly one POST (the action) per save,
+  no second RSC fetch for the page.
+
+**Scenario 2 — A refused save snaps back and reopens the editor**
+- Change the status chip to Complete, then record nothing and try to change
+  it back to In Progress on a paid job (or temporarily set
+  `payment_status = "paid"` on the test row).
+- Assert: the chip flips to the picked status for a moment, the toast shows
+  the refusal, and the chip returns to Complete without a reload.
+- For a text editor: disconnect the network, edit the title, press Enter.
+  Assert: the old title returns, the editor reopens with the typed draft,
+  and an error toast shows.
+
+**Scenario 3 — Customer fields**
+- On the customer page, edit the phone. Assert: the plain text of the new
+  number shows while saving, then the Call/Text links come back with the new
+  number once the action returns.
+
+**Scenario 4 — Every page paints something on click**
+- From the dashboard, click Appointments, Inspections, Team, Presets,
+  Settings → Catalog. Each should show a skeleton inside the shell before its
+  data arrives rather than a frozen sidebar. These routes have no
+  `loading.tsx` of their own; the `(dashboard)/loading.tsx` fallback covers
+  them.
+
+❌ FAIL signal: a save toasts success but the value on screen is the old one
+until a manual reload. That means the action stopped revalidating the page
+the editor lives on — check its `revalidatePath` set before putting a
+`router.refresh()` back.
 
 ---
 

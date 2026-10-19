@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +16,6 @@ export function ParkingNotesForm({
 }) {
   const [notes, setNotes] = useState(staffNotes || "");
   const [saving, setSaving] = useState(false);
-  const router = useRouter();
 
   const hasChanges = notes !== (staffNotes || "");
 
@@ -34,7 +32,6 @@ export function ParkingNotesForm({
     }
 
     toast.success("Updated");
-    router.refresh();
   }
 
   return (

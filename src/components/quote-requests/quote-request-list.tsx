@@ -194,7 +194,6 @@ function QuoteRequestCard({
   quoteRequest: QuoteRequest;
   photoUrls: Record<string, string>;
 }) {
-  const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const status = qr.status as QuoteRequestStatus;
   const days = ageDays(qr.created_at);
@@ -230,7 +229,6 @@ function QuoteRequestCard({
           `Status updated to ${QUOTE_REQUEST_STATUS_LABELS[newStatus as QuoteRequestStatus]}`
         );
       }
-      router.refresh();
     } finally {
       setIsUpdating(false);
     }
@@ -247,7 +245,6 @@ function QuoteRequestCard({
       } else {
         toast.success("Quote request deleted");
       }
-      router.refresh();
     } finally {
       setIsUpdating(false);
     }

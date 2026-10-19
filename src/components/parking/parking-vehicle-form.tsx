@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -27,7 +26,6 @@ export function ParkingVehicleForm({
   const [formPlate, setFormPlate] = useState(licensePlate);
   const [formColor, setFormColor] = useState(color ?? "");
   const [saving, setSaving] = useState(false);
-  const router = useRouter();
 
   const hasChanges =
     formMake !== make ||
@@ -52,7 +50,6 @@ export function ParkingVehicleForm({
     }
 
     toast.success("Vehicle info updated");
-    router.refresh();
   }
 
   return (

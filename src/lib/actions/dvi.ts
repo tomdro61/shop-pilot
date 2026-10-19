@@ -8,6 +8,7 @@ import { requireManager } from "@/lib/auth";
 import { findOrCreateParkingVehicle } from "@/lib/parking-vehicle";
 import { todayET } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import * as Sentry from "@sentry/nextjs";
 
 const DVI_SERVICE = "dvi_inspection" as const;
 
@@ -96,31 +97,35 @@ export async function startInspection(jobId: string) {
   const supabase = await createClient();
 
   // Check if inspection already exists
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("dvi_inspections")
     .select("id")
     .eq("job_id", jobId)
-    .single();
+    .maybeSingle();
 
+  if (existingError) return { error: existingError.message };
   if (existing) return { error: "An inspection already exists for this job" };
 
   // Look up the job's vehicle and customer for direct linking
-  const { data: job } = await supabase
+  const { data: job, error: jobError } = await supabase
     .from("jobs")
     .select("vehicle_id, customer_id")
     .eq("id", jobId)
-    .single();
+    .maybeSingle();
+  if (jobError) return { error: jobError.message };
+  if (!job) return { error: "Job not found" };
 
   // Check if customer has an active parking reservation requesting a DVI — link if so
   let parkingReservationId: string | null = null;
   if (job?.customer_id) {
-    const { data: reservations } = await supabase
+    const { data: reservations, error: reservationError } = await supabase
       .from("parking_reservations")
       .select("id, services_interested, services_completed")
       .eq("customer_id", job.customer_id)
       .in("status", ["reserved", "checked_in"])
       .order("drop_off_date", { ascending: false })
       .limit(1);
+    if (reservationError) return { error: reservationError.message };
 
     const reservation = reservations?.[0];
     if (
@@ -169,12 +174,13 @@ export async function startStandaloneInspection(params: {
   const supabase = await createClient();
 
   // Prevent duplicate DVIs for the same customer
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("dvi_inspections")
     .select("id")
     .eq("customer_id", params.customerId)
     .in("status", ["in_progress", "completed"])
     .limit(1);
+  if (existingError) return { error: existingError.message };
 
   if (existing && existing.length > 0) {
     return { error: "A DVI already exists for this customer" };
@@ -334,11 +340,18 @@ export async function completeInspection(inspectionId: string) {
 
   // If no vehicle from job, fetch directly
   if (!vehicle && inspection?.vehicle_id) {
-    const { data: v } = await supabase
+    const { data: v, error: vehicleError } = await supabase
       .from("vehicles")
       .select("year, make, model")
       .eq("id", inspection.vehicle_id)
-      .single();
+      .maybeSingle();
+    if (vehicleError) {
+      Sentry.captureException(new Error(vehicleError.message), {
+        level: "warning",
+        tags: { source: "dvi-vehicle-lookup" },
+        extra: { inspectionId },
+      });
+    }
     vehicle = v;
   }
 
@@ -563,13 +576,23 @@ export async function sendInspection(
   if (error) return { error: error.message };
 
   // Get inspection with job fallback for customer/vehicle
-  const { data: inspection } = await supabase
+  const { data: inspection, error: inspectionError } = await supabase
     .from("dvi_inspections")
     .select(
       "job_id, customer_id, vehicle_id, jobs(id, customer_id, customers(id, first_name, phone, email), vehicles(year, make, model))"
     )
     .eq("id", inspectionId)
-    .single();
+    .maybeSingle();
+  if (inspectionError || !inspection) {
+    Sentry.captureException(new Error(inspectionError?.message ?? "Inspection missing after marking sent"), {
+      tags: { source: "dvi-send" },
+      extra: { inspectionId },
+    });
+    return {
+      error:
+        "The inspection was marked sent, but the customer couldn't be looked up, so nothing was texted or emailed. Send it again.",
+    };
+  }
 
   const job = inspection?.jobs as {
     id: string;
@@ -585,21 +608,35 @@ export async function sendInspection(
 
   // If no customer from job, fetch directly
   if (!customer && inspection?.customer_id) {
-    const { data: c } = await supabase
+    const { data: c, error: customerError } = await supabase
       .from("customers")
       .select("id, first_name, phone, email")
       .eq("id", inspection.customer_id)
-      .single();
+      .maybeSingle();
+    if (customerError) {
+      Sentry.captureException(new Error(customerError.message), {
+        level: "warning",
+        tags: { source: "dvi-send" },
+        extra: { inspectionId },
+      });
+    }
     customer = c;
   }
 
   // If no vehicle from job, fetch directly
   if (!vehicle && inspection?.vehicle_id) {
-    const { data: v } = await supabase
+    const { data: v, error: vehicleError } = await supabase
       .from("vehicles")
       .select("year, make, model")
       .eq("id", inspection.vehicle_id)
-      .single();
+      .maybeSingle();
+    if (vehicleError) {
+      Sentry.captureException(new Error(vehicleError.message), {
+        level: "warning",
+        tags: { source: "dvi-vehicle-lookup" },
+        extra: { inspectionId },
+      });
+    }
     vehicle = v;
   }
 
@@ -908,10 +945,13 @@ export async function getStandaloneInspections(showAll = false) {
     );
     if (sentWithParking.length > 0) {
       const resIds = sentWithParking.map((i) => i.parking_reservation_id!);
-      const { data: reservations } = await admin
+      const { data: reservations, error: reservationError } = await admin
         .from("parking_reservations")
         .select("id, status")
         .in("id", resIds);
+      if (reservationError) {
+        throw new Error(`Failed to load parking reservations: ${reservationError.message}`);
+      }
       const goneIds = new Set(
         (reservations ?? [])
           .filter((r) => r.status === "checked_out" || r.status === "cancelled" || r.status === "no_show")
@@ -976,12 +1016,13 @@ export async function getRecentCompletedInspections(limit = 25) {
 
   const jobIds = [...new Set(inspections.map((i) => i.job_id).filter(Boolean))] as string[];
 
-  const { data: jobs } = jobIds.length > 0
+  const { data: jobs, error: jobsError } = jobIds.length > 0
     ? await admin
         .from("jobs")
         .select("id, ro_number, customer_id, vehicle_id")
         .in("id", jobIds)
-    : { data: [] as { id: string; ro_number: number | null; customer_id: string; vehicle_id: string | null }[] };
+    : { data: [] as { id: string; ro_number: number | null; customer_id: string; vehicle_id: string | null }[], error: null };
+  if (jobsError) throw new Error(`Failed to load jobs for inspections: ${jobsError.message}`);
 
   const jobMap = new Map((jobs ?? []).map((j) => [j.id, j]));
 
@@ -1035,7 +1076,7 @@ export async function getRecentCompletedInspections(limit = 25) {
 export async function getPendingParkingDviRequests() {
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("parking_reservations")
     .select(
       "id, first_name, last_name, phone, make, model, color, license_plate, lot, drop_off_date, pick_up_date, status, customer_id, services_interested, services_completed"
@@ -1043,6 +1084,7 @@ export async function getPendingParkingDviRequests() {
     .contains("services_interested", [DVI_SERVICE])
     .in("status", ["reserved", "checked_in"])
     .order("drop_off_date", { ascending: true });
+  if (error) throw new Error(`Failed to load parking DVI requests: ${error.message}`);
 
   // Filter out already-completed DVIs
   const pending = (data ?? []).filter(
@@ -1056,11 +1098,12 @@ export async function getPendingParkingDviRequests() {
   const reservationIds = pending.map((r) => r.id);
   const customerIds = [...new Set(pending.map((r) => r.customer_id).filter(Boolean))] as string[];
   if (customerIds.length > 0) {
-    const { data: existingDvis } = await supabase
+    const { data: existingDvis, error: dviError } = await supabase
       .from("dvi_inspections")
       .select("customer_id, parking_reservation_id")
       .in("status", ["in_progress", "completed"])
       .or(`parking_reservation_id.in.(${reservationIds.join(",")}),customer_id.in.(${customerIds.join(",")})`);
+    if (dviError) throw new Error(`Failed to load existing DVIs: ${dviError.message}`);
 
     // Build sets for both reservation-level and customer-level matches
     const reservationsWithDvi = new Set((existingDvis ?? []).filter((d) => d.parking_reservation_id).map((d) => d.parking_reservation_id));

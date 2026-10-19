@@ -29,7 +29,7 @@ export function NotesEditor({
   placeholder,
   emptyPrompt = "Add notes…",
 }: NotesEditorProps) {
-  const { editing, setEditing, draft, setDraft, saving, commit, cancel } = useInlineEditor(value ?? "");
+  const { editing, setEditing, draft, setDraft, saving, displayValue, commit, cancel } = useInlineEditor(value ?? "");
 
   async function save() {
     const next = draft.trim() || null;
@@ -72,7 +72,7 @@ export function NotesEditor({
     );
   }
 
-  if (!value) {
+  if (!displayValue) {
     return (
       <button
         onClick={() => setEditing(true)}
@@ -88,7 +88,7 @@ export function NotesEditor({
       onClick={() => setEditing(true)}
       className="group w-full text-left flex items-start gap-2"
     >
-      <p className={`${BODY_CLASS} flex-1 min-w-0`}>{value}</p>
+      <p className={`${BODY_CLASS} flex-1 min-w-0`}>{displayValue}</p>
       <Pencil className="h-3.5 w-3.5 shrink-0 text-stone-400 group-hover:text-stone-600 dark:group-hover:text-stone-300 transition-colors mt-0.5" />
     </button>
   );

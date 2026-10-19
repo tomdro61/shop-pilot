@@ -107,7 +107,6 @@ export function EstimateActions({
     } else {
       toast.success("Estimate resent by text and email");
     }
-    router.refresh();
   }
 
   async function handleDuplicate() {
@@ -170,7 +169,6 @@ export function EstimateActions({
     } else {
       toast.success("Estimate marked approved");
     }
-    router.refresh();
   }
 
   async function handleMarkDeclined() {
@@ -184,7 +182,6 @@ export function EstimateActions({
       return;
     }
     toast.success("Estimate marked declined");
-    router.refresh();
   }
 
   async function handleConvert() {

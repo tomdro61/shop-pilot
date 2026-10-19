@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Popover,
@@ -81,7 +80,6 @@ export function CustomerPickerEditor({
   onConfirm,
   describeChange,
 }: CustomerPickerEditorProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
@@ -122,7 +120,6 @@ export function CustomerPickerEditor({
     }
     toast.success(`Customer changed to ${formatCustomerName(pending)}`);
     setPending(null);
-    router.refresh();
   }
 
   return (

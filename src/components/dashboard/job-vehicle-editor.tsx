@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Popover,
@@ -62,7 +61,6 @@ export function VehiclePickerEditor({
   currentVehicleId,
   onAssign,
 }: VehiclePickerEditorProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [addOpen, setAddOpen] = useState(false);
@@ -102,7 +100,6 @@ export function VehiclePickerEditor({
     }
     toast.success(vehicleId ? "Vehicle updated" : "Vehicle cleared");
     setOpen(false);
-    router.refresh();
   }
 
   if (!customerId) {
