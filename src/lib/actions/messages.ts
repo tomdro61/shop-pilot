@@ -213,8 +213,13 @@ export async function logInboundSMS({
   body: string;
   phoneLine?: PhoneLine;
 }) {
+  // An unknown or unparseable number is a normal outcome the caller can
+  // acknowledge; only a failed lookup or insert is an error worth a retry.
   const phone = toE164(customerPhone);
-  if (!phone) return { error: `Invalid phone number: ${customerPhone}` };
+  if (!phone) {
+    console.log(`[SMS] Inbound from unparseable number: ${customerPhone}`);
+    return { data: { logged: false as const, reason: "invalid_number" as const } };
+  }
 
   const supabase = createAdminClient();
 
@@ -231,7 +236,7 @@ export async function logInboundSMS({
 
   if (!customer) {
     console.log(`[SMS] Inbound from unknown number: ${phone}`);
-    return { error: "No customer found for this phone number" };
+    return { data: { logged: false as const, reason: "unknown_number" as const } };
   }
 
   const { error } = await supabase.from("messages").insert({
@@ -243,5 +248,5 @@ export async function logInboundSMS({
   });
 
   if (error) return { error: error.message };
-  return { data: { logged: true, customerId: customer.id } };
+  return { data: { logged: true as const, customerId: customer.id } };
 }

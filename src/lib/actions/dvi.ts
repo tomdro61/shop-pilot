@@ -561,21 +561,8 @@ export async function sendInspection(
     }
   }
 
-  // Update inspection status
-  const { error } = await supabase
-    .from("dvi_inspections")
-    .update({
-      status: "sent" as const,
-      approval_token: token,
-      send_mode: options.mode,
-      sent_at: new Date().toISOString(),
-      customer_note: options.customerNote || null,
-    })
-    .eq("id", inspectionId);
-
-  if (error) return { error: error.message };
-
-  // Get inspection with job fallback for customer/vehicle
+  // Resolve who to notify before anything is marked sent, so a failed lookup
+  // leaves the inspection at "completed" and the Send button still works.
   const { data: inspection, error: inspectionError } = await supabase
     .from("dvi_inspections")
     .select(
@@ -583,18 +570,16 @@ export async function sendInspection(
     )
     .eq("id", inspectionId)
     .maybeSingle();
-  if (inspectionError || !inspection) {
-    Sentry.captureException(new Error(inspectionError?.message ?? "Inspection missing after marking sent"), {
+  if (inspectionError) {
+    Sentry.captureException(new Error(inspectionError.message), {
       tags: { source: "dvi-send" },
       extra: { inspectionId },
     });
-    return {
-      error:
-        "The inspection was marked sent, but the customer couldn't be looked up, so nothing was texted or emailed. Send it again.",
-    };
+    return { error: "Couldn't load the inspection, so nothing was sent. Try again." };
   }
+  if (!inspection) return { error: "Inspection not found" };
 
-  const job = inspection?.jobs as {
+  const job = inspection.jobs as {
     id: string;
     customer_id: string;
     customers: { id: string; first_name: string; phone: string | null; email: string | null } | null;
@@ -606,8 +591,7 @@ export async function sendInspection(
   let vehicle = job?.vehicles ?? null;
   const resolvedJobId = job?.id;
 
-  // If no customer from job, fetch directly
-  if (!customer && inspection?.customer_id) {
+  if (!customer && inspection.customer_id) {
     const { data: c, error: customerError } = await supabase
       .from("customers")
       .select("id, first_name, phone, email")
@@ -615,16 +599,17 @@ export async function sendInspection(
       .maybeSingle();
     if (customerError) {
       Sentry.captureException(new Error(customerError.message), {
-        level: "warning",
         tags: { source: "dvi-send" },
         extra: { inspectionId },
       });
+      return { error: "Couldn't load the customer, so nothing was sent. Try again." };
     }
     customer = c;
   }
 
-  // If no vehicle from job, fetch directly
-  if (!vehicle && inspection?.vehicle_id) {
+  // The vehicle only decorates the message, so a failed lookup is reported
+  // and the text goes out without it.
+  if (!vehicle && inspection.vehicle_id) {
     const { data: v, error: vehicleError } = await supabase
       .from("vehicles")
       .select("year, make, model")
@@ -639,6 +624,23 @@ export async function sendInspection(
     }
     vehicle = v;
   }
+
+  // Mark sent, pinned to the row that was just read.
+  const { data: marked, error } = await supabase
+    .from("dvi_inspections")
+    .update({
+      status: "sent" as const,
+      approval_token: token,
+      send_mode: options.mode,
+      sent_at: new Date().toISOString(),
+      customer_note: options.customerNote || null,
+    })
+    .eq("id", inspectionId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!marked) return { error: "Inspection not found" };
 
   // Fire-and-forget SMS to customer
   if (customer?.phone) {
@@ -686,7 +688,7 @@ export async function sendInspection(
       .catch((err) => console.error("Failed to send DVI email:", err));
   }
 
-  if (inspection?.job_id) {
+  if (inspection.job_id) {
     revalidatePath(`/jobs/${inspection.job_id}`);
   }
   revalidatePath("/dvi");
@@ -933,7 +935,7 @@ export async function getStandaloneInspections(showAll = false) {
   }
 
   const { data, error } = await query;
-  if (error) return [];
+  if (error) throw new Error(`Failed to load standalone inspections: ${error.message}`);
 
   let inspections = data ?? [];
 
@@ -967,14 +969,18 @@ export async function getStandaloneInspections(showAll = false) {
   const vehicleIds = [...new Set(inspections.map((i) => i.vehicle_id).filter(Boolean))] as string[];
   const customerIds = [...new Set(inspections.map((i) => i.customer_id).filter(Boolean))] as string[];
 
-  const [{ data: vehicles }, { data: customers }] = await Promise.all([
+  const [vehiclesRes, customersRes] = await Promise.all([
     vehicleIds.length > 0
       ? admin.from("vehicles").select("id, year, make, model, color").in("id", vehicleIds)
-      : Promise.resolve({ data: [] as { id: string; year: number | null; make: string | null; model: string | null; color: string | null }[] }),
+      : Promise.resolve({ data: [] as { id: string; year: number | null; make: string | null; model: string | null; color: string | null }[], error: null }),
     customerIds.length > 0
       ? admin.from("customers").select("id, first_name, last_name").in("id", customerIds)
-      : Promise.resolve({ data: [] as { id: string; first_name: string; last_name: string }[] }),
+      : Promise.resolve({ data: [] as { id: string; first_name: string; last_name: string }[], error: null }),
   ]);
+  if (vehiclesRes.error) throw new Error(`Failed to load vehicles for inspections: ${vehiclesRes.error.message}`);
+  if (customersRes.error) throw new Error(`Failed to load customers for inspections: ${customersRes.error.message}`);
+  const vehicles = vehiclesRes.data;
+  const customers = customersRes.data;
 
   const vehicleMap = new Map((vehicles ?? []).map((v) => [v.id, v]));
   const customerMap = new Map((customers ?? []).map((c) => [c.id, c]));
@@ -1012,7 +1018,8 @@ export async function getRecentCompletedInspections(limit = 25) {
     .order("completed_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  if (error || !inspections || inspections.length === 0) return [];
+  if (error) throw new Error(`Failed to load recent inspections: ${error.message}`);
+  if (!inspections || inspections.length === 0) return [];
 
   const jobIds = [...new Set(inspections.map((i) => i.job_id).filter(Boolean))] as string[];
 
@@ -1039,11 +1046,13 @@ export async function getRecentCompletedInspections(limit = 25) {
   const [customersResult, vehiclesResult] = await Promise.all([
     allCustomerIds.length > 0
       ? admin.from("customers").select("id, first_name, last_name").in("id", allCustomerIds)
-      : Promise.resolve({ data: [] as { id: string; first_name: string; last_name: string }[] }),
+      : Promise.resolve({ data: [] as { id: string; first_name: string; last_name: string }[], error: null }),
     allVehicleIds.length > 0
       ? admin.from("vehicles").select("id, year, make, model").in("id", allVehicleIds)
-      : Promise.resolve({ data: [] as { id: string; year: number | null; make: string | null; model: string | null }[] }),
+      : Promise.resolve({ data: [] as { id: string; year: number | null; make: string | null; model: string | null }[], error: null }),
   ]);
+  if (customersResult.error) throw new Error(`Failed to load customers for inspections: ${customersResult.error.message}`);
+  if (vehiclesResult.error) throw new Error(`Failed to load vehicles for inspections: ${vehiclesResult.error.message}`);
 
   const customerMap = new Map((customersResult.data ?? []).map((c) => [c.id, c]));
   const vehicleMap = new Map((vehiclesResult.data ?? []).map((v) => [v.id, v]));

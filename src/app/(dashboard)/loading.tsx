@@ -1,8 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Fallback for every dashboard route without its own loading.tsx, so a click
-// paints something inside the shell instead of freezing until the page's data
-// arrives. Routes with a closer loading.tsx keep theirs.
+// Fallback for dashboard routes with no loading.tsx of their own or in a
+// parent folder, so a click paints something inside the shell instead of
+// freezing until the page's data arrives. Routes with a closer loading.tsx
+// keep theirs.
 export default function DashboardLoading() {
   return (
     <div className="p-4 lg:p-10">
@@ -12,7 +13,7 @@ export default function DashboardLoading() {
       </div>
       <div className="space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          <Skeleton key={i} className="h-16 w-full rounded-md" />
         ))}
       </div>
     </div>

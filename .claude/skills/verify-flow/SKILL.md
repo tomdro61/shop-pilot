@@ -391,14 +391,14 @@ afterward.
   no second RSC fetch for the page.
 
 **Scenario 2 — A refused save snaps back and reopens the editor**
-- Change the status chip to Complete, then record nothing and try to change
-  it back to In Progress on a paid job (or temporarily set
-  `payment_status = "paid"` on the test row).
-- Assert: the chip flips to the picked status for a moment, the toast shows
-  the refusal, and the chip returns to Complete without a reload.
+- Use a job that is already Complete and paid (or invoiced). Pick In Progress
+  on the status chip.
+- Assert: the chip flips to In Progress for a moment, the toast shows the
+  refusal ("This job is settled…" or "has an invoice on file…"), and the chip
+  returns to Complete without a reload.
 - For a text editor: disconnect the network, edit the title, press Enter.
-  Assert: the old title returns, the editor reopens with the typed draft,
-  and an error toast shows.
+  Assert: the draft shows in place for a moment, then the old title returns,
+  the editor reopens with the typed draft, and an error toast shows.
 
 **Scenario 3 — Customer fields**
 - On the customer page, edit the phone. Assert: the plain text of the new
@@ -406,11 +406,11 @@ afterward.
   number once the action returns.
 
 **Scenario 4 — Every page paints something on click**
-- From the dashboard, click Appointments, Inspections, Team, Presets,
-  Settings → Catalog. Each should show a skeleton inside the shell before its
-  data arrives rather than a frozen sidebar. These routes have no
-  `loading.tsx` of their own; the `(dashboard)/loading.tsx` fallback covers
-  them.
+- From the dashboard, click Chat, Appointments, Inspections, Team, Presets.
+  Each should show a skeleton inside the shell before its data arrives rather
+  than a frozen sidebar. These routes have no `loading.tsx` of their own or in
+  a parent folder; the `(dashboard)/loading.tsx` fallback covers them.
+  (Settings pages are covered by `settings/loading.tsx`, not the fallback.)
 
 ❌ FAIL signal: a save toasts success but the value on screen is the old one
 until a manual reload. That means the action stopped revalidating the page

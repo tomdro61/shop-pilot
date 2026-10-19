@@ -49,13 +49,15 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Public routes — no auth required
+  // Public routes — no auth required. The token routes are matched with their
+  // trailing slash: "/inspect" alone would also match the dashboard's
+  // /inspections page.
   const isPublicRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/api") ||
-    pathname.startsWith("/estimates/approve") ||
-    pathname.startsWith("/inspect") ||
-    pathname.startsWith("/receipt") ||
+    pathname.startsWith("/estimates/approve/") ||
+    pathname.startsWith("/inspect/") ||
+    pathname.startsWith("/receipt/") ||
     pathname.startsWith("/monitoring") ||
     pathname === "/";
 
@@ -87,11 +89,18 @@ export async function middleware(request: NextRequest) {
         tags: { source: "middleware" },
         extra: { path: pathname, authId: user.id },
       });
+    } else if (!profile) {
+      Sentry.captureMessage("middleware_user_row_missing", {
+        level: "warning",
+        tags: { source: "middleware" },
+        extra: { path: pathname, authId: user.id },
+      });
     }
 
     // Fail closed: a role that can't be read, or a sign-in with no users row,
     // is treated as a tech. A manager hit by a transient read error lands on
-    // /dvi instead of a manager page; requireManager() still guards writes.
+    // /dvi instead of a manager page. This gate only routes pages; each
+    // server action and API route does its own auth check.
     const role = profileError || !profile ? "tech" : profile.role;
 
     // Login page → redirect to appropriate home
@@ -123,7 +132,7 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon)
      * - public files (icons, manifest, etc.)
-     * - api/ routes and the Sentry tunnel, which carry no session to refresh
+     * - api/ routes, which do their own auth, and the Sentry tunnel
      */
     "/((?!_next/static|_next/image|favicon.ico|icon-.*\\.png|manifest\\.json|.*\\.svg$|api/|monitoring).*)",
   ],

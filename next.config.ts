@@ -2,9 +2,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Clickjacking and MIME-sniffing protection for the public approval, inspect
-  // and receipt pages; the camera stays allowed for DVI photo capture. No CSP
-  // yet: it would have to enumerate Stripe.js and the Sentry tunnel first.
+  // Clickjacking and MIME-sniffing protection for every page, the public
+  // approval, inspect and receipt pages especially; the camera stays allowed
+  // for DVI photo capture. No CSP yet: it needs Stripe.js, the Supabase origin
+  // and nonces for Next's inline scripts first.
   async headers() {
     return [
       {

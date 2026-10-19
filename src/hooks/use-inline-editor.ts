@@ -5,11 +5,12 @@ import { toast } from "sonner";
 
 export type SaveResult = { error: string } | { success: boolean } | { data: unknown };
 
-// The save runs inside a transition so `displayValue` shows the draft while the
-// server action is in flight. The action revalidates the page it lives on, so
-// the fresh prop arrives in the action's own response and the optimistic value
-// settles on it; on an error the transition ends with the prop unchanged and
-// the display snaps back while the editor reopens with the draft.
+// The editor closes as soon as a save starts and `displayValue` shows the draft
+// until the server action returns. Callers' actions must revalidate after
+// writing: Next re-renders the calling page into the action's own response, so
+// the fresh prop arrives with the result and the optimistic value settles on
+// it. On an error the transition ends with the prop unchanged, the display
+// snaps back, and the editor reopens with the draft.
 export function useInlineEditor<D>(initial: D) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<D>(initial);
@@ -36,15 +37,20 @@ export function useInlineEditor<D>(initial: D) {
     if (savingRef.current) return Promise.resolve(false);
     savingRef.current = true;
     const attempted = draft;
+    // Outside the transition so it commits now; a state update inside an async
+    // transition is held until the action resolves, which would keep the
+    // disabled input on screen for the whole save.
+    setEditing(false);
 
     return new Promise((resolve) => {
       startTransition(async () => {
         setOptimisticValue(attempted);
-        setEditing(false);
 
         function reopen(message: string) {
-          if (!mountedRef.current) return;
+          // The toaster is global, so a failed save is reported even after
+          // navigating away; only the editor state needs the mount guard.
           toast.error(message);
+          if (!mountedRef.current) return;
           setEditing(true);
           setDraft(attempted);
         }
@@ -56,7 +62,7 @@ export function useInlineEditor<D>(initial: D) {
             resolve(false);
             return;
           }
-          if (mountedRef.current) toast.success(successMessage);
+          toast.success(successMessage);
           resolve(true);
         } catch (err) {
           reopen(err instanceof Error ? err.message : errorFallback);

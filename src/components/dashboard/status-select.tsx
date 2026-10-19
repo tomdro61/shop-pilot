@@ -42,23 +42,31 @@ export function StatusSelect({ jobId, currentStatus }: StatusSelectProps) {
   const [pending, startTransition] = useTransition();
 
   function handleChange(newStatus: string) {
+    // A second pick while one is in flight is ignored rather than disabling
+    // the trigger, which would drop keyboard focus mid-change.
+    if (pending) return;
     // Dropdown only renders JOB_STATUS_ORDER values (excludes cancelled),
     // so the cast to ActiveJobStatus is sound here.
     const next = newStatus as ActiveJobStatus;
     startTransition(async () => {
       setOptimisticStatus(next);
-      const result = await updateJobStatus(jobId, next);
-      if (result.error) {
-        toast.error(result.error);
-      } else {
-        toast.success(`Status updated to ${JOB_STATUS_LABELS[next]}`);
+      try {
+        const result = await updateJobStatus(jobId, next);
+        if (result.error) {
+          toast.error(result.error);
+        } else {
+          toast.success(`Status updated to ${JOB_STATUS_LABELS[next]}`);
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Couldn't update the status");
       }
     });
   }
 
   return (
-    <Select value={status} onValueChange={handleChange} disabled={pending}>
+    <Select value={status} onValueChange={handleChange}>
       <SelectTrigger
+        aria-disabled={pending}
         className={`w-auto border-0 bg-transparent p-0 h-auto shadow-none focus:ring-0 gap-1 ${pending ? "opacity-70" : ""}`}
       >
         <SelectValue>

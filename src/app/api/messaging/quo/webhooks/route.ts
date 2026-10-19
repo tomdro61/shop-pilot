@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { logInboundSMS } from "@/lib/actions/messages";
-import { QUO_SIGNATURE_HEADER, verifyQuoSignatureAny } from "@/lib/quo/signature";
+import {
+  QUO_SIGNATURE_HEADER,
+  parseQuoSignatureHeader,
+  splitQuoSecrets,
+  verifyQuoSignatureAny,
+} from "@/lib/quo/signature";
 import type { PhoneLine } from "@/lib/quo/routing";
 
 export async function POST(request: Request) {
@@ -19,7 +24,22 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const header =
     request.headers.get(QUO_SIGNATURE_HEADER) ?? request.headers.get(`x-${QUO_SIGNATURE_HEADER}`);
-  if (!verifyQuoSignatureAny(rawBody, header, secrets)) {
+  const verdict = verifyQuoSignatureAny(rawBody, header, secrets);
+  if (!verdict.ok) {
+    // A well-formed Quo header that fails is a configuration problem (wrong or
+    // stale key, a key for a different webhook) and must not look like the
+    // silent 401s this check replaced. Random unsigned traffic stays quiet.
+    if (verdict.reason !== "missing" && verdict.reason !== "malformed") {
+      Sentry.captureMessage("quo_webhook_signature_rejected", {
+        level: "warning",
+        tags: { source: "quo-webhook" },
+        extra: {
+          reason: verdict.reason,
+          keyCount: splitQuoSecrets(secrets).length,
+          timestamp: parseQuoSignatureHeader(header)?.timestamp,
+        },
+      });
+    }
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -58,7 +78,16 @@ export async function POST(request: Request) {
     }
 
     if (from && body) {
-      await logInboundSMS({ customerPhone: from, body: String(body), phoneLine });
+      const logged = await logInboundSMS({ customerPhone: from, body: String(body), phoneLine });
+      // A lookup or insert failure returns 500 so Quo redelivers; an unknown
+      // number is acknowledged, since a retry would not change it.
+      if ("error" in logged) {
+        Sentry.captureException(new Error(logged.error), {
+          tags: { source: "quo-webhook" },
+          extra: { phoneLine },
+        });
+        return NextResponse.json({ error: "Failed to log message" }, { status: 500 });
+      }
     }
   }
 
