@@ -94,7 +94,7 @@ This is the **current shape of the system** — what exists, where it lives, and
 ## Messaging
 
 ### Quo SMS
-- Fully wired (send/receive/webhook), triple-line routing:
+- Outbound fully wired with triple-line routing; inbound logging depends on the webhook below, which had never matched a real delivery before Session 87:
   - Shop — 617-996-8371 (`QUO_SHOP_PHONE_NUMBER`)
   - Parking — 978-684-9254 (`QUO_PHONE_NUMBER`)
   - APB — 978-644-9391 (`QUO_APB_PHONE_NUMBER`)
@@ -104,6 +104,7 @@ This is the **current shape of the system** — what exists, where it lives, and
 - 7 SMS templates in `src/lib/messaging/templates.ts` (reservation confirmation is lot-aware)
 - Phone line tracked on all messages (`messages.phone_line`)
 - **Blocked on A2P registration** (waiting on number port + paid plan)
+- **Inbound webhook** `POST /api/messaging/quo/webhooks` — verifies Quo's `openphone-signature` header (`hmac;1;<ts>;<base64>`, HMAC-SHA256 over `<ts>.<raw body>`, base64-decoded key) in constant time via `src/lib/quo/signature.ts`; `QUO_WEBHOOK_SECRET` holds one or more comma-separated signing keys (Quo issues one per webhook). Fails closed with a Sentry error when no key is set, reports a rejected well-formed header to Sentry (reason, key count, timestamp), rejects deliveries more than 5 minutes off the clock, and returns 500 when `logInboundSMS` can't write so Quo redelivers. An unknown number is acknowledged with 200. Until the signing key is in Vercel, every delivery is a 401 plus a Sentry warning.
 
 ### Resend Email
 - Branded HTML templates (estimate, receipt, generic)
@@ -241,6 +242,8 @@ Cross-project public form on BroadwayMotorsMA.com `/book` posts to ShopPilot's `
 
 ## Shared modules
 
+- **Saves don't call `router.refresh()`.** A server action that calls `revalidatePath` re-renders the calling page into its own response (Next 16: any revalidate call sets `pathWasRevalidated`; the path is not compared), so the refresh that used to follow was a second full render. `useInlineEditor` (`src/hooks/use-inline-editor.ts`) closes the editor, shows the draft through `useOptimistic` until the action returns, and reopens with the draft on a refusal; `StatusSelect` does the same for the status chip. Refresh is kept on money paths, DVI forms and error branches that re-sync a lock. `(dashboard)/loading.tsx` is the skeleton for routes with no closer one.
+
 - `src/lib/ui/alert-tone.ts` — `Tone` union (`amber|blue|indigo|violet|emerald|red`) + `TONE_CLASSES` Record with `tile`, `bar`, `card`, `count`, `chip` strings. Single source of truth for alert/needs-attention surfaces.
 - `src/lib/actions/_types.ts` — `ActionResult<T>` discriminated union for new server actions. Older actions still use `{ success | error }`.
 - `src/lib/utils/parking.ts` — `hasPendingService(reservation)`. Used by dashboard, inbox, and sidebar count.
@@ -250,6 +253,8 @@ Cross-project public form on BroadwayMotorsMA.com `/book` posts to ShopPilot's `
 
 - **Sentry** — `@sentry/nextjs` wired with tunnel route `/monitoring`, source maps uploaded on every Vercel build, errors tagged with commit SHA via release config. Project: `shop-pilot.sentry.io`.
 - **Sentry MCP** available — install per-machine with `claude mcp add --transport http sentry https://mcp.sentry.dev/mcp` (OAuth on first use, no token to manage)
+- **Security headers** (`next.config.ts` `headers()`, every route): X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, HSTS, Permissions-Policy `camera=(self), microphone=(), geolocation=()` (camera kept for DVI photo capture). No CSP yet: it needs Stripe.js, the Supabase origin and nonces for Next's inline scripts.
+- **Middleware role gate** (`src/middleware.ts`): one `users.role` read per protected request; a read error (Sentry exception) or a missing users row (Sentry warning) is treated as tech, which only routes pages — every server action and API route does its own auth check. Public token routes are matched with their trailing slash (`/inspect/`, `/receipt/`, `/estimates/approve/`). The matcher skips `api/` and the Sentry tunnel.
 
 ## Other utilities
 - Wix import: one-time script (`scripts/import-wix-customers.ts`) with filtering, dedup, dry-run mode

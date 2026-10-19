@@ -1948,3 +1948,95 @@ parts in proportion to their amounts, remainder on the last.
 - **Vitest, tsc and lint were green while `npm run build` was red, twice.**
   Tailwind v4 scans markdown. Now excluded via `@source not`; the planted
   probe build is the proof, not the config line.
+
+---
+
+## October 2026 — Speed and security batch (`b863f32`, fixes `088bc1f`), 5 scoped reviewers
+
+Items 1–6 of the ShopPilot-vs-Tile priority list. Reviewers: silent-failure
+hunter, auth/headers, React transitions, test coverage, comment accuracy. No
+Criticals. Everything below was fixed before push.
+
+## PS-1 — The inline editors never showed the optimistic value (MEDIUM, this diff, fixed)
+
+`setEditing(false)` ran inside the async `startTransition` callback. React 19
+holds a state update made during an async action until the action resolves,
+so the disabled input stayed on screen for the whole save and `displayValue`
+was never visible; the hook's comment and two `/verify-flow` scenarios
+described behaviour that didn't exist. Fix: the urgent `setEditing(false)`
+runs before `startTransition`; only `setOptimistic` lives inside it. The
+reviewer confirmed the hold in `react-dom-client` source rather than from the
+docs.
+
+## PS-2 — A rejected webhook signature left no trace (HIGH, this diff, fixed)
+
+The new HMAC check returned 401 silently, so a wrong or wrong-format key in
+`QUO_WEBHOOK_SECRET` would reproduce the exact "zero inbound rows" state the
+change set out to fix, and `Buffer.from(secret, "base64")` never throws on a
+bad key. Fix: a well-formed `hmac;…` header that fails reports
+`quo_webhook_signature_rejected` to Sentry with the reason, key count and
+timestamp; random unsigned traffic stays quiet.
+
+## PS-3 — sendInspection marked the row sent before resolving the customer (HIGH, ordering pre-existing, fixed)
+
+The status flip to `sent` ran first; the new error branch then told the
+manager to "Send it again", but the Send button only renders on `completed`
+and `reopenInspection` refuses `sent`, so the advice was impossible after a
+refresh. A failed customer lookup also returned success with nothing sent.
+Fix: inspection, customer and vehicle are read first and return errors; the
+update is pinned with `.select("id").maybeSingle()` so a zero-row update is
+an error too. Found by reading the consumer (the button's visibility
+condition), not the diff.
+
+## PS-4 — A failed inbound log returned 200, so Quo never retried (HIGH, pre-existing, fixed)
+
+`logInboundSMS` returns `{ error }` on a lookup or insert failure and the
+route ignored it. Fix: 500 plus Sentry on a failure so Quo redelivers; unknown
+and unparseable numbers became `{ data: { logged: false, reason } }` so they
+are acknowledged rather than retried forever.
+
+## PS-5 — `/inspect` matched `/inspections` (MEDIUM, pre-existing, fixed)
+
+`pathname.startsWith("/inspect")` made the dashboard's inspections page a
+public route: a logged-out visitor got the shell with the manager nav, and a
+tech could reach a page outside `TECH_ALLOWED`. RLS still protected the rows.
+Fix: token routes match with their trailing slash; tests cover
+`/inspections` for both visitor types.
+
+## PS-6 — No replay window on the Quo signature (MEDIUM, this diff, fixed)
+
+The signed timestamp was never compared to the clock. Impact was a duplicate
+inbound row at most, but Quo recommends a 5-minute window, so it was added
+with ten-digit timestamps read as seconds; the route reports `stale` to
+Sentry so a clock problem is visible rather than silent.
+
+## Open after this round
+
+- `getTechJobs`, `getInspectionsForVehicle` and `getInspectionById` still
+  return `[]`/`null` on a read error.
+- `logInboundSMS` is an exported server action using the admin client with
+  no auth check; it should move to a non-action module so the webhook's
+  signature check is the only way in.
+- No vendor-published test vector pins the Quo signature; the tests prove the
+  code matches the documented algorithm. The first real text after deploy is
+  the real check.
+- `StatusSelect`'s keyboard focus after a pick (65% confidence from the
+  reviewer) and the whole `inline-edit` flow are unverified by click-through:
+  the dev server has no test login.
+
+## Process notes
+
+- **Four of the six overclaiming comments were counts or "every" claims**
+  ("every dashboard route", "19 routes" → 11, "requireManager still guards
+  writes" → 94 of 171 actions). The commit message is a comment too.
+- **Two of the three Highs were found by reading what consumes the changed
+  code**, not the diff: the Send button's render condition (PS-3) and Quo's
+  retry behaviour (PS-4).
+- **React 19 transitions are their own state machine.** A plain `setState`
+  inside an async transition is deferred; `useOptimistic` is not. The
+  reviewer verified against `react-dom-client` source. `/sketch-flow` should
+  ask "which of these updates are inside the transition?" for any new
+  optimistic UI.
+- **A dev login for a shop-owned account would unblock `/verify-flow`.** This
+  batch shipped a UI state machine without a click-through because
+  password-only login has no test credential in `.env.local`.

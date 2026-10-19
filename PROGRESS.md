@@ -5527,3 +5527,98 @@ request, untested on the preview; the owner will try Split at the shop on
 production. `/post-deploy-check` passed (alias on the new deployment,
 liveness, no new Sentry issues). Still owed by the owner: the session 85
 real card-reader payment check and the Stripe key rotation.
+
+## Session 87 — 2026-10-19 — Speed and security batch from the Tile comparison
+
+Four Opus reviewers compared ShopPilot with Vin's Aguirre Modern Tile repo
+(read-only clone; the one-pager is a Claude doc shared with the owner). The
+speed gap came from three patterns in ShopPilot, not from Tile's
+architecture: a second full server render after every save, two sequential
+auth calls per request plus about 13 layout queries for badges, and pages
+that paint nothing until their data arrives. Items 1–6 of the resulting
+priority list shipped here; 7–16 (Stripe lookup in Suspense, badge RPC,
+maintenance reminders, estimate-viewed nudges, Stripe reconcile cron,
+Turnstile, JWT role claim, bounded jobs list + RLS wrap, PGlite SQL tests,
+unified inbox) are in the doc.
+
+**Changed.**
+- `router.refresh()` removed from 25 of 40 call sites: the inline-editor
+  hook and 15 components whose server actions already revalidate. Verified in
+  Next 16.1.6 source that any `revalidatePath()` inside an action re-renders
+  the calling page into the action's own response (the path is not compared),
+  so the refresh was a second render. Kept on money paths, DVI forms, the
+  public approval page and error branches that re-sync a lock.
+- `useInlineEditor` shows the draft through `useOptimistic` while the action
+  runs and reopens with the draft on a refusal. The editor-closing `setState`
+  sits outside the transition: inside an async transition React holds it
+  until the action resolves (review catch). `StatusSelect` flips at once and
+  snaps back on a refusal, with try/catch so a rejected action can't reach
+  the error boundary.
+- `(dashboard)/loading.tsx` fallback for the 11 routes with no skeleton of
+  their own or in a parent folder (chat, dvi ×4, team, presets, appointments
+  ×3, inspections).
+- Middleware: one `maybeSingle()` role read serves the login redirect and the
+  tech gate; a read error (Sentry exception) or a missing users row (Sentry
+  warning) is treated as tech. Before, an unreadable role fell through to
+  manager. Public token routes match with their trailing slash: `/inspect`
+  also matched the dashboard's `/inspections` and let it bypass both the
+  login redirect and the tech gate (pre-existing, found in review). The
+  Sentry tunnel left the matcher.
+- Security headers in `next.config.ts`: X-Frame-Options DENY, nosniff,
+  Referrer-Policy, HSTS, Permissions-Policy with the camera kept for DVI
+  photos. No CSP yet (needs Stripe.js, the Supabase origin and nonces).
+- **Quo inbound webhook never worked.** The route compared the
+  `x-openphone-signature` header to the secret as a plain string; Quo sends
+  `openphone-signature: hmac;1;<ts>;<base64>`, HMAC-SHA256 over
+  `<ts>.<raw body>` with the base64-decoded signing key. With the secret set
+  in production, no real delivery could have matched, and `messages` holds
+  zero `direction = 'in'` rows against 1,931 outbound in 120 days. Now
+  `src/lib/quo/signature.ts` verifies in constant time, accepts
+  comma-separated keys (Quo issues one per webhook), rejects deliveries more
+  than five minutes off the clock, and the route fails closed with a Sentry
+  error when no key is configured, reports a rejected well-formed header to
+  Sentry with the reason, and returns 500 when the message can't be logged so
+  Quo redelivers. `logInboundSMS` returns `{ data: { logged: false, reason } }`
+  for unknown or unparseable numbers instead of an error.
+- DVI: twelve discarded Supabase errors now checked. `sendInspection` resolves
+  the inspection, customer and vehicle before marking the row sent (pinned
+  with `.select("id").maybeSingle()`), so a failed lookup leaves it
+  "completed" and the Send button still works; before, the row flipped first
+  and "Send it again" was impossible. The standalone and recent inspection
+  list reads throw to the dashboard error boundary instead of returning `[]`.
+- `/verify-flow` gained an `inline-edit` flow definition.
+
+**Review round.** Five Opus reviewers (silent failures, auth and headers,
+React transitions, test coverage, comments). No Criticals. Highs fixed:
+silent 401 on a rejected signature; `sendInspection` ordering; failed log
+returning 200. Mediums fixed: optimistic state held by the transition, no
+replay window, `/inspect` prefix, missing-row telemetry, `rounded-lg`, and
+four overclaiming comments (including "19 routes" in the first commit
+message, which was 11). Entries PS-1..PS-6 in REVIEW-FINDINGS.md.
+
+**Tests.** 30 new on the first commit, 30 more on the fix commit: middleware
+role gate and matcher (11), Quo signature (16), Quo webhook route (17), DVI
+start/send (12). Suite 64 files / 1,067 tests. `npm run build` passes.
+**Not click-tested:** the dev server has no test login, so the inline-edit
+flow (title edit lands without a reload, status chip snaps back on a
+refusal, customer phone shows as text while saving) is for the owner on the
+staging preview. Security headers were confirmed on the dev server with curl.
+
+**Owner-side before this reaches production.**
+1. In Quo, open the webhook pointing at
+   `/api/messaging/quo/webhooks`, confirm it subscribes to
+   `message.received`, reveal the signing key, and put it in Vercel's
+   `QUO_WEBHOOK_SECRET` (production and preview). Two webhooks → both keys,
+   comma-separated. Until then every delivery gets a 401 and a Sentry warning.
+2. After deploy, text the shop line from a known customer's phone and
+   confirm a `direction = 'in'` row appears in `messages`.
+3. Try the inline-edit flow on the preview.
+
+**Known limits / still open.** `getTechJobs`, `getInspectionsForVehicle` and
+`getInspectionById` still return `[]`/`null` on error; `logInboundSMS` is an
+exported server action using the admin client (should move to a non-action
+module); no vendor test vector pins the Quo signature beyond the documented
+algorithm; the status chip's keyboard focus after a pick is unverified.
+
+**Commits:** `e5aeaed` (CLAUDE.md trim from /doctor), `b863f32`, `088bc1f`.
+Pushed to `staging`; not merged.
