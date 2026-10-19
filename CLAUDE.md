@@ -25,16 +25,6 @@ ShopPilot is a custom shop management system for Broadway Motors, an independent
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js App Router (server components), Tailwind CSS, shadcn/ui |
-| Backend/DB | Supabase (PostgreSQL, Auth, RLS, Storage, Real-time) |
-| AI | Claude API (Anthropic) with function calling — Haiku 4.5 |
-| Payments | Stripe (Invoicing, Terminal WisePOS E, Card on File) |
-| SMS | Quo (formerly OpenPhone) — triple-line routing |
-| Email | Resend |
-| Hosting | Vercel — auto-deploy from `master` |
-
 For per-integration detail (env vars, routes, edge cases), see [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ## Status
@@ -249,12 +239,6 @@ single test file, restore, and verify the restore by hash.
 ## Useful Commands
 
 ```bash
-# Development
-npm run dev              # Start dev server
-npm run build            # Production build
-npm run lint             # Run ESLint
-npm test                 # Run vitest
-
 # Supabase
 npx supabase db push     # Push migrations to remote
 npx supabase gen types typescript --project-id <id> > src/types/supabase.ts
