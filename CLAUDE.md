@@ -161,6 +161,12 @@ So, for any query whose result is summed, counted, or averaged into a figure a h
 - **Never `const { data } = await supabase...`** on these paths. `receivables.ts` discarded `error` and rendered **$0 outstanding** — indistinguishable from "everyone has paid", on the screen built for chasing non-payers.
 - **A figure that can't be trusted must fail, not render.** Prefer an error boundary over a plausible wrong number. This applies double to CSV exports: a `$0.00` CSV opens in Excel, looks authoritative, and gets emailed to an accountant.
 - **`{ count: "exact" }` counts top-level rows only.** An embedded resource (`job_line_items(...)`) that hits the cap returns HTTP 200 with nothing to detect. Not currently reachable at this shop's scale, but don't claim coverage you don't have.
+- **A list a person scrolls is capped too, and looks complete.** The jobs page
+  showed the newest 1,000 of 1,564 jobs for months with no error; the oldest
+  564 were simply absent. Any list read without a limit is a figure in
+  disguise. Page it with a keyset cursor (`takePage` in
+  `src/lib/supabase/take-page.ts`, `useLoadMore`) and show a server count,
+  never `rows.length`.
 
 Why this needs a rule rather than reviewer judgment: **every existing gate was structurally blind to it.** Unit tests use small fixtures. `/scoped-review` had no diff to review — the code was months old. Typecheck passed; truncation is a runtime property of data volume. `/verify-flow` renders a number and can't tell you it's the wrong one.
 
