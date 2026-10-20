@@ -5620,5 +5620,20 @@ exported server action using the admin client (should move to a non-action
 module); no vendor test vector pins the Quo signature beyond the documented
 algorithm; the status chip's keyboard focus after a pick is unverified.
 
-**Commits:** `e5aeaed` (CLAUDE.md trim from /doctor), `b863f32`, `088bc1f`.
-Pushed to `staging`; not merged.
+**Commits:** `e5aeaed` (CLAUDE.md trim from /doctor), `b863f32`, `088bc1f`,
+`52f7642` (docs).
+
+**Deployed 2026-10-19.** `master` = `staging` = `52f7642` at the owner's
+request, untested on the preview; the owner will look at it on production.
+`/post-deploy-check` passed: production `shop-pilot-qkikn1anz` Ready,
+liveness on every public surface, the five new security headers present on
+production (proof the new code is live), `/inspections` now redirects to
+`/login` unauthenticated, empty POSTs 400, the Quo webhook returns 401 to an
+unsigned POST (so `QUO_WEBHOOK_SECRET` is set in production), and no new
+Sentry issues. The owner said they knew inbound SMS was never logged and
+don't need inbound texts in ShopPilot, so the Quo owner-side steps above are
+moot: nothing to configure. Open offer: if a Quo webhook still points at the
+endpoint and its key isn't the one in Vercel, deliveries will 401 and raise a
+Sentry warning each; either delete the webhook in Quo or ask for the route to
+accept-and-drop. Still owed by the owner: the session 85 real card-reader
+payment check and the Stripe key rotation.
