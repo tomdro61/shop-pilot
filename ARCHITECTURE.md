@@ -20,6 +20,7 @@ This is the **current shape of the system** — what exists, where it lives, and
 
 - Core UI and server actions built: auth, customers, vehicles, jobs, line items, dashboard, reports, team management
 - Customer list: server-side pagination (50 per page) with URL params, handles 3,000+ imported contacts
+- Jobs and invoices lists: keyset paging with Load more (`src/lib/jobs/paging.ts`, `src/lib/invoices/list-paging.ts`, `useLoadMore`). Board columns are separate counted queries (Complete 15 per page, open columns 200), list 25, calendar per visible range, invoices 25; counts and the invoice total come from the server, never from the loaded rows. Category filtering uses a filter-only embed inside the counted query.
 - **RO numbers** — auto-assigned sequential repair order numbers (RO-0001 format) via PostgreSQL `ro_number_seq`
 - **Printable Repair Order** at `/jobs/[id]/print` — shop header, customer/vehicle info, itemized line items, tax, totals
 - **Printable Estimate** at `/estimates/[id]/print` — same layout, available in every estimate status including draft (printing previously required approving and converting to a job). Both routes share `components/dashboard/print-button.tsx`

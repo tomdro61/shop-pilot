@@ -5637,3 +5637,62 @@ endpoint and its key isn't the one in Vercel, deliveries will 401 and raise a
 Sentry warning each; either delete the webhook in Quo or ask for the route to
 accept-and-drop. Still owed by the owner: the session 85 real card-reader
 payment check and the Stripe key rotation.
+
+## Session 88 — 2026-10-20 — Jobs and invoices lists page instead of loading everything
+
+Owner asked, after seeing the session 87 batch on production, whether the
+jobs page would get faster if it stopped loading every completed job. It
+did more than that: measured against the live database, the default jobs
+page fetched 1,000 rows (1,062 KB, 877 ms from this machine) and was
+already silently capped. The shop has 1,564 non-cancelled jobs, so the
+oldest 564 never appeared and the toolbar count read 1,000.
+
+**Changed.**
+- `getJobs(filters, { limit })` returns one counted page; `loadMoreJobs`
+  and `loadCalendarJobs` are new server actions with zod-validated input
+  (`src/lib/jobs/paging.ts`). Keyset paging on (date_received desc, id
+  desc); the cursor predicate is one `.or()` that stacks with the search
+  `.or()` (verified: PostgREST ANDs them).
+- Board: one query per column (Complete pages by 15, open columns up to
+  200), count badge from the exact count. List: 25 with Load more. Calendar:
+  only the visible grid, fetched per range on navigation, with an inline
+  Retry when a range fails. AI `search_jobs` returns 25 plus `total_matches`.
+- Invoices: 25 per page on (created_at desc, id desc); header count from
+  the page query, total from a separate amount-column read through
+  `fetchAllRows` (SQL aggregates are disabled on this project, PGRST123).
+  Name search still reads the whole filtered set, now through
+  `fetchAllRows` so it can't truncate.
+- Category filter moved inside the counted query through a filter-only
+  embed (`category_match:job_line_items(category)` + `not.is.null`),
+  replacing an uncounted id pre-read that the 1,000-row cap could shorten.
+  Verified against the live DB: 271 both ways, totals embed unfiltered.
+- `useLoadMore` hook and `LoadMoreButton`; loaded pages reset whenever a
+  revalidating action re-renders the first page, and an in-flight load
+  against the old page is discarded (generation counter).
+- `normalizeJobFilters` on the jobs page so the page and Load more agree;
+  a malformed custom date no longer throws in `resolveDateRange`.
+
+**Review round.** Five Opus reviewers (silent failures, server actions and
+injection, React client state, test coverage, comment accuracy), then one
+verifier on the fixes. No Criticals. Highs: stale loaded pages after a
+status change (card in two columns, chip snapping back, row pushed off page
+one vanishing); a failed calendar range rendering as an empty month. Both
+fixed; see REVIEW-FINDINGS LP-1..LP-9.
+
+**Tests.** 1,091 → 1,096 across 67 files: `jobs-paging.test.ts`,
+`invoices-list.test.ts`, `handlers-search-jobs.test.ts`. Cursor clauses
+asserted adjacent to the limit; totals read's filters and sort pinned.
+
+**Not click-tested:** no dev login. The `list-paging` flow in
+`.claude/skills/verify-flow/SKILL.md` is the click-through; the live
+cursor walk (409 invoices, 150 jobs, search + cursor) reproduced a single
+sorted read exactly, which is the proof of the paging itself.
+
+**Known limits / still open.** List-view sorting sorts only the loaded
+rows. The invoices header count and total come from two reads and can
+disagree by one if an invoice lands between them. The jobs toolbar's
+`jobCount` prop is still never rendered. The Cancelled status filter on
+the board shows four empty columns (pre-existing). `jobs-list-view` still
+formats dates without a zone (pre-existing client component).
+
+**Commits:** `e322af5`, `9068066`. Pushed to `staging`; not merged.

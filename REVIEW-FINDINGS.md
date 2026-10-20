@@ -2040,3 +2040,102 @@ Sentry so a clock problem is visible rather than silent.
 - **A dev login for a shop-owned account would unblock `/verify-flow`.** This
   batch shipped a UI state machine without a click-through because
   password-only login has no test credential in `.env.local`.
+
+---
+
+## October 2026 — List paging (`e322af5`, fixes `9068066`), 5 scoped reviewers + 1 verifier
+
+Jobs and invoices lists page by keyset cursor instead of loading every
+row. Reviewers: silent-failure hunter, server actions and injection, React
+client state, test coverage, comment accuracy; then a verifier on the fix
+diff. No Criticals. Everything below was fixed before push unless marked.
+
+## LP-1 — Loaded pages went stale after a revalidating action (HIGH, this diff, fixed)
+
+Only the first page came back fresh after `updateJobStatus` re-rendered
+the page; extra pages sat in state. A card moved to another column showed
+in both, its StatusSelect snapped back to the stale prop after a success
+toast, and a row pushed off page one by a newer job sat in neither set and
+vanished. Fix: compare the server prop against the last-seen reference
+during render and reset loaded pages and cursor when it changes (React's
+documented adjust-state-on-prop-change pattern); a generation counter
+discards a load that was already in flight against the old page.
+
+## LP-2 — A failed calendar range looked like an empty month (HIGH, this diff, fixed)
+
+The catch toasted "Try again" and stored nothing, so the grid drew empty
+and the effect never re-ran. Fix: `{ status: "error" }` per range, an
+alert with Retry that deletes the entry so the effect refetches, the grid
+dimmed, Sentry on the failure.
+
+## LP-3 — Category filter pre-read ids in one uncounted request (HIGH, pre-existing, fixed)
+
+`job_line_items.select("job_id").eq("category", …)` had no count and no
+paging; past 1,000 line items the id list would silently shorten, and the
+new column badges presented the result as an exact total. Fix: a
+filter-only embed on the jobs query (`category_match:job_line_items(category)`
+with `.eq("category_match.category", …).not("category_match", "is", null)`),
+verified against the live DB and stripped from rows before they leave
+the server.
+
+## LP-4 — Page filters bypassed the schema Load more enforces (MEDIUM, this diff, fixed)
+
+Raw URL params reached `getJobs` while `loadMoreJobs` rejected the same
+values, so a 201-character search rendered a list whose Load more could
+never succeed, and the calendar view threw. Fix: `normalizeJobFilters`
+(per-field safeParse) on the page, `maxLength` on the search input, and
+custom date bounds validated before `resolveDateRange` (which threw a
+RangeError on `from=x`, pre-existing).
+
+## LP-5 — Client catch blocks dropped the error (MEDIUM, this diff, fixed)
+
+Hook, board and calendar now `Sentry.captureException` with a `source`
+tag; the toast suggests a refresh for deploy-skew failures.
+
+## LP-6 — Load more on one column ignored clicks while another loaded (MEDIUM, this diff, fixed)
+
+`LoadMoreButton` gained `disabled`; the board disables every column's
+button while any column loads.
+
+## LP-7 — Invoice dates could mismatch hydration (MEDIUM, this diff, fixed)
+
+Moving the invoice table into a client component made `formatDate` run in
+the browser's zone after rendering in UTC on the server. `formatDateInET`
+pins both.
+
+## LP-8 — Filter-only embed rode along in every row (LOW, this diff, fixed)
+
+The verifier's note on LP-3: the alias is selected unconditionally and
+would reach the browser and AI replies. Stripped in `stripCategoryMatch`.
+
+## LP-9 — Comment and skill-text claims (LOW, this diff, fixed)
+
+"never duplicates or skips a row" held only while page one didn't
+re-render; "564 of 1,549 completed" mixed the non-cancelled total with the
+Complete count; "count and total from their own reads" was half true; the
+FAIL signal named a cause that would error rather than mis-render.
+Rewritten to the local facts.
+
+## Open after this round
+
+- List-view sorting covers only the loaded rows (by design; noted in the
+  verify-flow flow).
+- Invoice header count and total come from two reads and can disagree by
+  one if an invoice lands between them.
+- `jobs-list-view` still formats dates without a zone; the toolbar's
+  `jobCount` prop is never rendered; the Cancelled status filter on the
+  board shows four empty columns. All pre-existing.
+- No click-through: the dev server has no test login.
+
+## Process notes
+
+- **The React reviewer, the test reviewer and the comment reviewer each
+  found the same stale-page gap from different directions** (a chip
+  snapping back, a missing unit test, a "never" claim). The "never" in a
+  comment was the cheapest signal: it named the exact row the code lost.
+- **A verifier pass on the fixes found a race the fix introduced** (a load
+  queued against the old page landing after the reset). Fixes to state
+  machines need their own review, not just the original diff's.
+- **PostgREST contracts were probed before coding** (stacked `.or()`,
+  head counts, aggregates disabled, keyset walk vs. sorted read, embed
+  filtering). Three of the five would have been wrong guesses.
