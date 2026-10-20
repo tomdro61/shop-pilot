@@ -5695,4 +5695,14 @@ disagree by one if an invoice lands between them. The jobs toolbar's
 the board shows four empty columns (pre-existing). `jobs-list-view` still
 formats dates without a zone (pre-existing client component).
 
-**Commits:** `e322af5`, `9068066`. Pushed to `staging`; not merged.
+**Commits:** `e322af5`, `9068066`, `5f07ea5` (docs).
+
+**Deployed 2026-10-20.** `master` = `staging` = `5f07ea5` at the owner's
+request after they looked at the preview; `/post-deploy-check` passed
+(production `shop-pilot-2x60choaf` Ready in 39s, liveness on every public
+surface, empty POSTs 400, no new Sentry issues in the hour after). The
+jobs and invoices pages are behind login and no public page changed, so
+the new code's presence rests on the deployment being the one Vercel built
+from the push and aliased to production, not on a public string. Still
+owed by the owner: the session 85 real card-reader payment check and the
+Stripe key rotation.
