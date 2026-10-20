@@ -42,7 +42,7 @@ function mockSearch(customers: { id: string }[] = [], vehicles: { id: string }[]
   const mock = createSupabaseMock([
     { data: customers, error: null },
     { data: vehicles, error: null },
-    { data: [], error: null },
+    { data: [], error: null, count: 0 },
   ]);
   vi.mocked(createClient).mockResolvedValue(
     mock.client as unknown as Awaited<ReturnType<typeof createClient>>,

@@ -15,6 +15,15 @@ import { sendCustomerEmail } from "@/lib/actions/email";
 import { invoiceReminderSMS, invoiceSentSMS } from "@/lib/messaging/templates";
 import { invoiceReadyEmail } from "@/lib/resend/templates";
 import { isFirstDelivery } from "@/lib/invoices/delivery";
+import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
+import { takePage } from "@/lib/supabase/take-page";
+import {
+  INVOICES_PAGE_SIZE,
+  invoiceCursorFilter,
+  loadMoreInvoicesInputSchema,
+  type InvoiceCursor,
+  type InvoiceListFilters,
+} from "@/lib/invoices/list-paging";
 
 export async function getOrCreateStripeCustomer(customerId: string) {
   const auth = await requireManager();
@@ -923,53 +932,129 @@ export async function voidInvoiceForJob(
   return { ok: true };
 }
 
-export async function getInvoices(status?: string, search?: string, source?: string) {
-  const supabase = await createClient();
+const INVOICE_LIST_SELECT =
+  "id, job_id, parking_reservation_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, created_at, jobs(id, title, customers(id, first_name, last_name), vehicles(year, make, model)), parking_reservations(id, customer_id, first_name, last_name, lot)";
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+function invoiceListQuery(supabase: SupabaseServerClient, filters: InvoiceListFilters) {
   let query = supabase
     .from("invoices")
-    .select(
-      "id, job_id, parking_reservation_id, stripe_invoice_id, stripe_hosted_invoice_url, status, amount, paid_at, created_at, jobs(id, title, customers(id, first_name, last_name), vehicles(year, make, model)), parking_reservations(id, customer_id, first_name, last_name, lot)"
-    )
-    .order("created_at", { ascending: false });
+    .select(INVOICE_LIST_SELECT, { count: "exact" })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
 
-  if (status && status !== "all") {
-    query = query.eq("status", status as "draft" | "sent" | "paid");
+  if (filters.status) {
+    query = query.eq("status", filters.status);
   }
-
-  const normalizedSource = source === "parking" || source === "jobs" ? source : null;
-  if (normalizedSource === "parking") {
+  if (filters.source === "parking") {
     query = query.not("parking_reservation_id", "is", null);
-  } else if (normalizedSource === "jobs") {
+  } else if (filters.source === "jobs") {
     query = query.not("job_id", "is", null);
   }
+  return query;
+}
 
-  const { data, error } = await query;
+export type InvoiceListRow = NonNullable<
+  Awaited<ReturnType<typeof invoiceListQuery>>["data"]
+>[number];
 
-  if (error) throw new Error(error.message);
+function invoiceCursorOf(invoice: InvoiceListRow): InvoiceCursor {
+  return { created_at: invoice.created_at, id: invoice.id };
+}
 
-  let invoices = data ?? [];
+function matchesInvoiceSearch(inv: InvoiceListRow, term: string): boolean {
+  const jobCustomer = inv.jobs?.customers;
+  if (jobCustomer) {
+    const fullName = `${jobCustomer.first_name} ${jobCustomer.last_name}`.toLowerCase();
+    if (fullName.includes(term)) return true;
+  }
+  const reservation = inv.parking_reservations;
+  if (reservation) {
+    const fullName = `${reservation.first_name} ${reservation.last_name}`.toLowerCase();
+    if (fullName.includes(term)) return true;
+    if (reservation.lot?.toLowerCase().includes(term)) return true;
+  }
+  return false;
+}
 
-  if (search) {
-    const term = search.toLowerCase();
-    invoices = invoices.filter((inv) => {
-      const job = inv.jobs as { customers: { first_name: string; last_name: string } | null } | null;
-      const jobCustomer = job?.customers;
-      if (jobCustomer) {
-        const fullName = `${jobCustomer.first_name} ${jobCustomer.last_name}`.toLowerCase();
-        if (fullName.includes(term)) return true;
-      }
-      const reservation = inv.parking_reservations as { first_name: string; last_name: string; lot: string } | null;
-      if (reservation) {
-        const fullName = `${reservation.first_name} ${reservation.last_name}`.toLowerCase();
-        if (fullName.includes(term)) return true;
-        if (reservation.lot?.toLowerCase().includes(term)) return true;
-      }
-      return false;
-    });
+// Aggregates are disabled on this project (PGRST123), so the header total
+// pages the amount column instead of fetching the joined rows a second time.
+async function sumInvoiceAmounts(
+  supabase: SupabaseServerClient,
+  filters: InvoiceListFilters
+): Promise<number> {
+  const rows = await fetchAllRows<{ amount: number | null }>((from, to) => {
+    let query = supabase
+      .from("invoices")
+      .select("amount", { count: "exact" })
+      .order("id", { ascending: true });
+    if (filters.status) query = query.eq("status", filters.status);
+    if (filters.source === "parking") {
+      query = query.not("parking_reservation_id", "is", null);
+    } else if (filters.source === "jobs") {
+      query = query.not("job_id", "is", null);
+    }
+    return query.range(from, to);
+  }, "invoice totals");
+  return rows.reduce((sum, row) => sum + (row.amount ?? 0), 0);
+}
+
+// Name search matches across two different joins (job customer vs. parking
+// reservation), which PostgREST can't express in one filter, so a search
+// reads the whole filtered set and matches in memory. Paging applies only to
+// the unsearched list, which is the one that grows.
+export async function getInvoices(
+  filters: InvoiceListFilters = {},
+  page: { limit: number } = { limit: INVOICES_PAGE_SIZE }
+): Promise<{
+  invoices: InvoiceListRow[];
+  nextCursor: InvoiceCursor | null;
+  totalCount: number;
+  totalAmount: number;
+}> {
+  const supabase = await createClient();
+  const term = filters.search?.trim().toLowerCase();
+
+  if (term) {
+    const all = await fetchAllRows<InvoiceListRow>(
+      (from, to) => invoiceListQuery(supabase, filters).range(from, to),
+      "invoices"
+    );
+    const invoices = all.filter((inv) => matchesInvoiceSearch(inv, term));
+    return {
+      invoices,
+      nextCursor: null,
+      totalCount: invoices.length,
+      totalAmount: invoices.reduce((sum, inv) => sum + (inv.amount ?? 0), 0),
+    };
   }
 
-  return invoices;
+  const { data, error, count } = await invoiceListQuery(supabase, filters).limit(page.limit + 1);
+  if (error) throw new Error(`Failed to load invoices: ${error.message}`);
+  if (typeof count !== "number") {
+    throw new Error("Failed to load invoices: expected an exact count");
+  }
+  const { rows, nextCursor } = takePage(data ?? [], page.limit, invoiceCursorOf);
+  const totalAmount = await sumInvoiceAmounts(supabase, filters);
+  return { invoices: rows, nextCursor, totalCount: count, totalAmount };
+}
+
+export async function loadMoreInvoices(input: {
+  filters: InvoiceListFilters;
+  cursor: InvoiceCursor;
+}): Promise<{ invoices: InvoiceListRow[]; nextCursor: InvoiceCursor | null }> {
+  const parsed = loadMoreInvoicesInputSchema.safeParse(input);
+  if (!parsed.success) throw new Error("Invalid load-more request");
+  const { filters, cursor } = parsed.data;
+
+  const supabase = await createClient();
+  const { data, error } = await invoiceListQuery(supabase, filters)
+    .or(invoiceCursorFilter(cursor))
+    .limit(INVOICES_PAGE_SIZE + 1);
+  if (error) throw new Error(`Failed to load invoices: ${error.message}`);
+  const { rows, nextCursor } = takePage(data ?? [], INVOICES_PAGE_SIZE, invoiceCursorOf);
+  return { invoices: rows, nextCursor };
 }
 
 // `.maybeSingle()` errors on two rows, and swallowing that here used to hide

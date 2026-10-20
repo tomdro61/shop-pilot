@@ -26,6 +26,7 @@ import {
   recordPayment,
   markJobUnpaid,
 } from "@/lib/actions/jobs";
+import { AI_SEARCH_LIMIT } from "@/lib/jobs/paging";
 import {
   createLineItem,
   updateLineItem,
@@ -188,10 +189,11 @@ export async function executeToolCall(
         const filters: { search?: string; status?: string } = {};
         if (toolInput.search) filters.search = str(toolInput.search);
         if (toolInput.status) filters.status = str(toolInput.status);
-        const results = await getJobs(
-          filters as Parameters<typeof getJobs>[0]
+        const { jobs, totalCount } = await getJobs(
+          filters as Parameters<typeof getJobs>[0],
+          { limit: AI_SEARCH_LIMIT }
         );
-        return JSON.stringify(results);
+        return JSON.stringify({ jobs, total_matches: totalCount, showing: jobs.length });
       }
       case "get_job": {
         const result = await getJob(str(toolInput.id));

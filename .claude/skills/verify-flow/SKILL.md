@@ -69,6 +69,7 @@ If still ambiguous, ask the user.
 | `resend-invoice` | `src/lib/actions/invoices.ts` (`resendInvoiceForJob`), `src/components/dashboard/resend-invoice-button.tsx`, `src/components/dashboard/invoice-section.tsx` |
 | `mark-unpaid` | `src/lib/actions/jobs.ts` (`markJobUnpaid`, `recordPayment`, `updateJob`), `src/components/dashboard/mark-job-unpaid-button.tsx`, `src/components/dashboard/job-payment-footer.tsx`, `src/lib/ai/handlers.ts` (`mark_job_unpaid` case) |
 | `inline-edit` | `src/hooks/use-inline-editor.ts`, `src/components/dashboard/{job-title,job-date,job-mileage,job-scheduled-time,notes,customer-text-field}-editor.tsx`, `src/components/dashboard/status-select.tsx`, any component that drops a `router.refresh()` after a server action |
+| `list-paging` | `src/lib/jobs/paging.ts`, `src/lib/invoices/list-paging.ts`, `src/hooks/use-load-more.ts`, `src/components/dashboard/{jobs-board,jobs-list,jobs-calendar}-view.tsx`, `src/components/dashboard/invoices-list.tsx`, `getJobs`/`loadMoreJobs`/`loadCalendarJobs` in `src/lib/actions/jobs.ts`, `getInvoices`/`loadMoreInvoices` in `src/lib/actions/invoices.ts` |
 
 ---
 
@@ -416,6 +417,65 @@ afterward.
 until a manual reload. That means the action stopped revalidating the page
 the editor lives on — check its `revalidatePath` set before putting a
 `router.refresh()` back.
+
+---
+
+### Flow: `list-paging`
+
+Shipped October 2026 (session 88). The jobs page and the invoices page no
+longer load every row. Jobs: each board column is its own counted query
+(Complete shows 15, open columns up to 200), the list shows 25, the calendar
+loads only the visible grid. Invoices: 25 per page, header count and total
+from their own reads. Paging is keyset (date + id), so a new job arriving
+between clicks never duplicates or skips a row. Before this the page silently
+stopped at Supabase's 1,000-row cap: 564 of 1,549 completed jobs were
+invisible and the count said 1,000.
+
+**Test data prereq:** none for reading. For scenario 4 you need to create a
+job (any shop-owned "Test" customer) and delete it afterward.
+
+**Scenario 1 — Board loads small and the counts are the real totals**
+- Open `/jobs`. Network panel: the page's RSC payload should be well under
+  200 KB (it was ~1 MB).
+- Assert: the Complete column shows 15 cards and its badge shows the full
+  count (1,549 on 2026-10-19, growing), not 15 and not 1,000. The open
+  columns show every open job with no Load more button.
+- Click Load more under Complete. Assert: 15 more cards append below, no
+  card repeats, the button shows "30 of N jobs", and the page did not scroll
+  to top or reload. Click it twice fast: only one request fires.
+
+**Scenario 2 — Filters restart paging**
+- With extra Complete pages loaded, type a search term. Assert: the columns
+  reset to their first page for that search and the badge counts change.
+  Clear the search: back to the unfiltered first page.
+- Pick Status = Complete. Assert: only the Complete column has cards, still
+  paged, and the other three say Empty.
+
+**Scenario 3 — List and calendar**
+- Switch to List. Assert: 25 rows, a Load more button with "25 of N jobs",
+  and sorting a column sorts only the loaded rows (expected; note it).
+- Switch to Calendar. Go back two months. Assert: "Loading…" shows briefly
+  next to the month label, then that month's jobs appear. Go forward again:
+  no second fetch (already loaded).
+
+**Scenario 4 — A job added between pages is not skipped or doubled**
+- Load one extra Complete page. In another tab create a job and mark it
+  Complete with today's date. Back on the board, click Load more again.
+- Assert: the new page continues from where the previous one ended (no row
+  repeated, none missing). Navigate away and back: the new job is at the top
+  of the first page.
+
+**Scenario 5 — Invoices**
+- Open `/invoices`. Assert: 25 rows, header shows the real count and the
+  total of every invoice in the filter (409 · the full sum on 2026-10-19),
+  not the sum of the 25 shown. Load more appends. Pick Status = Paid: list
+  and header both change. Type a customer name: the matching invoices show,
+  no Load more button (search reads the whole set).
+
+❌ FAIL signal: a column badge equal to the number of cards shown while a
+Load more button is visible (the count query was dropped), or a repeated
+card after Load more (the `id` tiebreaker was dropped from the sort or the
+cursor predicate).
 
 ---
 

@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
+import { loadCalendarJobs } from "@/lib/actions/jobs";
+import type { CalendarRange, JobFilters } from "@/lib/jobs/paging";
 import {
   startOfMonth,
   endOfMonth,
@@ -47,7 +50,16 @@ type JobRow = {
 };
 
 interface JobsCalendarViewProps {
-  jobs: JobRow[];
+  initialJobs: JobRow[];
+  initialRange: CalendarRange;
+  truncated: boolean;
+  filters: JobFilters;
+}
+
+type LoadedRange = { jobs: JobRow[]; truncated: boolean };
+
+function rangeKeyOf(range: CalendarRange): string {
+  return `${range.from}_${range.to}`;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -55,9 +67,24 @@ const MONTH_MAX_VISIBLE = 2;
 
 type CalendarMode = "month" | "week";
 
-export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
+// Only the visible grid's jobs are loaded; moving to another month or week
+// fetches that range once and keeps it. Mount with a key derived from the
+// filters so a filter change starts over.
+export function JobsCalendarView({
+  initialJobs,
+  initialRange,
+  truncated,
+  filters,
+}: JobsCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [mode, setMode] = useState<CalendarMode>("month");
+  const [ranges, setRanges] = useState<Record<string, LoadedRange>>(() => ({
+    [rangeKeyOf(initialRange)]: { jobs: initialJobs, truncated },
+  }));
+  const [pending, startTransition] = useTransition();
+  const inFlight = useRef(new Set<string>());
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
 
   // Compute days based on mode
   let days: Date[];
@@ -92,6 +119,32 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
     setCurrentDate((d) => (mode === "week" ? addWeeks(d, 1) : addMonths(d, 1)));
   }
 
+  const from = format(days[0], "yyyy-MM-dd");
+  const to = format(days[days.length - 1], "yyyy-MM-dd");
+  const rangeKey = `${from}_${to}`;
+  const loaded = ranges[rangeKey];
+
+  useEffect(() => {
+    if (ranges[rangeKey] || inFlight.current.has(rangeKey)) return;
+    inFlight.current.add(rangeKey);
+    startTransition(async () => {
+      try {
+        const result = await loadCalendarJobs({
+          filters: filtersRef.current,
+          range: { from, to },
+        });
+        setRanges((prev) => (prev[rangeKey] ? prev : { ...prev, [rangeKey]: result }));
+      } catch {
+        toast.error("Couldn't load that range. Try again.");
+      } finally {
+        inFlight.current.delete(rangeKey);
+      }
+    });
+  }, [ranges, rangeKey, from, to]);
+
+  const jobs = loaded?.jobs ?? [];
+  const isFetching = pending && !loaded;
+
   // Group jobs by date string (YYYY-MM-DD)
   const jobsByDate = new Map<string, JobRow[]>();
   for (const job of jobs) {
@@ -121,6 +174,14 @@ export function JobsCalendarView({ jobs }: JobsCalendarViewProps) {
           <h3 className="text-sm font-semibold text-stone-900 dark:text-stone-50">
             {headerLabel}
           </h3>
+          {isFetching && (
+            <span className="text-xs text-stone-400 dark:text-stone-500">Loading…</span>
+          )}
+          {loaded?.truncated && (
+            <span className="text-xs text-amber-600 dark:text-amber-400">
+              Showing the first {jobs.length.toLocaleString()} jobs in this range
+            </span>
+          )}
           <div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1 text-xs">
             <button
               aria-pressed={mode === "month"}

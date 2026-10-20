@@ -22,6 +22,10 @@ import { StatusSelect } from "./status-select";
 import { CustomerLink } from "@/components/ui/customer-link";
 import { COLUMN_HEADER } from "@/components/ui/section-card";
 import type { JobStatus } from "@/types";
+import { useLoadMore } from "@/hooks/use-load-more";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
+import { loadMoreJobs } from "@/lib/actions/jobs";
+import type { JobCursor, JobFilters } from "@/lib/jobs/paging";
 
 const STATUS_BORDER: Record<JobStatus, string> = {
   not_started: "border-l-stone-300 dark:border-l-stone-700",
@@ -47,7 +51,11 @@ type JobRow = {
 };
 
 interface JobsListViewProps {
-  jobs: JobRow[];
+  initialJobs: JobRow[];
+  nextCursor: JobCursor | null;
+  totalCount: number;
+  filters: JobFilters;
+  pageSize: number;
 }
 
 function SortHeader({
@@ -75,9 +83,25 @@ function totalForJob(job: JobRow): number {
   return job.job_line_items?.reduce((s, li) => s + (li.total || 0), 0) ?? 0;
 }
 
-export function JobsListView({ jobs }: JobsListViewProps) {
+export function JobsListView({
+  initialJobs,
+  nextCursor,
+  totalCount,
+  filters,
+  pageSize,
+}: JobsListViewProps) {
   const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
+  const { rows, hasMore, loading, loadMore } = useLoadMore<JobRow, JobCursor>(
+    initialJobs,
+    nextCursor,
+    (cursor) =>
+      loadMoreJobs({ filters, cursor, limit: pageSize }).then((result) => ({
+        rows: result.jobs,
+        nextCursor: result.nextCursor,
+      })),
+    "jobs"
+  );
 
   const columns = useMemo<ColumnDef<JobRow>[]>(
     () => [
@@ -175,7 +199,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
   );
 
   const table = useReactTable({
-    data: jobs,
+    data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -183,7 +207,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
     state: { sorting },
   });
 
-  if (jobs.length === 0) {
+  if (rows.length === 0) {
     return (
       <div className="bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card py-12 text-center">
         <p className="text-sm font-medium text-stone-500 dark:text-stone-400">No jobs found</p>
@@ -242,7 +266,7 @@ export function JobsListView({ jobs }: JobsListViewProps) {
 
       {/* Mobile: dense stacked rows */}
       <div className="lg:hidden bg-card border border-stone-200 dark:border-stone-800 rounded-md shadow-card overflow-hidden divide-y divide-stone-200 dark:divide-stone-800">
-        {jobs.map((job) => {
+        {rows.map((job) => {
           const s = job.status as JobStatus;
           const c = job.customers;
           const t = totalForJob(job);
@@ -299,6 +323,15 @@ export function JobsListView({ jobs }: JobsListViewProps) {
           );
         })}
       </div>
+
+      <LoadMoreButton
+        hasMore={hasMore}
+        loading={loading}
+        onClick={loadMore}
+        shown={rows.length}
+        total={totalCount}
+        noun="jobs"
+      />
     </>
   );
 }

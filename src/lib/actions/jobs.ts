@@ -16,21 +16,50 @@ import type { ActionResult } from "./_types";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
 import type { JobStatus, PaymentMethod, PaymentStatus } from "@/types";
+import { takePage } from "@/lib/supabase/take-page";
+import {
+  CALENDAR_LIMIT,
+  LIST_PAGE_SIZE,
+  calendarLoadInputSchema,
+  clampFiltersToRange,
+  jobCursorFilter,
+  loadMoreJobsInputSchema,
+  type JobCursor,
+  type JobFilters,
+} from "@/lib/jobs/paging";
 
-export async function getJobs(filters?: {
-  search?: string;
-  status?: JobStatus;
-  category?: string;
-  paymentStatus?: PaymentStatus;
-  dateFrom?: string;
-  dateTo?: string;
-}) {
-  const supabase = await createClient();
+const JOB_LIST_SELECT =
+  "*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model, license_plate), users(id, name), job_line_items(total), dvi_inspections(status)";
 
-  let query = supabase
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+function jobListSelect(supabase: SupabaseServerClient, withCount: boolean) {
+  return supabase
     .from("jobs")
-    .select("*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model, license_plate), users(id, name), job_line_items(total), dvi_inspections(status)")
-    .order("date_received", { ascending: false });
+    .select(JOB_LIST_SELECT, { count: withCount ? "exact" : undefined })
+    .order("date_received", { ascending: false })
+    .order("id", { ascending: false });
+}
+
+export type JobListRow = NonNullable<
+  Awaited<ReturnType<typeof jobListSelect>>["data"]
+>[number];
+
+type JobsPage = { jobs: JobListRow[]; nextCursor: JobCursor | null };
+
+function jobCursorOf(job: JobListRow): JobCursor {
+  return { date_received: job.date_received, id: job.id };
+}
+
+// Resolves to null when a category filter matches no line items, so there is
+// nothing to query. The builder is wrapped in an object because it is a
+// thenable: returning it bare from an async function would run the query.
+async function buildJobsQuery(
+  supabase: SupabaseServerClient,
+  filters: JobFilters,
+  withCount: boolean
+) {
+  let query = jobListSelect(supabase, withCount);
 
   if (filters?.dateFrom) {
     query = query.gte("date_received", filters.dateFrom);
@@ -64,7 +93,7 @@ export async function getJobs(filters?: {
       throw new Error(`Failed to filter jobs by category: ${categoryError.message}`);
     }
     const jobIds = [...new Set(matchingJobs?.map((li) => li.job_id) || [])];
-    if (jobIds.length === 0) return [];
+    if (jobIds.length === 0) return null;
     query = query.in("id", jobIds);
   }
 
@@ -136,15 +165,58 @@ export async function getJobs(filters?: {
     }
 
     query = query.or(orParts.join(","));
-
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    return data;
   }
 
-  const { data, error } = await query;
+  return { query };
+}
+
+export async function getJobs(
+  filters: JobFilters = {},
+  page: { limit: number } = { limit: LIST_PAGE_SIZE }
+): Promise<JobsPage & { totalCount: number }> {
+  const supabase = await createClient();
+  const built = await buildJobsQuery(supabase, filters, true);
+  if (!built) return { jobs: [], nextCursor: null, totalCount: 0 };
+
+  const { data, error, count } = await built.query.limit(page.limit + 1);
   if (error) throw new Error(error.message);
-  return data;
+  if (typeof count !== "number") {
+    throw new Error("Failed to load jobs: expected an exact count");
+  }
+  const { rows, nextCursor } = takePage(data ?? [], page.limit, jobCursorOf);
+  return { jobs: rows, nextCursor, totalCount: count };
+}
+
+export async function loadMoreJobs(input: {
+  filters: JobFilters;
+  cursor: JobCursor;
+  limit: number;
+}): Promise<JobsPage> {
+  const parsed = loadMoreJobsInputSchema.safeParse(input);
+  if (!parsed.success) throw new Error("Invalid load-more request");
+  const { filters, cursor, limit } = parsed.data;
+
+  const supabase = await createClient();
+  const built = await buildJobsQuery(supabase, filters, false);
+  if (!built) return { jobs: [], nextCursor: null };
+
+  const { data, error } = await built.query.or(jobCursorFilter(cursor)).limit(limit + 1);
+  if (error) throw new Error(error.message);
+  const { rows, nextCursor } = takePage(data ?? [], limit, jobCursorOf);
+  return { jobs: rows, nextCursor };
+}
+
+export async function loadCalendarJobs(input: {
+  filters: JobFilters;
+  range: { from: string; to: string };
+}): Promise<{ jobs: JobListRow[]; truncated: boolean }> {
+  const parsed = calendarLoadInputSchema.safeParse(input);
+  if (!parsed.success) throw new Error("Invalid calendar request");
+  const { jobs, nextCursor } = await getJobs(
+    clampFiltersToRange(parsed.data.filters, parsed.data.range),
+    { limit: CALENDAR_LIMIT }
+  );
+  return { jobs, truncated: nextCursor !== null };
 }
 
 export const getJob = cache(async (id: string) => {
