@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 interface LoadMoreButtonProps {
   hasMore: boolean;
   loading: boolean;
+  disabled?: boolean;
   onClick: () => void;
   shown: number;
   total: number | null;
@@ -15,6 +16,7 @@ interface LoadMoreButtonProps {
 export function LoadMoreButton({
   hasMore,
   loading,
+  disabled = false,
   onClick,
   shown,
   total,
@@ -29,14 +31,17 @@ export function LoadMoreButton({
         type="button"
         variant="outline"
         size="sm"
-        disabled={loading}
+        disabled={loading || disabled}
         onClick={onClick}
         className="bg-card"
       >
         {loading ? "Loading…" : "Load more"}
       </Button>
       {total !== null && (
-        <span className="text-xs text-stone-500 dark:text-stone-400 font-mono tabular-nums">
+        <span
+          aria-live="polite"
+          className="text-xs text-stone-500 dark:text-stone-400 font-mono tabular-nums"
+        >
           {shown.toLocaleString()} of {total.toLocaleString()} {noun}
         </span>
       )}

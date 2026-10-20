@@ -90,6 +90,9 @@ describe("getInvoices first page", () => {
     const after = mock.calls.slice(limitIndex + 1);
     expect(after).toContainEqual({ method: "eq", args: ["status", "paid"] });
     expect(after).toContainEqual({ method: "not", args: ["job_id", "is", null] });
+    expect(after.filter((c) => c.method === "order").map((c) => c.args)).toEqual([
+      ["id", { ascending: true }],
+    ]);
     expect(after).toContainEqual({ method: "range", args: [0, 999] });
 
     expect(result.totalCount).toBe(1);
@@ -120,7 +123,18 @@ describe("getInvoices first page", () => {
       { data: [], error: null, count: 0 },
       { data: [{ amount: 1 }], error: null, count: 2 },
     ]);
-    await expect(getInvoices({}, { limit: 25 })).rejects.toThrow();
+    await expect(getInvoices({}, { limit: 25 })).rejects.toThrow(/returned 1 of 2 rows/);
+  });
+
+  it("applies the parking source filter to the totals read too", async () => {
+    const mock = mockQueue([
+      { data: [], error: null, count: 0 },
+      { data: [], error: null, count: 0 },
+    ]);
+    await getInvoices({ source: "parking" }, { limit: 25 });
+    const limitIndex = mock.calls.findIndex((c) => c.method === "limit");
+    const after = mock.calls.slice(limitIndex + 1);
+    expect(after).toContainEqual({ method: "not", args: ["parking_reservation_id", "is", null] });
   });
 });
 
@@ -141,9 +155,16 @@ describe("getInvoices search", () => {
       }),
     ];
     const mock = mockQueue([{ data: rows, error: null, count: 3 }]);
-    const result = await getInvoices({ search: "  LOPEZ " }, { limit: 25 });
+    const result = await getInvoices(
+      { search: "  LOPEZ ", status: "paid", source: "parking" },
+      { limit: 25 },
+    );
 
-    expect(mock.calls).toContainEqual({ method: "range", args: [0, 999] });
+    const rangeIndex = mock.calls.findIndex((c) => c.method === "range");
+    expect(mock.calls[rangeIndex].args).toEqual([0, 999]);
+    const before = mock.calls.slice(0, rangeIndex);
+    expect(before).toContainEqual({ method: "eq", args: ["status", "paid"] });
+    expect(before).toContainEqual({ method: "not", args: ["parking_reservation_id", "is", null] });
     expect(mock.calls.find((c) => c.method === "limit")).toBeUndefined();
     expect(result.invoices.map((i) => i.id)).toEqual([ID_A, ID_B]);
     expect(result.nextCursor).toBeNull();

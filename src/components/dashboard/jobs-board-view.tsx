@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { toast } from "sonner";
 import { CircleDashed, Package, Wrench, CheckCircle2, Ban } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -65,22 +66,38 @@ type ColumnState = {
   pageSize: number;
 };
 
+type Paging = {
+  generation: number;
+  extra: Partial<Record<JobStatus, JobRow[]>>;
+  cursors: Partial<Record<JobStatus, JobCursor | null>>;
+};
+
 // Paging state lives here rather than in BoardColumn because each column is
 // rendered twice (mobile scroller and desktop grid) and both copies must show
-// the same loaded rows. Mount with a key derived from the filters so a filter
-// change starts over; the server-rendered `columns` stay the source of truth
-// for each column's first page.
+// the same loaded rows. `columns` is replaced whenever a revalidating action
+// re-renders the page (a status change on a card, for instance); that resets
+// the loaded pages, because a card pushed off a column's first page by the
+// change would otherwise sit in neither set and vanish. A load already in
+// flight against the old columns is discarded when it lands. Mount with a key
+// derived from the filters so a filter change starts over as well.
 export function JobsBoardView({ columns, filters }: JobsBoardViewProps) {
-  const [extra, setExtra] = useState<Partial<Record<JobStatus, JobRow[]>>>({});
-  const [cursors, setCursors] = useState<Partial<Record<JobStatus, JobCursor | null>>>({});
+  const [paging, setPaging] = useState<Paging>({ generation: 0, extra: {}, cursors: {} });
   const [loadingStatus, setLoadingStatus] = useState<JobStatus | null>(null);
+  const [seenColumns, setSeenColumns] = useState(columns);
   const [, startTransition] = useTransition();
+
+  if (columns !== seenColumns) {
+    setSeenColumns(columns);
+    setPaging({ generation: paging.generation + 1, extra: {}, cursors: {} });
+  }
 
   const state: ColumnState[] = columns.map((column) => {
     const seen = new Set(column.jobs.map((job) => job.id));
-    const more = (extra[column.status] ?? []).filter((job) => !seen.has(job.id));
+    const more = (paging.extra[column.status] ?? []).filter((job) => !seen.has(job.id));
     const cursor =
-      column.status in cursors ? (cursors[column.status] ?? null) : column.nextCursor;
+      column.status in paging.cursors
+        ? (paging.cursors[column.status] ?? null)
+        : column.nextCursor;
     return {
       status: column.status,
       rows: [...column.jobs, ...more],
@@ -93,6 +110,7 @@ export function JobsBoardView({ columns, filters }: JobsBoardViewProps) {
   function loadMore(column: ColumnState) {
     if (loadingStatus !== null || column.cursor === null) return;
     const cursor = column.cursor;
+    const generation = paging.generation;
     setLoadingStatus(column.status);
     startTransition(async () => {
       try {
@@ -101,13 +119,21 @@ export function JobsBoardView({ columns, filters }: JobsBoardViewProps) {
           cursor,
           limit: column.pageSize,
         });
-        setExtra((prev) => ({
-          ...prev,
-          [column.status]: [...(prev[column.status] ?? []), ...result.jobs],
-        }));
-        setCursors((prev) => ({ ...prev, [column.status]: result.nextCursor }));
-      } catch {
-        toast.error("Couldn't load more jobs. Try again.");
+        setPaging((prev) =>
+          prev.generation !== generation
+            ? prev
+            : {
+                ...prev,
+                extra: {
+                  ...prev.extra,
+                  [column.status]: [...(prev.extra[column.status] ?? []), ...result.jobs],
+                },
+                cursors: { ...prev.cursors, [column.status]: result.nextCursor },
+              }
+        );
+      } catch (err) {
+        Sentry.captureException(err, { tags: { source: "jobs-board-load-more" } });
+        toast.error("Couldn't load more jobs. Try again, or refresh if it keeps happening.");
       } finally {
         setLoadingStatus(null);
       }
@@ -125,6 +151,7 @@ export function JobsBoardView({ columns, filters }: JobsBoardViewProps) {
                 key={column.status}
                 column={column}
                 loading={loadingStatus === column.status}
+                anyLoading={loadingStatus !== null}
                 onLoadMore={() => loadMore(column)}
                 className="w-[85vw] shrink-0"
               />
@@ -141,6 +168,7 @@ export function JobsBoardView({ columns, filters }: JobsBoardViewProps) {
             key={column.status}
             column={column}
             loading={loadingStatus === column.status}
+            anyLoading={loadingStatus !== null}
             onLoadMore={() => loadMore(column)}
           />
         ))}
@@ -152,11 +180,13 @@ export function JobsBoardView({ columns, filters }: JobsBoardViewProps) {
 function BoardColumn({
   column,
   loading,
+  anyLoading,
   onLoadMore,
   className,
 }: {
   column: ColumnState;
   loading: boolean;
+  anyLoading: boolean;
   onLoadMore: () => void;
   className?: string;
 }) {
@@ -199,6 +229,7 @@ function BoardColumn({
           <LoadMoreButton
             hasMore={cursor !== null}
             loading={loading}
+            disabled={anyLoading}
             onClick={onLoadMore}
             shown={rows.length}
             total={totalCount}

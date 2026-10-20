@@ -10,6 +10,8 @@ import {
   BOARD_COMPLETE_PAGE_SIZE,
   BOARD_OPEN_PAGE_SIZE,
   LIST_PAGE_SIZE,
+  jobFiltersSchema,
+  normalizeJobFilters,
   type JobFilters,
 } from "@/lib/jobs/paging";
 import { JobsToolbar } from "@/components/dashboard/jobs-toolbar";
@@ -17,7 +19,7 @@ import { JobsListView } from "@/components/dashboard/jobs-list-view";
 import { JobsBoardView, type BoardColumnData } from "@/components/dashboard/jobs-board-view";
 import { JobsCalendarView } from "@/components/dashboard/jobs-calendar-view";
 import { PageShell } from "@/components/layout/page-shell";
-import type { JobStatus, PaymentStatus } from "@/types";
+import type { JobStatus } from "@/types";
 
 export const metadata = {
   title: "Jobs | ShopPilot",
@@ -44,19 +46,25 @@ export default async function JobsPage({
   let dateFrom: string | undefined;
   let dateTo: string | undefined;
   if (params.range) {
-    const resolved = resolveDateRange(params.range, params.from, params.to);
+    // A malformed custom bound would throw inside resolveDateRange; drop it.
+    const isoDate = jobFiltersSchema.shape.dateFrom;
+    const resolved = resolveDateRange(
+      params.range,
+      isoDate.safeParse(params.from).data,
+      isoDate.safeParse(params.to).data
+    );
     dateFrom = resolved.from;
     dateTo = resolved.to;
   }
 
-  const filters: JobFilters = {
+  const filters = normalizeJobFilters({
     search: params.search,
-    status: params.status as JobStatus | undefined,
+    status: params.status,
     category: params.category,
-    paymentStatus: params.payment_status as PaymentStatus | undefined,
+    paymentStatus: params.payment_status,
     dateFrom,
     dateTo,
-  };
+  });
   const filtersKey = JSON.stringify(filters);
 
   const [dbCategories, settings, content] = await Promise.all([

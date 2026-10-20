@@ -18,6 +18,29 @@ export const jobFiltersSchema = z.object({
 });
 export type JobFilters = z.infer<typeof jobFiltersSchema>;
 
+// For URL search params: a value the strict schema would reject is dropped
+// rather than failing the page, so the page and the Load more action that
+// re-sends its filters always agree on what was applied.
+export function normalizeJobFilters(raw: {
+  search?: string;
+  status?: string;
+  category?: string;
+  paymentStatus?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}): JobFilters {
+  const shape = jobFiltersSchema.shape;
+  const search = raw.search?.trim().slice(0, 200);
+  return {
+    search: search || undefined,
+    status: shape.status.safeParse(raw.status).data,
+    category: shape.category.safeParse(raw.category).data,
+    paymentStatus: shape.paymentStatus.safeParse(raw.paymentStatus).data,
+    dateFrom: shape.dateFrom.safeParse(raw.dateFrom).data,
+    dateTo: shape.dateTo.safeParse(raw.dateTo).data,
+  };
+}
+
 export const jobCursorSchema = z.object({
   date_received: z.iso.date(),
   id: z.uuid(),

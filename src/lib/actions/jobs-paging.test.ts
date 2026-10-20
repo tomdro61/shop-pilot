@@ -1,8 +1,8 @@
 /**
  * Keyset paging on the jobs list: getJobs (first page, counted),
  * loadMoreJobs (cursor pages, validated input) and loadCalendarJobs (visible
- * range clamp). The predicate assertions are adjacent to the limit so that
- * deleting the cursor clause or the tiebreaker sort goes red.
+ * range clamp). The cursor clause is asserted immediately before the limit and
+ * the sort list is asserted exactly, so deleting either goes red.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -80,11 +80,35 @@ describe("getJobs first page", () => {
     await expect(getJobs({}, { limit: 15 })).rejects.toThrow("exact count");
   });
 
-  it("returns an empty counted page without querying jobs when the category matches nothing", async () => {
-    const mock = mockQueue([{ data: [], error: null }]);
+  it("filters a category through the embedded line items inside the one counted query", async () => {
+    const mock = mockQueue([{ data: [], error: null, count: 0 }]);
+    await getJobs({ category: "Brakes" }, { limit: 15 });
+
+    expect(mock.calls.filter((c) => c.method === "from")).toEqual([{ method: "from", args: ["jobs"] }]);
+    const select = mock.calls[1].args[0] as string;
+    expect(select).toContain("category_match:job_line_items(category)");
+    // The per-job total must sum every line, so the filter targets the alias,
+    // never the unaliased embed.
+    expect(select).toContain("job_line_items(total)");
+    expect(mock.calls).toContainEqual({ method: "eq", args: ["category_match.category", "Brakes"] });
+    expect(mock.calls).toContainEqual({ method: "not", args: ["category_match", "is", null] });
+    expect(mock.calls.find((c) => c.method === "eq" && c.args[0] === "job_line_items.category")).toBeUndefined();
+  });
+
+  it("drops the filter-only embed from the rows it returns", async () => {
+    mockQueue([
+      { data: [{ ...row(ID_A, "2026-10-19"), category_match: [{ category: "Brakes" }] }], error: null, count: 1 },
+    ]);
     const result = await getJobs({ category: "Brakes" }, { limit: 15 });
-    expect(result).toEqual({ jobs: [], nextCursor: null, totalCount: 0 });
-    expect(mock.calls.find((c) => c.method === "limit")).toBeUndefined();
+    expect(result.jobs[0]).not.toHaveProperty("category_match");
+    expect(result.jobs[0].id).toBe(ID_A);
+  });
+
+  it("returns no cursor when exactly the limit came back", async () => {
+    mockQueue([{ data: [row(ID_A, "2026-10-19"), row(ID_B, "2026-10-18")], error: null, count: 2 }]);
+    const result = await getJobs({}, { limit: 2 });
+    expect(result.jobs).toHaveLength(2);
+    expect(result.nextCursor).toBeNull();
   });
 });
 
@@ -106,6 +130,12 @@ describe("loadMoreJobs", () => {
       method: "select",
       args: [expect.any(String), { count: undefined }],
     });
+  });
+
+  it("applies the payment-status filter the client re-sends", async () => {
+    const mock = mockQueue([{ data: [], error: null }]);
+    await loadMoreJobs({ filters: { paymentStatus: "unpaid" }, cursor: CURSOR, limit: 25 });
+    expect(mock.calls).toContainEqual({ method: "eq", args: ["payment_status", "unpaid"] });
   });
 
   it("keeps the search clause and the cursor clause as separate filters", async () => {
@@ -166,6 +196,7 @@ describe("loadMoreJobs", () => {
         limit: 15,
       }),
     ).rejects.toThrow("Invalid load-more request");
+    expect(createClient).not.toHaveBeenCalled();
   });
 });
 

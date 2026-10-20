@@ -16,6 +16,7 @@ import type { ActionResult } from "./_types";
 import { revalidatePath } from "next/cache";
 import type { JobFormData } from "@/lib/validators/job";
 import type { JobStatus, PaymentMethod, PaymentStatus } from "@/types";
+import { z } from "zod";
 import { takePage } from "@/lib/supabase/take-page";
 import {
   CALENDAR_LIMIT,
@@ -28,8 +29,11 @@ import {
   type JobFilters,
 } from "@/lib/jobs/paging";
 
+// `category_match` is a second embed of job_line_items used only as a filter
+// target (see the category branch below); `job_line_items(total)` stays
+// unfiltered so the per-job total covers every line.
 const JOB_LIST_SELECT =
-  "*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model, license_plate), users(id, name), job_line_items(total), dvi_inspections(status)";
+  "*, customers(id, first_name, last_name, phone), vehicles(id, year, make, model, license_plate), users(id, name), job_line_items(total), dvi_inspections(status), category_match:job_line_items(category)";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -41,9 +45,11 @@ function jobListSelect(supabase: SupabaseServerClient, withCount: boolean) {
     .order("id", { ascending: false });
 }
 
-export type JobListRow = NonNullable<
+type JobListRawRow = NonNullable<
   Awaited<ReturnType<typeof jobListSelect>>["data"]
 >[number];
+
+export type JobListRow = Omit<JobListRawRow, "category_match">;
 
 type JobsPage = { jobs: JobListRow[]; nextCursor: JobCursor | null };
 
@@ -51,9 +57,18 @@ function jobCursorOf(job: JobListRow): JobCursor {
   return { date_received: job.date_received, id: job.id };
 }
 
-// Resolves to null when a category filter matches no line items, so there is
-// nothing to query. The builder is wrapped in an object because it is a
-// thenable: returning it bare from an async function would run the query.
+// The filter-only embed is dropped before rows leave the server; nothing
+// renders it and it would otherwise ride along in every page and AI reply.
+function stripCategoryMatch(rows: JobListRawRow[]): JobListRow[] {
+  return rows.map((raw) => {
+    const { category_match, ...row } = raw;
+    void category_match;
+    return row;
+  });
+}
+
+// The builder is wrapped in an object because it is a thenable: returning it
+// bare from an async function would run the query.
 async function buildJobsQuery(
   supabase: SupabaseServerClient,
   filters: JobFilters,
@@ -82,19 +97,14 @@ async function buildJobsQuery(
     query = query.eq("payment_status", filters.paymentStatus);
   }
 
-  if (filters?.category) {
-    // Filter jobs that have line items in this category
-    const supabaseForCategory = await createClient();
-    const { data: matchingJobs, error: categoryError } = await supabaseForCategory
-      .from("job_line_items")
-      .select("job_id")
-      .eq("category", filters.category);
-    if (categoryError) {
-      throw new Error(`Failed to filter jobs by category: ${categoryError.message}`);
-    }
-    const jobIds = [...new Set(matchingJobs?.map((li) => li.job_id) || [])];
-    if (jobIds.length === 0) return null;
-    query = query.in("id", jobIds);
+  if (filters.category) {
+    // Filtering the embed and then requiring it non-null keeps only jobs with
+    // a line item in the category, inside the one counted query. The old
+    // pre-read of matching job ids was a single uncounted request, so past
+    // 1,000 line items it would have silently shortened the list.
+    query = query
+      .eq("category_match.category", filters.category)
+      .not("category_match", "is", null);
   }
 
   if (filters?.search && filters.search.trim().length >= 2) {
@@ -175,15 +185,14 @@ export async function getJobs(
   page: { limit: number } = { limit: LIST_PAGE_SIZE }
 ): Promise<JobsPage & { totalCount: number }> {
   const supabase = await createClient();
-  const built = await buildJobsQuery(supabase, filters, true);
-  if (!built) return { jobs: [], nextCursor: null, totalCount: 0 };
+  const { query } = await buildJobsQuery(supabase, filters, true);
 
-  const { data, error, count } = await built.query.limit(page.limit + 1);
+  const { data, error, count } = await query.limit(page.limit + 1);
   if (error) throw new Error(error.message);
   if (typeof count !== "number") {
     throw new Error("Failed to load jobs: expected an exact count");
   }
-  const { rows, nextCursor } = takePage(data ?? [], page.limit, jobCursorOf);
+  const { rows, nextCursor } = takePage(stripCategoryMatch(data ?? []), page.limit, jobCursorOf);
   return { jobs: rows, nextCursor, totalCount: count };
 }
 
@@ -193,16 +202,17 @@ export async function loadMoreJobs(input: {
   limit: number;
 }): Promise<JobsPage> {
   const parsed = loadMoreJobsInputSchema.safeParse(input);
-  if (!parsed.success) throw new Error("Invalid load-more request");
+  if (!parsed.success) {
+    throw new Error(`Invalid load-more request: ${z.prettifyError(parsed.error)}`);
+  }
   const { filters, cursor, limit } = parsed.data;
 
   const supabase = await createClient();
-  const built = await buildJobsQuery(supabase, filters, false);
-  if (!built) return { jobs: [], nextCursor: null };
+  const { query } = await buildJobsQuery(supabase, filters, false);
 
-  const { data, error } = await built.query.or(jobCursorFilter(cursor)).limit(limit + 1);
+  const { data, error } = await query.or(jobCursorFilter(cursor)).limit(limit + 1);
   if (error) throw new Error(error.message);
-  const { rows, nextCursor } = takePage(data ?? [], limit, jobCursorOf);
+  const { rows, nextCursor } = takePage(stripCategoryMatch(data ?? []), limit, jobCursorOf);
   return { jobs: rows, nextCursor };
 }
 
@@ -211,7 +221,9 @@ export async function loadCalendarJobs(input: {
   range: { from: string; to: string };
 }): Promise<{ jobs: JobListRow[]; truncated: boolean }> {
   const parsed = calendarLoadInputSchema.safeParse(input);
-  if (!parsed.success) throw new Error("Invalid calendar request");
+  if (!parsed.success) {
+    throw new Error(`Invalid calendar request: ${z.prettifyError(parsed.error)}`);
+  }
   const { jobs, nextCursor } = await getJobs(
     clampFiltersToRange(parsed.data.filters, parsed.data.range),
     { limit: CALENDAR_LIMIT }

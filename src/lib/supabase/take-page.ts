@@ -1,6 +1,6 @@
 // For keyset paging: the caller fetches `limit + 1` rows so the extra row, if
 // present, proves another page exists without a second query. The cursor is
-// taken from the last row actually returned.
+// taken from the last row of the returned page, not from the probe row.
 export function takePage<T, C>(
   rows: T[],
   limit: number,

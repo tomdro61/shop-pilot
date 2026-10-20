@@ -76,6 +76,7 @@ export function JobsToolbar({ categories, jobCount }: JobsToolbarProps) {
         <Input
           placeholder="Search jobs..."
           value={search}
+          maxLength={200}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 pl-8 text-sm bg-card"
         />

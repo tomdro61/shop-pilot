@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import * as Sentry from "@sentry/nextjs";
 import { loadCalendarJobs } from "@/lib/actions/jobs";
 import type { CalendarRange, JobFilters } from "@/lib/jobs/paging";
 import {
@@ -56,7 +56,9 @@ interface JobsCalendarViewProps {
   filters: JobFilters;
 }
 
-type LoadedRange = { jobs: JobRow[]; truncated: boolean };
+type LoadedRange =
+  | { status: "ok"; jobs: JobRow[]; truncated: boolean }
+  | { status: "error" };
 
 function rangeKeyOf(range: CalendarRange): string {
   return `${range.from}_${range.to}`;
@@ -68,8 +70,8 @@ const MONTH_MAX_VISIBLE = 2;
 type CalendarMode = "month" | "week";
 
 // Only the visible grid's jobs are loaded; moving to another month or week
-// fetches that range once and keeps it. Mount with a key derived from the
-// filters so a filter change starts over.
+// fetches that range once and keeps it for the life of the mount. Mount with
+// a key derived from the filters so a filter change starts over.
 export function JobsCalendarView({
   initialJobs,
   initialRange,
@@ -79,12 +81,10 @@ export function JobsCalendarView({
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [mode, setMode] = useState<CalendarMode>("month");
   const [ranges, setRanges] = useState<Record<string, LoadedRange>>(() => ({
-    [rangeKeyOf(initialRange)]: { jobs: initialJobs, truncated },
+    [rangeKeyOf(initialRange)]: { status: "ok", jobs: initialJobs, truncated },
   }));
   const [pending, startTransition] = useTransition();
   const inFlight = useRef(new Set<string>());
-  const filtersRef = useRef(filters);
-  filtersRef.current = filters;
 
   // Compute days based on mode
   let days: Date[];
@@ -129,20 +129,32 @@ export function JobsCalendarView({
     inFlight.current.add(rangeKey);
     startTransition(async () => {
       try {
-        const result = await loadCalendarJobs({
-          filters: filtersRef.current,
-          range: { from, to },
+        const result = await loadCalendarJobs({ filters, range: { from, to } });
+        setRanges((prev) =>
+          prev[rangeKey] ? prev : { ...prev, [rangeKey]: { status: "ok", ...result } }
+        );
+      } catch (err) {
+        Sentry.captureException(err, {
+          tags: { source: "jobs-calendar-range" },
+          extra: { from, to },
         });
-        setRanges((prev) => (prev[rangeKey] ? prev : { ...prev, [rangeKey]: result }));
-      } catch {
-        toast.error("Couldn't load that range. Try again.");
+        setRanges((prev) => (prev[rangeKey] ? prev : { ...prev, [rangeKey]: { status: "error" } }));
       } finally {
         inFlight.current.delete(rangeKey);
       }
     });
-  }, [ranges, rangeKey, from, to]);
+  }, [ranges, rangeKey, from, to, filters]);
 
-  const jobs = loaded?.jobs ?? [];
+  function retryRange() {
+    setRanges((prev) => {
+      const next = { ...prev };
+      delete next[rangeKey];
+      return next;
+    });
+  }
+
+  const jobs = loaded?.status === "ok" ? loaded.jobs : [];
+  const failed = loaded?.status === "error";
   const isFetching = pending && !loaded;
 
   // Group jobs by date string (YYYY-MM-DD)
@@ -177,9 +189,9 @@ export function JobsCalendarView({
           {isFetching && (
             <span className="text-xs text-stone-400 dark:text-stone-500">Loading…</span>
           )}
-          {loaded?.truncated && (
+          {loaded?.status === "ok" && loaded.truncated && (
             <span className="text-xs text-amber-600 dark:text-amber-400">
-              Showing the first {jobs.length.toLocaleString()} jobs in this range
+              Showing the newest {jobs.length.toLocaleString()} jobs in this range
             </span>
           )}
           <div className="flex gap-1 rounded-md border border-stone-200 dark:border-stone-800 bg-card p-1 text-xs">
@@ -218,8 +230,27 @@ export function JobsCalendarView({
         </Button>
       </div>
 
+      {failed && (
+        <div
+          role="alert"
+          className="mb-4 flex items-center justify-between gap-3 rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-3 py-2"
+        >
+          <p className="text-sm text-red-700 dark:text-red-300">
+            Couldn&apos;t load the jobs for this range.
+          </p>
+          <Button variant="outline" size="sm" className="bg-card" onClick={retryRange}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 border-l border-t border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
+      <div
+        aria-busy={isFetching}
+        className={`grid grid-cols-7 border-l border-t border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden ${
+          failed ? "opacity-40 pointer-events-none" : ""
+        }`}
+      >
         {/* Weekday headers */}
         {WEEKDAYS.map((day) => (
           <div

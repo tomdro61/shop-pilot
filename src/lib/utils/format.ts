@@ -68,6 +68,12 @@ export function formatDate(dateStr: string): string {
   return d.toLocaleDateString();
 }
 
+// For a timestamp rendered by a client component: pinning the zone keeps the
+// server render and the browser's hydration on the same calendar day.
+export function formatDateInET(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { timeZone: "America/New_York" });
+}
+
 export function formatDateShort(dateStr: string): string {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
     month: "short",

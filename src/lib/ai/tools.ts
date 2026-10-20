@@ -161,7 +161,7 @@ export const tools: Anthropic.Tool[] = [
   {
     name: "search_jobs",
     description:
-      "Search jobs by RO number (e.g. 'RO-1860' or '1860'), customer name, vehicle, title, or notes. Can also filter by status. Returns jobs with customer, vehicle info, and RO number (ro_number).",
+      "Search jobs by RO number (e.g. 'RO-1860' or '1860'), customer name, vehicle, title, or notes. Can also filter by status. Returns the newest 25 matching jobs (with customer, vehicle info, and RO number) plus total_matches, the full count. When total_matches exceeds showing, say so and narrow the search instead of counting the returned list.",
     input_schema: {
       type: "object" as const,
       properties: {

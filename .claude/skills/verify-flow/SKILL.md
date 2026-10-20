@@ -69,7 +69,7 @@ If still ambiguous, ask the user.
 | `resend-invoice` | `src/lib/actions/invoices.ts` (`resendInvoiceForJob`), `src/components/dashboard/resend-invoice-button.tsx`, `src/components/dashboard/invoice-section.tsx` |
 | `mark-unpaid` | `src/lib/actions/jobs.ts` (`markJobUnpaid`, `recordPayment`, `updateJob`), `src/components/dashboard/mark-job-unpaid-button.tsx`, `src/components/dashboard/job-payment-footer.tsx`, `src/lib/ai/handlers.ts` (`mark_job_unpaid` case) |
 | `inline-edit` | `src/hooks/use-inline-editor.ts`, `src/components/dashboard/{job-title,job-date,job-mileage,job-scheduled-time,notes,customer-text-field}-editor.tsx`, `src/components/dashboard/status-select.tsx`, any component that drops a `router.refresh()` after a server action |
-| `list-paging` | `src/lib/jobs/paging.ts`, `src/lib/invoices/list-paging.ts`, `src/hooks/use-load-more.ts`, `src/components/dashboard/{jobs-board,jobs-list,jobs-calendar}-view.tsx`, `src/components/dashboard/invoices-list.tsx`, `getJobs`/`loadMoreJobs`/`loadCalendarJobs` in `src/lib/actions/jobs.ts`, `getInvoices`/`loadMoreInvoices` in `src/lib/actions/invoices.ts` |
+| `list-paging` | `src/lib/jobs/paging.ts`, `src/lib/invoices/list-paging.ts`, `src/lib/supabase/take-page.ts`, `src/hooks/use-load-more.ts`, `src/components/ui/load-more-button.tsx`, `src/components/dashboard/{jobs-board,jobs-list,jobs-calendar}-view.tsx`, `src/components/dashboard/invoices-list.tsx`, `getJobs`/`loadMoreJobs`/`loadCalendarJobs` in `src/lib/actions/jobs.ts`, `getInvoices`/`loadMoreInvoices` in `src/lib/actions/invoices.ts` |
 
 ---
 
@@ -425,11 +425,13 @@ the editor lives on — check its `revalidatePath` set before putting a
 Shipped October 2026 (session 88). The jobs page and the invoices page no
 longer load every row. Jobs: each board column is its own counted query
 (Complete shows 15, open columns up to 200), the list shows 25, the calendar
-loads only the visible grid. Invoices: 25 per page, header count and total
-from their own reads. Paging is keyset (date + id), so a new job arriving
-between clicks never duplicates or skips a row. Before this the page silently
-stopped at Supabase's 1,000-row cap: 564 of 1,549 completed jobs were
-invisible and the count said 1,000.
+loads only the visible grid. Invoices: 25 per page, header count from the
+page query's exact count, total from a separate amount-column read. Paging
+is keyset (date + id), so a job created in another tab between clicks
+doesn't duplicate or skip a row. When an action on the page re-renders it
+(a status change on a card), the loaded pages reset to a fresh first page.
+Before this the page silently stopped at Supabase's 1,000-row cap: the
+oldest 564 of 1,564 jobs were invisible and the toolbar count said 1,000.
 
 **Test data prereq:** none for reading. For scenario 4 you need to create a
 job (any shop-owned "Test" customer) and delete it afterward.
@@ -439,7 +441,8 @@ job (any shop-owned "Test" customer) and delete it afterward.
   200 KB (it was ~1 MB).
 - Assert: the Complete column shows 15 cards and its badge shows the full
   count (1,549 on 2026-10-19, growing), not 15 and not 1,000. The open
-  columns show every open job with no Load more button.
+  columns show every open job with no Load more button (true while each
+  open status is under 200).
 - Click Load more under Complete. Assert: 15 more cards append below, no
   card repeats, the button shows "30 of N jobs", and the page did not scroll
   to top or reload. Click it twice fast: only one request fires.
@@ -464,6 +467,10 @@ job (any shop-owned "Test" customer) and delete it afterward.
 - Assert: the new page continues from where the previous one ended (no row
   repeated, none missing). Navigate away and back: the new job is at the top
   of the first page.
+- Then, with extra pages loaded, change a status on a card in the Complete
+  column. Assert: the column resets to its first page (15 cards) with the
+  moved card gone, and no card from the old second page is missing from the
+  sequence after the next Load more.
 
 **Scenario 5 — Invoices**
 - Open `/invoices`. Assert: 25 rows, header shows the real count and the
@@ -473,9 +480,11 @@ job (any shop-owned "Test" customer) and delete it afterward.
   no Load more button (search reads the whole set).
 
 ❌ FAIL signal: a column badge equal to the number of cards shown while a
-Load more button is visible (the count query was dropped), or a repeated
-card after Load more (the `id` tiebreaker was dropped from the sort or the
-cursor predicate).
+Load more button is visible (the badge was switched back to the loaded
+count); a jobs page that errors (the exact count was dropped, which
+`getJobs` refuses); a repeated card after Load more (`lt` became `lte` in
+the cursor); or a card missing from the sequence, which is harder to spot
+(the `id` tiebreaker was dropped from the sort or the cursor predicate).
 
 ---
 

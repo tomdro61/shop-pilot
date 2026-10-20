@@ -8,7 +8,7 @@ import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { useLoadMore } from "@/hooks/use-load-more";
 import { loadMoreInvoices, type InvoiceListRow } from "@/lib/actions/invoices";
 import type { InvoiceCursor, InvoiceListFilters } from "@/lib/invoices/list-paging";
-import { formatCurrencyWhole, formatDate, getInitials } from "@/lib/utils/format";
+import { formatCurrencyWhole, formatDateInET, getInitials } from "@/lib/utils/format";
 import type { InvoiceStatus } from "@/types";
 
 const STATUS_BORDER: Record<InvoiceStatus, string> = {
@@ -24,7 +24,6 @@ interface InvoicesListProps {
   filters: InvoiceListFilters;
 }
 
-// Mount with a key derived from the filters so a filter change starts over.
 export function InvoicesList({
   initialInvoices,
   nextCursor,
@@ -139,7 +138,7 @@ export function InvoicesList({
                     </span>
                   </td>
                   <td className="px-3 py-2 align-middle font-mono tabular-nums text-xs text-stone-500 dark:text-stone-400">
-                    {formatDate(invoice.created_at)}
+                    {formatDateInET(invoice.created_at)}
                   </td>
                   <td className="px-3 py-2 align-middle">
                     {invoice.stripe_hosted_invoice_url && (
@@ -200,7 +199,7 @@ export function InvoicesList({
                   {INVOICE_STATUS_LABELS[invoiceStatus] ?? invoiceStatus}
                 </span>
                 <span className="font-mono tabular-nums text-[11px] text-stone-500 dark:text-stone-400">
-                  {formatDate(invoice.created_at)}
+                  {formatDateInET(invoice.created_at)}
                 </span>
               </div>
             </Link>

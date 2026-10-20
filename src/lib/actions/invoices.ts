@@ -15,6 +15,7 @@ import { sendCustomerEmail } from "@/lib/actions/email";
 import { invoiceReminderSMS, invoiceSentSMS } from "@/lib/messaging/templates";
 import { invoiceReadyEmail } from "@/lib/resend/templates";
 import { isFirstDelivery } from "@/lib/invoices/delivery";
+import { z } from "zod";
 import { fetchAllRows } from "@/lib/supabase/fetch-all-rows";
 import { takePage } from "@/lib/supabase/take-page";
 import {
@@ -1000,10 +1001,9 @@ async function sumInvoiceAmounts(
   return rows.reduce((sum, row) => sum + (row.amount ?? 0), 0);
 }
 
-// Name search matches across two different joins (job customer vs. parking
-// reservation), which PostgREST can't express in one filter, so a search
-// reads the whole filtered set and matches in memory. Paging applies only to
-// the unsearched list, which is the one that grows.
+// Name search spans two joins (job customer, parking reservation), so it reads
+// the whole filtered set and matches in memory, unpaged. Its read cost grows
+// with the table; the unsearched list is the one that pages.
 export async function getInvoices(
   filters: InvoiceListFilters = {},
   page: { limit: number } = { limit: INVOICES_PAGE_SIZE }
@@ -1045,7 +1045,9 @@ export async function loadMoreInvoices(input: {
   cursor: InvoiceCursor;
 }): Promise<{ invoices: InvoiceListRow[]; nextCursor: InvoiceCursor | null }> {
   const parsed = loadMoreInvoicesInputSchema.safeParse(input);
-  if (!parsed.success) throw new Error("Invalid load-more request");
+  if (!parsed.success) {
+    throw new Error(`Invalid load-more request: ${z.prettifyError(parsed.error)}`);
+  }
   const { filters, cursor } = parsed.data;
 
   const supabase = await createClient();
