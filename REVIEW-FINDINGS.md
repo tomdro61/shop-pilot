@@ -2139,3 +2139,50 @@ Rewritten to the local facts.
 - **PostgREST contracts were probed before coding** (stacked `.or()`,
   head counts, aggregates disabled, keyset walk vs. sorted read, embed
   filtering). Three of the five would have been wrong guesses.
+
+---
+
+## October 2026 — Dependency upgrades (`ef44c53`, `c2049bd`), 1 scoped reviewer each
+
+Security bump (next 16.4.2, sharp 0.35.5, @sentry/nextjs 10.76.2) and the
+follow-up audit cleanup (shadcn 4, supabase CLI 2.122, vitest 4.1.12,
+csv-parse 7, eslint-config-next 16.4.2, resend 6.34, in-range transitive).
+Both diffs touched only `package.json` + lockfile, so the router dispatched
+one `feature-dev:code-reviewer` (config-or-design) per commit. No findings
+at either pass; both "Ready to push". The second reviewer verified the
+single resend call site against every release note 6.9.2 → 6.34.1, the
+three csv-parse scripts against v7, `components.json` against shadcn 4,
+and the lockfile pins.
+
+## Open after this round
+
+- 18 lint errors (was 11), all `react-hooks/*` from eslint-plugin-react-hooks
+  7.1.1, which eslint-config-next 16.4.2 requires. The new
+  `react-hooks/immutability` rule flags three self-referencing poll
+  callbacks (`quick-pay-form.tsx:462`, `terminal-pay-button.tsx:69`,
+  `use-chat.ts:91`). Runtime unaffected; `next build` does not lint.
+  Cleanup session pending.
+- `braces@*` is flagged under fast-glob (eslint-config-next, shadcn) with no
+  patched release. Dev-only. Dependabot will list it until upstream fixes it.
+- Sentry deprecation: import `withSentryConfig` from `@sentry/nextjs/config`
+  before v11. Next `middleware` → `proxy` rename eventually.
+
+## Process notes
+
+- **A dependency-only diff still earns a reviewer, and the reviewer earned
+  its keep by reading release notes, not the lockfile.** The only runtime
+  change (resend) had one call site; the reviewer's value was confirming
+  the `{ data, error }` contract held across 25 releases.
+- **Severity on an audit finding rates the bug, not the exposure.** The
+  critical `tar` finding was the Supabase CLI unpacking its own download on
+  a laptop. `npm audit --omit=dev` is the number that describes production;
+  it was zero after both passes.
+- **Verify the commit message's claims before pushing someone else's
+  commit.** `c2049bd` arrived pre-made; lint, audit and the 1,096 tests were
+  re-run in-session before the marker was written. They matched.
+- **Vercel Preview deployments are SSO-protected,** so "walk the preview"
+  is not available to an unauthenticated session. The local production
+  build plus a read-only walk of production after merge is the fallback.
+- **The Playwright MCP can hang forever on browser launch.** A plain Node
+  script against the cached playwright-core + headless Chromium did the
+  walk (user memory `playwright-mcp-fallback`).
