@@ -5812,3 +5812,37 @@ repos via `gh api`. `tomdro61/shop-pilot` still PUBLIC on GitHub (owner
 action pending). Playwright MCP hung on browser launch twice; the website
 walk used a headless script with the cached playwright-core instead (see
 user memory `playwright-mcp-fallback`).
+
+## Session 91 — 2026-10-23 — Sentry: ignore stale-tab-after-deploy errors
+
+**Trigger.** SHOP-PILOT-T at 14:58Z: "The router state header was sent but
+could not be parsed" on /inbox then /dashboard, one Edge/Windows user in
+Saugus, two events, release `7f375b4`. Cause: a tab loaded before the
+03:55Z Next 16.1.6 → 16.4.2 deploy sent the old router-state shape; the
+`flightRouterStateSchema` in `app-render/types.js` changed between those
+versions (dynamic-segment tuple gained a field, url became a pair,
+`refresh` literal removed). Next falls back to a full-page navigation on
+a non-OK RSC response, so the user saw one slow load. Same family as
+SHOP-PILOT-R (stale server-action id, 2026-10-14). Resolved in Sentry.
+
+**Shipped** (`7df3302` + comment fix `8ae58e2`, merged to master, prod
+deploy 7281983581 Ready 15:23Z). `ignoreErrors` in `sentry.server.config.ts`
+and `sentry.edge.config.ts`: the router-state message and "Failed to find
+Server Action … older or newer deployment". In `src/instrumentation-client.ts`:
+'Server Action "<id>" was not found on the server.' (thrown client-side by
+`server-action-reducer.js`). All anchored to Next 16.4.2's exact strings.
+
+**Verified.** Build, lint, 1,096 tests. One Opus `feature-dev:code-reviewer`
+confirmed each regex against the Next source and placement per runtime; it
+caught the comments claiming a reload after a stale action id, which Next
+does not do (the promise is rejected; the server normally answers 409 with
+a console.warn). Comments corrected in `8ae58e2`. Post-deploy: liveness,
+release meta `8ae58e2`, crons 401, tunnel, 9/9 CORS. Two deliberate
+requests with a garbage `Next-Router-State-Tree` header to prod `/login`
+returned 500 at 15:24Z and produced no Sentry event.
+
+**Tradeoff, Tom's call later.** Ignoring the client-side unknown-action
+error removes the only signal that a staff submit failed after a deploy
+(the submit fails until the tab is refreshed). Options if wanted: catch
+`unstable_isUnrecognizedActionError` client-side and `location.reload()`,
+or enable Vercel Skew Protection so old tabs keep their old deployment.

@@ -2186,3 +2186,28 @@ and the lockfile pins.
 - **The Playwright MCP can hang forever on browser launch.** A plain Node
   script against the cached playwright-core + headless Chromium did the
   walk (user memory `playwright-mcp-fallback`).
+
+---
+
+## October 2026 — Sentry ignore list (`7df3302`, fix `8ae58e2`), 1 scoped reviewer
+
+Three `ignoreErrors` regexes for stale-tab-after-deploy errors. One
+`feature-dev:code-reviewer` (config-or-design). Regexes, anchoring,
+runtime placement and types all confirmed against `next/dist/esm`.
+
+## SI-1 — Comments claimed a full reload after a stale server-action id (MEDIUM, this diff, fixed)
+
+Next 16.4.2 rejects the action promise (`server-action-reducer.js:329`)
+with no reload, and the server normally answers 409 via
+`handleUnrecognizedAction` without reaching `captureRequestError`. Only the
+router-state case triggers `doMpaNavigation`. Comments rewritten to the
+verified behaviour in `8ae58e2`; regexes unchanged.
+
+## Process notes
+
+- **"Nothing is wrong" was a universal claim and it was wrong.** The app
+  code was fine; the user-visible failure was real. CLAUDE.md's comment
+  rule caught it through the reviewer.
+- **The reviewer had no shell and said so,** then reviewed the working
+  tree and told the dispatcher to check line attribution. That honesty
+  is worth more than a confident guess.
