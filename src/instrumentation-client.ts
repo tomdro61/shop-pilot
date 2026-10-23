@@ -29,6 +29,11 @@ Sentry.init({
     // code and no wallet dependencies, so any such error is someone's browser.
     /MetaMask/i,
     /ethereum provider/i,
+    // A tab loaded before a deploy still holds the old bundle's server-action
+    // ids. The first form submit after the deploy fails this way and Next
+    // recovers with a full reload; nothing is wrong with the app. Seen
+    // 2026-10-14 on /parking (SHOP-PILOT-R). Keep it exact.
+    /^Server Action "[0-9a-f]+" was not found on the server\./,
   ],
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
