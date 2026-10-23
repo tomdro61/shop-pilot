@@ -5706,3 +5706,61 @@ the new code's presence rests on the deployment being the one Vercel built
 from the push and aliased to production, not on a public string. Still
 owed by the owner: the session 85 real card-reader payment check and the
 Stripe key rotation.
+
+## Session 89 — 2026-10-23 — Security dependency upgrade (Next 16.4.2, sharp 0.35.5, Sentry 10.76.2)
+
+Executed from `../SECURITY-UPGRADE-HANDOFF.md` (audit 2026-10-22). Dependency
+bump only; no source changed. shop-pilot shipped first, then
+broadway-motors-web (its own commit `62a4f8e`, also on master).
+
+**Why.** Next 16.4.1 patched two critical unauthenticated RCEs
+(CVE-2026-96889 SVG/sharp image path, GHSA-673q-mjm6-r5xr `use cache`) and a
+server-actions DoS (GHSA-p3m5-59mp-jv5r; this app has 35 server-action
+files). @sentry/nextjs 10.75.2 fixed GHSA-mchm-gjx6-7h55, where requests
+under the `tunnelRoute` prefix skipped middleware.
+
+**Changed (`ef44c53`).** next 16.1.6 → 16.4.2; sharp ^0.34.5 → 0.35.5
+(exact pin, required by the image fix); @sentry/nextjs ^10.51.0 → ^10.76.2
+(stayed on v10; v11 is a separate major). React 19.2.3 and everything else
+untouched. Lockfile: only those three direct deps moved.
+
+**Verified before push.** `npm ci` clean; `next build` green (TypeScript
+pass, 55 static pages, 71 routes); vitest 67 files / 1,096 tests, identical
+to the pre-bump baseline; lint unchanged (11 pre-existing react-hooks
+errors, see below). One Opus `feature-dev:code-reviewer` for the
+`config-or-design` category: no findings, "Ready to push". Local
+production build: every protected route 307 → /login, `/monitoring`
+rewrite present in `routes-manifest.json`, middleware matcher still excludes
+`api/` and `monitoring`, CORS preflight for `/api/parking/submit` from the
+website origin 204.
+
+**Verified after the master deploy (03:55Z).** Liveness per
+`/post-deploy-check`: `/` → /dashboard → /login chain, public approve and
+inspect pages 200 for a fake token, empty POSTs to quote-requests, parking
+submit and appointments submit all 400 (not 5xx). New code live: the Sentry
+release in the `baggage` meta tag equals `ef44c53…`. A deliberate client
+error thrown on /login travelled through `/monitoring` (four 200 POSTs) and
+arrived in Sentry as SHOP-PILOT-S with release `ef44c53`, environment
+vercel-production; resolved with a note. Cron routes 401 without
+`CRON_SECRET`. Cross-app: all nine CORS preflights (broadwaymotorsrevere.com,
+www., broadwaymotorsma.com × parking/quote/appointments) 204 with the matching
+allow-origin. Sentry quiet for 30 minutes after deploy apart from the test
+error.
+
+**Not verified from this machine.** Vercel cron *registration* and
+`vercel env ls production` (no Vercel CLI login here). Playwright walk of
+the staging preview: both projects' Preview deployments sit behind Vercel SSO
+deployment protection (302 to vercel.com/sso-api), so staging was verified
+with the local production build instead and the walk was done on production
+read-only.
+
+**Pre-existing, deliberately left alone.** 11 lint errors
+(`react-hooks/refs`, `react-hooks/set-state-in-effect`) in untouched files;
+Next's `middleware` → `proxy` deprecation warning; Sentry's new warning to
+import `withSentryConfig` from `@sentry/nextjs/config` (required by v11).
+`npm audit` still reports highs on dev-only CLIs (eslint-config-next,
+shadcn, supabase); the handoff forbade further bumps.
+
+**Outside the repo (owner).** `tomdro61/shop-pilot` was still PUBLIC on
+GitHub on 2026-10-23 despite the parent CLAUDE.md saying private. Dependabot
+alerts not yet enabled on either repo.
