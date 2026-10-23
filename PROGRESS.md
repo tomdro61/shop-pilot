@@ -5764,3 +5764,51 @@ shadcn, supabase); the handoff forbade further bumps.
 **Outside the repo (owner).** `tomdro61/shop-pilot` was still PUBLIC on
 GitHub on 2026-10-23 despite the parent CLAUDE.md saying private. Dependabot
 alerts not yet enabled on either repo.
+
+## Session 90 — 2026-10-23 — Clear remaining npm audit findings (dev tools + transitive)
+
+**Scope.** Follow-up to Session 89. Tom asked for "everything updated";
+agreed scope was tiers 1–3: in-range updates, the two dev-tool majors,
+and eslint-config-next to match Next. Majors unrelated to security
+(Sentry 11, Stripe 23, Recharts 3, Lucide 1.x, TanStack Table 9,
+Anthropic SDK 1.x, React 19.3, TypeScript 7, ESLint 10) deferred to
+separate sessions.
+
+**Shipped** (`c2049bd`, merged to master 14:04Z, production deploy
+7280219425 Ready). Direct: shadcn 3.8.5 → 4.22.1, supabase CLI 2.76.9 →
+2.122.0, vitest + @vitest/coverage-v8 4.1.5 → 4.1.12, csv-parse 6.1.0 →
+7.0.3 (scripts only; upstream says 7.0.0 has no breaking changes),
+eslint-config-next 16.1.6 → 16.4.2, resend 6.9.2 → 6.34.1 (the only
+production-runtime change; single call site `src/lib/resend/client.ts`
+uses `emails.send` + `{ data, error }`, unchanged across those releases).
+Transitive via `npm update` + non-forced `npm audit fix`.
+
+**Result.** `npm audit --omit=dev` = 0. Remaining dev-only highs all trace
+to `braces@*` (every published version flagged, no fix exists) under
+fast-glob → eslint-config-next / shadcn. Nothing further to do until
+upstream ships a patch; Dependabot will keep showing them. Next 16.4.3
+(bug-fix backports, no security content) was released this morning and
+deliberately not taken.
+
+**Verified.** Build green; 67 files / 1,096 tests; one Opus
+`feature-dev:code-reviewer` (config-or-design): no findings, "Ready to
+push". Post-deploy: liveness chain, public approve/inspect 200, empty
+POSTs 400, Sentry release meta = `c2049bd…`, cron routes 401, `/monitoring`
+rewrite answers from Sentry ingest, all nine cross-app CORS preflights 204
+with matching allow-origin. Health cron fired 14:00:11Z today
+(`cron_health_ok`), so the Vercel schedule is live; `vercel.json`
+unchanged. Sentry: no new issues after deploy.
+
+**Lint moved 11 → 18 errors, lint-only.** eslint-config-next 16.4.2
+requires eslint-plugin-react-hooks ^7.1.0, which adds
+`react-hooks/immutability`. It flags three self-referencing poll
+callbacks (`quick-pay-form.tsx:462`, `terminal-pay-button.tsx:69`,
+`use-chat.ts:91`) plus more `set-state-in-effect` / `refs` hits in
+untouched files. Runtime is unaffected; `next build` does not lint.
+Follow-up cleanup session.
+
+**Also today.** Dependabot alerts + security updates enabled on both
+repos via `gh api`. `tomdro61/shop-pilot` still PUBLIC on GitHub (owner
+action pending). Playwright MCP hung on browser launch twice; the website
+walk used a headless script with the cached playwright-core instead (see
+user memory `playwright-mcp-fallback`).
