@@ -30,8 +30,9 @@ Sentry.init({
     /MetaMask/i,
     /ethereum provider/i,
     // A tab loaded before a deploy still holds the old bundle's server-action
-    // ids. The first form submit after the deploy fails this way and Next
-    // recovers with a full reload; nothing is wrong with the app. Seen
+    // ids. Next 16.4.2 rejects the action promise with UnrecognizedActionError
+    // (server-action-reducer.js) and does not reload, so that one submit fails
+    // for the user until they refresh; the app code itself is fine. Seen
     // 2026-10-14 on /parking (SHOP-PILOT-R). Keep it exact.
     /^Server Action "[0-9a-f]+" was not found on the server\./,
   ],
